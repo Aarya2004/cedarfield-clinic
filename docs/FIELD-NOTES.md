@@ -53,6 +53,10 @@ Consequences already applied in code: `execute(input, options?)` with `options?.
 | 2 | Node inside the image | v22.23.2 (docs say Node 20) | 1 |
 | 3 | The sandbox entrypoint spawns the user command and logs `User command failed exitCode:1` **without the command's stderr** — debug with `docker run --entrypoint sh … -c 'node …'` | lesson | 1 |
 | 4 | A `RUN a && b \|\| true` chain swallowed a failed `npm install` (no `ws`, no `node-pty`) — never `\|\| true` an install step | lesson | 1 |
+| 5 | node-pty 1.1.0 has **no linux prebuild for the image's Node 22 ABI** → `node-gyp rebuild` → needs `build-essential` (+ python3) in the image | fixed | 1 |
+| 6 | Our bridge inside the image: first WebSocket accepted → `hello` (incl. container start under amd64 emulation) | 1079 ms | 1 |
+| 7 | Command inside the image as `judge` (uid 1000): `whoami; id -u; echo probe_ok; false` → measured | exit 1 · 23 ms | 1 |
+| 8 | `--ttl-ms 20000` → session ended (error frame `timeout`) at | 20 735 ms | 1 |
 
 ## ChatGPT desktop (GPT-5.6 Sol/Terra) — not yet measured
 

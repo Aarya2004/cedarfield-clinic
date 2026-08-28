@@ -3,14 +3,14 @@ FROM docker.io/cloudflare/sandbox:0.12.9-python
 
 # zsh for shell integration (OSC 133), git/curl/jq for the demo, no sudo for the judge user.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends zsh git curl jq ca-certificates \
+  && apt-get install -y --no-install-recommends zsh git curl jq ca-certificates build-essential python3 \
   && rm -rf /var/lib/apt/lists/* \
   && useradd -m -s /bin/zsh -u 1000 judge \
   && echo 'export PS1="judge@rokan:%~ %# "' > /home/judge/.zshrc \
   && echo 'autoload -Uz compinit && compinit -u' >> /home/judge/.zshrc \
   && chown -R judge:judge /home/judge
 
-# Our bridge (synced from packages/bridge by scripts/sync-bridge.sh) — node-pty ships linux prebuilds.
+# Our bridge (synced from packages/bridge by scripts/sync-bridge.sh). node-pty has no linux prebuild for Node 22 here → node-gyp needs build-essential.
 COPY container/bridge /opt/bridge
 WORKDIR /opt/bridge
 # Fail loudly if deps do not install (a swallowed failure here cost an hour on 2026-08-28).

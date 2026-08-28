@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 12:40 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 13:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -10,7 +10,7 @@ Last update: **2026-08-28 12:40 PT** by C (Arav's Claude). Branch `main`, all pu
 | **A** — inert `terminal_propose` invoked by a consumer | 🟡 **Chrome half green; ChatGPT half blocked on human** | C → A | `docs/evidence/gate-a/`, `docs/FIELD-NOTES.md` |
 | B — terminal + ghost-typing E2E | 🟡 **headless half GREEN on a real PTY** (Chrome 152 + `packages/bridge` via `--no-tunnel`): pair → propose → ghost decoration → Enter → measured `exit_code`/`ms`/redacted tail → bridge countersign; Tab-insert/edit; dangerous double-Enter; Share-screen gate + `[redacted]` on a real `AWS_SECRET_ACCESS_KEY`; forged tool born → invoked → Enter → `exit 0` → `forge_list median_ms`. **Headed Chrome 152 via the real `executeTool` API also green** (ghost at the cursor 12 ms, Enter runs on the shell, `exit_code 1` back to the agent). Only the ChatGPT-desktop take (through a tunnel, recorded) needs Arav | C → A | `evals/cases/terminal-*.json` (98 steps), `docs/evidence/gate-b/*.png|jpg` |
 | C — forge → tool appears → invoked (**decoupled from B, PLAN §0.9**) | 🟡 **prompt-line half GREEN** (headless Chrome 152: `forge_create` → approve → `forged_hn_top` in `toolsAdded` → invoke → ghost text → Enter → `terminal_wait` executed → `forge_list runs:1`); live-terminal half after the Terminal plan; ChatGPT `toolchange` refresh unmeasured | C | `docs/evidence/gate-c/2026-08-28-forge-birth-chrome152.png`, `evals/cases/forge-*.json` (150 steps, 0 failed) |
-| D — judge mode live URL | ⬜ | C | — |
+| D — judge mode live URL | 🟡 **image green locally** (our bridge inside `cloudflare/sandbox:0.12.9-python`: hello 1079 ms, uid 1000 `judge`, honest `exit 1 · 23 ms`, TTL ends session); Worker + Gate typecheck/tests green; **deploy blocked on `! wrangler login`** | C → A | `infra/sandbox/scripts/smoke-image.sh` output in FIELD-NOTES |
 
 ## What is green right now (all measured — see FIELD-NOTES)
 
