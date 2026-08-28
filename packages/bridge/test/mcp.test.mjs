@@ -130,11 +130,13 @@ test('regression (Opus/Fable pass 2 P2): AgentLink reconnects after a bridge res
   await new Promise((r) => setTimeout(r, 300));
   assert.deepEqual(link.tools.map((t) => t.name), ['terminal_status']);
 
-  bridge.close(); // bridge goes away → list emptied, reconnect scheduled
-  await new Promise((r) => setTimeout(r, 200));
-  assert.equal(link.socket, null);
+  bridge.close(); // bridge goes away → list emptied, reconnect loop running
+  // Observable state only: `link.socket` flips between null and a fresh connecting socket every
+  // backoff tick (racy to snapshot — failed on Linux CI), so poll for the emptied list instead.
+  for (let i = 0; i < 50 && link.tools.length; i++) await new Promise((r) => setTimeout(r, 100));
   assert.deepEqual(link.tools, []);
-  await assert.rejects(() => link.call('terminal_status', {}), /not connected/);
+  assert.ok(lists.some((l) => l.length === 0), 'clients were never told the list emptied');
+  await assert.rejects(() => link.call('terminal_status', {}), /not connected|disconnected/);
 
   bridge = await startBridge({ port, token, ledgerDir, shell: '/bin/zsh' });
   for (let i = 0; i < 40 && !(link.socket && link.socket.readyState === 1); i++) await new Promise((r) => setTimeout(r, 100));
@@ -145,7 +147,6 @@ test('regression (Opus/Fable pass 2 P2): AgentLink reconnects after a bridge res
   publishOn(tab2);
   await new Promise((r) => setTimeout(r, 300));
   assert.deepEqual(link.tools.map((t) => t.name), ['terminal_status']);
-  assert.ok(lists.some((l) => l.length === 0), 'clients were never told the list emptied');
   link.close();
   tab2.close();
   bridge.close();
