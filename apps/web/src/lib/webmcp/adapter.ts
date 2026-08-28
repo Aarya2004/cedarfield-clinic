@@ -6,7 +6,7 @@
  * `gateAAdapter` keeps the page and the tools working with no shell attached.
  */
 import type { BridgeMode, BridgeStatus } from '@/lib/ws/protocol';
-import { proposals, type Proposal } from './proposals';
+import { proposals, type Proposal, type ProposeOptions } from './proposals.ts';
 
 export interface ResolvedProposal extends Proposal {
   /** Set by the real terminal once the command that followed Enter finished. */
@@ -25,18 +25,32 @@ export interface TerminalAdapter {
   /** Latest honest status frame from the bridge, or null when not paired. */
   status(): (BridgeStatus & { integration: boolean }) | null;
   /** Show `command` as ghost text on the prompt line. Never types Enter. */
-  ghostType(command: string, why?: string): Proposal;
+  ghostType(command: string, why?: string, opts?: ProposeOptions): Proposal;
   /** Resolve when the human hits Enter/Esc on that proposal (with exit info when available). */
   waitProposal(id: string, ms: number, signal?: AbortSignal): Promise<ResolvedProposal | null>;
+}
+
+let gateAShare = false;
+/** Gate A page's Share-screen toggle (no shell: the "screen" is the prompt history). */
+export function setGateAShare(on: boolean): void {
+  gateAShare = on;
+}
+export function getGateAShare(): boolean {
+  return gateAShare;
 }
 
 /** No shell, no bridge: proposals live in memory; Enter/Esc come from the page's key handler. */
 export const gateAAdapter: TerminalAdapter = {
   mode: 'builder',
-  shareScreen: () => false,
-  screenLines: () => [],
+  shareScreen: () => gateAShare,
+  screenLines: (n) =>
+    proposals
+      .snapshot()
+      .filter((p) => p.status !== 'queued')
+      .slice(-n)
+      .map((p) => `~ $ ${p.command}  # ${p.status}${p.status === 'accepted' ? ' (Gate A build: no shell attached)' : ''}`),
   status: () => null,
-  ghostType: (command, why) => proposals.propose(command, why),
+  ghostType: (command, why, opts) => proposals.propose(command, why, opts),
   waitProposal: (id, ms, signal) => proposals.wait(id, ms, signal),
 };
 

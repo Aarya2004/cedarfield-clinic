@@ -12,10 +12,14 @@ export type LedgerKind =
   | 'dismissed'
   | 'executed'
   | 'screen_read'
+  | 'registered'
+  | 'unregistered'
+  | 'forge_requested'
+  | 'forge_rejected'
   | 'forged'
   | 'invoked'
-  | 'registered'
-  | 'unregistered';
+  | 'restored'
+  | 'pinned';
 
 export interface LedgerRow {
   seq: number;
