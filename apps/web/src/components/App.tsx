@@ -14,6 +14,7 @@ import { Terminal } from './Terminal';
 import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
 import { LedgerPane, MobileCard, PairingCard, StatusBar, ToolsPane, useSession } from './Panes';
+import { Tour, tourRequested } from './Tour';
 
 const EMPTY: never[] = [];
 
@@ -63,6 +64,7 @@ export function App() {
   const [reg, setReg] = useState<RegistrationState | { kind: 'pending' }>({ kind: 'pending' });
   const [hooks, setHooks] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [tour, setTour] = useState<'unset' | 'on' | 'off'>('unset');
   const s = useSession();
   const cards = useCards();
   const notes = useFieldNotes();
@@ -70,6 +72,7 @@ export function App() {
 
   useEffect(() => {
     setHooks(installTestHooks());
+    if (tourRequested()) setTour('on');
     session.start();
     let dispose = () => {};
     registerTerminalTools(setReg).then((d) => (dispose = d));
@@ -77,6 +80,7 @@ export function App() {
   }, []);
 
   if (mobile) return <MobileCard />;
+  const showTour = tour === 'on' || (tour === 'unset' && s.hello?.mode === 'judge');
 
   const forgeThis = (lines: string[]) => {
     const first = lines[0]?.replace(/^[~$%❯#]\s*\$?\s*/, '') ?? '';
@@ -89,6 +93,7 @@ export function App() {
   return (
     <main className="mx-auto flex h-screen max-w-[1400px] flex-col gap-3 px-4 py-3">
       <StatusBar reg={reg} />
+      {showTour && <Tour judge={s.hello?.mode === 'judge'} onClose={() => setTour('off')} />}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)]">
         <div className="flex min-h-0 flex-col gap-3">
           {s.mode === 'live' && s.state !== 'busy' && s.state !== 'unauthorized' ? (

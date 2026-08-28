@@ -9,7 +9,7 @@
  * Restarts the built web app on :3311 for the run and stops everything afterwards.
  */
 import { spawn, spawnSync, execSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -87,7 +87,10 @@ const cases = readdirSync(`${root}evals/cases`)
   .sort();
 let failed = 0;
 for (const f of cases) {
-  const url = `http://localhost:${WEB_PORT}/?test=1${withBridge || judgeUrl ? pairingHash : ''}`;
+  // A case may start with {"query": "tour=1"} to add page query params for that run.
+  const first = JSON.parse(readFileSync(`${root}evals/cases/${f}`, 'utf8'))[0] ?? {};
+  const extraQuery = typeof first.query === 'string' ? `&${first.query}` : '';
+  const url = `http://localhost:${WEB_PORT}/?test=1${extraQuery}${withBridge || judgeUrl ? pairingHash : ''}`;
   const r = spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], { encoding: 'utf8' });
   const summary = r.stdout.trim().split('\n').pop();
   console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} ${f} ${summary}`);

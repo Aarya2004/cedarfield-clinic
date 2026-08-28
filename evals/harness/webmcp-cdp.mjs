@@ -63,7 +63,9 @@ const out = (o) => console.log(JSON.stringify(o));
 for (const step of steps) {
   const t0 = performance.now();
   try {
-    if (step.list) {
+    if (typeof step.query === 'string') {
+      out({ step: 'query', query: step.query }); // consumed by run-all.mjs (page URL params)
+    } else if (step.list) {
       out({ step: 'list', tools: [...tools.values()].map((t) => ({ name: t.name, annotations: t.annotations })), ms: Math.round(performance.now() - t0) });
     } else if (step.invoke) {
       const before = responded.length;

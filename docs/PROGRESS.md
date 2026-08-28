@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 13:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 13:50 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -29,7 +29,11 @@ Last update: **2026-08-28 13:10 PT** by C (Arav's Claude). Branch `main`, all pu
 
 ## Now / Next / Done / In flight (C builds everything — Arav 03:10 PT; Aarya takes the next *unstarted* item here, never a stale one)
 
-**Now (C, in flight):** `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
+**Done 13:50 PT:** `?tour=1` guided first-60-seconds (auto in judge mode; verified by real state; `evals/cases/tour.json`), `docs/SECURITY.md`, `AGENTS.md`, `docs/DEMO.md`, PLAN §3 synced. `wrangler deploy --dry-run` green.
+
+**Now (C, in flight):** MCP parity (PLAN §13.1) — `rokan-terminal mcp` serves the page's fixed + forged tools over stdio; bridge relays `agent_call`/`agent_result` between the MCP process and the tab; the page stays the single source of truth (no duplicated substitution logic). Files: `packages/bridge/{bin,src/mcp.js,src/protocol.js}`, `apps/web/src/lib/terminal/session.ts`, `apps/web/src/lib/webmcp/agent-relay.ts`.
+
+**Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 
 **Done since 03:30 PT:** forge engine + contracts + 6 fixed tools + test hooks + placeholder card + 5 harness cases (`1fe5ca7`…`faf5038`); both reviewers' first passes fixed (Opus 16/16 ticked, Fable 7/7 P1 + 6 P2 ticked below). `pnpm gate`: web 76/76 · bridge smoke 24/24 · evals 150 steps 0 failed.
 

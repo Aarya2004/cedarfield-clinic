@@ -1,0 +1,17 @@
+[
+  { "query": "tour=1" },
+  { "eval": "new URLSearchParams(location.search).get('tour')", "equals": "1" },
+  { "waitFor": "document.querySelector('[data-tour]') !== null", "timeout": 3000 },
+  { "eval": "document.querySelector('[data-tour]')?.textContent?.includes('First 60 seconds')", "equals": true },
+  { "eval": "document.querySelectorAll('[data-tour] li.line-through').length", "equals": 0 },
+  { "invoke": "terminal_propose", "input": { "command": "ls", "why": "tour step 1" } },
+  { "waitFor": "document.querySelectorAll('[data-tour] li.line-through').length === 1", "timeout": 2000 },
+  { "key": "Enter" },
+  { "waitFor": "document.querySelectorAll('[data-tour] li.line-through').length === 2", "timeout": 2000 },
+  { "invoke": "forge_create", "input": { "name": "lister", "description": "list files", "commands": ["ls"], "params": [], "kind": "read" } },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.tool; })()", "equals": "forged_lister" },
+  { "waitFor": "document.querySelectorAll('[data-tour] li.line-through').length === 3", "timeout": 2000 },
+  { "eval": "document.querySelector('[data-tour]')?.textContent?.includes('That is the whole product')", "equals": true },
+  { "eval": "(() => { document.querySelector('[data-tour-close]').click(); return true; })()", "equals": true },
+  { "waitFor": "document.querySelector('[data-tour]') === null", "timeout": 2000 }
+]
