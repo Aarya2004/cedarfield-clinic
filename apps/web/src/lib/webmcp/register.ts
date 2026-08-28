@@ -77,10 +77,12 @@ export async function registerTerminalTools(
           additionalProperties: false,
         },
         annotations: { readOnlyHint: true },
-        async execute(input: { proposal_id: string }, { signal }) {
+        async execute(input: { proposal_id: string }, options) {
           const start = performance.now();
           let aborted = false;
-          signal.addEventListener(
+          const signal = options?.signal;
+          if (!signal) note('terminal_wait.no_signal_from_consumer');
+          signal?.addEventListener(
             'abort',
             () => {
               aborted = true;

@@ -17,7 +17,8 @@ export interface ModelContextTool<In = Record<string, unknown>> {
   description: string;
   inputSchema?: Record<string, unknown>;
   annotations?: ToolAnnotations;
-  execute: (input: In, options: ToolExecuteOptions) => Promise<unknown>;
+  /** Chrome 152 passes no second argument (measured 2026-08-28); treat `options` as optional. */
+  execute: (input: In, options?: ToolExecuteOptions) => Promise<unknown>;
 }
 
 export interface RegisterToolOptions {
