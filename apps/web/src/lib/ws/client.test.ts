@@ -1,0 +1,158 @@
+// Run: node --experimental-strip-types --test src/lib/ws/client.test.ts
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { BridgeClient, type WebSocketLike } from './client.ts';
+
+class FakeSocket implements WebSocketLike {
+  static all: FakeSocket[] = [];
+  readyState = 0;
+  sent: string[] = [];
+  onopen: ((ev: unknown) => void) | null = null;
+  onmessage: ((ev: { data: unknown }) => void) | null = null;
+  onclose: ((ev: { code: number; reason: string }) => void) | null = null;
+  onerror: ((ev: unknown) => void) | null = null;
+  url: string;
+  constructor(url: string) {
+    this.url = url;
+    FakeSocket.all.push(this);
+  }
+  send(d: string) {
+    this.sent.push(d);
+  }
+  close(code = 1000, reason = '') {
+    this.readyState = 3;
+    this.onclose?.({ code, reason });
+  }
+  open() {
+    this.readyState = 1;
+    this.onopen?.(undefined);
+  }
+  frame(obj: unknown) {
+    this.onmessage?.({ data: JSON.stringify(obj) });
+  }
+  hello() {
+    this.frame({ type: 'hello', mode: 'builder', shell: 'zsh', cwd: '/home', pid: 1, session_id: 's', version: 1, integration: true });
+  }
+  parsed() {
+    return this.sent.map((s) => JSON.parse(s) as { type: string; [k: string]: unknown });
+  }
+}
+
+const tick = (ms = 3) => new Promise((r) => setTimeout(r, ms));
+
+function make(extra: Partial<ConstructorParameters<typeof BridgeClient>[0]> = {}) {
+  FakeSocket.all = [];
+  const states: string[] = [];
+  const client = new BridgeClient({ ws: 'ws://127.0.0.1:7331', token: 'a'.repeat(32), cols: 80, rows: 24, makeSocket: (u) => new FakeSocket(u), backoffMs: [2, 4, 8], giveUpMs: 1000, pingMs: 5, ...extra });
+  client.on('state', (s) => states.push(s));
+  return { client, states, sock: () => FakeSocket.all[FakeSocket.all.length - 1] };
+}
+
+test('auth is the first frame; hello → paired; pairMs measured; input queued while connecting is flushed', async () => {
+  const { client, states, sock } = make();
+  client.connect();
+  assert.equal(client.state, 'connecting');
+  client.sendInput('ls\r'); // queued
+  sock().open();
+  assert.equal(sock().parsed()[0].type, 'auth');
+  assert.equal(sock().parsed()[0].cols, 80);
+  sock().hello();
+  assert.equal(client.state, 'paired');
+  assert.ok(typeof client.pairMs === 'number' && client.pairMs >= 0);
+  assert.deepEqual(sock().parsed().map((f) => f.type), ['auth', 'input']);
+  assert.deepEqual(states, ['connecting', 'paired']);
+  client.close();
+  assert.equal(client.state, 'closed');
+});
+
+test('data/status/exit frames are surfaced; lastStatus kept; ping every pingMs while paired', async () => {
+  const { client, sock } = make();
+  const got: string[] = [];
+  client.on('data', (d) => got.push(d));
+  client.on('exit', (c) => got.push(`exit:${c}`));
+  client.connect();
+  sock().open();
+  sock().hello();
+  sock().frame({ type: 'data', data: 'hi' });
+  sock().frame({ type: 'status', cwd: '/x', running: false, last_exit_code: 1, last_command_ms: 5, last_command: 'false' });
+  sock().frame({ type: 'exit', code: 0 });
+  assert.deepEqual(got, ['hi', 'exit:0']);
+  assert.equal(client.lastStatus?.last_exit_code, 1);
+  await tick(14);
+  assert.ok(sock().parsed().filter((f) => f.type === 'ping').length >= 2);
+  client.close();
+});
+
+test('busy and unauthorized are terminal; no auto-reconnect', async () => {
+  const a = make();
+  a.client.connect();
+  a.sock().open();
+  a.sock().frame({ type: 'error', code: 'busy', message: 'x' });
+  a.sock().close(4409, 'busy');
+  await tick(20);
+  assert.equal(a.client.state, 'busy');
+  assert.equal(FakeSocket.all.length, 1);
+
+  const b = make();
+  b.client.connect();
+  b.sock().open();
+  b.sock().close(4401, 'bad token');
+  await tick(20);
+  assert.equal(b.client.state, 'unauthorized');
+  assert.equal(FakeSocket.all.length, 1);
+});
+
+test('unexpected close → disconnected → reconnect with backoff 2,4,8,8; reconnect count; give up after giveUpMs', async () => {
+  const { client, states, sock } = make({ giveUpMs: 40 });
+  client.connect();
+  sock().open();
+  sock().hello();
+  sock().close(1006, '');
+  assert.equal(client.state, 'disconnected');
+  assert.ok(client.reconnectAt !== null);
+  await tick(3); // 2 ms backoff
+  assert.equal(FakeSocket.all.length, 2);
+  sock().open();
+  sock().hello();
+  assert.equal(client.state, 'paired');
+  assert.equal(client.reconnects, 1);
+  // now fail repeatedly until give-up
+  for (let i = 0; i < 8; i++) {
+    sock().close(1006, '');
+    await tick(12);
+  }
+  assert.equal(client.state, 'disconnected');
+  const n = FakeSocket.all.length;
+  await tick(30);
+  assert.equal(FakeSocket.all.length, n, 'no more sockets after give-up');
+  assert.equal(client.reconnectAt, null);
+  assert.ok(states.includes('disconnected'));
+  client.close();
+});
+
+test('reconnectNow from busy re-attempts; auth timeout closes as unauthorized', async () => {
+  const { client, sock } = make();
+  client.connect();
+  sock().open();
+  sock().frame({ type: 'error', code: 'busy', message: 'x' });
+  sock().close(4409, 'busy');
+  client.reconnectNow();
+  assert.equal(client.state, 'connecting');
+  assert.equal(FakeSocket.all.length, 2);
+  client.close();
+});
+
+test('ledger forward + countersign callback; resize sent only when paired', () => {
+  const acks: [number, number, string][] = [];
+  const { client, sock } = make({ onCountersign: (c, b, s) => acks.push([c, b, s]) });
+  assert.equal(client.forwardLedger({ seq: 1, t: 't', session: 's', kind: 'proposed', fields: {}, prev: '', sig: 'x' }), false);
+  client.connect();
+  sock().open();
+  sock().hello();
+  client.resize(100, 30);
+  assert.equal(client.forwardLedger({ seq: 1, t: 't', session: 's', kind: 'proposed', fields: {}, prev: '', sig: 'x' }), true);
+  sock().frame({ type: 'ledger_ack', seq: 9, sig: 'b'.repeat(64), client_seq: 1 });
+  assert.deepEqual(acks, [[1, 9, 'b'.repeat(64)]]);
+  assert.deepEqual(sock().parsed().map((f) => f.type), ['auth', 'resize', 'ledger']);
+  client.close();
+});

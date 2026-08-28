@@ -21,7 +21,10 @@ export type LedgerKind =
   | 'forged'
   | 'invoked'
   | 'restored'
-  | 'pinned';
+  | 'pinned'
+  | 'paired'
+  | 'disconnected'
+  | 'reconnected';
 
 export interface LedgerRow {
   seq: number;

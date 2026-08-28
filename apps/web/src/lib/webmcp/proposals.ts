@@ -15,6 +15,8 @@ export interface Proposal {
   proposedAt: number;
   resolvedAt?: number;
   reason?: DismissReason;
+  /** accepted after the human inserted the ghost text with Tab and possibly edited it */
+  edited?: boolean;
   dangerous?: boolean;
   invocation_id?: string;
   step?: number;
@@ -82,7 +84,7 @@ export class ProposalStore {
     return next;
   }
 
-  resolve(id: string, status: 'accepted' | 'dismissed', reason?: DismissReason): void {
+  resolve(id: string, status: 'accepted' | 'dismissed', reason?: DismissReason, opts: { edited?: boolean } = {}): void {
     const p = this.get(id);
     if (!p || (p.status !== 'awaiting_human' && p.status !== 'queued')) return;
     if (p.status === 'queued' && status === 'accepted') return; // a queued step cannot be accepted before it is shown
@@ -91,6 +93,7 @@ export class ProposalStore {
       status,
       resolvedAt: performance.now(),
       ...(status === 'dismissed' ? { reason: reason ?? 'dismissed_by_human' } : {}),
+      ...(status === 'accepted' && opts.edited ? { edited: true } : {}),
     };
     this.items = this.items.map((x) => (x.id === id ? next : x));
     this.emit();

@@ -156,6 +156,10 @@ export type TerminalWaitResult =
       /** set when the proposal was a step of a forged invocation */
       invocation_id?: string;
       next_proposal_id?: string | null;
+      /** the human inserted the ghost text with Tab and edited it before Enter */
+      edited?: boolean;
+      /** the bridge disconnected before the end marker; exit_code is null, tail is partial */
+      interrupted?: boolean;
     };
 
 export const TERMINAL_WAIT_DESCRIPTION =

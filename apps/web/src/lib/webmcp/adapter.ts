@@ -14,6 +14,10 @@ export interface ResolvedProposal extends Proposal {
   ms?: number | null;
   /** Raw (un-redacted) lines printed after Enter. `register.ts` redacts before returning. */
   tail?: string[];
+  /** the bridge disconnected before the command's end marker arrived */
+  interrupted?: boolean;
+  /** the human inserted the ghost text (Tab) and edited before running */
+  edited?: boolean;
 }
 
 export interface TerminalAdapter {

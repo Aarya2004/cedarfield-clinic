@@ -212,6 +212,8 @@ export async function registerTerminalTools(onState: (s: RegistrationState) => v
             ms: p.ms ?? null,
             tail,
             shared,
+            ...(p.edited ? { edited: true } : {}),
+            ...(p.interrupted ? { interrupted: true } : {}),
             ...(p.invocation_id ? { invocation_id: p.invocation_id, next_proposal_id: next } : {}),
           };
         },
