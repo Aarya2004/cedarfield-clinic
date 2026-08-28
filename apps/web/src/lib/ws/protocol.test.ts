@@ -40,3 +40,13 @@ test('extra hosts (named tunnel / sandbox) are exact-match wss only', () => {
   assert.equal(isAllowedBridgeUrl('ws://bridge.rokan.dev', ['bridge.rokan.dev']), false);
   assert.equal(parsePairingHash(`#ws=wss%3A%2F%2Fbridge.rokan.dev&t=${tok}`, ['bridge.rokan.dev'])?.ws, 'wss://bridge.rokan.dev');
 });
+
+test('regression (judge mode, 2026-08-28): the Worker WS URL `/ws/<signed sid>` is allowed only on a configured judge host', () => {
+  const judge = 'wss://rokan-sandbox.rokan-sandbox.workers.dev/ws/2629e05271f6f70ea51d3e13.1787951905.c65acab2f6cf630c';
+  assert.equal(isAllowedBridgeUrl(judge, ['rokan-sandbox.rokan-sandbox.workers.dev']), true);
+  assert.equal(isAllowedBridgeUrl(judge, []), false);
+  assert.equal(isAllowedBridgeUrl('wss://rokan-sandbox.rokan-sandbox.workers.dev/api/health', ['rokan-sandbox.rokan-sandbox.workers.dev']), false);
+  assert.equal(isAllowedBridgeUrl('wss://rokan-sandbox.rokan-sandbox.workers.dev/ws/x?t=1', ['rokan-sandbox.rokan-sandbox.workers.dev']), false);
+  assert.equal(isAllowedBridgeUrl('ws://127.0.0.1:7331/ws/abc', []), false); // a path on localhost is not a bridge
+  assert.equal(isAllowedBridgeUrl('wss://abc.trycloudflare.com/ws/abc', []), false);
+});

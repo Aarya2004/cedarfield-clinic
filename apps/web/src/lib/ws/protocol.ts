@@ -117,12 +117,15 @@ export function isAllowedBridgeUrl(ws: string, extraHosts: readonly string[] = [
     return false;
   }
   if (u.username || u.password || u.search || u.hash) return false;
-  if (u.pathname !== '/' && u.pathname !== '') return false;
   const host = u.hostname.toLowerCase();
-  if (u.protocol === 'ws:') return host === '127.0.0.1' || host === 'localhost' || host === '[::1]';
+  const rootPath = u.pathname === '/' || u.pathname === '';
+  if (u.protocol === 'ws:') return rootPath && (host === '127.0.0.1' || host === 'localhost' || host === '[::1]');
   if (u.protocol !== 'wss:') return false;
-  if (/^[a-z0-9-]+\.trycloudflare\.com$/.test(host)) return true;
-  return extraHosts.some((h) => h.toLowerCase() === host);
+  if (/^[a-z0-9-]+\.trycloudflare\.com$/.test(host)) return rootPath;
+  // The judge Worker proxies at `/ws/<signed sid>` — a path is allowed there and only there
+  // (measured 2026-08-28: the live sandbox paired over the proxy but the page refused the URL).
+  const judgePath = rootPath || /^\/ws\/[a-f0-9.]{1,96}$/.test(u.pathname);
+  return judgePath && extraHosts.some((h) => h.toLowerCase() === host);
 }
 
 /** Extra bridge hosts allowed by deployment config (the judge Worker), comma-separated. */
