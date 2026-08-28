@@ -156,3 +156,23 @@ Full report: `docs/reviews/2026-08-28-fable-1.md`. Gate re-run cold at `4a6e8a6`
 - [ ] P2 — `evals/run-all.mjs:6` — hard-kills :3311 (collides with a second reviewer / Aarya's server); take a port — Fable [C]
 - [ ] P2 — `docs/PLAN.md` §4 — "`sudo` in judge mode" hard-block is not implemented anywhere — Fable [C]
 - [ ] P2 — `evals/harness/webmcp-cdp.mjs:60` — no case exercises the JSON-**string** input path (`coerceInput`) that spec-level `executeTool` / ChatGPT use — Fable [C]
+
+## Review findings (open) — Opus 5 reviewer, pass 2, 2026-08-28
+
+Full report: `docs/reviews/2026-08-28-opus-2.md`. Reproduced from a clean pull at `7a32314`:
+web **98/98** · bridge smoke **28/28 in 2157 ms** + 2 MCP tests · evals **6 cases / 174 steps / 0
+failed / 0 pageErrors**. Pass-#1 P0s confirmed closed *with* regression tests (nested-object tamper,
+key-order independence, cwd gated on Share-screen). Findings 1 and 2 are invisible to all 98 tests
+and all 174 eval steps.
+
+- [ ] P1 — `apps/web/src/lib/terminal/adapter.ts:85,90` — an in-flight proposal only finishes on OSC 133;C **and** a `running:false` status, both zsh-only; with bash (measured: 0 status frames, no 133;C) `inflight` never clears and `acceptProposal` returns false forever — the first agent proposal permanently wedges the terminal on any non-zsh shell — Opus [C]
+- [ ] P1 — `apps/web/src/lib/webmcp/forge.ts:447` — forged-tool step rows are appended as kind `executed`, but `CLIENT_LEDGER_KINDS` (`ws/protocol.ts:24`) accepts `executed_step` and nothing in the repo produces that, so the hero shot's "forged tool ran, exit 0" rows are silently dropped at `session.ts:93`, never countersigned, and will read as un-countersigned in `rokan-terminal verify` — Opus [C]
+- [ ] P1 — `infra/sandbox/src/worker.ts:37,57` — `cors()` omits headers for a disallowed origin but the handler still runs; a cross-origin simple `POST /api/session` burns a visitor's 1-per-10-min Gate quota, so any page a judge visits can deny them a sandbox. Return 403 before `gate.allow()` — Opus [C]
+- [ ] P2 — `infra/sandbox/src/worker.ts:102` — `/ws/:sid` instantiates a Sandbox DO for any well-formed sid with no Gate and no ownership check, outside the rate limiter (bridge token still blocks PTY access; unverified against a live deploy) — Opus [C]
+- [ ] P2 — `infra/sandbox/src/worker.ts:93` — `DELETE /api/session/:sid` has no ownership check and releases on the *caller's* Gate DO, so a third party who learns a sid destroys the victim's sandbox while the victim stays rate-limited — Opus [C]
+- [ ] P2 — `packages/bridge/src/mcp.js:108` — `destructiveHint: !readOnlyHint` marks the inert `terminal_propose` destructive over MCP while WebMCP calls it non-destructive: one registry, two protocols, two safety claims — Opus [C]
+- [ ] P2 — `apps/web/src/components/Terminal.tsx:226` — `dir="auto"` on the ghost overlay lets a leading strong-RTL *letter* (not a Cf char, so `validateProposedCommand` passes it) flip render order → displayed ≠ executed; use `dir="ltr"` — Opus [C]
+- [ ] P2 — `apps/web/src/lib/webmcp/ledger.ts:12` vs `ws/protocol.ts:24` — client `LedgerKind` permits `executed` (bridge drops it) and omits `executed_step` (bridge accepts it); the enums are not the same set — root cause of the finding above — Opus [C]
+- [ ] P2 — `apps/web/src/lib/ws/client.ts:164` — ping `setInterval` assigned without clearing an existing timer; a duplicate `hello` leaks an interval and doubles the ping rate — Opus [C]
+- [ ] P2 — `apps/web/src/lib/ws/client.ts:251` — input queued during `connecting` is flushed on `hello`, so after a shell respawn those bytes land in a different shell than the one the human was typing at — Opus [C]
+- [ ] P2 — `packages/bridge/src/mcp.js:42` — `AgentLink` never reconnects; after a bridge restart the MCP server serves a stale tool list and every call rejects with no recovery — Opus [C]
