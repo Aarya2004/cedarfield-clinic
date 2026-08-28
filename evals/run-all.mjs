@@ -101,8 +101,8 @@ for (const f of cases) {
     console.log(
       r.stdout
         .split('\n')
-        .filter((l) => l.includes('"ok":false') || l.includes('NO_RESPONSE') || l.includes('CDP_ERROR') || l.includes('"error"'))
-        .slice(0, 6)
+        .filter((l) => l.includes('"ok":false') || l.includes('"diag"') || l.includes('NO_RESPONSE') || l.includes('CDP_ERROR') || l.includes('"error"'))
+        .slice(0, 8)
         .join('\n'),
     );
     if (r.stderr) console.log(r.stderr.slice(0, 500));

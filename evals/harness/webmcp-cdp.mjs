@@ -61,6 +61,17 @@ await sleep(2000);
 
 let failed = 0;
 const out = (o) => console.log(JSON.stringify(o));
+// On the first failure of a run, dump what the page knows (session, last status, pending proposal,
+// screen tail, recent field notes) so a remote failure (judge sandbox) is diagnosable from the log.
+const DIAG = "(() => { const r = window.__rokan; if (!r) return 'no test hooks'; const s = r.session(); return { state: s.state, mode: s.mode, host: s.host, hello: s.hello && { mode: s.hello.mode, shell: s.hello.shell, integration: s.hello.integration }, lastStatus: s.lastStatus, reconnects: s.reconnects, reconnectAt: s.reconnectAt, share: s.share, pending: r.proposals.pending(), lineEmpty: !!document.querySelector('[data-ghost]'), screen: r.screen(8) ?? null, notes: r.fieldNotes().slice(-14) }; })()";
+let diagDone = false;
+const fail = async () => {
+  failed++;
+  if (!diagDone) {
+    diagDone = true;
+    try { out({ diag: await evalJs(DIAG) }); } catch (e) { out({ diag: `diag failed: ${e instanceof Error ? e.message : String(e)}` }); }
+  }
+};
 for (const step of steps) {
   const t0 = performance.now();
   try {
@@ -89,7 +100,7 @@ for (const step of steps) {
       const output = r?.output ?? r?.exception?.description ?? inv.error?.message ?? null;
       let ok = status === (step.expectStatus ?? 'Completed');
       if (ok && step.outputMatches && !new RegExp(step.outputMatches).test(JSON.stringify(output))) ok = false;
-      if (!ok) failed++;
+      if (!ok) await fail();
       out({ step: 'invoke', tool: step.invoke, input, status, output, ...(step.outputMatches ? { outputMatches: step.outputMatches, ok } : {}), ms: Math.round(performance.now() - t0) });
     } else if (step.focus) {
       // Explicit only. Harness rule: never arrange a precondition a human would not have.
@@ -119,7 +130,7 @@ for (const step of steps) {
         await sleep(50);
       }
       const ok = !!v;
-      if (!ok) failed++;
+      if (!ok) await fail();
       out({ step: 'waitFor', expr: step.waitFor, ok, value: v, ms: Math.round(performance.now() - t0) });
     } else if (step.key) {
       await send('Input.dispatchKeyEvent', { type: 'keyDown', key: step.key, code: step.key, windowsVirtualKeyCode: step.key === 'Enter' ? 13 : step.key === 'Escape' ? 27 : 0 });
@@ -128,14 +139,14 @@ for (const step of steps) {
     } else if (step.eval) {
       const value = await evalJs(step.eval);
       const ok = 'equals' in step ? JSON.stringify(value) === JSON.stringify(step.equals) : 'matches' in step ? new RegExp(step.matches).test(String(value)) : true;
-      if (!ok) failed++;
+      if (!ok) await fail();
       out({ step: 'eval', expr: step.eval, value, ...('equals' in step ? { equals: step.equals, ok } : {}), ...('matches' in step ? { matches: step.matches, ok } : {}), ms: Math.round(performance.now() - t0) });
     } else if (step.sleep) {
       await sleep(step.sleep);
       out({ step: 'sleep', ms: step.sleep });
     } else if (step.expect) {
       const ok = step.expect.tool ? tools.has(step.expect.tool) : step.expect.noTool ? !tools.has(step.expect.noTool) : false;
-      if (!ok) failed++;
+      if (!ok) await fail();
       out({ step: 'expect', expect: step.expect, ok, tools: [...tools.keys()] });
     }
   } catch (e) {
