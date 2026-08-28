@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 21:20 PT** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
+Last update: **2026-08-28 21:50 PT** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
 
 ## Gates
 
@@ -49,6 +49,8 @@ Last update: **2026-08-28 21:20 PT** by C (Arav's Claude, Fable 5 — owns the w
 **Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 
 **Done since 03:30 PT:** forge engine + contracts + 6 fixed tools + test hooks + placeholder card + 5 harness cases (`1fe5ca7`…`faf5038`); both reviewers' first passes fixed (Opus 16/16 ticked, Fable 7/7 P1 + 6 P2 ticked below). `pnpm gate`: web 76/76 · bridge smoke 24/24 · evals 150 steps 0 failed.
+
+**Next — needs Arav's go (Docker build ≈ 10–20 min of pinned CPU under amd64 emulation, and Workers Paid to deploy):** `rokan do` inside the judge container (Gate D "seeded, `calls:0` on replay"): build the three wheels from a scratch copy of `~/dev/Rokan/packages/{rokan-mcp,rokan-agent,rokan-do}` (`uv build`, Rokan's tree untouched) → `vendor/`; Dockerfile adds `uv` + the wheels + `playwright install --with-deps chromium` (~400 MB; `instance_type: basic` = 1 GiB RAM — measure one replay under ¼ vCPU before promising a number) + `rokan-do seed install` at build + Rokan's `SKILL.md` into the seed dir; `allowedHosts` += the seeded hosts to be demoed (githubstatus.com, pypi.org, docs.github.com …); then `pnpm smoke:image` once. Everything else in HANDOFF §7 that does not need a human is done (below).
 
 **Next (in order, all C unless Aarya claims one here first):** Terminal plan (xterm + WS client + real `TerminalAdapter` + ghost overlay + card UX + Share-screen + states) → judge sandbox (`infra/sandbox`) → `rokan do` seeded + `--json` → §13 upgrades → test protocol → README/GIF → rehearsals + backup video → Devpost.
 
