@@ -202,10 +202,14 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
           return ws.close(CLOSE.UNAUTHORIZED, 'bad token');
         }
         if (f.role === 'agent') {
-          // MCP relay socket: never the PTY. One at a time; replaces a dead one.
+          // MCP relay socket: never the PTY. One at a time — the newest process with the valid token
+          // wins (Codex CLI lists MCP tools once per session, so a forged tool needs a NEW session;
+          // the old session's relay must not block it — measured 2026-08-29).
           if (agent && agent.readyState === agent.OPEN) {
-            send(ws, { type: 'error', code: 'busy', message: 'an agent process is already connected' });
-            return ws.close(CLOSE.BUSY, 'busy');
+            const old = agent;
+            send(old, { type: 'error', code: 'replaced', message: 'another agent process connected with your token; this one was released' });
+            old.close(CLOSE.REPLACED, 'replaced');
+            log('agent (MCP) replaced by a newer process');
           }
           authed = true;
           ws.role = 'agent';

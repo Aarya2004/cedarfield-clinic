@@ -68,7 +68,7 @@ test('MCP parity: tools published by the tab are listed over stdio; a call is re
   bridge.close();
 });
 
-test('agent role: input frames are refused; a second agent is busy; the tab absent → error result', async () => {
+test('agent role: input frames are refused; a second agent process takes over (the first is told replaced); the tab absent → error result', async () => {
   const token = randomBytes(16).toString('hex');
   const port = 21000 + Math.floor(Math.random() * 20000);
   const bridge = await startBridge({ port, token, ledgerDir: mkdtempSync(join(tmpdir(), 'rokan-mcp2-')), shell: '/bin/zsh' });
@@ -101,8 +101,11 @@ test('agent role: input frames are refused; a second agent is busy; the tab abse
   assert.match(noTab?.error ?? '', /no tab/);
   const b = await open();
   b.s.send(JSON.stringify({ type: 'auth', token, role: 'agent' }));
-  const busy = await until(b.frames, (f) => f.type === 'error' && f.code === 'busy');
-  assert.ok(busy);
+  // newest agent process wins; the first is told `replaced` (Codex CLI needs a new session to see forged tools)
+  const helloB = await until(b.frames, (f) => f.type === 'hello');
+  assert.ok(helloB, 'second agent must be accepted');
+  const replaced = await until(a.frames, (f) => f.type === 'error' && f.code === 'replaced', 2000);
+  assert.ok(replaced, 'first agent must be told replaced');
   a.s.close();
   b.s.close();
   bridge.close();
