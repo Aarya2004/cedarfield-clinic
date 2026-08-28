@@ -81,3 +81,50 @@ Drop `--no-tunnel` to get a `wss://…trycloudflare.com` link (≈ 15–20 s, wa
 ## Objections
 
 - None from C yet. (D1 above is a recommendation on pitch framing, not an objection to a locked decision.)
+
+## Review findings (open) — Opus 5 reviewer, 2026-08-28
+
+Full report: `docs/reviews/2026-08-28-opus-1.md`. Gate re-run from a cold build before reviewing:
+`pnpm gate` green — typecheck/lint clean, web 34/34, smoke 14/14 (496 ms), evals 0 failed. Every
+PROGRESS claim reproduced.
+
+- [ ] P0 — `packages/bridge/src/ledger.js:16` — `canonical()` uses `JSON.stringify(obj, keys)`, a *recursive key allowlist*, so nested object keys are dropped from the digest: a `forged {params:[{…}]}` row can be rewritten and `verifyLedger()` still returns `ok:true` (proven; smoke only tampers a top-level scalar, so 14/14 is false confidence) — Opus [C's lane]
+- [ ] P0 — `apps/web/src/lib/webmcp/ledger.ts:104` — `export()` ships `key_hex` beside the rows it authenticates (and mirrors both to localStorage), so anyone who edits rows can re-sign; use the bridge's `ledger_ack` sig (key the page never sees) as the real countersignature and stop claiming tamper-proof — Opus [C's lane]
+- [ ] P1 — `apps/web/src/lib/ws/protocol.ts:79` — `parsePairingHash` validates scheme + token shape but **not the host**, so `#ws=wss://evil/&t=<hex>` connects the terminal to an attacker: keystroke exfiltration + spoofed screen. Allowlist the host before the WS client is written — Opus [Ay's lane, contract file]
+- [ ] P1 — `apps/web/next.config.ts` + `bin/rokan-terminal.js:62` — pairing token stays in `location.hash` (readable by any third-party script — the exact arXiv 2606.06387 vector we cite) with no CSP, and **will be on camera in the demo video / evidence screenshots**; `history.replaceState` after parse + a real CSP — Opus [C's lane]
+- [ ] P1 — `apps/web/src/lib/webmcp/register.ts:74` — `isDangerous()` is never called on the proposal path, so `rm -rf /` ghost-types with no red banner and no second confirmation; PLAN §4 + T2.2 currently fail — Opus [C's lane]
+- [ ] P1 — `.github/workflows/ci.yml` — CI never runs `pnpm --filter web test` or the evals, so the 12 redaction tests guarding the security choke point can regress on `main` silently — Opus [C's lane]
+- [ ] P1 — `README.md` — describes `infra/sandbox` and `vendor/` wheels; both directories are empty. Judges read the README first and §0.6 is "say the true thing" — Opus [C's lane]
+- [ ] P1 — `apps/web/src/components/TerminalTools.tsx:62` — Enter/Esc only work after the human clicks the section (no autofocus, no document-level handler); the harness passes only because `webmcp-cdp.mjs:67` focuses it explicitly. Green tests, dead demo — the April 23 shape — Opus [Ay's lane]
+- [ ] P2 — `docs/PLAN.md` §3 — contract drift: row 4 + T2.4 say 120 s, `WAIT_DEFAULT_MS` is 45 s; rows 2/4 return shapes omit `redactions`/`truncated`/`reason`/`still_waiting` — Opus [C's lane]
+- [ ] P2 — `apps/web/src/lib/webmcp/register.ts:130` — `terminal_status` returns `cwd` ungated and unredacted, bypassing both the Share-screen gate and the `redactForAgent` choke point — Opus [C's lane]
+- [ ] P2 — `ledger.ts` (both) — client nests under `fields`, bridge spreads flat + sorts: the "same row in both ledgers" can never be cross-verified — Opus [C's lane]
+- [ ] P2 — `apps/web/src/lib/webmcp/ledger.ts:90` — one rejected append poisons `this.chain` forever and every caller is `void`-ed, so the ledger dies silently (trigger: `crypto.subtle` undefined on a non-localhost http:// origin, e.g. LAN testing) — Opus [C's lane]
+- [ ] P2 — `apps/web/src/lib/webmcp/register.ts` — nothing serialises `terminal_propose`; a second proposal strands the first, whose `terminal_wait` returns `still_waiting` forever — Opus [C's lane]
+- [ ] P2 — `packages/bridge/src/shell-integration.js:96` — `feed()` discards a trailing lone ESC, losing an OSC marker split at exactly that byte; line 25 leaks one temp ZDOTDIR per run — Opus [C's lane]
+- [ ] P2 — `packages/bridge/src/bridge.js:101` — idle timeout closes the socket but leaves the process and the **public tunnel** alive indefinitely — Opus [C's lane]
+- [ ] P2 — `evals/run-all.mjs:6` / `evals/harness/webmcp-cdp.mjs:44` — `new URL().pathname` instead of `fileURLToPath`; `send()` has no timeout so a stalled Chrome hangs the run forever — Opus [C's lane]
+
+## Review findings (open) — Fable 5 reviewer, 2026-08-28 (does not repeat the Opus list above)
+
+Full report: `docs/reviews/2026-08-28-fable-1.md`. Gate re-run cold at `4a6e8a6`/`1fe5ca7`: typecheck/lint clean, web 27→50 tests green, smoke 14/14 (495 ms), Gate A harness 14 steps 0 failed on an isolated :3399 build. New measured Chrome 152 rows (abort → `toolsRemoved` yes; `toolchange` fires on abort; duplicate name w/o abort → `InvalidStateError`) are in the report's "Measured" table — copy into FIELD-NOTES.
+
+- [ ] P1 — `apps/web/src/lib/webmcp/redact.ts:48` — `kv_secret` puts `\b` *before* the keyword, so `AWS_SECRET_ACCESS_KEY=`, `VERCEL_TOKEN=`, `CLOUDFLARE_API_TOKEN=`, `PGPASSWORD=`, JSON `"password": "…"`, `postgres://u:p@`, `sk_live_`, `AIza…` all leak — 18 of 29 realistic lines measured leaking; PLAN §4 promises `token=` is redacted — Fable [C]
+- [ ] P1 — `packages/bridge/src/shell-integration.js:130` — `decodeURIComponent` on the raw OSC 7 path throws `URIError` inside `term.onData` → `rokan-terminal` dies on `cd` into any dir with `%` (reproduced, real PTY) — Fable [C]
+- [ ] P1 — `packages/bridge/src/bridge.js:78,126` — after the shell exits, the next tab that pairs calls `term.resize` on a dead PTY → uncaught `ioctl(2) failed`, bridge dies (reproduced) — Fable [C]
+- [ ] P1 — `apps/web/src/lib/webmcp/forge-spec.ts:170` — `substituteLine` doesn't model `$'…'`; value `a\'; touch X #` in template `echo $'{{x}}'` executes `touch` in zsh **and** bash (reproduced); reject `$'`/`$"` templates at forge time — Fable [C]
+- [ ] P1 — `apps/web/src/lib/webmcp/register.ts:163` — `terminal_wait` on an unknown id returns `still_waiting` (1 ms) forever instead of the typed `unknown_proposal`; agent loops — Fable [C; FORGE-PLAN §3.4 lists it — verify when the in-flight register.ts lands]
+- [ ] P1 — `apps/web/src/lib/webmcp/register.ts:79` + `TerminalTools.tsx:76` — `why` is not sanitised (only sliced); U+202E + ESC in `why` render on the prompt line beside the command (reproduced via CDP) — Fable [C validates, Ay isolates the span]
+- [ ] P1 — `packages/bridge/src/bridge.js:152` + `ledger.js:33` — client `ledger` rows spread *after* `seq/t/session/kind/origin`, so a client can write `origin:'bridge', kind:'executed', session:'other', seq:1` and `verifyLedger` stays ok (reproduced); allowlist `kind`, strip reserved keys — Fable [C]
+- [ ] P2 — `schemas.ts:68` — `DANGEROUS_PATTERNS` pass `rm -rf /*`, `rm -rf ~`, `rm -rf $HOME`, `rm -Rf /`, `rm -r -f /`, `chmod -R 777 /`, `find / -delete` (measured) — Fable [C]
+- [ ] P2 — `forge-spec.ts:65` — `MUTATING_RE` `>>?\s*\S` flags `2>&1` / `2>/dev/null`, turning read tools into `CONSEQUENTIAL` writes (measured) — Fable [C]
+- [ ] P2 — `forge.ts:264-316` — a rejected `registerTool` (Chrome throws `Duplicate tool name` without a prior abort — measured) leaves a phantom `visible` tool in `toolMap` and the error escapes `approve()`; roll back + typed error — Fable [C]
+- [ ] P2 — `forge.ts:240` — `forged` ledger row stores a command *count*, not the commands; the "traceable log of registration" can't show what was registered — Fable [C]
+- [ ] P2 — `forge.ts:346` — `unforge` of the tool whose invocation is active leaves `activeInv` set; everything else stays `busy` — Fable [C]
+- [ ] P2 — `packages/bridge/src/bridge.js:175` — no `'error'` on `http.listen`: stale bridge on 7331 → `EADDRINUSE` stack, process dies (measured) — Fable [C]
+- [ ] P2 — `packages/bridge/src/bridge.js:88` — no `Origin` check on the WS upgrade (defence in depth for a leaked fragment) — Fable [C]
+- [ ] P2 — `TerminalTools.tsx:32` — unmount before `registerTerminalTools` resolves leaks the AbortController (dispose captured before assignment); not reproduced in dev, code path only — Fable [Ay]
+- [ ] P2 — `docs/FORGE-PLAN.md` §4.3 vs `forge-spec.ts` — plan says quoted placeholders are rejected; code substitutes context-aware (correct); update plan + `ForgeError` — Fable [C]
+- [ ] P2 — `evals/run-all.mjs:6` — hard-kills :3311 (collides with a second reviewer / Aarya's server); take a port — Fable [C]
+- [ ] P2 — `docs/PLAN.md` §4 — "`sudo` in judge mode" hard-block is not implemented anywhere — Fable [C]
+- [ ] P2 — `evals/harness/webmcp-cdp.mjs:60` — no case exercises the JSON-**string** input path (`coerceInput`) that spec-level `executeTool` / ChatGPT use — Fable [C]
