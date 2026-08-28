@@ -69,7 +69,11 @@ Everything below is implemented and covered by a test that fails when it regress
 Non-root `judge` user, no sudo; `enableInternet=false` with an HTTP/S allowlist (the SDK cannot
 filter raw TCP/UDP — stated, not hidden); 1 new session per IP per 10 min, 3 concurrent; 30-min
 TTL ends the session; no persistent volume; the same token-gated bridge runs inside the
-container; the Worker never stores tokens. Tests: `infra/sandbox/test/gate.test.mjs`, image smoke.
+container; the Worker never stores tokens; a failed session start returns a generic 503 and logs
+internals server-side (no stack/SDK detail to the client). Tests: `infra/sandbox/test/gate.test.mjs`,
+image smoke. (The judge Worker was written after the two external reviews; C self-audited it against
+the same P0/P1 bar — CORS allowlist, per-IP rate limit on the one write endpoint, no secret in code,
+generic errors.)
 
 ## 7. Known gaps (honest)
 

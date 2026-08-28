@@ -82,7 +82,9 @@ export default {
         }
       } catch (e) {
         await gate.release(sid);
-        return json({ error: `sandbox failed: ${e instanceof Error ? e.message : String(e)}` }, 503, h);
+        // Log internals server-side; return a generic message (never leak stack/SDK details to clients).
+        console.error('session start failed', sid, e instanceof Error ? e.stack : String(e));
+        return json({ error: 'the sandbox could not be started; please try again' }, 503, h);
       }
       const ws = `${url.protocol === 'https:' ? 'wss' : 'ws'}://${url.host}/ws/${sid}`;
       return json({ sid, ws, token, ttl_ms: ttl, mode: 'judge', cold_ms: Date.now() - t0 }, 201, h);
