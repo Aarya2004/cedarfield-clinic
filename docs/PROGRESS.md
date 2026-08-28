@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 22:50 PT** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
+Last update: **2026-08-28 23:40 PT** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
 
 ## Gates
 
@@ -242,11 +242,11 @@ I invented all refused, 2 positive controls still parse), forged sids **403 in 8
 instance started, cross-origin `POST /api/session` **403** before the Gate, `/tmp/pwned` never created.
 All pass-1/2/3 findings verified closed by measurement.
 
-- [ ] P1 — `evals/run-all.mjs:38,50,88,140` — the detached `next-server` is only reaped at line 140, **after** two unconditional `process.exit(1)` paths (line 50 "web app did not start", line 88 "bridge did not print a pairing link"), and there is **no** SIGINT/SIGTERM handler (`grep -c "process.on"` = 0), so every early exit or interruption leaks a 54 MB server; measured **16 orphans holding 767 MB**, oldest alive **2 h 33 m** — I reclaimed 767 MB. This is the likely proximate cause of today's laptop crash and it is in the one command every reviewer, the builder and CI run — wrap in try/finally + signal handlers — Opus [C]
-- [ ] P2 — `evals/run-all.mjs:38` — `pnpm start` serves whatever `.next` exists, so after a `git pull` that touches `apps/web` the suite silently tests a **stale build** and reports eval failures (or "web app did not start") instead of a build problem; both of my first-pass failures were this. Build, or stat `.next` against the working tree and refuse — Opus [C]
-- [ ] P2 — `infra/sandbox/wrangler.jsonc` — `wrangler containers list` shows **7 live instances** of 10 (`max_instances: 10`) while idle; with a 30-min TTL, sessions ending only on TTL/idle (J5) and 3 concurrent per IP, **four judge IPs exhaust the pool** and the next judge gets a failed start. J1 says the pile-up is pre-fix residue — re-measure cold before judging day and consider raising `max_instances` — Opus [C]
-- [ ] P2 — `docs/FORGE-PLAN.md:485` — still states "1 session/IP/10 min" (now 3) and "model-call cap" (deliberately not implemented); PLAN, SANDBOX-PLAN and SECURITY.md were all corrected, this judge-analysis row was missed — Opus [C]
-- [ ] P2 — `evals/cases/forge-birth.json`, `evals/cases/gate-a-propose-wait.json` — 2 of 141 eval steps still assert nothing (bare `eval`, no `equals`/`matches`); down from pass 3, not gone — Opus [C]
+- [x] P1 — `evals/run-all.mjs:38,50,88,140` — the detached `next-server` is only reaped at line 140, **after** two unconditional `process.exit(1)` paths (line 50 "web app did not start", line 88 "bridge did not print a pairing link"), and there is **no** SIGINT/SIGTERM handler (`grep -c "process.on"` = 0), so every early exit or interruption leaks a 54 MB server; measured **16 orphans holding 767 MB**, oldest alive **2 h 33 m** — I reclaimed 767 MB. This is the likely proximate cause of today's laptop crash and it is in the one command every reviewer, the builder and CI run — wrap in try/finally + signal handlers — Opus [C] — **fixed 848ca42 (cleanup on every exit path + signals; evals/test/runner-cleanup.test.mjs)**
+- [x] P2 — `evals/run-all.mjs:38` — `pnpm start` serves whatever `.next` exists, so after a `git pull` that touches `apps/web` the suite silently tests a **stale build** and reports eval failures (or "web app did not start") instead of a build problem; both of my first-pass failures were this. Build, or stat `.next` against the working tree and refuse — Opus [C] — **fixed 848ca42 / 6b0d… (runner rebuilds when .next is stale; sleepAfter 10m; row fixed; bare evals must record a value)**
+- [x] P2 — `infra/sandbox/wrangler.jsonc` — `wrangler containers list` shows **7 live instances** of 10 (`max_instances: 10`) while idle; with a 30-min TTL, sessions ending only on TTL/idle (J5) and 3 concurrent per IP, **four judge IPs exhaust the pool** and the next judge gets a failed start. J1 says the pile-up is pre-fix residue — re-measure cold before judging day and consider raising `max_instances` — Opus [C] — **fixed 848ca42 / 6b0d… (runner rebuilds when .next is stale; sleepAfter 10m; row fixed; bare evals must record a value)**
+- [x] P2 — `docs/FORGE-PLAN.md:485` — still states "1 session/IP/10 min" (now 3) and "model-call cap" (deliberately not implemented); PLAN, SANDBOX-PLAN and SECURITY.md were all corrected, this judge-analysis row was missed — Opus [C] — **fixed 848ca42 / 6b0d… (runner rebuilds when .next is stale; sleepAfter 10m; row fixed; bare evals must record a value)**
+- [x] P2 — `evals/cases/forge-birth.json`, `evals/cases/gate-a-propose-wait.json` — 2 of 141 eval steps still assert nothing (bare `eval`, no `equals`/`matches`); down from pass 3, not gone — Opus [C] — **fixed 848ca42 / 6b0d… (runner rebuilds when .next is stale; sleepAfter 10m; row fixed; bare evals must record a value)**
 
 ## Review findings (open) — Fable 5, verify pass (2026-08-28 night)
 
@@ -257,3 +257,19 @@ Full report + 8 screenshots: `docs/reviews/2026-08-28-fable-verify.md`, `docs/ev
 - [ ] P2 — docs (`ENV-ARAV.md`, `HANDOFF.md`, README "Run it yourself") + pairing card — a `--no-tunnel` `ws://127.0.0.1` link opened from the https live page never pairs and never says why (bridge saw no connection; Node probes with the browser Origin get `hello`); state that local `ws://` links work only from a localhost page — Fable [C]
 - [ ] P2 — `components/Terminal.tsx` — pane forced to 105 px renders blank while the shell keeps running (read_screen still redacted 22 lines / 3); clamp min height or show "terminal too small" — Fable [C]
 - [ ] P2 — `apps/web/src/lib/webmcp/redact.ts` — value pattern `\S+` swallows the `;` after a secret (`…KEY=[redacted] echo ok`), so the agent's view differs from what the human typed; stop at `[;&|)]` — Fable [C]
+
+## Review findings (open) — Codex (gpt-5.5 via MCP), browser-side pass, 2026-08-28 night
+
+Prompted by C on the diff since `7a32314` (apps/web/src/lib + components), read-only sandbox. Verdict "not judge-ready, 0.96" — every finding was reproduced by C before fixing; all fixed in `b45db33` with a regression test each.
+
+- [x] P1 — `redact.ts` entropy rule reported a redaction it did not make (match without change) — **fixed b45db33**
+- [x] P2 — `redact.ts` `key` keyword over-redacted `keyboard=`, `monkey=` — **fixed b45db33** (identifier-boundary lookarounds)
+- [x] P2 — `redact.ts` entropy rule hid `build_id=…` — **fixed b45db33** (plain-name deny-list: id/sha/hash/commit/build/version/…)
+- [x] P1 — `schemas.ts` judge sudo missed `VAR=1 sudo …` — **fixed b45db33**
+- [x] P1 — `forge.ts` forged invocation used mode-less isDangerous → judge sudo step not flagged — **fixed b45db33**
+- [x] P1 — `adapter.ts` Enter on a ghost while connecting queued the command into the next hello — **fixed b45db33** (refused until paired)
+- [x] P1 — `linebuffer.ts` one-character paste/IME slipped the dirty gate — **fixed b45db33** (keyed vs unkeyed data)
+- [x] P1 — `linebuffer.ts` Enter reset the line before the prompt returned (fast second Enter) — **fixed b45db33** (awaitPrompt with integration)
+- [x] P1 — `adapter.ts` no-integration quiet fallback let the next proposal be typed into a still-running program — **mitigated b45db33**: an unmeasured completion marks the line unknown until the human clears/submits it (SECURITY §1 already scopes the guard to zsh integration)
+- [x] P1 — `forge.ts` unforge after Enter aborted the wait; running step never recorded — **fixed b45db33** (stopAfterCurrent)
+- [x] P2 — `client.ts` half-open socket never detected — **fixed b45db33** (3 unanswered pings → close → reconnect)
