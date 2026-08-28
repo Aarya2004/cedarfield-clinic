@@ -9,6 +9,6 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
     "build": "pnpm -r --if-present build",
-    "gate": "pnpm -r --if-present typecheck && pnpm -r --if-present lint && pnpm --filter web test && pnpm --filter web build && pnpm --filter rokan-terminal check && pnpm --filter rokan-sandbox check && pnpm --filter rokan-terminal smoke && node evals/run-all.mjs && node evals/run-all.mjs --bridge"
+    "gate": "pnpm -r --if-present typecheck && pnpm -r --if-present lint && pnpm --filter web test && pnpm --filter web build && pnpm --filter rokan-terminal check && pnpm --filter rokan-sandbox check && pnpm --filter rokan-terminal smoke && node --test evals/test/*.test.mjs && node evals/run-all.mjs && node evals/run-all.mjs --bridge"
   }
 }

@@ -36,6 +36,42 @@ const freePort = () =>
 const WEB_PORT = Number(process.env.ROKAN_EVAL_WEB_PORT) || (await freePort());
 const BRIDGE_PORT = Number(process.env.ROKAN_EVAL_BRIDGE_PORT) || (await freePort());
 const srv = spawn('pnpm', ['start', '-p', String(WEB_PORT)], { cwd: `${root}apps/web`, stdio: 'ignore', detached: true });
+let bridge = null;
+// Every exit path — success, the two startup failures, Ctrl-C, a pkill from another agent, an
+// uncaught error — must reap the detached web server (its whole process group), the bridge and the
+// harness's Chrome. Measured 2026-08-28 (Opus VERIFY): 16 leaked `next start`, 767 MB RSS.
+let cleaned = false;
+const cleanup = () => {
+  if (cleaned) return;
+  cleaned = true;
+  for (const sig of ['SIGTERM', 'SIGKILL']) {
+    try {
+      process.kill(-srv.pid, sig);
+    } catch {
+      /* gone */
+    }
+    try {
+      if (bridge && bridge.exitCode === null) bridge.kill(sig);
+    } catch {
+      /* gone */
+    }
+    if (sig === 'SIGTERM') {
+      const t = Date.now();
+      while (Date.now() - t < 300) {
+        /* give SIGTERM a moment before SIGKILL */
+      }
+    }
+  }
+  try {
+    execSync('pkill -f "user-data-dir=/tmp/webmcp-cdp"', { stdio: 'ignore' });
+  } catch {
+    /* none */
+  }
+};
+process.on('exit', cleanup);
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { cleanup(); process.exit(130); });
+process.on('uncaughtException', (e) => { console.error(e); cleanup(); process.exit(1); });
+process.on('unhandledRejection', (e) => { console.error(e); cleanup(); process.exit(1); });
 let up = false;
 for (let i = 0; i < 60 && !up; i++) {
   await sleep(250);
@@ -50,7 +86,7 @@ if (!up) {
   process.exit(1);
 }
 
-let bridge = null;
+
 let pairingHash = '';
 async function judgeHash() {
   const t0 = Date.now();
@@ -136,16 +172,6 @@ for (const f of cases) {
     });
   }
 }
-try {
-  process.kill(-srv.pid);
-} catch {
-  /* gone */
-}
-bridge?.kill('SIGTERM');
-try {
-  execSync('pkill -f "user-data-dir=/tmp/webmcp-cdp"', { stdio: 'ignore' });
-} catch {
-  /* none */
-}
+cleanup();
 console.log(`evals${withBridge ? ' (real PTY)' : judgeUrl ? ' (judge sandbox)' : ''}: ${failed} failed of ${cases.length}`);
 process.exit(failed ? 1 : 0);

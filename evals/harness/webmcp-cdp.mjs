@@ -138,9 +138,12 @@ for (const step of steps) {
       out({ step: 'key', key: step.key, ms: Math.round(performance.now() - t0) });
     } else if (step.eval) {
       const value = await evalJs(step.eval);
-      const ok = 'equals' in step ? JSON.stringify(value) === JSON.stringify(step.equals) : 'matches' in step ? new RegExp(step.matches).test(String(value)) : true;
+      // A bare eval (no equals/matches) is a recorded measurement: it must at least produce a value.
+      // Opus pass 3: a bare step whose value was null counted toward "0 failed" for a day.
+      const recorded = !('equals' in step) && !('matches' in step);
+      const ok = 'equals' in step ? JSON.stringify(value) === JSON.stringify(step.equals) : 'matches' in step ? new RegExp(step.matches).test(String(value)) : value !== null && value !== undefined && value !== false;
       if (!ok) await fail();
-      out({ step: 'eval', expr: step.eval, value, ...('equals' in step ? { equals: step.equals, ok } : {}), ...('matches' in step ? { matches: step.matches, ok } : {}), ms: Math.round(performance.now() - t0) });
+      out({ step: 'eval', expr: step.eval, value, ...('equals' in step ? { equals: step.equals, ok } : {}), ...('matches' in step ? { matches: step.matches, ok } : {}), ...(recorded ? { recorded: true, ok } : {}), ms: Math.round(performance.now() - t0) });
     } else if (step.sleep) {
       await sleep(step.sleep);
       out({ step: 'sleep', ms: step.sleep });

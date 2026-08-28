@@ -2,7 +2,7 @@
 
 Your job this pass is to **run the product the way a judge will and prove each claim with a measurement**, not to read code. Pull `main` first. Every line below must end in a number, a screenshot path under `docs/evidence/verify-<you>/`, or a reproduced failure. No "looks fine".
 
-Resource rules (a laptop crashed today): one browser tab at a time, close it when done; one `--judge` run maximum (each is a 30-minute per-IP session slot; the builder's network is capped, so do judge-mode steps from a **different network** — phone hotspot is fine); no Docker builds; no loops.
+**Use your own worktree** — never the builder's checkout: `git worktree add ../webmcp-<you> main && cd ../webmcp-<you>` (three agents in one tree made green and red runs differ by who else was typing — Opus VERIFY). Resource rules (a laptop crashed today): one browser tab at a time, close it when done; one `--judge` run maximum (each is a 30-minute per-IP session slot; the builder's network is capped, so do judge-mode steps from a **different network** — phone hotspot is fine); no Docker builds; no loops.
 
 ## A. Cold gate (once, from a clean checkout)
 `pnpm install` → `cd apps/web && pnpm typecheck && pnpm lint && pnpm build && pnpm test` → `cd ../../packages/bridge && pnpm check && node --test test/*.test.mjs && pnpm smoke` → `cd ../../infra/sandbox && pnpm check` → `cd ../.. && node evals/run-all.mjs && node evals/run-all.mjs --bridge && node evals/run-all.mjs --bridge --mode=judge`. Record every count and ms. Expected: web 114, smoke 36, MCP 3, trailer 4, sandbox 12, evals 7/7 + 8/8 + 8/8.

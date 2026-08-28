@@ -84,7 +84,7 @@ export default {
       }
       const t0 = Date.now();
       const token = hex(16);
-      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '35m' });
+      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '10m' /* idle instances count against max_instances (Opus VERIFY: 7/10 live while idle) */ });
       try {
         await sandbox.startProcess(`node /opt/bridge/bin/rokan-terminal.js --no-tunnel --mode judge --host 0.0.0.0 --port ${BRIDGE_PORT} --token ${token} --ttl-ms ${ttl} --app ${env.APP_ORIGIN}`);
         // wait until the bridge answers on its port (measured cold start)
@@ -118,7 +118,7 @@ export default {
       // unverified id would let anyone burn max_instances with random sids (Fable F4).
       const id = env.SID_SECRET ? await verifySid(env.SID_SECRET, wsm[1], Date.now()) : null;
       if (!id) return json({ error: 'unknown or expired session' }, 403, h);
-      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '35m' });
+      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '10m' /* idle instances count against max_instances (Opus VERIFY: 7/10 live while idle) */ });
       return sandbox.wsConnect(request, BRIDGE_PORT);
     }
 

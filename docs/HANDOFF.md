@@ -82,6 +82,10 @@ call count on screen must be produced by the code that shows it.
 4. **No persistent monitors / poll loops.**
 5. `graphify update .`, Docker builds and full eval sweeps are minutes of pinned CPU — run them
    deliberately, once, not on a loop.
+6. **Kill only by PID** (`process.kill(pid)` / the runner's own children) — never `pkill -f rokan-terminal.js`
+   or `pkill -f next`: reviewers run the same suites in this checkout and a global pkill kills their
+   bridge mid-case (measured). Reviewers get their own `git worktree`; the freeze verification is run
+   by one agent on a quiet machine.
 
 ## 6. What is still genuinely blocked on a human (only one thing)
 
