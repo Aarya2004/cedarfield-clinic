@@ -29,7 +29,6 @@ const connect = () => new Promise((resolve, reject) => {
   ws.on('open', () => resolve({ ws, frames }));
   ws.on('error', reject);
 });
-const PROMPT_TIMEOUT = 20000; // CI runners are slow to emit the first prompt
 const until = (frames, pred, ms = 12000) => new Promise((resolve) => {
   const start = Date.now();
   const tick = () => {
@@ -56,24 +55,23 @@ ws.send(JSON.stringify({ type: 'auth', token, cols: 100, rows: 30 }));
 const hello = await until(frames, (f) => f.type === 'hello');
 check('hello received', !!hello && hello.mode === 'builder', JSON.stringify(hello));
 check('shell integration on', hello?.integration === true);
-const firstPrompt = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A'), PROMPT_TIMEOUT);
-check('shell prompt marker (OSC 133;A) appeared', !!firstPrompt, `${Math.round(performance.now() - t0)} ms since start`);
-
-// The line editor may not accept bytes the instant the prompt paints (a slow PTY drops the first
-// char). Our own `preexec` marker is the reliable "ready" signal — type, and if the command text
-// does not come back intact, retype once after a short settle.
-const typeCommand = async (cmd) => {
-  ws.send(JSON.stringify({ type: 'input', data: cmd + '\r' }));
-  let st = await until(frames, (f) => f.type === 'status' && f.last_command === cmd, 4000);
-  if (!st) {
+// Readiness = a command's own marker round-trips, not the first prompt paint. Grepping raw `data`
+// for the first `]133;A` is fragile (the marker can split across frames under CI load; the bridge's
+// OscParser handles splits, this grep does not). So we prove the shell is live by running a no-op
+// and seeing its status frame. The line editor can also drop the first byte on a slow PTY, so each
+// attempt clears the line first (Ctrl-U) and retries a few times.
+const typeCommand = async (cmd, tries = 4) => {
+  for (let i = 0; i < tries; i++) {
+    ws.send(JSON.stringify({ type: 'input', data: '\x15' + cmd + '\r' })); // Ctrl-U clears any partial line
+    const st = await until(frames, (f) => f.type === 'status' && f.last_command === cmd && f.running === false, 6000);
+    if (st) return st;
     await new Promise((r) => setTimeout(r, 500));
-    ws.send(JSON.stringify({ type: 'input', data: cmd + '\r' }));
-    st = await until(frames, (f) => f.type === 'status' && f.last_command === cmd, 8000);
   }
-  return st;
+  return null;
 };
 
-await new Promise((r) => setTimeout(r, 300));
+const ready = await typeCommand(':', 6); // zsh no-op; its precmd/preexec markers prove the shell is up
+check('shell ready (command marker round-trips)', !!ready, `${Math.round(performance.now() - t0)} ms since start`);
 await typeCommand('echo hi_from_pty; false');
 const gotEcho = await until(frames, (f) => f.type === 'data' && f.data.includes('hi_from_pty') && !f.data.includes('echo hi_from_pty'), 8000);
 check('command output streamed back', !!gotEcho);
@@ -115,11 +113,10 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
   check('exit frame on shell exit', !!ex, JSON.stringify(ex));
   const restarted = await until(frames, (f) => f.type === 'data' && f.data.includes('started a new one'), 8000);
   check('shell respawned after exit', !!restarted);
-  const marker = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A') && frames.indexOf(f) > frames.indexOf(restarted), PROMPT_TIMEOUT);
-  check('new shell prompt marker', !!marker);
   ws.send(JSON.stringify({ type: 'resize', cols: 120, rows: 40 }));
-  await new Promise((r) => setTimeout(r, 300));
-  const alive = await typeCommand('echo alive_after_respawn');
+  // The new shell running a command (with its marker) is the real proof it is live and writable —
+  // stronger and less fragile than grepping raw data for a post-respawn prompt marker.
+  const alive = await typeCommand('echo alive_after_respawn', 6);
   check('new shell runs commands (write/resize on live PTY)', alive?.last_exit_code === 0, JSON.stringify(alive));
 }
 
@@ -173,7 +170,10 @@ const clientRow = lines.find((r) => r.kind === 'client:proposed');
 check('client row is nested under client{} with bridge-owned seq/session/origin', clientRow?.origin === 'client' && clientRow?.client?.command === 'ls' && clientRow?.client?.params?.[0]?.example === '5' && clientRow.session === bridge.sessionId, JSON.stringify(clientRow).slice(0, 200));
 const override = lines.find((r) => r.kind === 'client:forged');
 check('F7: reserved fields are bridge-owned on the override attempt', override?.origin === 'client' && override?.session === bridge.sessionId && override?.seq !== 1 && override?.client?.origin === 'bridge' && !override?.t.startsWith('1999'), JSON.stringify(override).slice(0, 220));
-check('F7: bridge-only kinds cannot be forwarded', !kinds.includes('executed_from_client') && kinds.filter((k) => k === 'executed').length === 3, kinds.join(','));
+// The client's forwarded kind:'executed' must never be stored (it is rejected as bad_frame). Every
+// `executed`/`client:executed` row here is bridge-origin; none may carry origin 'client'. (Command
+// retries on slow CI make the exact executed count vary, so assert provenance, not a count.)
+check('F7: bridge-only kinds cannot be forwarded', !lines.some((r) => r.kind === 'executed' && r.origin === 'client') && !kinds.includes('client:executed'), kinds.join(','));
 const v = verifyLedger(bridge.sessionId, { dir: ledgerDir });
 check('HMAC chain verifies', v.ok && v.rows === lines.length, JSON.stringify(v));
 // tamper (top-level scalar) → must fail
