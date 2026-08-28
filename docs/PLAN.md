@@ -440,3 +440,24 @@ implementation experience (MCP-B) — not "originator"; Shopify is an origin-tri
 6. Anthropic key with a hard spend cap for the judge sandbox (Worker secret).
 7. Aarya: confirm ownership split (§6) or swap it; confirm his Claude works in `apps/web` only.
 8. Arav: `rokan-do seed export` on the demo sites once D3 begins.
+
+---
+
+## 13. Score upgrades — from ~7.6 to ~8.4 (D3 stretch, strict priority order, each gated on Gates A–C green)
+
+Simulated judge mean on §1–§9 is ~7.6/10; the winning band is ≥ 8.0. These seven items are the
+cheapest +1s per judge. **None enters D1/D2.** Start Mon 08-31 after Gate C; stop at 20:00 for Gate D.
+
+| # | Upgrade | Judge(s) moved | Cost | Owner |
+|---|---|---|---|---|
+| 1 | **MCP parity.** `rokan-terminal mcp` serves the *same* forged tools over stdio to Claude Code / Cursor / Codex CLI. One library, two protocols: WebMCP for the browser agent, MCP for the terminal agent. README shows both. | Grigorik (generalizes), Nahas (MCP-in-browser thesis), Roberts (AX) | 3 h | C |
+| 2 | **Any machine, not just the laptop.** Video beat: pair the same client to a remote Linux box (Render/Fly VM) through the tunnel; ChatGPT desktop operates a server it doesn't own, human-gated. The bridge already runs anywhere Node runs. | Rushing (answers "Codex does this"), Galloni | 1 h | C |
+| 3 | **Recovery beat.** A forged tool exits non-zero → agent reads the redacted tail → proposes the fix → Enter → ledger shows fail→fix. Zero build; scripted in §8 at 2:05. | Roberts (his doctrine: recover), Drasner | 0 | A |
+| 4 | **Self-forge beat.** Agent proposes three commands, human approves each, agent calls `forge_create` from the `terminal_wait` results — "it forged its own workflow after I approved it three times." Zero build; scripted. | Creativity across the panel | 0 | A |
+| 5 | **Tool identity hash.** Every forged tool carries a content hash (name+schema+commands); shown on the card, referenced in each ledger row; a changed hash re-requires approval. Direct implementation of arXiv 2606.06387's "bind tool identity" mitigation — cite it. | Nahas, Drasner, Galloni | 1 h | Ay |
+| 6 | **Guided first 60 s in judge mode.** `?tour=1`: three-step overlay ("ask ChatGPT to list files → press Enter → Forge this"), sandbox banner shows egress allowlist and TTL. Judges decide in the first minute. | Execution, all | 2 h | Ay |
+| 7 | **Framework surface.** `useForgedTools()` hook documented in 10 lines; `AGENTS.md` at repo root (Gao's own finding: AGENTS.md beats skills in agent evals); `evals/` referenced from README. | Gao | 1.5 h | C |
+
+Projected after 1–7: Rushing 8.5 · Drasner 9 · Nahas 9 · Grigorik 8 · Gao 8.5 · Galloni 8 · Roberts 8.5 → **mean ≈ 8.4**. Chance executed ≈ 30%.
+
+Kill rule: any item over its cost by 50% is dropped, in reverse order (7 first). Items 3–4 are free and always in.
