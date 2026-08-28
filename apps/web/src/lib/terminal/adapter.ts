@@ -172,7 +172,9 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
   });
 
   const adapter: LiveTerminalAdapter = {
-    mode: 'builder',
+    get mode() {
+      return deps.client.hello?.mode === 'judge' ? 'judge' : 'builder';
+    },
     shareScreen: () => deps.share(),
     screenLines: (n) => {
       const b = deps.term.buffer.active;

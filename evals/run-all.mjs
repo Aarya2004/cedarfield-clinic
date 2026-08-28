@@ -9,6 +9,7 @@
  * Restarts the built web app on :3311 for the run and stops everything afterwards.
  */
 import { spawn, spawnSync, execSync } from 'node:child_process';
+import { createServer } from 'node:net';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -16,20 +17,21 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const withBridge = process.argv.includes('--bridge');
 const judgeUrl = process.argv.find((a) => a.startsWith('--judge='))?.slice(8) ?? null;
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
-const WEB_PORT = 3311;
-const BRIDGE_PORT = 7345;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function killPort(port) {
-  try {
-    execSync(`lsof -ti :${port} | xargs kill`, { stdio: 'ignore', shell: '/bin/zsh' });
-  } catch {
-    /* nothing listening */
-  }
-}
-
-killPort(WEB_PORT);
-killPort(BRIDGE_PORT);
+// Take free ports (never kill someone else's :3311 — a second reviewer / Aarya may be serving there).
+// ROKAN_EVAL_WEB_PORT / ROKAN_EVAL_BRIDGE_PORT pin them when a fixed URL is wanted.
+const freePort = () =>
+  new Promise((resolve, reject) => {
+    const s = createServer();
+    s.listen(0, '127.0.0.1', () => {
+      const { port } = s.address();
+      s.close(() => resolve(port));
+    });
+    s.on('error', reject);
+  });
+const WEB_PORT = Number(process.env.ROKAN_EVAL_WEB_PORT) || (await freePort());
+const BRIDGE_PORT = Number(process.env.ROKAN_EVAL_BRIDGE_PORT) || (await freePort());
 const srv = spawn('pnpm', ['start', '-p', String(WEB_PORT)], { cwd: `${root}apps/web`, stdio: 'ignore', detached: true });
 let up = false;
 for (let i = 0; i < 60 && !up; i++) {
@@ -113,7 +115,7 @@ for (const f of cases) {
     // each case needs a fresh, unpaired bridge (one tab at a time): restart it
     bridge.kill('SIGTERM');
     await sleep(300);
-    killPort(BRIDGE_PORT);
+    if (bridge.exitCode === null) bridge.kill('SIGKILL');
     bridge = spawn('node', [`${root}packages/bridge/bin/rokan-terminal.js`, '--no-tunnel', '--port', String(BRIDGE_PORT), '--app', `http://localhost:${WEB_PORT}`, '--token', pairingHash.split('&t=')[1]], { stdio: ['ignore', 'pipe', 'pipe'] });
     await new Promise((resolve) => {
       const onData = (buf) => {
@@ -131,8 +133,6 @@ try {
   /* gone */
 }
 bridge?.kill('SIGTERM');
-killPort(WEB_PORT);
-killPort(BRIDGE_PORT);
 try {
   execSync('pkill -f "user-data-dir=/tmp/webmcp-cdp"', { stdio: 'ignore' });
 } catch {

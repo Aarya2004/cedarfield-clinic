@@ -76,8 +76,16 @@ export const DANGEROUS_PATTERNS: RegExp[] = [
   /\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|)sh\b/,
 ];
 
+/** `sudo` wherever a command can start (line, pipe, `;`, `&&`, `||`, subshell, `env sudo`): hard-blocked in judge mode (PLAN §4). */
+export const JUDGE_SUDO_RE = /(^|[|;&(])\s*(env\s+)?sudo\b/;
+
 export function isDangerous(command: string): boolean {
   return DANGEROUS_PATTERNS.some((re) => re.test(command));
+}
+
+/** Mode-aware: judge sandboxes additionally hard-block `sudo` (red banner, Enter twice). */
+export function isDangerousIn(command: string, mode: 'builder' | 'judge'): boolean {
+  return isDangerous(command) || (mode === 'judge' && JUDGE_SUDO_RE.test(command));
 }
 
 // ---------- terminal_read_screen ----------

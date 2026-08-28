@@ -28,7 +28,6 @@ export interface ForgeError {
     | 'invalid_params'
     | 'unknown_placeholder'
     | 'unused_param'
-    | 'placeholder_in_quotes'
     | 'invalid_kind'
     | 'invalid_param'
     | 'too_long'

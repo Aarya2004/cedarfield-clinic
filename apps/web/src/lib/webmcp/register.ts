@@ -28,7 +28,7 @@ import {
   terminalStatusSchema,
   terminalWaitSchema,
   validateProposedCommand,
-  isDangerous,
+  isDangerousIn,
   type TerminalProposeInput,
   type TerminalProposeResult,
   type TerminalReadScreenInput,
@@ -113,7 +113,8 @@ export function fixedToolDefs(): ToolDef[] {
         const why = sanitiseWhy(input.why);
         const prev = proposals.pending();
         if (prev) proposals.resolve(prev.id, 'dismissed', 'superseded'); // one ghost text at a time; its terminal_wait resolves
-        const p = getTerminalAdapter().ghostType(command, why, { dangerous: isDangerous(command) });
+        const ta = getTerminalAdapter();
+        const p = ta.ghostType(command, why, { dangerous: isDangerousIn(command, ta.mode) });
         void ledger.append('proposed', { proposal_id: p.id, command, why: why ?? null, dangerous: p.dangerous ?? false });
         note('terminal_propose.called', { proposal_id: p.id, command_len: command.length, handler_ms: Math.round((performance.now() - t) * 100) / 100 });
         return { proposal_id: p.id, status: 'awaiting_human' };

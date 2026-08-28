@@ -1,0 +1,30 @@
+[
+  { "list": true },
+  { "eval": "typeof (document.modelContext ?? navigator.modelContext)?.executeTool", "equals": "function" },
+  {
+    "invoke": "forge_create",
+    "input": {
+      "name": "hn_top",
+      "description": "Top N Hacker News titles via rokan do.",
+      "commands": ["rokan do \"top {{n}} HN titles\""],
+      "params": [{ "name": "n", "description": "How many titles", "example": "5" }],
+      "kind": "read"
+    }
+  },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.registered; })()", "equals": true },
+  { "sleep": 200 },
+  { "expect": { "tool": "forged_hn_top" } },
+  { "eval": "(async () => { const mc = document.modelContext ?? navigator.modelContext; const tool = (await mc.getTools()).find((t) => t.name === 'forged_hn_top'); const r = await mc.executeTool(tool, JSON.stringify({ n: '3' })); const s = typeof r === 'string' ? r : JSON.stringify(r); return s.includes('proposal_ids'); })()", "equals": true },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "rokan do \"top 3 HN titles\"" },
+  { "eval": "window.__rokan.proposals.pending()?.why", "equals": "forged_hn_top · step 1/1" },
+  { "key": "Escape" },
+  { "sleep": 100 },
+  { "eval": "window.__rokan.forge.active()", "equals": null },
+  { "eval": "(async () => { const mc = document.modelContext ?? navigator.modelContext; const tool = (await mc.getTools()).find((t) => t.name === 'terminal_propose'); const r = await mc.executeTool(tool, JSON.stringify({ command: 'ls -la', why: 'string input path' })); const s = typeof r === 'string' ? r : JSON.stringify(r); return s.includes('proposal_id'); })()", "equals": true },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "ls -la" },
+  { "key": "Escape" },
+  { "sleep": 100 },
+  { "eval": "(async () => { const r = await window.__rokan.agentCall('forged_hn_top', '{\"n\":\"7\"}'); return Array.isArray(r.proposal_ids) && r.proposal_ids.length === 1; })()", "equals": true },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "rokan do \"top 7 HN titles\"" },
+  { "key": "Escape" }
+]

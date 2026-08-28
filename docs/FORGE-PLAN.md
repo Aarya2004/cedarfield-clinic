@@ -147,7 +147,7 @@ honest numbers (§0.6); WebMCP-touching code public; timestamped commits after 0
  "required":["name","description","commands","kind"],"additionalProperties":false}
 ```
 - result: `{card_id, status:'awaiting_human', will_register_as:'forged_<name>', hash}` or
-  `{error: 'invalid_name'|'invalid_command'|'unknown_placeholder'|'unused_param'|'too_many_pending'|'placeholder_in_quotes', detail}`.
+  `{error: 'invalid_name'|'invalid_command'|'unknown_placeholder'|'unused_param'|'too_many_pending', detail}`.
 
 ### 3.2 `forged_<name>` (dynamic)
 - `annotations: { readOnlyHint: kind === 'read' }`
@@ -203,8 +203,12 @@ type ForgeError = { error: string; detail?: string; param?: string }
 
 ### 4.3 Substitution + quoting (pure, in `schemas.ts` so both lanes share it)
 - Grammar: `{{name}}` only (`/\{\{\s*([a-z][a-z0-9_]{0,19})\s*\}\}/g`). Validation at forge time:
-  every placeholder declared; every param used at least once; **placeholder inside a `'…'` or `"…"`
-  region → `placeholder_in_quotes`** (single-pass quote-state scan; the engine owns quoting).
+  every placeholder declared; every param used at least once. A placeholder **inside** author
+  quotes is allowed and substituted context-aware (what the code does — `substituteLine`): outside
+  quotes → bare when clean, else `'…'`; inside `'…'` → the region is closed, the value inserted
+  single-quoted, the region reopened; inside `"…"` → same close/insert/reopen so `$(…)` in a value
+  never expands; `$'…'` / `$"…"` templates are rejected at forge time (`invalid_command`). The old
+  `placeholder_in_quotes` rejection was dropped in favour of this (Fable pass-1 P2).
 - Value coercion at call: `string | finite number | boolean` → `String(v)`; else `invalid_param`;
   ≤ 200 chars; `validateProposedCommand(v)` must pass (kills CR/LF/ESC/bidi).
 - Rendering: bare if `/^[A-Za-z0-9_./:@%+=,-]{1,80}$/`, else POSIX single-quote:
@@ -337,7 +341,7 @@ text. Rokan palette, no new deps.
 | threat | mitigation (code) |
 | --- | --- |
 | Injected text in `terminal_read_screen` output tells the agent to forge `rm -rf` as `kind:'read'` | `forge_create` never registers — a card + human approval; `kind` auto-overridden to `write` on dangerous/mutating verbs; `isDangerous` → red banner + second confirmation; every forged step still needs Enter |
-| Param value smuggles shell metacharacters / newlines / bidi into a ghost-typed line | §4.3: control/format chars rejected, POSIX single-quoting for anything non-bare, re-validation of the final line, `{{}}` inside quotes rejected at forge time, overlay highlights substituted spans |
+| Param value smuggles shell metacharacters / newlines / bidi into a ghost-typed line | §4.3: control/format chars rejected, POSIX single-quoting for anything non-bare, re-validation of the final line, `{{}}` inside quotes substituted context-aware (never expanded), `$'…'`/`$"…"` templates rejected at forge time, overlay highlights substituted spans |
 | Tool framing / hijack (arXiv 2606.06387): a re-forge silently softens a description or flips read→write | content hash covers name+description+params+commands+kind; changed hash → new approval; hash on card and in every ledger row |
 | Registration races / AbortSignal abuse | one controller per tool, aborted before any re-register; `execute` guarded by `signal.aborted`; `dispose()` aborts all |
 | Runaway tool count / picker noise | 12-cap with pin/evict; `forge_list` still lists evicted |
