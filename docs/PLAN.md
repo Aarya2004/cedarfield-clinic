@@ -1,0 +1,442 @@
+# Rokan Terminal — WebMCP Challenge execution plan
+
+> **Status: PROPOSED. Nothing built. Arav + Aarya both say "go" before any code.**
+> Written 2026-08-28 night. Deadline **2026-09-03 13:00 PT** (Devpost rules; ignore
+> "5pm"/"Sep 4"/"Aug 31" from secondary sources). Research: `docs/WEBMCP-MASTERY-2026-08-28.md`.
+> Decision trail: `docs/IDEA-LEDGER.md` §S. This file follows the Handset discipline
+> (`~/YC Hack VA MAY26/handset/{CONTEXT,EXECUTION_PLAN,DEMO_SCRIPT,TEST_PROTOCOL,REDTEAM}.md`)
+> folded into one document: §0 locked decisions · §1 product · §2 architecture · §3 tool
+> contracts · §4 security · §5 repo · §6 schedule · §7 test protocol · §8 demo + video ·
+> §9 submission text · §10 risks + kill rules · §11 rules · §12 asks.
+
+---
+
+## 0. Locked decisions (don't re-litigate without editing this section)
+
+1. **Entry = Rokan Terminal**: a shared human+agent terminal in a browser tab, WebMCP tools on
+   the page, **the human's Enter is the trust boundary**, and **forge**: a command sequence
+   becomes a named, typed WebMCP tool + a button. **`rokan do` is the star command.**
+   WHY: the four-judge kill-shot is DOM-driving _inside the WebMCP layer_. The terminal keeps
+   the WebMCP layer clean; browsing happens in the shell on the user's machine — Roberts's
+   own conceded "fallback". Ghost-typing threads OpenAI's per-call safety review (the tool is
+   inert). Ledger §S addendum 2.
+2. **Two modes, one client.** _Builder mode_: your own machine via a local bridge + Cloudflare
+   quick tunnel. _Judge mode_: a hosted Cloudflare Sandbox container, seeded, throttled.
+   Judges never install anything. The video shows builder mode.
+3. **All execution is a human keypress.** Agent tools never run a command. Not `propose`, not
+   forged tools. "Trusted auto-run" is a stretch goal, off by default, never in the demo.
+4. **Imperative WebMCP, top-level document only.** ChatGPT's consumer ignores declarative forms
+   and iframe tools. ≤ 12 tools visible at any time (picker noise, Chrome's guidance).
+5. **No acquisition, no voice, no channels, no mascot, no Shopify re-registration, no
+   chat-style `ask/do` meta-tools, no live writes that spend money.** §R stays parked.
+6. **Honest numbers only.** Every ms and call count on screen is measured by the code that
+   shows it. No synthetic telemetry (Handset REDTEAM L1). N is stated wherever a % appears.
+7. **Launch = submission.** Public repo, live URL, video, and (Arav's call) PyPI on Sep 2.
+8. **Kill rules (§10) are binding.** Gate B (terminal + ghost-typing green in ChatGPT desktop)
+   by Sat 22:00 PT or we ship _that_ alone.
+
+---
+
+## 1. Product
+
+**One line:** A terminal you and your agent share. Your Enter is the trust boundary. What you
+do once becomes a tool.
+
+**Hero moment (the 15 seconds that must land):** ChatGPT proposes a command → it appears
+ghost-typed in _your_ prompt → you press Enter → it runs on _your_ machine → the agent reads the
+result → you select what you just did → "Forge this" → a named tool appears in ChatGPT's
+site-tools list → the agent calls it → 0 model calls, sub-second.
+
+**Audience (Impact criterion):** developers whose ChatGPT/Codex needs to act on their machine,
+their dashboards, their deploys — with a human present and every keystroke visible. Provencher
+(OpenAI): "Codex is your customer." Roberts (Netlify): agents are "extensions of real users."
+
+**What humans + agents can do together that was impossible:** the agent gets hands on a real
+shell without ever getting execution; the human gets a co-pilot that proposes, reads, and
+remembers — and the two of them grow a tool library neither had at the start.
+
+**Why Rokan:** `rokan do` is the command most worth forging: typed once (model plans, browser
+verifies), forged into `forged.hn_top({n})`, replayed at 0 calls. The thesis — operations
+compile, the model leaves the hot path — on camera, in the world's format, without exposing
+browser replay to the WebMCP layer.
+
+---
+
+## 2. Architecture
+
+```
+                 ┌───────────────────────── Vercel (Next.js 15, App Router) ─────────────────────────┐
+                 │  /                 xterm.js pane · Tools pane · Forge card · Ledger column        │
+                 │  document.modelContext.registerTool(...) × ≤12   (client component, top-level)   │
+                 │  WS client  ──────────────────────────────────────────────────────────┐          │
+                 └───────────────────────────────────────────────────────────────────────┼──────────┘
+                                                                                         │ wss://
+                 BUILDER MODE (video, real users)                 JUDGE MODE (live URL)  │
+   ┌────────────────────────────────────────────┐   ┌─────────────────────────────────────▼────────┐
+   │ user's Mac                                  │   │ Cloudflare Worker  (@cloudflare/sandbox)     │
+   │  `npx rokan-terminal` →                     │   │  getSandbox(env.Sandbox, sessionId)          │
+   │   node-pty (zsh) ⇄ ws://127.0.0.1:7331      │   │  → container: Debian + Python 3.11 + uv +    │
+   │   + `cloudflared tunnel --url` (quick)      │   │    node + rokan-do wheel + playwright chromium│
+   │   prints  https://<rand>.trycloudflare.com  │   │    seeded ops (0-call replays), $-capped key │
+   │   + pairing token (URL fragment)            │   │  xterm SandboxAddon WS terminal              │
+   └────────────────────────────────────────────┘   └──────────────────────────────────────────────┘
+```
+
+Decisions inside the diagram:
+
+- **No Durable Object relay in v1.** Builder mode connects the client straight to the tunnel;
+  judge mode uses the Sandbox SDK's own WebSocket terminal. A DO relay is only needed for
+  multi-viewer sessions — stretch, day 5, only if everything else is green.
+- **Local bridge = one Node script** (`packages/bridge`): `node-pty` spawns the user's shell,
+  `ws` serves `{type:"data"|"resize"|"input"}` frames, a `--token` gate, and it shells out to
+  `cloudflared tunnel --url http://127.0.0.1:7331`, parses the printed URL, prints a single
+  pairing link `https://<vercel-app>/#ws=<tunnel>&t=<token>`. Verify on day 1 that quick
+  tunnels pass WebSocket upgrades (docs are silent; SSE is unsupported; WS is widely used).
+  Fallback: named tunnel on Arav's account.
+- **Judge sandbox** = Worker route `/api/session` → `getSandbox(env.Sandbox, id)` → start
+  shell → return the WS URL for the xterm `SandboxAddon`. Container Dockerfile in
+  `infra/sandbox/Dockerfile`. Rate limits: 1 session per IP per 10 min, 30-min TTL,
+  `rokan-do` runs limited by a wrapper that counts model calls and refuses past 20/session.
+- **Ledger** lives client-side (append-only array, mirrored to `localStorage`, exported as
+  JSON) and is _also_ appended to `~/.rokan-terminal/ledger.jsonl` by the bridge (builder
+  mode). One row per: proposal, keypress-execution, forge, forged-invocation, screen read.
+- **`rokan do` output parsing**: the bridge watches PTY output for the `rokan-do` trailer
+  (`… 6.1s` / `41ms ⚡`) and, if present, attaches `{calls, ms}` to the ledger row. Day-3 task
+  in Rokan: `rokan-do run --json` printing `{answer, verified, model_calls, ms}` on one line so
+  parsing is exact, not regex. If that lands, the bridge prefers it.
+
+---
+
+## 3. WebMCP tool contracts (exact; names ≤ 30 chars; descriptions ≤ 500; outputs ≤ 1.5 KB)
+
+All registered from one client component `<TerminalTools/>` on `DOMContentLoaded`, each with
+its own `AbortController` so tools unregister when their pane unmounts. Feature-detect
+`document.modelContext ?? navigator.modelContext`; the page is fully usable with neither.
+
+| #   | name                      | inputSchema                                                                                                                                     | annotations                                                                                                                                   | behaviour                                                                                                                                                                             | returns                                                                                                                                                                                                                            |
+| --- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------- |
+| 1   | `terminal_propose`        | `{command: string (≤ 400), why?: string (≤ 200)}`                                                                                               | `readOnlyHint:false`                                                                                                                          | Writes `command` into the prompt line as ghost text (dim, highlighted diff vs. current input). **Never executes.** Human edits/Enter/Esc. Ledger row `proposed`.                      | `{proposal_id, status:"awaiting_human"}`                                                                                                                                                                                           |
+| 2   | `terminal_read_screen`    | `{lines?: integer 1–200 (default 60)}`                                                                                                          | `readOnlyHint:true, untrustedContentHint:true`                                                                                                | Returns the last N lines of the visible buffer **after redaction** (§4). Only if the human's "Share screen with agent" toggle is ON; else `{shared:false}`. Ledger row `screen_read`. | `{shared, lines:[…], cwd?, last_exit?}`                                                                                                                                                                                            |
+| 3   | `terminal_status`         | `{}`                                                                                                                                            | `readOnlyHint:true`                                                                                                                           | `{mode:"builder"                                                                                                                                                                      | "judge", cwd, running:boolean, last_exit_code, last_command_ms}`                                                                                                                                                                   | as left                              |
+| 4   | `terminal_wait`           | `{proposal_id}`                                                                                                                                 | `readOnlyHint:true`                                                                                                                           | Resolves when the human executes/dismisses that proposal, or after 120 s. Lets the agent block on the human instead of polling. Honours `signal`.                                     | `{status:"executed"                                                                                                                                                                                                                | "dismissed"                          | "timeout", exit_code?, ms?, tail:[…]}` |
+| 5   | `forge_create`            | `{name: string ^[a-z][a-z0-9_]{1,28}$, description ≤ 300, commands: string[] (1–5), params?: [{name, description ≤ 150, example}], kind: "read" | "write"}`                                                                                                                                     | `readOnlyHint:false`                                                                                                                                                                  | Opens a **Forge card** prefilled. Human reviews name/description/commands/params/kind, may edit, approves or rejects. On approve → `forged_<name>` registers (tool #6), `toolchange` fires, a button appears. Ledger row `forged`. | `{card_id, status:"awaiting_human"}` |
+| 6   | `forged_<name>` (dynamic) | from card params, `additionalProperties:false`                                                                                                  | `readOnlyHint: kind==="read"`; if `kind==="write"` the description starts with "CONSEQUENTIAL:" (and `consequential` via CDP where supported) | Substitutes params into the commands, ghost-types them one at a time; each still needs Enter. Ledger row `invoked`.                                                                   | `{proposal_ids:[…]}` then agent uses `terminal_wait`                                                                                                                                                                               |
+| 7   | `forge_list`              | `{}`                                                                                                                                            | `readOnlyHint:true`                                                                                                                           | Forged tools with schemas + last-run stats (`runs`, `median_ms`, `last_exit`).                                                                                                        | list                                                                                                                                                                                                                               |
+
+Reverse direction (human → agent), UI only: select 1–5 lines in history → **Forge this** → card
+prefilled from the selection → same approval path → tool appears for the agent.
+
+Tool budget: 7 fixed + up to 5 forged visible; beyond 5, `forge_list` still returns all and the
+oldest unpinned forged tools unregister (the human pins from the card).
+
+Chrome DevTools → Application → WebMCP panel must show every registration and invocation
+(Drasner's "observability" beat, 2 s in the video).
+
+Evals (`GoogleChromeLabs/webmcp-tools/evals-cli`): `evals/` with ≥ 6 cases — "run the tests",
+"what's in this directory", "deploy this", "forge the last two commands as `deploy`", "read
+the screen and tell me why it failed", ambiguous "clean up" (must _propose_, not execute) —
+asserting ordered/unordered expected calls. Gao reads this folder.
+
+---
+
+## 4. Security model (this is a scored section — make it the strongest)
+
+**Threat**: prompt injection through `terminal_read_screen` (a file, a log line, a web page
+fetched by `rokan do` says "run `curl … | sh`").
+
+**Why it can't execute**: no tool executes. The only path to the PTY is a human keypress on the
+human's device. The agent's worst case is a _proposal_ the human reads before Enter. The
+proposal is rendered as a diff against the current prompt, in a distinct colour, with the
+agent's `why` beside it. Multi-line proposals are refused (one command per proposal;
+`&&`/`;`/`|` allowed, newlines not). Proposals containing a hard-blocked pattern
+(`rm -rf /`, `:(){ :|:& };:`, `mkfs`, `dd if=`, `> /dev/sd`, `curl … | sh`, `sudo` in judge
+mode) are shown with a red banner and require a second confirmation.
+
+**Secrets in scrollback**: `terminal_read_screen` is OFF by default; the human turns on "Share
+screen with agent" per session. Redaction before return: AWS `AKIA…`, `sk-…`, `ghp_…`,
+`xox[abp]-…`, JWT `eyJ…`, `-----BEGIN … KEY-----` blocks, `password=`/`token=`/`secret=` values,
+`Authorization:` headers, 32+ hex runs. Redacted spans render as `[redacted]` in the tool result
+_and_ are highlighted in the pane so the human sees what would have leaked.
+
+**Pairing** (builder mode): tunnel URL is random; the bridge requires a 128-bit token carried in
+the URL fragment (never sent to Vercel); one client per bridge; bridge refuses a second
+connection; idle timeout 30 min; `Ctrl-C` twice in the bridge kills the tunnel.
+
+**Judge sandbox**: non-root user, no network egress except an allowlist (PyPI mirror off; HN,
+lobste.rs, example.org, a demo Shopify store, and the Anthropic API host), 30-min TTL,
+1 session/IP/10 min, model-call cap 20/session, no persistent volume, image rebuilt from a
+pinned Dockerfile. The `$`-capped Anthropic key lives in Worker secrets, never in the image.
+
+**Ledger**: append-only, every row signed with a per-session HMAC so the export can be checked
+for tampering (5 lines of code; say it in the text — it's the arXiv 2606.06387 recommendation
+"traceable logs of tool registration and invocation").
+
+**`rokan do` writes**: `rokan-do allow` grants are per-site per-action; the demo uses reads
+plus one harmless write (a Render restart on a demo service _or_ `netlify deploy` of a static
+page). Nothing that spends money. `may_act` bypass (2026-08-27 review) is a known open item in
+Rokan; it is outside the WebMCP layer and not on the demo path.
+
+**Say in the submission text**: "WebMCP tool descriptions are hints to a cooperative agent,
+never a security boundary. Our boundary is the keyboard."
+
+---
+
+## 5. Repository `Aarya2004/webmcp-private` (empty today) — layout and what moves from Rokan
+
+```
+webmcp-private/
+  LICENSE                     Apache-2.0 (also set in GitHub → About → license)
+  README.md                   judge-facing: what/why/how-to-test (ChatGPT desktop + Chrome 149), GIF
+  apps/web/                   Next.js 15 + TS strict + Tailwind + shadcn; xterm.js; tools; card; ledger
+    src/app/page.tsx
+    src/components/{Terminal,ToolsPane,ForgeCard,Ledger,ShareScreenToggle}.tsx
+    src/lib/webmcp/{register.ts,useTool.ts,redact.ts,ledger.ts,schemas.ts}
+    src/lib/ws/{client.ts,protocol.ts}
+  packages/bridge/            Node 20 · node-pty · ws · cloudflared spawn · pairing token · ledger.jsonl
+    bin/rokan-terminal.js     `npx rokan-terminal` (publish to npm on Sep 2, name TBD)
+  infra/sandbox/              Cloudflare Worker (wrangler.toml, @cloudflare/sandbox), Dockerfile, seed/
+    seed/operations.json      `rokan-do seed export` from Arav's machine: HN, lobste.rs, example ops
+  evals/                      Chrome evals-cli cases (§3)
+  docs/PLAN.md                this file, copied verbatim
+  docs/SECURITY.md            §4, expanded
+  docs/DEMO.md                §8
+  vendor/                     built wheels: rokan-mcp, rokan-agent, rokan-do (from Rokan main, pinned SHA)
+```
+
+**From Rokan, copy only** (Arav's rule: parts we use + safety, not the repo):
+
+- The three wheels (`uv build` in each package) → `vendor/`. Source stays in Rokan.
+- `packages/rokan-do/SKILL.md` → `infra/sandbox/seed/SKILL.md` (the container's `rokan do` help).
+- Seeded operations (`rokan-do seed export`) for the 4–6 demo sites.
+- Redaction patterns — write fresh in TS (`redact.ts`), no Rokan dependency.
+- Nothing from `apps/api`, channels, voice, mascot, Forge pipeline, Quorus.
+
+**Changes inside Rokan (separate PRs, tiny):** `rokan-do run --json` (one-line result with
+`model_calls` and `ms`); confirm `seed install` works on a fresh machine with no key
+(0-call replay path). Both by me, day 2–3, on `feat/rokan-mcp-v1` or a side branch.
+
+---
+
+## 6. Schedule (PT). Owners: **A** = Arav (human), **Ay** = Aarya (+ his Claude), **C** = me (Arav's Claude)
+
+Gates are binary. A gate not green by its time triggers its kill rule (§10) — no discussion.
+
+### D0 — Fri Aug 28 (tonight)
+
+- [ ] A/Ay: **go** on this plan; name chosen; accounts (§12) created; ChatGPT Sol/Terra on one Mac.
+- [ ] C: scaffold `webmcp-private` (layout above), CI = `tsc --noEmit` + `next build` + `ruff`.
+- [ ] C: **Gate A test page** — a static Next page registering `terminal_propose` (no backend);
+      open in ChatGPT desktop built-in browser; confirm the "Site tools" arrow shows it; ask
+      ChatGPT to propose `ls`; confirm the tool is invoked and _not_ blocked by safety review.
+      Same page in Chrome 149 + Inspector + DevTools WebMCP panel.
+- **GATE A (Fri 23:59):** ChatGPT invokes an inert propose tool on our page. ✅/❌ recorded in
+  `docs/PROGRESS.md` with a screenshot.
+
+### D1 — Sat Aug 29 — the terminal alone must stand
+
+- Ay: `apps/web` — layout (terminal 70% · right column: Tools / Forge / Ledger), xterm.js with
+  fit + webgl addons, WS client, ghost-text rendering in the prompt line (dim + diff), Esc
+  dismisses, Enter executes, "Share screen" toggle, dark/light, Rokan palette (`docs/BRAND.md`).
+- C: `packages/bridge` — node-pty + ws + token + cloudflared spawn + pairing link + ledger.jsonl;
+  `terminal_read_screen` with redaction; `terminal_status`; `terminal_wait`.
+- Joint 20:00: builder mode E2E on Arav's Mac from the deployed Vercel URL through the tunnel.
+- **GATE B (Sat 22:00):** ChatGPT proposes → Arav presses Enter → command runs on Arav's Mac →
+  ChatGPT reads the redacted screen → correct follow-up. Recorded (this recording is already a
+  submittable backup).
+
+### D2 — Sun Aug 30 — forge + ledger + judge sandbox scaffold
+
+- Ay: Forge card (edit name/desc/commands/params/kind, approve/reject, pin), dynamic
+  `forged_<name>` registration with `AbortController` per tool, button rendering, `forge_list`,
+  "Forge this" from selected history lines, ledger column with `calls`/`ms`.
+- C: `infra/sandbox` — Worker + Sandbox SDK + Dockerfile (Python 3.11, uv, node, rokan-do
+  wheels, playwright chromium), `/api/session`, xterm `SandboxAddon`, TTL, rate limit.
+- C: Rokan PR `rokan-do run --json`.
+- **GATE C (Sun 22:00):** in ChatGPT desktop: forge from a proposal → tool appears in site tools
+  → agent invokes it → ghost-typed → Enter → ledger row. DevTools panel shows registration.
+
+### D3 — Mon Aug 31 — `rokan do` inside; office hours
+
+- 11:00 A + Ay: **challenge office hours** (Netlify/Render pages). Ask: are inert proposal tools
+  OK; iframe/decl limits; any tool-count guidance; whether judges test in ChatGPT or Chrome.
+- C: seeded ops in the sandbox; `rokan do "top 5 HN titles"` → forge → `forged_hn_top({n})` →
+  0-call replay shows `calls:0 ms:<400` in the ledger; model-call cap; egress allowlist.
+- Ay: polish — empty states, error states (bridge down, tunnel died, WS reconnect), keyboard
+  focus discipline, the 12-tool budget, mobile = "open on desktop" card.
+- C: `evals/` six cases green with the Chrome evals CLI; `docs/SECURITY.md`.
+- **GATE D (Mon 22:00):** judge mode live URL: a stranger with ChatGPT desktop can open it, get a
+  sandbox, propose, Enter, forge, invoke — with no help. Arav tests from a second account.
+
+### D4 — Tue Sep 1 — freeze, test, record
+
+- 12:00 **feature freeze.** Only bugs after this.
+- 13:00–17:00 §7 test protocol, full pass, both modes, both browsers. Fix blockers only.
+- 17:00–19:00 README with GIF; LICENSE visible in About; repo public; Vercel prod alias;
+  Worker prod; `docs/PLAN.md`, `DEMO.md`, `SECURITY.md` copied.
+- 19:00–22:00 **5 rehearsals** of §8 with a stopwatch; record the best full run as
+  `demo-backup.mp4`; upload privately to YouTube.
+- Netlify credits form closes **Sep 1 12:00 PT** — submit before.
+
+### D5 — Wed Sep 2 — video + submit
+
+- 10:00–14:00 final video (§8 shot list), narration recorded separately, cut to ≤ 2:50.
+- 14:00 YouTube public. 15:00 Devpost submission complete (text §9, video, repo, live URL,
+  judge instructions incl. "use GPT-5.6 Sol or Terra").
+- 16:00 (Arav's call) `uv publish` rokan-do / `npm publish rokan-terminal`; launch post.
+- **Submitted by 18:00 PT Sep 2.** The last 19 hours are buffer, not build time.
+
+### D6 — Thu Sep 3
+
+- 09:00 re-open the live URL from a clean machine; re-run one forge; confirm video public.
+- 13:00 deadline. Nothing new after 09:00.
+
+---
+
+## 7. Test protocol (run T-4h before submission; each PASS/FAIL, owner, evidence file)
+
+**Golden rule:** demo from the Vercel _production_ alias, bridge from a _fresh clone_ of the
+repo, sandbox from the _deployed_ Worker. Never from `localhost` or a dev branch.
+
+L1 — Bridge (C)
+
+- T1.1 `npx rokan-terminal` on a clean Mac prints one pairing link within 10 s. PASS if link opens a live shell.
+- T1.2 Second client with the same link is refused. PASS if refused with a visible message.
+- T1.3 Kill `cloudflared` → client shows "bridge disconnected" within 5 s, reconnect button works.
+- T1.4 `ledger.jsonl` gains one row per proposal/execute/forge; rows carry HMAC.
+
+L2 — Tools (C/Ay)
+
+- T2.1 Page registers 7 tools; DevTools WebMCP panel lists them with descriptions ≤ 500 chars.
+- T2.2 `terminal_propose` with a newline → rejected with reason. With `rm -rf /` → red banner + double confirm.
+- T2.3 `terminal_read_screen` with toggle OFF → `{shared:false}`. With ON and a fake `AKIA…` on screen → `[redacted]`.
+- T2.4 `terminal_wait` resolves on Enter with exit code; resolves `dismissed` on Esc; times out at 120 s.
+- T2.5 `forge_create` → card → approve → new tool visible in ChatGPT site tools **without reload**; reject → nothing registered.
+- T2.6 Unpin 6th forged tool → oldest unregisters; `forge_list` still lists it.
+- T2.7 Page with WebMCP absent (Safari) → everything but the Tools pane works; no console errors.
+
+L3 — ChatGPT desktop (A)
+
+- T3.1 Sol: propose `ls`, Enter, read screen, correct summary. Repeat on Terra.
+- T3.2 Ambiguous "clean up this folder" → agent _proposes_, does not attempt to execute; human dismisses.
+- T3.3 Forge from agent; invoke forged tool; ledger row `invoked`, `calls:0` for a seeded `rokan do`.
+- T3.4 Luna → tools absent (expected). Documented in README.
+
+L4 — Judge mode (A from a second account, Ay from his machine)
+
+- T4.1 Cold open → sandbox within 15 s; shell responsive.
+- T4.2 `rokan do "top 5 HN titles"` seeded → answer + `calls:0`. Unseeded task → answer with `calls:1..3`, or honest refusal.
+- T4.3 Model-call cap hit → clear message, shell still works.
+- T4.4 Egress: `curl https://example.org` OK; `curl https://evil.example` blocked.
+- T4.5 TTL expiry → "session ended" card with a "new session" button.
+
+L5 — Ops (A)
+
+- T5.1 Repo public, LICENSE in About, README renders GIF, judge instructions at top.
+- T5.2 Video public, ≤ 3:00, audio audible, URL in submission.
+- T5.3 Devpost form complete; live URL opens in ChatGPT desktop _and_ Chrome 149 + flag.
+
+---
+
+## 8. Demo script + video shot list (target 2:40; narration recorded separately)
+
+Pre-stage: fresh macOS user, Dock hidden, 1440×900, ChatGPT desktop on Sol, bridge running,
+pairing link opened, tools pane showing 7, ledger empty, `rokan do` seeded for HN. Second
+laptop (Aarya) mirrors the setup for a second take. `demo-backup.mp4` one keypress away.
+
+| t         | shot                                                                                                                                                             | narration (short)                                                                     |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 0:00–0:12 | Cold open on the empty terminal + ChatGPT side panel showing "Site tools · 7"                                                                                    | "This is a terminal. ChatGPT can see it. It can't type Enter."                        |
+| 0:12–0:35 | Ask: "what's in this repo and are the tests passing?" → `ls` ghost-typed → Enter → `pytest -q` proposed → Enter → agent reads screen → answer                    | "Every command it wants is a proposal. My Enter is the trust boundary."               |
+| 0:35–0:50 | Toggle "Share screen" off → agent asks to see the screen → `{shared:false}`; toggle on; a fake key on screen renders `[redacted]`                                | "It reads what I let it read. Secrets never leave the tab."                           |
+| 0:50–1:20 | Ask: "get me the top 5 Hacker News titles" → `rokan do "top 5 HN titles"` proposed → Enter → browser does it (rokan output) → ledger `calls:1 · 4.2s`            | "`rokan do` browses for real — the model plans once, the page verifies."              |
+| 1:20–1:45 | Select the line → **Forge this** → card: `hn_top`, param `n` → approve → **ChatGPT's site-tools list gains `forged_hn_top`** (cut to DevTools WebMCP panel, 2 s) | "What I did once is now a tool — in WebMCP's own format."                             |
+| 1:45–2:05 | Ask: "top 3 now" → agent calls `forged_hn_top({n:3})` → ghost-typed → Enter → ledger `calls:0 · 0.36s`                                                           | "Second time: zero model calls. The model left the hot path."                         |
+| 2:05–2:25 | Agent: "deploy the docs" → `netlify deploy --prod` proposed, banner **CONSEQUENTIAL** → Enter → forge as `deploy` (kind: write)                                  | "Writes are marked. Still my Enter."                                                  |
+| 2:25–2:40 | Ledger scroll: proposed / executed / forged / invoked, each with ms and calls; export JSON                                                                       | "Every action, who did it, what it cost. Rokan Terminal. Your Enter is the boundary." |
+
+Trigger to switch to backup: tunnel not connected in 10 s, or any tool call not visible in
+ChatGPT within 15 s. Say it plainly on camera if live; in the edit, use the backup take.
+
+Sponsor clips (each 10–15 s, same video): OpenAI 0:12–0:35 · Chrome 1:20–1:45 · Netlify
+2:05–2:25 · Cloudflare (judge-mode B-roll 3 s at 0:00 showing the sandbox banner) · Vercel
+(README badge + "Next.js" in the footer) · Render optional (use Render instead of Netlify for the
+write beat if Netlify auth is a hassle).
+
+---
+
+## 9. Submission text (drafts; final on D5)
+
+**Why WebMCP fits.** A terminal already has a human on one side. WebMCP is the first standard
+that puts the agent on the _same page_ with the same session — not in a sandbox on someone
+else's machine. Tools carry the intent ("propose", "read", "forge") and the page carries the
+trust boundary (the keyboard). The dynamic half of the spec — `toolchange`, per-tool
+`AbortController`, annotations — is exactly what "a tool library that grows as you work" needs.
+
+**Better experience.** For the human: a co-pilot that proposes instead of acting, reads only
+what you share, and turns your repetitive commands into buttons. For the agent: typed tools
+instead of guessing at a screen, and a way to wait on the human (`terminal_wait`) instead of
+polling.
+
+**Together, newly possible.** The agent gets hands on a real shell without ever getting
+execution. The human gets to _teach by doing_: anything done once can be forged into a tool the
+agent calls next time — including `rokan do`, which browses the web behind your logins and
+replays at zero model calls. Neither could grow that library alone.
+
+**Implementation.** Next.js 15 on Vercel; `document.modelContext.registerTool` × 7 fixed +
+dynamic `forged_*` tools, each with an `AbortController`; `readOnlyHint` /
+`untrustedContentHint` on reads, "CONSEQUENTIAL:" on writes; redaction before any screen
+leaves the tab; xterm.js ↔ WebSocket ↔ `node-pty` on your machine via Cloudflare Tunnel, or a
+Cloudflare Sandbox container for judges; HMAC-signed append-only ledger; six Chrome evals-CLI
+cases. Tool descriptions are hints to a cooperative agent, never a security boundary — the
+boundary is the keyboard.
+
+Facts to keep straight: WebMCP authored by Microsoft + Google; Alex Nahas credited for
+implementation experience (MCP-B) — not "originator"; Shopify is an origin-trial participant.
+
+---
+
+## 10. Risk register + kill rules
+
+| #   | Risk                                               | Sev  | Mitigation                                                                    | Kill rule                                                                                                                   |
+| --- | -------------------------------------------------- | ---- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 1   | ChatGPT safety review blocks `terminal_propose`    | CRIT | Gate A on D0; name/description make inertness explicit                        | Gate A ❌ → Chrome 149 + Inspector is the primary demo; ChatGPT shown only for tool discovery; say so in README             |
+| 2   | Quick tunnel drops WebSocket                       | HIGH | test D1 morning; named tunnel fallback; ngrok as last resort (not in video)   | none — 2 h fix                                                                                                              |
+| 3   | Terminal + ghost-typing not E2E by Sat 22:00       | CRIT | two people on it all day; nothing else scheduled                              | **Gate B ❌ → forge becomes "buttons only" (human-made, no `forge_create`), submission = terminal + ghost-typing + ledger** |
+| 4   | Sandbox container can't run Chromium / too slow    | HIGH | seeded 0-call ops need no browser at replay; keep Chromium for unseeded       | Gate D ❌ on rokan → judge sandbox ships without `rokan do`; rokan beat in video only                                       |
+| 5   | Forge card half-done → "gimmick"                   | HIGH | Aarya owns the card end-to-end D2; design review Sun 18:00                    | card not approvable by Sun 22:00 → cut "Forge this" (reverse) keep `forge_create`                                           |
+| 6   | Integration sprawl (Vercel+Workers+Tunnel+Netlify) | HIGH | no DO relay; Netlify only in the video; Render as substitute                  | any vendor > 2 h of yak → drop it                                                                                           |
+| 7   | Judges read "terminal" as not-the-web              | MED  | README first line: a web app, WebMCP tools, ChatGPT drives it                 | none                                                                                                                        |
+| 8   | Rushing: "Codex does this"                         | MED  | text: browser-platform capability, human-gated, open standard, any machine    | none                                                                                                                        |
+| 9   | Live URL dead on Sep 3                             | CRIT | Worker + Vercel prod; uptime check every 5 min; Sep 3 09:00 re-verify         | none                                                                                                                        |
+| 10  | Launch week collides                               | HIGH | rokan-do launch = the Sep 2 publish; no rokan-do feature work except `--json` | if rokan-do gate breaks, do not publish; the entry doesn't depend on PyPI                                                   |
+
+---
+
+## 11. Rules (the Handset discipline, adapted — read every morning)
+
+1. **One feature.** Terminal + ghost-typing is the product. Forge is the second beat. Everything else is cut.
+2. **Verified-state table first.** Every standup starts with "what is green _right now_", not what's planned. `docs/PROGRESS.md` holds it.
+3. **Gates are binary and dated.** A red gate triggers its kill rule the same hour. No "one more try".
+4. **Never fake a number.** ms and calls come from the code that ran. Label what is measured. State N.
+5. **Decouple the unfailable beat from the bonus beat.** The tool appearing in the site-tools list is unfailable; the agent invoking it correctly is the bonus. Rehearse so the words land on the unfailable one.
+6. **Recorded backup one keypress away.** Trigger conditions written down. Never debug on stage or in a take.
+7. **Golden path only in the video.** One page, one bridge, one URL. Quarantine every alternate client.
+8. **Every 30 minutes: does this demo well?** If not, the next 30 minutes go to the demo, not the code.
+9. **No vendor yak > 2 h.** Drop the vendor.
+10. **Freeze is a freeze.** After Tue 12:00, bugs only.
+11. **Two owners per gate, one keyboard.** Aarya's Claude and mine never edit the same file; ownership in §6.
+12. **Submit a day early.** The last 19 hours are for re-verification, not building.
+13. **Say the true thing.** In the text, in the video, at office hours. Judges have seen the fake ones.
+
+---
+
+## 12. Asks (all independent; answer in one message)
+
+1. Go / no-go from both of you. Product name.
+2. ChatGPT plan with GPT-5.6 Sol/Terra on one Mac; latest desktop app installed.
+3. Cloudflare account, Workers Paid ($5) for Sandbox SDK; sponsor credits claimed.
+4. Vercel account; code `OAIWEBMH-9E2F-MUT4`; project `rokan-terminal`.
+5. Netlify (or Render) account for the write beat; Netlify credits form before Sep 1 12:00 PT.
+6. Anthropic key with a hard spend cap for the judge sandbox (Worker secret).
+7. Aarya: confirm ownership split (§6) or swap it; confirm his Claude works in `apps/web` only.
+8. Arav: `rokan-do seed export` on the demo sites once D3 begins.
