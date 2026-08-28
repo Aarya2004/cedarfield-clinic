@@ -4,8 +4,8 @@
  * `data` frames. Used to reset the local line buffer on a new prompt and to know when the
  * command after an Enter has ended (its exit code arrives in the `status` frame).
  */
-const ESC = '';
-const BEL = '';
+const ESC = String.fromCharCode(27);
+const BEL = String.fromCharCode(7);
 
 export type PromptEvent = { kind: 'prompt' } | { kind: 'start' } | { kind: 'end'; code: number | null } | { kind: 'cwd'; cwd: string };
 

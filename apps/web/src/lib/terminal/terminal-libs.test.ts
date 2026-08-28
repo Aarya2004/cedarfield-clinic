@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { PromptDetector } from './osc.ts';
 import { LineBuffer } from './linebuffer.ts';
 
-const ESC = '';
-const BEL = '';
+const ESC = String.fromCharCode(27);
+const BEL = String.fromCharCode(7);
 
 test('PromptDetector: A/C/D/7 in one chunk', () => {
   const d = new PromptDetector();
