@@ -93,6 +93,12 @@ export function TerminalTools() {
               executes.
             </li>
             <li>
+              <code className="mono">terminal_read_screen</code> — last N lines, redacted, only if shared.
+            </li>
+            <li>
+              <code className="mono">terminal_status</code> — cwd, running, last exit code + ms (measured).
+            </li>
+            <li>
               <code className="mono">terminal_wait</code> — blocks until Enter/Esc or 45 s.
             </li>
           </ul>
