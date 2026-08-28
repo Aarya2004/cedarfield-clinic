@@ -214,3 +214,19 @@ Full report: `docs/reviews/2026-08-28-fable-3.md`. Gate cold at `3691189`: typec
 - [ ] P2 — `infra/sandbox/src/worker.ts:107` — `/ws` `getSandbox(env.Sandbox, id)` omits `sleepAfter:'35m'` (SDK default 10 m); confirm the persisted value wins on first deploy — Fable [C]
 - [ ] P2 — `infra/sandbox/Dockerfile` — `rokan-do` not in the judge image while the `rokan` shim is on PATH and `api.anthropic.com` is allowlisted; `rokan do` exits 127 in the sandbox — install it (seeds, no key) or say so in the seed README — Fable [C]
 - [ ] P2 — `README.md` — "`npx rokan-terminal mcp`" before the package is published; use the `node packages/bridge/bin/rokan-terminal.js mcp` form — Fable [C]
+
+## Review findings (open) — Opus 5 reviewer, pass 3, 2026-08-28
+
+Full report: `docs/reviews/2026-08-28-opus-3.md`. Cold gate at `3691189`: web **109/109** · bridge
+check + smoke **33/33 in 2404 ms** + MCP 3/3 · bridge units 6/6 + 3/3 · sandbox **11/11** · evals
+**7 cases / 193 steps / 0 failed** · `--bridge` **8 cases / 172 steps / 0 failed**. **Live prod
+measured healthy:** 200 in 219 ms, nonce CSP + `strict-dynamic` served, and the gate-a case driven
+against `https://rokan-terminal.vercel.app/` registers 6 tools, `terminal_propose` 21 ms, ESC + RLO
+both rejected. All pass-2 findings (mine and Fable's Worker ones) verified closed with regression tests.
+
+- [ ] P1 — `packages/bridge/src/bridge.js:116` — the rokan trailer is parsed from *any* command's output with no check that `last_command` was a rokan invocation (measured: `echo "  the answer is 42   7ms  ⚡"` → signed ledger row `rokan_calls:0`), so `docs/SUBMISSION.md:44`'s "parsed from rokan-do's own result line" is untrue as written, `Panes.tsx:197` renders a bare `calls:0 ⚡` badge with no qualifier, and an agent-proposed `echo` the human waves through makes the HMAC chain vouch for a replay that never happened; gate on `last_command` (one line) and the SUBMISSION sentence becomes true — Opus [C]
+- [ ] P2 — `docs/SECURITY.md:71` — says "1 new session per IP per 10 min"; `wrangler.jsonc` sets 3 and `SUBMISSION.md:54` says 3, while `SECURITY.md:7` claims everything below is implemented and regression-tested — Opus [C]
+- [ ] P2 — `infra/sandbox/src/worker.ts:71` — the 429 body ("This IP already started a sandbox in the last 10 minutes") is the copy for a limit of 1; the limit is 3, so a judge who trips it reads a message contradicting the README and SECURITY.md — Opus [C]
+- [ ] P2 — `docs/PLAN.md:119,189,285` + `SANDBOX-PLAN.md:57` + `FORGE-PLAN.md:485` — the "model-call cap 20/session" abuse control is promised in four places and implemented in none; risk is nil (no key reaches the container) but the claim is unfulfilled — replace with the true, stronger "no API key in the judge container; unseeded tasks are refused" — Opus [C]
+- [ ] P2 — `infra/sandbox/src/worker.ts:28` — `ANTHROPIC_API_KEY` is a declared-but-unused `Env` field, so `wrangler secret put ANTHROPIC_API_KEY` (which `PLAN §12.6` instructs) silently does nothing; delete it or comment why it is deliberately unwired — Opus [C]
+- [ ] P2 — `evals/cases/gate-a-propose-wait.json:18` — the final "ledger row rendered" step is a bare `eval` with no `equals`/`matches`, so the harness defaults `ok:true`; its value is `null` on both localhost and live prod, i.e. it would fail if made asserting (stale Gate-A placeholder text vs the current pane UI). 1 of 18 steps asserts — sweep all cases for non-asserting `eval` steps — Opus [C]
