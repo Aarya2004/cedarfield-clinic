@@ -42,6 +42,9 @@ ask "propose ls", then ask it to `terminal_wait` on the id and do nothing — th
 | 2 | Hostname resolvable at 1.1.1.1 after URL print | ~25 s | 1 |
 | 3 | Querying the local resolver before it propagates **negative-caches NXDOMAIN** for minutes — the first two runs "failed" for this reason only | yes | 2 |
 | 4 | WebSocket upgrade through the tunnel (dependency-free RFC 6455 echo) | open 197 ms, echo RTT 216 ms | 1 |
+| 5 | `rokan-terminal` CLI: URL printed → DNS-over-HTTPS (1.1.1.1) answers | 12.1 s, 18.3 s | 2 |
+| 6 | Pair through the tunnel with the real bridge: `auth` → `hello` / first honest `status` after a command | 367 ms / 411 ms | 1 |
+| 7 | Real-PTY smoke (`packages/bridge/test/smoke.mjs`, 14 checks incl. tamper detection) | 14/14 in 331 ms | 1 |
 
 Bridge rule: after cloudflared prints the URL, poll `1.1.1.1` (not the system resolver) until
 it answers, *then* print the pairing link. PLAN §10 risk #2 is closed: quick tunnels pass WS.

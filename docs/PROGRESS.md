@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 01:20 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 01:30 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -18,7 +18,8 @@ Last update: **2026-08-28 01:20 PT** by C (Arav's Claude). Branch `main`, all pu
 - Page registers `terminal_propose` (inert; description says NEVER executes) + `terminal_wait` (45 s, `still_waiting`, honours `signal` when given) under one `AbortController`; feature-detects `document.modelContext ?? navigator.modelContext`; page works without WebMCP.
 - Chrome 152 + `--enable-features=WebMCP`: `toolsAdded` fires per registration; CDP `WebMCP.invokeTool` → ghost text on the prompt → Enter → `terminal_wait` returns `executed` (705 ms) → ledger row with measured decision latency. ESC / bidi-override injections rejected with reasons (T2.2 half green).
 - Quick tunnel passes WebSocket upgrades: open 197 ms, echo 216 ms. PLAN §10 risk #2 closed.
-- Shared contract v0: `apps/web/src/lib/webmcp/schemas.ts` (`terminal_propose` schema + `validateProposedCommand`, the row-1 printable allowlist). `protocol.ts` lands Sat 10:00 as `contract:`.
+- **`packages/bridge` green (commit `7a3f88c`)**: `node bin/rokan-terminal.js` → node-pty zsh + ws on 127.0.0.1 + 128-bit token (first-frame auth, timing-safe) + one tab at a time (second gets `busy`) + cloudflared quick tunnel + DNS-over-HTTPS wait + one pairing link. zsh shell integration (OSC 133 / OSC 7 / private OSC 7331) gives **honest** `running / last_exit_code / last_command_ms / last_command / cwd`. `~/.rokan-terminal/ledger.jsonl` rows are HMAC-chained per session; `verifyLedger()` detects tampering. Real-PTY smoke `pnpm smoke`: **14/14 in 331 ms**. Through a real tunnel: hello 367 ms, status 411 ms.
+- Shared contracts: `schemas.ts` v0 (`terminal_propose` + `validateProposedCommand`) and **`apps/web/src/lib/ws/protocol.ts` v1** (commit `647486d`, frames + `parsePairingHash`). Both under `contract:`.
 
 ## Blocked on Arav (do these first — Gate A deadline Fri 23:59 PT)
 
@@ -44,11 +45,21 @@ Last update: **2026-08-28 01:20 PT** by C (Arav's Claude). Branch `main`, all pu
 - `TerminalTools.tsx` and `page.tsx` are placeholders in your lane — replace freely; keep the registration shape in `register.ts`.
 - Local run: `pnpm install` at root (pnpm 11 needs `allowBuilds` — already in `pnpm-workspace.yaml`), then `cd apps/web && pnpm dev`.
 
-## Next (C, Sat 08-29 PT)
+## For Aarya's Claude — how to run against the real bridge (D1 morning)
 
-- 10:00 `packages/bridge` — node-pty + ws + token + cloudflared spawn (poll 1.1.1.1 before printing the link) + `protocol.ts` (`contract:`).
-- 14:00 `redact.ts` + tests; `terminal_read_screen`, `terminal_status` wired.
-- 18:00 `terminal_wait` on real PTY exit codes; `ledger.ts` + HMAC; bridge `ledger.jsonl`.
+```
+pnpm install                                   # root
+node packages/bridge/bin/rokan-terminal.js --no-tunnel --app http://localhost:3000
+# prints http://localhost:3000/#ws=ws%3A%2F%2F127.0.0.1%3A7331&t=<token>
+# client: parsePairingHash(location.hash) → new WebSocket(ws) → send {type:'auth',token,cols,rows}
+# then {type:'input',data} for every keystroke, {type:'resize'} on fit; render {type:'data'} into xterm.
+```
+Drop `--no-tunnel` to get a `wss://…trycloudflare.com` link (≈ 15–20 s, waits for DNS). Smoke: `cd packages/bridge && pnpm smoke`.
+
+## Next (C, Sat 08-29 PT) — bridge done a day early; remaining lane work
+
+- 10:00 `redact.ts` + tests (every PLAN §4 pattern); client `ledger.ts` (append-only, HMAC, mirrors to bridge via `{type:'ledger'}`).
+- 14:00 `terminal_read_screen` (Share-screen gate + redact), `terminal_status` (from `status` frames), `terminal_wait` on real exit codes — wired to whatever `useBridge()`/terminal buffer Aarya's client exposes; I'll code against `protocol.ts` and a tiny adapter interface so the wiring is a one-line hook-up.
 - 20:00 joint E2E from the deployed URL. 22:00 Gate B.
 
 ## Objections
