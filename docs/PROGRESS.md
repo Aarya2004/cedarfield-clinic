@@ -199,3 +199,18 @@ Full report: `docs/reviews/2026-08-28-fable-2.md`. Gate re-run once at `7a32314`
 - [x] P2 — `components/Terminal.tsx:150-152` — `acceptProposal` return ignored + key consumed → silent dead Enter with no reason shown — Fable [C] — **fixed e34c0c4**
 - [x] P2 — `apps/web/src/lib/ws/client.ts:163, 251-253` — keystrokes queued while `connecting` are replayed into the shell after a *re*-pair; flush only on first connect — Fable [C] — **fixed 84759c8**
 - [x] P2 — `infra/sandbox/src/worker.ts:93-100` — unauthenticated, unused `DELETE /api/session/:sid`; remove or bind to the token — Fable [C] — **fixed 439cf19**
+
+## Review findings (open) — Fable 5, pass 3 (2026-08-28 night)
+
+Full report: `docs/reviews/2026-08-28-fable-3.md`. Gate cold at `3691189`: typecheck/lint/build clean, web 109/109, bridge 6/6 + smoke 33/33 (2401 ms), sandbox 11/11, evals 7/7 + `--bridge` 8/8; live URL 200 (nonce CSP, HSTS, DENY). All pass-2 fixes verified.
+
+- [ ] P1 — `packages/bridge/src/bridge.js:116` + `apps/web/src/components/Panes.tsx:196` + `evals/cases/terminal-rokan-trailer.json:3` — `calls:0 ⚡` is set from any command's output (the gate's own smoke + E2E prove it with `echo`), so the ledger, the hero beat and SUBMISSION show a printed line as a measured zero-call replay (§0.6); gate `parseRokanTrailer` on `state.last_command` matching `^(rokan|rokan-do)\b` (OSC 7331 already carries it), make the `echo` cases negative tests — Fable [C]
+- [ ] P2 — `README.md` — "94 unit tests" / "12 cases" are stale; measured 109 / 15 (365 steps) — Fable [C]
+- [ ] P2 — `README.md` judges step 4 — "site-tools list gains forged_<name> (no reload)" is asserted for ChatGPT desktop but measured only in Chrome 152; state it per PLAN §0.9 — Fable [C]
+- [ ] P2 — `docs/PLAN.md:143,146` — row 6 says `executed` per step (now `executed_step`); row 4 deltas lack `measured:false`, `rokan{ms,replayed,calls}`, `terminal_status.last_rokan` — Fable [C]
+- [ ] P2 — `apps/web/src/lib/webmcp/forge.ts:212,240` + `ForgeCard.tsx:23` — forge path uses mode-less `isDangerous`, so judge-mode `sudo` in a forged command is not flagged while `terminal_propose` (`isDangerousIn`) flags it — Fable [C]
+- [ ] P2 — `apps/web/src/lib/terminal/adapter.ts:170,218` — no-integration quiet fallback (750 ms) marks a silent long command done; the `running` Enter-gate cannot fire without integration; SECURITY §1 row 4 should scope the claim to zsh integration — Fable [C]
+- [ ] P2 — `infra/sandbox/src/sid.ts` — signed sids never expire: after TTL a stale tab's reconnects to `/ws/<sid>` restart an empty container each attempt; sign `id.exp` or check the Gate row's `expires_at` — Fable [C]
+- [ ] P2 — `infra/sandbox/src/worker.ts:107` — `/ws` `getSandbox(env.Sandbox, id)` omits `sleepAfter:'35m'` (SDK default 10 m); confirm the persisted value wins on first deploy — Fable [C]
+- [ ] P2 — `infra/sandbox/Dockerfile` — `rokan-do` not in the judge image while the `rokan` shim is on PATH and `api.anthropic.com` is allowlisted; `rokan do` exits 127 in the sandbox — install it (seeds, no key) or say so in the seed README — Fable [C]
+- [ ] P2 — `README.md` — "`npx rokan-terminal mcp`" before the package is published; use the `node packages/bridge/bin/rokan-terminal.js mcp` form — Fable [C]
