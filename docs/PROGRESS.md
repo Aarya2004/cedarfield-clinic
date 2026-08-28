@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 01:30 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 01:50 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -19,7 +19,10 @@ Last update: **2026-08-28 01:30 PT** by C (Arav's Claude). Branch `main`, all pu
 - Chrome 152 + `--enable-features=WebMCP`: `toolsAdded` fires per registration; CDP `WebMCP.invokeTool` → ghost text on the prompt → Enter → `terminal_wait` returns `executed` (705 ms) → ledger row with measured decision latency. ESC / bidi-override injections rejected with reasons (T2.2 half green).
 - Quick tunnel passes WebSocket upgrades: open 197 ms, echo 216 ms. PLAN §10 risk #2 closed.
 - **`packages/bridge` green (commit `7a3f88c`)**: `node bin/rokan-terminal.js` → node-pty zsh + ws on 127.0.0.1 + 128-bit token (first-frame auth, timing-safe) + one tab at a time (second gets `busy`) + cloudflared quick tunnel + DNS-over-HTTPS wait + one pairing link. zsh shell integration (OSC 133 / OSC 7 / private OSC 7331) gives **honest** `running / last_exit_code / last_command_ms / last_command / cwd`. `~/.rokan-terminal/ledger.jsonl` rows are HMAC-chained per session; `verifyLedger()` detects tampering. Real-PTY smoke `pnpm smoke`: **14/14 in 331 ms**. Through a real tunnel: hello 367 ms, status 411 ms.
-- Shared contracts: `schemas.ts` v0 (`terminal_propose` + `validateProposedCommand`) and **`apps/web/src/lib/ws/protocol.ts` v1** (commit `647486d`, frames + `parsePairingHash`). Both under `contract:`.
+- **All four `terminal_*` tools registered and invoked in Chrome 152** (`register.ts`): `terminal_propose` · `terminal_read_screen` (Share-screen gate → `{shared:false}` when OFF, `redactForAgent()` choke point, 1.5 K output budget with `truncated`) · `terminal_status` (honest fields from bridge `status` frames, `measured:true` only with shell integration) · `terminal_wait` (45 s, `still_waiting`, tail through the same redaction + gate). Evidence appended to `docs/evidence/gate-a/2026-08-28-chrome152-cdp.log`.
+- `redact.ts` (every PLAN §4 pattern + PEM blocks + ANSI strip; 12 tests) and client `ledger.ts` (append-only, WebCrypto HMAC chain, localStorage mirror, forward-to-bridge hook, `verifyExport`; 2 tests). `pnpm test` in `apps/web` = 14/14.
+- Shared contracts under `contract:`: `schemas.ts` v1 (all four fixed tools, `validateProposedCommand`, `DANGEROUS_PATTERNS`/`isDangerous`, `OUTPUT_BUDGET_CHARS`) and `apps/web/src/lib/ws/protocol.ts` v1 (frames + `parsePairingHash`).
+- **Seam for Aarya's terminal UI: `apps/web/src/lib/webmcp/adapter.ts`.** Implement `TerminalAdapter` (`shareScreen`, `screenLines(n)` from the xterm buffer, `status()` from the latest `status` frame, `ghostType`, `waitProposal` with `exit_code/ms/tail` after Enter) and call `setTerminalAdapter(...)` once — the tools need no other change. Until then `gateAAdapter` keeps everything working with no shell.
 
 ## Blocked on Arav (do these first — Gate A deadline Fri 23:59 PT)
 
