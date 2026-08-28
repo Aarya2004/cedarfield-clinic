@@ -34,3 +34,10 @@ Switch to `demo-backup.mp4` if: pairing not green in 10 s · any tool call not v
 | 3 | | | | |
 | 4 | | | | |
 | 5 | | | | |
+
+## Seeded `rokan do` beat — use a seeded question (measured 2026-08-28, FIELD-NOTES R2–R4)
+
+Hacker News is **not** in rokan-do's seed pack. For the `calls:0 ⚡` beat type one of the seeded questions verbatim, e.g.
+`rokan do "what is the current status at githubstatus.com"` or
+`rokan do "what is the latest version of pydantic at pypi.org/project/pydantic"` (312 ms replay measured for the docs.github.com seed).
+`rokan do "top 5 HN titles"` is honest too — it is the model-call path (`calls:null`, needs the key) or an abstention; say which one you are showing.

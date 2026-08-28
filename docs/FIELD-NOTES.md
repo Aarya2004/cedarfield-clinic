@@ -78,3 +78,13 @@ ask "propose ls", then ask it to `terminal_wait` on the id and do nothing — th
 
 Bridge rule: after cloudflared prints the URL, poll `1.1.1.1` (not the system resolver) until
 it answers, *then* print the pairing link. PLAN §10 risk #2 is closed: quick tunnels pass WS.
+
+## rokan-do on the demo Mac (measured 2026-08-28 21:05 PT)
+
+| # | Fact | Measured | N |
+| --- | --- | --- | --- |
+| R1 | `rokan-do` installed as a user tool from the local Rokan tree (`uv tool install --from ~/dev/Rokan/packages/rokan-do rokan-do`); `rokan-do can` prints the offer; Rokan ships **no `rokan` binary** (`rokan-do` is the console script) — the terminal's `rokan` shim (`packages/bridge/shims/rokan`, on the PTY PATH) makes `rokan do "…"` real | works | 1 |
+| R2 | `rokan-do seed install` → 54 seeded operations (status pages, docs sites, pypi, wikipedia, curl.se, ubuntu.com …). **Hacker News is not seeded**: `rokan do "top 5 HN titles"` is a model-call path (needs `ANTHROPIC_API_KEY`), not a 0-call replay | 54 seeds | 1 |
+| R3 | Seeded replay, cold store: `rokan-do run "what is the maximum file size GitHub blocks at docs.github.com/…/about-large-files-on-github"` → `GitHub blocks files larger than 100 MiB.   312ms  ⚡` (⚡ = replayed, 0 model calls) | 312 ms | 1 |
+| R4 | A question not matching a seed's own text (`"is github up?"`) → `⏸ abstained — Rokan cannot prove this one` (exit 0, the trust line). Seeds match their recorded question, e.g. `what is the current status at githubstatus.com` | abstains | 1 |
+| R5 | Result-line grammar (from `rokan_agent/adapters/cli/render.py`): `  <answer>   <elapsed_ms>ms` + `  ⚡` only when `transport_used == "replay"`; ANSI (dim timing, saffron bolt) only on a TTY. Model-call counts are **not** printed → the bridge reports `calls:0` for ⚡ and `calls:null` otherwise | grammar | — |
