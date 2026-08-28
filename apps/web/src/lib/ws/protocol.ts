@@ -56,12 +56,20 @@ export type ClientFrame =
 export type BridgeMode = 'builder' | 'judge';
 
 /** Honest status: every field is set by the bridge from OSC 133 / OSC 7 markers, never inferred. */
+/** Parsed `rokan-do` result line of the last command: `⚡` (replayed) means no model call. */
+export interface RokanTrailer {
+  ms: number;
+  replayed: boolean;
+}
+
 export interface BridgeStatus {
   cwd: string;
   running: boolean;
   last_exit_code: number | null;
   last_command_ms: number | null;
   last_command: string | null;
+  /** null unless the last command printed a rokan-do result line (bridge-measured) */
+  last_rokan?: RokanTrailer | null;
 }
 
 /** Bridge → client */

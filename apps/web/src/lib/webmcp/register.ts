@@ -162,6 +162,7 @@ export function fixedToolDefs(): ToolDef[] {
           last_exit_code: st?.last_exit_code ?? null,
           last_command_ms: st?.last_command_ms ?? null,
           measured: st?.integration ?? false,
+          last_rokan: st?.last_rokan ? { ...st.last_rokan, calls: st.last_rokan.replayed ? 0 : null } : null,
         };
       },
     },
@@ -216,6 +217,7 @@ export function fixedToolDefs(): ToolDef[] {
           ...(p.edited ? { edited: true } : {}),
           ...(p.interrupted ? { interrupted: true } : {}),
           ...(p.measured === false ? { measured: false } : {}),
+          ...(p.rokan ? { rokan: { ms: p.rokan.ms, replayed: p.rokan.replayed, calls: p.rokan.replayed ? 0 : null } } : {}),
           ...(p.invocation_id ? { invocation_id: p.invocation_id, next_proposal_id: next } : {}),
         };
       },

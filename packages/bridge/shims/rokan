@@ -1,0 +1,5 @@
+#!/bin/sh
+# Rokan Terminal convenience: `rokan do "<task>"` runs `rokan-do "<task>"` (Rokan ships `rokan-do`
+# as its console script; there is no `rokan` binary). Put on the PTY's PATH by the bridge.
+[ "$1" = "do" ] && shift
+exec rokan-do "$@"

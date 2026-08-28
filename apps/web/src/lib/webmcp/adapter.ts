@@ -20,6 +20,8 @@ export interface ResolvedProposal extends Proposal {
   edited?: boolean;
   /** false when the shell has no integration: completion was inferred from output silence, exit_code/ms unknown */
   measured?: boolean;
+  /** the command printed a rokan-do result line (parsed by the bridge) */
+  rokan?: { ms: number; replayed: boolean };
 }
 
 export interface TerminalAdapter {

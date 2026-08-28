@@ -118,7 +118,7 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
       inflight = null;
       return;
     }
-    finish({ ...p, status: 'accepted', exit_code: st.last_exit_code, ms: st.last_command_ms, tail: tailOf(f), ...(f.edited ? { edited: true } : {}) });
+    finish({ ...p, status: 'accepted', exit_code: st.last_exit_code, ms: st.last_command_ms, tail: tailOf(f), ...(f.edited ? { edited: true } : {}), ...(st.last_rokan ? { rokan: st.last_rokan } : {}) });
   };
 
   /** (Re)arm the quiescence timer — only used when the shell has no integration. */

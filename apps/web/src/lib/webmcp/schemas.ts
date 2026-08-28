@@ -129,6 +129,8 @@ export interface TerminalStatusResult {
   last_command_ms: number | null;
   /** true when exit codes / ms come from shell integration markers, not guesses */
   measured: boolean;
+  /** parsed rokan-do result line of the last command, when there was one */
+  last_rokan?: { ms: number; replayed: boolean; calls: 0 | null } | null;
 }
 
 export const TERMINAL_STATUS_DESCRIPTION =
@@ -170,6 +172,8 @@ export type TerminalWaitResult =
       interrupted?: boolean;
       /** false when the shell has no integration: completion inferred from output silence; exit_code/ms are null, not measured */
       measured?: boolean;
+      /** present when the command printed a rokan-do result line: ms measured by rokan-do; calls is 0 for a replay (⚡), else unknown */
+      rokan?: { ms: number; replayed: boolean; calls: 0 | null };
     };
 
 export const TERMINAL_WAIT_DESCRIPTION =

@@ -10,6 +10,7 @@ import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import { AUTH_TIMEOUT_MS, CLIENT_LEDGER_KINDS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_VERSION, isAgentFrameAllowed, parseClientFrame } from './protocol.js';
 import { OscParser, cleanupShellEnv, prepareShellEnv, shellName } from './shell-integration.js';
+import { ROKAN_OUT_MAX, parseRokanTrailer } from './rokan-trailer.js';
 import { Ledger } from './ledger.js';
 
 const require = createRequire(import.meta.url);
@@ -37,7 +38,8 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   const tokenBuf = Buffer.from(token, 'utf8');
   const ledger = new Ledger({ session: sessionId, ...(ledgerDir ? { dir: ledgerDir } : {}) });
 
-  const state = { cwd: cwd || process.env.HOME, running: false, last_exit_code: null, last_command_ms: null, last_command: null };
+  const state = { cwd: cwd || process.env.HOME, running: false, last_exit_code: null, last_command_ms: null, last_command: null, last_rokan: null };
+  let cmdOut = ''; // raw output of the running command, for the rokan-do trailer (capped)
   let startedAt = null;
   let sawStart = false;
   let osc = new OscParser();
@@ -95,19 +97,31 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
     scrollbackBytes += data.length;
     while (scrollbackBytes > SCROLLBACK_MAX && scrollback.length > 1) scrollbackBytes -= scrollback.shift().length;
     let endStatus = false;
+    if (state.running && cmdOut.length < ROKAN_OUT_MAX) cmdOut += data;
     for (const ev of osc.feed(data)) {
       if (ev.kind === 'start') {
         sawStart = true;
         startedAt = performance.now();
         state.running = true;
         state.last_command = ev.command;
+        state.last_rokan = null;
+        cmdOut = data.slice(0, ROKAN_OUT_MAX);
         sendStatus();
       } else if (ev.kind === 'end') {
         if (!sawStart) continue; // the shell's first prompt reports $? of nothing
         state.running = false;
         state.last_exit_code = ev.code;
         state.last_command_ms = startedAt === null ? null : Math.round(performance.now() - startedAt);
-        ledger.append('executed', { command: state.last_command, exit_code: ev.code, ms: state.last_command_ms, cwd: state.cwd });
+        // rokan-do prints `  <answer>   <ms>ms[  ⚡]`; ⚡ = replayed with no model call (PLAN §2)
+        state.last_rokan = parseRokanTrailer(cmdOut);
+        cmdOut = '';
+        ledger.append('executed', {
+          command: state.last_command,
+          exit_code: ev.code,
+          ms: state.last_command_ms,
+          cwd: state.cwd,
+          ...(state.last_rokan ? { rokan_ms: state.last_rokan.ms, rokan_calls: state.last_rokan.replayed ? 0 : null } : {}),
+        });
         endStatus = true; // sent AFTER this data frame so the client sees the end marker (and the last output) first
       } else if (ev.kind === 'cwd') {
         state.cwd = ev.cwd;

@@ -6,6 +6,7 @@
  *
  * zsh only. Other shells spawn without integration and status fields stay null.
  */
+import { fileURLToPath } from 'node:url';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, basename } from 'node:path';
@@ -19,7 +20,8 @@ export function shellName(shellPath) {
 
 /** Returns {env, integration:boolean}. */
 export function prepareShellEnv(shellPath, baseEnv) {
-  const env = { ...baseEnv, ROKAN_TERMINAL: '1', TERM: baseEnv.TERM || 'xterm-256color', COLORTERM: 'truecolor' };
+  const shims = fileURLToPath(new URL('../shims', import.meta.url));
+  const env = { ...baseEnv, ROKAN_TERMINAL: '1', TERM: baseEnv.TERM || 'xterm-256color', COLORTERM: 'truecolor', PATH: `${shims}:${baseEnv.PATH || '/usr/bin:/bin'}` };
   if (shellName(shellPath) !== 'zsh') return { env, integration: false };
   const home = homedir();
   const dir = mkdtempSync(join(tmpdir(), 'rokan-zdotdir-'));

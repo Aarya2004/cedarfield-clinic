@@ -9,7 +9,8 @@
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "shims"
   ],
   "engines": {
     "node": ">=20"

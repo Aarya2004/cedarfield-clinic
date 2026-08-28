@@ -84,6 +84,17 @@ check('status carries the command text', status?.last_command === 'echo hi_from_
 const endData = frames.find((f) => f.type === 'data' && f.data.includes(']133;D;1'));
 check('end-marker data frame precedes its status frame (tail complete)', !!endData && !!status && frames.indexOf(endData) < frames.indexOf(status), `data#${frames.indexOf(endData)} status#${frames.indexOf(status)}`);
 
+// rokan-do trailer → status.last_rokan + ledger fields (PLAN §2); the `rokan` shim is on the PTY PATH
+const rk = await typeCommand("echo '  GitHub blocks files larger than 100 MiB.   312ms  ⚡'");
+check('rokan trailer: replayed answer parsed (ms + calls:0)', rk?.last_rokan?.ms === 312 && rk?.last_rokan?.replayed === true, JSON.stringify(rk?.last_rokan));
+const rk2 = await typeCommand("echo '  planned answer   6100ms'");
+check('rokan trailer: planned answer parsed, calls unknown', rk2?.last_rokan?.ms === 6100 && rk2?.last_rokan?.replayed === false, JSON.stringify(rk2?.last_rokan));
+const rk3 = await typeCommand('echo plain');
+check('rokan trailer: cleared for a non-rokan command', rk3?.last_rokan === null, JSON.stringify(rk3?.last_rokan));
+await typeCommand('which rokan');
+const shimOut = await until(frames, (f) => f.type === 'data' && /shims\/rokan/.test(f.data), 4000);
+check('`rokan` shim is on the PTY PATH', !!shimOut);
+
 await typeCommand('cd /tmp');
 const cwdStatus = await until(frames, (f) => f.type === 'status' && f.last_command === 'cd /tmp' && f.running === false, 8000);
 check('cwd tracked via OSC 7', /\/tmp$/.test(cwdStatus?.cwd ?? ''), JSON.stringify(cwdStatus?.cwd));

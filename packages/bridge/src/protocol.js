@@ -17,7 +17,8 @@
  * Bridge → client
  *   {type:"hello", mode:"builder"|"judge", shell, cwd, pid, session_id, version, integration:boolean, started_at, ttl_ms?, expires_at?}
  *   {type:"data", data}
- *   {type:"status", cwd, running, last_exit_code, last_command_ms, last_command}
+ *   {type:"status", cwd, running, last_exit_code, last_command_ms, last_command, last_rokan}
+ *     last_rokan: null | {ms, replayed} — parsed rokan-do result line of the last command (⚡ = replayed, no model call)
  *   {type:"exit", code}
  *   {type:"ledger_ack", seq, sig, client_seq}   bridge countersignature for the client row
  *   {type:"error", code, message}        code ∈ unauthorized | busy | bad_frame | timeout

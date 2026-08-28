@@ -257,3 +257,18 @@ test('with integration, output silence never finishes a command (only the status
   assert.equal((await a.waitProposal(id, 100))?.ms, 1000);
   a.destroy();
 });
+
+test('rokan-do trailer parsed by the bridge rides along on the resolved proposal', async () => {
+  const store = new ProposalStore();
+  const c = fakeClient();
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store });
+  const p = store.propose('rokan do "what is the current status at githubstatus.com"');
+  const w = a.waitProposal(p.id, 1000);
+  a.acceptProposal(p.id);
+  c.emit('data', `${ESC}]133;C${BEL}  All Systems Operational   312ms  ⚡\r\n${ESC}]133;D;0${BEL}`);
+  c.emit('status', status({ last_exit_code: 0, last_command_ms: 400, last_rokan: { ms: 312, replayed: true } }));
+  const r = await w;
+  assert.deepEqual(r?.rokan, { ms: 312, replayed: true });
+  assert.equal(a.status()?.last_rokan?.replayed, true);
+  a.destroy();
+});
