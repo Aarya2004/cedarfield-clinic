@@ -13,6 +13,7 @@ import { getGateAShare } from './adapter';
 import { fieldNotes } from './fieldnotes';
 import { session } from '@/lib/terminal/session';
 import { agentTools, callAgentTool } from './register';
+import { forgeFromLines } from './forge-this';
 import type { ForgeSpec } from './forge-spec';
 
 export function testHooksEnabled(): boolean {
@@ -58,6 +59,7 @@ export function installTestHooks(): boolean {
     session: () => session.snapshot(),
     agentTools: () => agentTools(),
     agentCall: (tool: string, input: unknown) => callAgentTool(tool, input),
+    forgeThis: (lines: string[]) => forgeFromLines(lines),
     screen: (n = 40) => session.getAdapter()?.screenLines(n) ?? null,
     reconnect: () => session.reconnectNow(),
   };

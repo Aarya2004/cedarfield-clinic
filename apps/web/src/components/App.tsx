@@ -8,6 +8,7 @@ import { Component, useEffect, useState, useSyncExternalStore, type ReactNode } 
 import { registerTerminalTools, type RegistrationState } from '@/lib/webmcp/register';
 import { forge, type ForgeCard as Card } from '@/lib/webmcp/forge';
 import { installTestHooks } from '@/lib/webmcp/testhooks';
+import { forgeFromLines } from '@/lib/webmcp/forge-this';
 import { session } from '@/lib/terminal/session';
 import { clearFieldNotes, fieldNotes, note, subscribeFieldNotes } from '@/lib/webmcp/fieldnotes';
 import { Terminal } from './Terminal';
@@ -83,11 +84,8 @@ export function App() {
   const showTour = tour === 'on' || (tour === 'unset' && s.hello?.mode === 'judge');
 
   const forgeThis = (lines: string[]) => {
-    const first = lines[0]?.replace(/^[~$%❯#]\s*\$?\s*/, '') ?? '';
-    const guess = (first.split(/\s+/)[0] ?? 'tool').toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^[^a-z]+/, '').slice(0, 20) || 'tool';
-    const commands = lines.map((l) => l.replace(/^(?:[~\w./-]*\s*)?[$%❯#]\s+/, '').trim()).filter(Boolean).slice(0, 5);
-    const r = forge.openCard({ name: `${guess}_${Math.floor(Math.random() * 90 + 10)}`, description: `Forged from ${commands.length} command${commands.length === 1 ? '' : 's'} the human ran.`, commands, params: [], kind: 'read' }, { origin: 'human' });
-    if ('error' in r) window.alert?.(`Cannot forge: ${r.error}${r.detail ? ' — ' + r.detail : ''}`);
+    const r = forgeFromLines(lines);
+    if ('error' in r) note('forge_this.rejected', { error: r.error, detail: r.detail });
   };
 
   return (

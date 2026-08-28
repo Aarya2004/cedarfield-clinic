@@ -35,5 +35,10 @@
   { "invoke": "forge_list", "input": {} },
   { "eval": "window.__rokan.forge.list().tools[0].runs", "equals": 1 },
   { "eval": "window.__rokan.ledger().rows.map(r => r.kind).filter(k => ['forge_requested','forged','invoked','executed'].includes(k))", "equals": ["forge_requested", "forged", "invoked", "executed"] },
-  { "eval": "document.body.innerText.replace(/\\s+/g,' ').includes('forged_hn_top')", "equals": true }
+  { "eval": "document.body.innerText.replace(/\\s+/g,' ').includes('forged_hn_top')", "equals": true },
+  { "eval": "(() => { const r = window.__rokan.forgeThis(['~ $ ls -la', 'total 8', '~ $ git status']); return [r.spec?.commands, r.spec?.name?.startsWith('ls_'), r.origin]; })()", "equals": [["ls -la", "total 8", "git status"], true, "human"] },
+  { "waitFor": "document.querySelector('[data-card]') !== null", "timeout": 2000 },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id, { commands: ['ls -la', 'git status'] }); return r.tool?.startsWith('forged_ls_'); })()", "equals": true },
+  { "sleep": 150 },
+  { "eval": "window.__rokan.forge.list().visible", "equals": 2 }
 ]

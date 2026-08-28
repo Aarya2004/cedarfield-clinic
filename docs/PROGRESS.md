@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 15:40 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 16:20 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -35,7 +35,9 @@ Last update: **2026-08-28 15:40 PT** by C (Arav's Claude). Branch `main`, all pu
 
 **Done 15:40 PT:** judge-facing README; nonce CSP (no `unsafe-inline` scripts); UI nits from a headed pass (params grid, ledger truncation, how-it-works card). Chrome's `evals-cli` is not on npm (`webmcp-tools` on npm is a third-party SDK) — our CDP harness + 12 cases is the evals story; cite it in the submission.
 
-**Now (C, in flight):** `docs/SUBMISSION.md` (Devpost text, PLAN §9 in the §0.9 order); then a Forge-this harness check; then idle-poll for the logins (Vercel → deploy; wrangler → judge sandbox live) and the reviewers' second pass.
+**Done 16:20 PT:** `docs/SUBMISSION.md` draft; Forge-this as a tested lib (`forge-this.ts`, prompt stripping + name grammar) with a harness path (selection → card → approve → `forged_ls_*`).
+
+**Now (C, in flight):** CI runs the real-PTY bridge smoke on Linux; `rokan-terminal verify <export.json>` (ledger cross-check); then an automated demo dry-run (one harness case per §8 beat with screenshots + timings). Still blocked on Arav: ChatGPT Sol/Terra, `vercel login`, `wrangler login`.
 
 **Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 
