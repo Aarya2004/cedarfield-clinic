@@ -98,6 +98,10 @@ const rk = await typeCommand('rokan do "what is the maximum file size GitHub blo
 check('rokan trailer: attributed to a `rokan do` command (via the shim) — ms + calls:0', rk?.last_rokan?.ms === 312 && rk?.last_rokan?.replayed === true, JSON.stringify(rk?.last_rokan));
 const rk2 = await typeCommand('rokan-do planned');
 check('rokan trailer: planned answer parsed, calls unknown', rk2?.last_rokan?.ms === 6100 && rk2?.last_rokan?.replayed === false, JSON.stringify(rk2?.last_rokan));
+// Codex review P2: two commands in ONE PTY chunk — the second must not inherit the first's trailer
+ws.send(JSON.stringify({ type: 'input', data: '\x15rokan do "again"\recho plain_after\r' }));
+const rkPlain = await until(frames, (f) => f.type === 'status' && f.last_command === 'echo plain_after' && f.running === false, 6000);
+check('rokan trailer: not inherited by the next command in the same chunk', rkPlain?.last_rokan === null, JSON.stringify(rkPlain?.last_rokan));
 const rkNeg = await typeCommand("echo '  the answer is 42   7ms  ⚡'");
 check('rokan trailer: NOT attributed to an echo of the same line (Fable pass-3 P1)', rkNeg?.last_rokan === null, JSON.stringify(rkNeg?.last_rokan));
 await typeCommand('which rokan');
@@ -189,6 +193,10 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
   const h2 = await until(c2.frames, (f) => f.type === 'hello', 3000);
   const rep = await until(c.frames, (f) => f.type === 'error' && f.code === 'replaced', 3000);
   check('judge mode: a newer tab with the token takes over; the old tab is told `replaced`', !!h2 && !!rep, JSON.stringify({ h2: h2?.mode, rep: rep?.code }));
+  // Codex review P1: the replaced tab may still be mid-close; nothing it sends reaches the PTY
+  if (c.ws.readyState === c.ws.OPEN) c.ws.send(JSON.stringify({ type: 'input', data: 'echo stale_tab_typed\r' }));
+  const stale = await until(c2.frames, (f) => f.type === 'status' && f.last_command === 'echo stale_tab_typed', 1200);
+  check('judge mode: a replaced tab cannot type into the PTY', !stale, JSON.stringify(stale?.last_command));
   const ended = await until(c2.frames, (f) => f.type === 'error' && f.code === 'timeout', 5000);
   await new Promise((r) => setTimeout(r, 100));
   check('judge TTL ends the session and signals onIdle', !!ended && idle, JSON.stringify(ended));

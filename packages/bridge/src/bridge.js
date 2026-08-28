@@ -91,21 +91,25 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
     attach(term);
   };
 
+  // A PTY chunk can carry the end of one command and the start of the next; split it at the OSC 133
+  // markers so the trailer buffer holds exactly one command's output (Codex review P2).
+  const OSC133_SPLIT = /(\x1b\]133;[^\x07\x1b]*(?:\x07|\x1b\\))/;
   const attach = (t) => {
   t.onData((data) => {
     scrollback.push(data);
     scrollbackBytes += data.length;
     while (scrollbackBytes > SCROLLBACK_MAX && scrollback.length > 1) scrollbackBytes -= scrollback.shift().length;
     let endStatus = false;
-    if (state.running && cmdOut.length < ROKAN_OUT_MAX) cmdOut += data;
-    for (const ev of osc.feed(data)) {
+    for (const piece of data.split(OSC133_SPLIT)) {
+      if (!piece) continue;
+      for (const ev of osc.feed(piece)) {
       if (ev.kind === 'start') {
         sawStart = true;
         startedAt = performance.now();
         state.running = true;
         state.last_command = ev.command;
         state.last_rokan = null;
-        cmdOut = data.slice(0, ROKAN_OUT_MAX);
+        cmdOut = '';
         sendStatus();
       } else if (ev.kind === 'end') {
         if (!sawStart) continue; // the shell's first prompt reports $? of nothing
@@ -128,6 +132,8 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
       } else if (ev.kind === 'cwd') {
         state.cwd = ev.cwd;
       }
+      }
+      if (state.running && !piece.startsWith('\x1b]133;') && cmdOut.length < ROKAN_OUT_MAX) cmdOut += piece;
     }
     send(client, { type: 'data', data });
     if (endStatus) sendStatus();
@@ -268,6 +274,12 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
           return;
         }
         if (f.type === 'ping') send(ws, { type: 'pong' });
+        return;
+      }
+      if (ws !== client) {
+        // A replaced tab (judge-mode takeover) stays authenticated until its close handshake
+        // completes; nothing it sends may reach the PTY, the agent or the ledger (Codex review P1).
+        send(ws, { type: 'error', code: 'replaced', message: 'this tab was replaced by a newer one' });
         return;
       }
       switch (f.type) {
