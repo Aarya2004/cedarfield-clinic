@@ -1,9 +1,12 @@
 node_modules/
 .next/
-.env*
+out/
+dist/
+.env
+.env.*
 !.env.example
-.wrangler/
-graphify-out/
-*.log
+.vercel
+.wrangler
 .DS_Store
-vendor/*.whl
+*.log
+pnpm-debug.log*
