@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 17:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 18:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -39,7 +39,12 @@ Last update: **2026-08-28 17:10 PT** by C (Arav's Claude). Branch `main`, all pu
 
 **Done 17:10 PT:** CI runs the real-PTY smoke + MCP relay on Linux; `rokan-terminal verify` (ledger cross-check, smoke 29/29); **automated demo dry-run** — every §8 beat on a real PTY with a screenshot per beat (`docs/evidence/demo/`, 47 steps, 0 failed). **Incident:** `bin/rokan-terminal.js` was committed empty by a truncating edit (6c9d3d0) and restored in 072f11c; `check` now requires a non-empty bin.
 
-**Now (C):** waiting on Arav for ChatGPT Sol/Terra, `vercel login`, `wrangler login`; meanwhile polishing (headed QA of the card/ledger, FIELD-NOTES), and ready for the reviewers' second pass.
+**State (C): idle, everything login-free is done and green.** Since 17:10: `useForgedTools()` hook (§13.7), judge-Worker self-audit (generic 503, no secret in code, self-audit note in SECURITY.md). `pnpm gate` green on macOS; **CI green on Linux** (real-PTY smoke + MCP relay + sandbox check).
+
+**The moment a login lands (C runs immediately, no further decisions needed):**
+- **`vercel login` done** → `cd apps/web && vercel link --project rokan-terminal --yes && vercel pull --yes && vercel --prod` (Root Directory = `apps/web`; set `NEXT_PUBLIC_SANDBOX_URL` + `NEXT_PUBLIC_BRIDGE_HOSTS` after the Worker URL exists). Then open the prod URL in Chrome 152 for a smoke, screenshot to `docs/evidence/gate-a/`.
+- **`wrangler login` done** (Workers Paid) → `cd infra/sandbox && pnpm deploy` → capture the Worker URL → set the two Vercel env vars + `NEXT_PUBLIC_SANDBOX_URL` → redeploy web → `node evals/run-all.mjs --judge=<worker-url>` (real judge sandbox) → cold-start numbers to FIELD-NOTES.
+- **ChatGPT desktop on Sol/Terra confirmed** → measure the ChatGPT half of Gates A/B (does the Site tools list refresh on `toolchange` without reload?), FIELD-NOTES + `docs/evidence/gate-a|b/`.
 
 **Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 
