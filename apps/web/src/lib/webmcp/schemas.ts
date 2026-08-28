@@ -129,7 +129,7 @@ export interface TerminalStatusResult {
   last_command_ms: number | null;
   /** true when exit codes / ms come from shell integration markers, not guesses */
   measured: boolean;
-  /** rokan-do result line parsed from the last command's output (any program can print one — it attests what the PTY showed) */
+  /** rokan-do result line of the last command, only when that command line was rokan / rokan-do */
   last_rokan?: { ms: number; replayed: boolean; calls: 0 | null } | null;
 }
 
@@ -172,7 +172,7 @@ export type TerminalWaitResult =
       interrupted?: boolean;
       /** false when the shell has no integration: completion inferred from output silence; exit_code/ms are null, not measured */
       measured?: boolean;
-      /** parsed from the command's OUTPUT by the bridge (rokan-do's result line `  <answer>   <ms>ms[  ⚡]`): ms as printed; calls is 0 for a replay (⚡), else unknown. Any program can print that line — it attests what the PTY showed, not what ran. */
+      /** the bridge parsed rokan-do's result line (`  <answer>   <ms>ms[  ⚡]`) from the output of a command line that IS rokan / rokan-do (an echo of the line is never attributed): ms as printed; calls is 0 for a replay (⚡), else unknown */
       rokan?: { ms: number; replayed: boolean; calls: 0 | null };
     };
 
@@ -182,7 +182,7 @@ export const TERMINAL_WAIT_DESCRIPTION =
   'waiting. On executed, returns the exit code, duration, a redacted tail of the output (empty unless ' +
   'Share screen is on) and, for forged tools, next_proposal_id for the following step. measured:false means the ' +
   'shell has no integration: exit_code/ms are null and completion was inferred from output silence. rokan, when present, is ' +
-  "parsed from the command's printed rokan-do result line (calls:0 only for a ⚡ replay) — it reports what the terminal showed. Never executes anything itself.";
+  "parsed from rokan-do's printed result line, only when the command that ran was rokan / rokan-do (calls:0 only for a ⚡ replay). Never executes anything itself.";
 
 // ---------- forge_create / forge_list (engine: forge.ts; spec helpers: forge-spec.ts) ----------
 

@@ -32,6 +32,12 @@ export class Gate extends DurableObject {
     return d;
   }
 
+  /** A session is recorded provisionally (short expiry) until the container answers; then it gets its full TTL. */
+  async confirm(sid: string, ttlMs: number): Promise<void> {
+    this.init();
+    this.ctx.storage.sql.exec('UPDATE sessions SET expires_at = ? WHERE sid = ?', Date.now() + ttlMs, sid);
+  }
+
   async release(sid: string): Promise<void> {
     this.init();
     this.ctx.storage.sql.exec('UPDATE sessions SET expires_at = ? WHERE sid = ?', Date.now(), sid);

@@ -1,15 +1,18 @@
 [
   { "list": true },
   { "waitFor": "window.__rokan.session().state === 'paired'", "timeout": 8000 },
-  { "invoke": "terminal_propose", "input": { "command": "echo '  All Systems Operational   312ms  ⚡'", "why": "a rokan-do replay prints exactly this line" } },
+  { "invoke": "terminal_propose", "input": { "command": "mkdir -p /tmp/rokan-fake && printf '#!/bin/sh\\necho \"  All Systems Operational   312ms  ⚡\"\\n' > /tmp/rokan-fake/rokan-do && chmod +x /tmp/rokan-fake/rokan-do", "why": "a stand-in rokan-do that prints a replay line" } },
+  { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid0 = p.id; return typeof p.id; })()", "equals": "string" },
+  { "key": "Enter" },
+  { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid0 }).then(r => r.status)", "equals": "executed" },
+  { "invoke": "terminal_propose", "input": { "command": "PATH=/tmp/rokan-fake:$PATH rokan do \"what is the current status at githubstatus.com\"", "why": "a rokan do replay" } },
   { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()", "equals": "string" },
   { "key": "Enter" },
-  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanPid" } },
   { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid }).then(r => [r.status, r.rokan && r.rokan.calls, r.rokan && r.rokan.replayed, r.rokan && r.rokan.ms])", "equals": ["executed", 0, true, 312] },
-  { "invoke": "terminal_status", "input": {} },
   { "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => r.last_rokan && r.last_rokan.calls)", "equals": 0 },
-  { "invoke": "terminal_propose", "input": { "command": "which rokan", "why": "the shim is on the PTY PATH" } },
+  { "invoke": "terminal_propose", "input": { "command": "echo '  All Systems Operational   312ms  ⚡'", "why": "an echo of the same line must NOT count as a replay" } },
   { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid2 = p.id; return typeof p.id; })()", "equals": "string" },
   { "key": "Enter" },
-  { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid2 }).then(r => r.status === 'executed' && r.rokan === undefined)", "equals": true }
+  { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid2 }).then(r => r.status === 'executed' && r.rokan === undefined)", "equals": true },
+  { "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => r.last_rokan)", "equals": null }
 ]

@@ -8,6 +8,11 @@
 const ANSI_RE = /\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]/g;
 const LINE_RE = /^\s{2}\S.*?\s{3}(\d{1,7})ms(\s{2}⚡)?\s*$/;
 export const ROKAN_OUT_MAX = 65536;
+/** The command line that ran must BE rokan / rokan-do (env assignments or a path prefix allowed). */
+export const ROKAN_CMD_RE = /^\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:\S*\/)?(?:rokan|rokan-do)(?:\s|$)/;
+export function isRokanCommand(cmd) {
+  return typeof cmd === 'string' && ROKAN_CMD_RE.test(cmd);
+}
 
 export function stripAnsi(text) {
   return String(text).replace(ANSI_RE, '');

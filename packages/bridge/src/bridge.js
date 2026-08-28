@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import { AUTH_TIMEOUT_MS, CLIENT_LEDGER_KINDS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_VERSION, isAgentFrameAllowed, parseClientFrame } from './protocol.js';
 import { OscParser, cleanupShellEnv, prepareShellEnv, shellName } from './shell-integration.js';
-import { ROKAN_OUT_MAX, parseRokanTrailer } from './rokan-trailer.js';
+import { ROKAN_OUT_MAX, isRokanCommand, parseRokanTrailer } from './rokan-trailer.js';
 import { Ledger } from './ledger.js';
 
 const require = createRequire(import.meta.url);
@@ -112,8 +112,10 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
         state.running = false;
         state.last_exit_code = ev.code;
         state.last_command_ms = startedAt === null ? null : Math.round(performance.now() - startedAt);
-        // rokan-do prints `  <answer>   <ms>ms[  ⚡]`; ⚡ = replayed with no model call (PLAN §2)
-        state.last_rokan = parseRokanTrailer(cmdOut);
+        // rokan-do prints `  <answer>   <ms>ms[  ⚡]`; ⚡ = replayed with no model call (PLAN §2).
+        // Attributed ONLY when the command that ran is rokan / rokan-do — an `echo` of the same
+        // line is never a replay (Fable pass-3 P1).
+        state.last_rokan = isRokanCommand(state.last_command) ? parseRokanTrailer(cmdOut) : null;
         cmdOut = '';
         ledger.append('executed', {
           command: state.last_command,

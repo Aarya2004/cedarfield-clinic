@@ -4,6 +4,9 @@
  * second-client refusal + bad-token refusal. Exit 0 only if everything holds.
  */
 import { mkdtempSync, readFileSync } from 'node:fs';
+import * as fsx from 'node:fs';
+import * as osx from 'node:os';
+import * as pathx from 'node:path';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -84,13 +87,19 @@ check('status carries the command text', status?.last_command === 'echo hi_from_
 const endData = frames.find((f) => f.type === 'data' && f.data.includes(']133;D;1'));
 check('end-marker data frame precedes its status frame (tail complete)', !!endData && !!status && frames.indexOf(endData) < frames.indexOf(status), `data#${frames.indexOf(endData)} status#${frames.indexOf(status)}`);
 
-// rokan-do trailer → status.last_rokan + ledger fields (PLAN §2); the `rokan` shim is on the PTY PATH
-const rk = await typeCommand("echo '  GitHub blocks files larger than 100 MiB.   312ms  ⚡'");
-check('rokan trailer: replayed answer parsed (ms + calls:0)', rk?.last_rokan?.ms === 312 && rk?.last_rokan?.replayed === true, JSON.stringify(rk?.last_rokan));
-const rk2 = await typeCommand("echo '  planned answer   6100ms'");
+// rokan-do trailer → status.last_rokan + ledger fields (PLAN §2), attributed ONLY to a rokan / rokan-do
+// command line (Fable pass-3 P1). A fake `rokan-do` on the PATH stands in for the real one on CI; the
+// `rokan` shim (packages/bridge/shims) is on the PTY PATH already.
+const rkDir = fsx.mkdtempSync(pathx.join(osx.tmpdir(), 'rokan-fake-'));
+fsx.writeFileSync(pathx.join(rkDir, 'rokan-do'), '#!/bin/sh\nif [ "$1" = planned ]; then echo "  planned answer   6100ms"; else echo "  GitHub blocks files larger than 100 MiB.   312ms  ⚡"; fi\n');
+fsx.chmodSync(pathx.join(rkDir, 'rokan-do'), 0o755);
+await typeCommand(`export PATH=${rkDir}:$PATH`);
+const rk = await typeCommand('rokan do "what is the maximum file size GitHub blocks"');
+check('rokan trailer: attributed to a `rokan do` command (via the shim) — ms + calls:0', rk?.last_rokan?.ms === 312 && rk?.last_rokan?.replayed === true, JSON.stringify(rk?.last_rokan));
+const rk2 = await typeCommand('rokan-do planned');
 check('rokan trailer: planned answer parsed, calls unknown', rk2?.last_rokan?.ms === 6100 && rk2?.last_rokan?.replayed === false, JSON.stringify(rk2?.last_rokan));
-const rk3 = await typeCommand('echo plain');
-check('rokan trailer: cleared for a non-rokan command', rk3?.last_rokan === null, JSON.stringify(rk3?.last_rokan));
+const rkNeg = await typeCommand("echo '  the answer is 42   7ms  ⚡'");
+check('rokan trailer: NOT attributed to an echo of the same line (Fable pass-3 P1)', rkNeg?.last_rokan === null, JSON.stringify(rkNeg?.last_rokan));
 await typeCommand('which rokan');
 const shimOut = await until(frames, (f) => f.type === 'data' && /shims\/rokan/.test(f.data), 4000);
 check('`rokan` shim is on the PTY PATH', !!shimOut);

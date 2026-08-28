@@ -10,6 +10,11 @@
  * The bridge token is issued once and never stored by the Worker; the bridge verifies it.
  */
 import { getSandbox, Sandbox } from '@cloudflare/sandbox';
+
+// The sandbox DO reaches its container through `ctx.exports.ContainerProxy`; the SDK requires the
+// Worker entrypoint to re-export it. Without this every container start logs
+// `ctx.exports.ContainerProxy is undefined` and times out (measured 2026-08-28: 135 s → 503).
+export { ContainerProxy } from '@cloudflare/sandbox';
 import { Gate } from './gate';
 import { corsHeaders, originAllowed } from './origin';
 import { issueSid, verifySid } from './sid';
@@ -35,6 +40,10 @@ export class RokanSandbox extends Sandbox<Env> {
 }
 
 const BRIDGE_PORT = 7331;
+/** A session counts as active for this long until the bridge answers; a client that gives up (or a
+ *  Worker invocation that dies) before then must not lock its IP for the full TTL (measured
+ *  2026-08-28: three aborted starts → "3 active sandboxes", retry in 977 s). */
+const PROVISIONAL_MS = 180_000;
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extra } });
@@ -66,9 +75,12 @@ export default {
       const id = hex(12);
       const sid = await issueSid(env.SID_SECRET, id);
       const gate = env.Gate.get(env.Gate.idFromName(ip));
-      const d = await gate.allow(sid, ttl, Number.parseInt(env.SESSIONS_PER_IP_PER_10MIN, 10) || 1, Number.parseInt(env.MAX_CONCURRENT_PER_IP, 10) || 3);
+      const perWindow = Number.parseInt(env.SESSIONS_PER_IP_PER_10MIN, 10) || 1;
+      const maxConcurrent = Number.parseInt(env.MAX_CONCURRENT_PER_IP, 10) || 3;
+      const d = await gate.allow(sid, PROVISIONAL_MS, perWindow, maxConcurrent);
       if (!d.ok) {
-        return json({ error: d.reason === 'rate' ? `This IP already started a sandbox in the last 10 minutes; try again in ${d.retry_after_s} s` : `This IP already has ${d.active} active sandboxes`, retry_after_s: d.retry_after_s }, 429, { ...h, 'retry-after': String(d.retry_after_s ?? 60) });
+        const msg = d.reason === 'rate' ? `This IP already started ${perWindow} sandbox${perWindow === 1 ? '' : 'es'} in the last 10 minutes; try again in ${d.retry_after_s} s` : `This IP already has ${d.active} active sandboxes (limit ${maxConcurrent})`;
+        return json({ error: msg, retry_after_s: d.retry_after_s }, 429, { ...h, 'retry-after': String(d.retry_after_s ?? 60) });
       }
       const t0 = Date.now();
       const token = hex(16);
@@ -87,8 +99,10 @@ export default {
           await sandbox.destroy().catch(() => undefined);
           return json({ error: 'sandbox did not start in time' }, 503, h);
         }
+        await gate.confirm(sid, ttl); // the bridge answered: now the session holds its full TTL
       } catch (e) {
         await gate.release(sid);
+        await sandbox.destroy().catch(() => undefined); // never leave a half-started instance counting against max_instances
         // Log internals server-side; return a generic message (never leak stack/SDK details to clients).
         console.error('session start failed', sid, e instanceof Error ? e.stack : String(e));
         return json({ error: 'the sandbox could not be started; please try again' }, 503, h);

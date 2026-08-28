@@ -88,3 +88,11 @@ it answers, *then* print the pairing link. PLAN §10 risk #2 is closed: quick tu
 | R3 | Seeded replay, cold store: `rokan-do run "what is the maximum file size GitHub blocks at docs.github.com/…/about-large-files-on-github"` → `GitHub blocks files larger than 100 MiB.   312ms  ⚡` (⚡ = replayed, 0 model calls) | 312 ms | 1 |
 | R4 | A question not matching a seed's own text (`"is github up?"`) → `⏸ abstained — Rokan cannot prove this one` (exit 0, the trust line). Seeds match their recorded question, e.g. `what is the current status at githubstatus.com` | abstains | 1 |
 | R5 | Result-line grammar (from `rokan_agent/adapters/cli/render.py`): `  <answer>   <elapsed_ms>ms` + `  ⚡` only when `transport_used == "replay"`; ANSI (dim timing, saffron bolt) only on a TTY. Model-call counts are **not** printed → the bridge reports `calls:0` for ⚡ and `calls:null` otherwise | grammar | — |
+
+## Judge sandbox — deployed (measured 2026-08-28 ~16:25 PT)
+
+| # | Fact | Measured | N |
+| --- | --- | --- | --- |
+| J1 | Root cause of every failed start after the first deploy: `@cloudflare/sandbox` 0.12.9's DO reaches its container via `ctx.exports.ContainerProxy`; the Worker entrypoint must `export { ContainerProxy } from '@cloudflare/sandbox'`. Without it: `container.startup … ctx.exports.ContainerProxy is undefined` in the Worker log, retries for ~135 s, then our 503; instances pile up (7 live) | log line | 3 |
+| J2 | With the export: `POST /api/session` → 201 in **4.76 s**, `cold_ms: 4543` (container start + bridge answering on :7331, two `exec curl` probes at 78 / 65 ms) | 4543 ms | 1 |
+| J3 | Aborted client requests (curl `-m 60`) left Gate rows active for the full 30-min TTL → `429 This IP already has 3 active sandboxes, retry 977 s`. Fixed: rows are provisional (180 s) until the bridge answers, then `confirm` sets the full TTL | 977 s lockout | 1 |
