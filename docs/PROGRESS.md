@@ -24,6 +24,16 @@ Last update: **2026-08-28 02:45 PT** by C (Arav's Claude). Branch `main`, all pu
 - Shared contracts under `contract:`: `schemas.ts` v1 (all four fixed tools, `validateProposedCommand`, `DANGEROUS_PATTERNS`/`isDangerous`, `OUTPUT_BUDGET_CHARS`) and `apps/web/src/lib/ws/protocol.ts` v1 (frames + `parsePairingHash`).
 - **Seam for Aarya's terminal UI: `apps/web/src/lib/webmcp/adapter.ts`.** Implement `TerminalAdapter` (`shareScreen`, `screenLines(n)` from the xterm buffer, `status()` from the latest `status` frame, `ghostType`, `waitProposal` with `exit_code/ms/tail` after Enter) and call `setTerminalAdapter(...)` once — the tools need no other change. Until then `gateAAdapter` keeps everything working with no shell.
 
+## Now / Next / Done / In flight (C builds everything — Arav 03:10 PT; Aarya takes the next *unstarted* item here, never a stale one)
+
+**Now (C, in flight — do not edit these files):** `apps/web/src/lib/webmcp/{schemas,proposals,forge,register,adapter,ledger,testhooks}.ts`, `apps/web/src/components/TerminalTools.tsx`, `evals/**` — building the forge engine per `docs/FORGE-PLAN.md` (approved 03:30 PT).
+
+**Next (in order, all C unless Aarya claims one here first):** Terminal plan (xterm + WS client + real `TerminalAdapter` + ghost overlay + card UX + Share-screen + states) → judge sandbox (`infra/sandbox`) → `rokan do` seeded + `--json` → §13 upgrades → test protocol → README/GIF → rehearsals + backup video → Devpost.
+
+**Done (green, measured):** see "What is green right now" above.
+
+**Rules for anyone joining:** read `docs/FORGE-PLAN.md` §16 (test every baby step; `pnpm gate` before every commit) and `docs/ENV-ARAV.md`. Claim an item by writing your name next to it here and pushing before you start.
+
 ## Blocked on Arav (do these first — Gate A deadline Fri 23:59 PT)
 
 1. **Install the ChatGPT desktop app on this Mac; confirm GPT-5.6 Sol or Terra is available** (Luna has site tools disabled; Enterprise/Edu excluded). Nothing else can measure the ChatGPT consumer.

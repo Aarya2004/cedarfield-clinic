@@ -2,10 +2,13 @@
   "name": "rokan-terminal-monorepo",
   "private": true,
   "packageManager": "pnpm@11.1.2",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
-    "build": "pnpm -r --if-present build"
+    "build": "pnpm -r --if-present build",
+    "gate": "pnpm -r --if-present typecheck && pnpm -r --if-present lint && pnpm --filter web test && pnpm --filter web build && pnpm --filter rokan-terminal check && pnpm --filter rokan-terminal smoke && node evals/run-all.mjs"
   }
 }
