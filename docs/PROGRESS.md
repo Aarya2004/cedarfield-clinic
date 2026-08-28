@@ -96,6 +96,11 @@ Drop `--no-tunnel` to get a `wss://…trycloudflare.com` link (≈ 15–20 s, wa
 - **Sat 20:00** joint E2E from the deployed URL through a real tunnel. **22:00 Gate B.**
 - **Sun:** `infra/sandbox` (Worker + Sandbox SDK + Dockerfile) — judge mode.
 
+## Before the repo goes public (Sep 1) — checklist
+- [ ] Purge `docs/evidence/demo/beat3-share-redacted.png` from history (commit `0bb4cba` captured a listing of Arav's home directory; regenerated in a scratch dir in the next commit). `git filter-repo --path docs/evidence/demo/beat3-share-redacted.png --invert-paths` on a fresh clone, then force-push — Arav's call, coordinate with Aarya.
+- [ ] Grep evidence images/logs for home paths and tokens (`docs/evidence/**`, `FIELD-NOTES.md`): the pairing token appears nowhere; `/Users/aravkekane` appears in status bars — acceptable.
+- [ ] LICENSE in GitHub About; README first line; `vendor/` note honest.
+
 ## Objections
 
 - None from C yet. (D1 above is a recommendation on pitch framing, not an objection to a locked decision.)

@@ -1,6 +1,8 @@
 [
   { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
   { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+  { "type": "mkdir -p /tmp/rokan-demo && cd /tmp/rokan-demo && touch README.md app.py tests.py && clear\r" },
+  { "waitFor": "(window.__rokan.screen(5) ?? []).some(l => l.includes('rokan-demo'))", "timeout": 5000 },
   { "type": "seq 1 5\r" },
   { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l === '5')", "timeout": 5000 },
   { "shot": "docs/evidence/demo/beat0-history.png" },
