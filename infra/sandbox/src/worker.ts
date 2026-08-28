@@ -9,6 +9,7 @@
  */
 import { getSandbox, Sandbox } from '@cloudflare/sandbox';
 import { Gate } from './gate';
+import { corsHeaders, originAllowed } from './origin';
 
 export { Gate };
 
@@ -34,12 +35,6 @@ const SID_RE = /^[a-f0-9]{24}$/;
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extra } });
 
-function cors(env: Env, req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? '';
-  const allowed = origin === env.APP_ORIGIN || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-  return allowed ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'POST, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
-}
-
 function hex(bytes: number): string {
   const b = new Uint8Array(bytes);
   crypto.getRandomValues(b);
@@ -49,7 +44,10 @@ function hex(bytes: number): string {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const h = cors(env, request);
+    // Disallowed origin → 403 before any handler (never before-the-Gate work for a stranger's page).
+    const origin = request.headers.get('origin');
+    if (origin !== null && !originAllowed(env.APP_ORIGIN, origin)) return json({ error: 'origin not allowed' }, 403);
+    const h = corsHeaders(env.APP_ORIGIN, origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: h });
 
     if (url.pathname === '/api/health') return json({ ok: true, mode: 'judge' }, 200, h);
