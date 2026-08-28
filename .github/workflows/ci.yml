@@ -38,3 +38,7 @@ jobs:
       - run: pnpm --filter web test
       - run: pnpm --filter web build
       - run: pnpm --filter rokan-terminal check
+      - run: pnpm --filter rokan-sandbox check
+      # real PTY on Linux (zsh for shell integration) + MCP relay over stdio
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh
+      - run: pnpm --filter rokan-terminal smoke
