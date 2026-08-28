@@ -57,6 +57,8 @@ export interface LiveTerminalAdapter extends TerminalAdapter {
   result(id: string): ResolvedProposal | undefined;
   /** true while an accepted proposal has not reached its end marker */
   inFlight(): string | null;
+  /** every resolved proposal (measured or not), for the UI to react (e.g. unmeasured → line unknown) */
+  subscribeResults(fn: (r: ResolvedProposal) => void): () => void;
   destroy(): void;
 }
 
@@ -85,6 +87,7 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
   let quietTimer: ReturnType<typeof setTimeout> | null = null;
   const results = new Map<string, ResolvedProposal>();
   const waiters = new Map<string, Set<(r: ResolvedProposal) => void>>();
+  const resultListeners = new Set<(r: ResolvedProposal) => void>();
 
   const integrated = () => deps.client.hello?.integration === true;
 
@@ -95,6 +98,7 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     inflight = null;
     waiters.get(r.id)?.forEach((fn) => fn(r));
     waiters.delete(r.id);
+    resultListeners.forEach((fn) => fn(r));
   };
 
   const tailOf = (f: InFlight) => {
@@ -242,6 +246,7 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     acceptProposal: (id, opts = {}) => {
       const p = store.get(id);
       if (!p || p.status !== 'awaiting_human') return false;
+      if (!deps.client.paired) return false; // never queue a proposal into a shell that has not said hello yet (Codex review)
       // A program owns stdin (cat, vim, ssh, python…): typing the proposal would feed it, not the shell.
       if (integrated() && deps.client.lastStatus?.running) return false;
       if (inflight) {
@@ -261,6 +266,10 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     },
     result: (id) => results.get(id),
     inFlight: () => inflight?.id ?? null,
+    subscribeResults: (fn) => {
+      resultListeners.add(fn);
+      return () => resultListeners.delete(fn);
+    },
     destroy: () => {
       if (quietTimer) clearTimeout(quietTimer);
       quietTimer = null;

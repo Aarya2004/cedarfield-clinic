@@ -280,3 +280,27 @@ test('regression (judge mode, 2026-08-28): wrapped rows are joined into logical 
   assert.deepEqual(a.screenLines(10), ['judge@rokan:/tmp/demo % export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY', 'marker_ok', 'judge@rokan:/tmp/demo %']);
   assert.deepEqual(a.screenLines(1), ['judge@rokan:/tmp/demo %']);
 });
+
+test('regression (Codex review): Enter on a ghost before hello is refused and queues nothing; unmeasured results are announced', async () => {
+  const store = new ProposalStore();
+  const c = fakeClient();
+  c.setPaired(false);
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store });
+  const p = store.propose('ls');
+  assert.equal(a.acceptProposal(p.id), false);
+  assert.deepEqual(c.sent, []);
+  assert.equal(store.get(p.id)?.status, 'awaiting_human');
+  c.setPaired(true);
+  Object.assign(c, { hello: { ...c.hello!, integration: false } });
+  const seen: boolean[] = [];
+  const off = a.subscribeResults((r) => seen.push(r.measured === false));
+  const b = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store, quietMs: 10 });
+  const q = store.propose('sleep 1');
+  b.acceptProposal(q.id);
+  await b.waitProposal(q.id, 500);
+  off();
+  a.destroy();
+  b.destroy();
+  assert.equal(seen.length, 0); // `a` did not resolve it; `b` did — listeners are per adapter
+  assert.equal(b.result(q.id)?.measured, false);
+});

@@ -75,7 +75,7 @@ test('regression (Fable pass 2 F5): history recall and paste make the line dirty
   b.reset();
   assert.equal(b.empty, true);
   // paste (⌘V arrives only via onData), bracketed paste, IME commit → dirty; single keys and arrow sequences → not
-  assert.equal(b.feedData('x'), false);
+  assert.equal(b.feedData('x', true), false); // a keystroke's own data
   assert.equal(b.feedData(ESC + '[A'), false);
   assert.equal(b.empty, true);
   assert.equal(b.feedData('rm -rf ~/'), true);
@@ -89,4 +89,24 @@ test('regression (Fable pass 2 F5): history recall and paste make the line dirty
   b.feedKey({ key: 'ArrowUp' });
   b.feedKey({ key: 'Backspace' });
   assert.equal(b.empty, false);
+});
+
+test('regression (Codex review): 1-char paste is dirty, keyed 1-char data is not; Enter awaits the prompt with integration; markUnknown', () => {
+  const b = new LineBuffer();
+  assert.equal(b.feedData('x', true), false);
+  assert.equal(b.empty, true);
+  assert.equal(b.feedData('x'), true); // middle-click / IME commit of one character
+  assert.equal(b.empty, false);
+  b.reset();
+  b.feedKey({ key: 'l' });
+  b.feedKey({ key: 'Enter' }, { awaitPrompt: true });
+  assert.equal(b.empty, false, 'submitted line must stay unknown until the prompt marker');
+  b.reset(); // 133;A arrived
+  assert.equal(b.empty, true);
+  b.feedKey({ key: 'Enter' }, { awaitPrompt: false }); // no integration: Enter is the only signal we have
+  assert.equal(b.empty, true);
+  b.markUnknown();
+  assert.equal(b.empty, false);
+  b.feedKey({ key: 'Enter' });
+  assert.equal(b.empty, true);
 });

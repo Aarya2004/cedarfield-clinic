@@ -47,6 +47,7 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
         {s.state === 'disconnected' && chip(s.reconnectAt ? `disconnected · retrying` : 'disconnected', 'danger')}
         {s.state === 'busy' && chip('another tab is paired', 'danger')}
         {s.state === 'unauthorized' && chip('link not valid', 'danger')}
+        {s.pairError && s.state === 'unpaired' && chip(s.pairError, 'danger')}
         {s.host && <span className="mono text-muted">{s.host}</span>}
         {s.share && st?.cwd && <span className="mono text-muted">{st.cwd}</span>}
         {st && st.last_exit_code !== null && (

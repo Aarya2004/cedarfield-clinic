@@ -29,6 +29,8 @@ export interface BridgeClientOptions {
   backoffMs?: number[];
   /** stop reconnecting this long after the first disconnect */
   giveUpMs?: number;
+  /** ms to wait for open+hello before treating the attempt as lost (default AUTH_TIMEOUT_MS) */
+  authTimeoutMs?: number;
   pingMs?: number;
   /** called on `ledger_ack` so the ledger can store the bridge countersignature */
   onCountersign?: (clientSeq: number, bridgeSeq: number, sig: string) => void;
@@ -57,6 +59,8 @@ export class BridgeClient {
   private readonly makeSocket: (url: string) => WebSocketLike;
   private readonly backoff: number[];
   private readonly giveUpMs: number;
+  private readonly authTimeoutMs: number;
+  private pendingPings = 0;
   private readonly pingMs: number;
   private readonly onCountersign?: BridgeClientOptions['onCountersign'];
 
@@ -91,6 +95,7 @@ export class BridgeClient {
     this.makeSocket = opts.makeSocket ?? ((url) => new WebSocket(url) as unknown as WebSocketLike);
     this.backoff = opts.backoffMs ?? [1000, 2000, 4000, 8000, 15000];
     this.giveUpMs = opts.giveUpMs ?? 10 * 60_000;
+    this.authTimeoutMs = opts.authTimeoutMs ?? AUTH_TIMEOUT_MS;
     this.pingMs = opts.pingMs ?? 20_000;
     this.onCountersign = opts.onCountersign;
   }
@@ -138,13 +143,21 @@ export class BridgeClient {
       return;
     }
     this.socket = sock;
+    // Armed at connect, not at open: a socket that never opens (dropped container, blocked mixed
+    // content) used to sit in "pairing…" forever (Fable VERIFY P1). No hello in time is a slow/lost
+    // link, not a rejected token: close with a non-terminal code so onClosed schedules a retry.
+    if (this.authTimer) clearTimeout(this.authTimer);
+    this.authTimer = setTimeout(() => {
+      if (this._state !== 'connecting' || this.socket !== sock) return;
+      try {
+        sock.close(NO_HELLO_CLOSE_CODE, 'no hello');
+      } catch {
+        /* never opened */
+      }
+      if (this.socket === sock) this.onClosed({ code: NO_HELLO_CLOSE_CODE, reason: 'no open/hello' });
+    }, this.authTimeoutMs);
     sock.onopen = () => {
       this.sendRaw({ type: 'auth', token: this.token, cols: this.cols, rows: this.rows });
-      this.authTimer = setTimeout(() => {
-        // No hello in time is a slow/lost link (cold judge proxy), not a rejected token: close with a
-        // non-terminal code so onClosed schedules a retry instead of showing "link not valid".
-        if (this._state === 'connecting') sock.close(NO_HELLO_CLOSE_CODE, 'no hello');
-      }, AUTH_TIMEOUT_MS);
     };
     sock.onmessage = (ev) => this.onFrame(String(ev.data), t0);
     sock.onerror = () => {
@@ -174,7 +187,20 @@ export class BridgeClient {
         if (!this.everPaired) for (const q of queued) this.socket?.send(q);
         this.everPaired = true;
         if (this.pingTimer) clearInterval(this.pingTimer);
-        this.pingTimer = setInterval(() => this.sendRaw({ type: 'ping' }), this.pingMs);
+        this.pendingPings = 0;
+        this.pingTimer = setInterval(() => {
+          // A half-open socket stays OPEN while the path is dead: three unanswered pings = gone (Codex review)
+          if (this.pendingPings >= 3) {
+            this.pendingPings = 0;
+            try {
+              this.socket?.close(NO_HELLO_CLOSE_CODE, 'pong timeout');
+            } catch {
+              /* already gone */
+            }
+            return;
+          }
+          if (this.sendRaw({ type: 'ping' })) this.pendingPings++;
+        }, this.pingMs);
         this.emit('hello', f);
         break;
       case 'data':
@@ -200,6 +226,7 @@ export class BridgeClient {
         if (f.client_seq !== null && this.onCountersign) this.onCountersign(f.client_seq, f.seq, f.sig);
         break;
       case 'pong':
+        this.pendingPings = 0;
         this.emit('pong', undefined);
         break;
       case 'agent_call':
@@ -211,6 +238,7 @@ export class BridgeClient {
   }
 
   private onClosed(ev: { code: number; reason: string }): void {
+    if (this.socket === null && this._state !== 'connecting') return; // a late close from a socket we already gave up on
     this.lastClose = { code: ev.code, reason: ev.reason, at: new Date().toISOString() };
     if (this.authTimer) clearTimeout(this.authTimer);
     if (this.pingTimer) clearInterval(this.pingTimer);

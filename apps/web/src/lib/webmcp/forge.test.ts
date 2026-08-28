@@ -356,3 +356,21 @@ test('regression (Fable pass 3 P2): the forge path flags judge-mode sudo like te
   const r = await engine.approve(c.card_id);
   assert.equal('error' in r ? r.error : null, 'needs_confirmation');
 });
+
+test('regression (Codex review): judge mode marks a forged sudo step dangerous at invocation; unforge after Enter still records the step', async () => {
+  const { engine, store, adapter, ledger } = make();
+  Object.defineProperty(adapter, 'mode', { value: 'judge', configurable: true });
+  const spec: ForgeSpec = { ...hn, name: 'root_two', commands: ['sudo ls /root', 'echo after'], params: [], kind: 'read' };
+  const c = card(engine, spec);
+  await engine.approve(c.card_id, undefined, { confirmDangerous: true });
+  const r = engine.invoke('root_two', {});
+  if ('error' in r || 'status' in r) throw new Error(JSON.stringify(r));
+  assert.equal(store.get(r.proposal_ids[0])?.dangerous, true, 'judge-mode sudo step must carry the dangerous flag');
+  store.resolve(r.proposal_ids[0], 'accepted'); // human pressed Enter: the step is running
+  assert.deepEqual(engine.unforge('root_two'), { ok: true });
+  await tick();
+  const kinds = ledger.snapshot().map((x) => x.kind);
+  assert.ok(kinds.includes('executed_step'), 'the running step must still be recorded');
+  assert.equal(store.get(r.proposal_ids[1])?.status, 'dismissed');
+  assert.equal(engine.active(), null);
+});

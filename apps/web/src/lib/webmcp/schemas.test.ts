@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { isDangerous, isDangerousIn } from './schemas.ts';
 
 test('regression (Fable pass 1 P2 / PLAN §4): sudo is hard-blocked in judge mode only', () => {
-  for (const c of ['sudo rm x', '  sudo -i', 'ls | sudo tee /etc/x', 'a; sudo b', 'a && sudo b', 'a || sudo b', '(sudo b)', 'env sudo b']) {
+  for (const c of ['sudo rm x', '  sudo -i', 'ls | sudo tee /etc/x', 'a; sudo b', 'a && sudo b', 'a || sudo b', '(sudo b)', 'env sudo b', 'VAR=1 sudo ls /root', 'A=1 B=2 env C=3 sudo x', 'x; FOO=bar sudo y']) {
     assert.equal(isDangerousIn(c, 'judge'), true, c);
     assert.equal(isDangerousIn(c, 'builder'), isDangerous(c), c);
   }

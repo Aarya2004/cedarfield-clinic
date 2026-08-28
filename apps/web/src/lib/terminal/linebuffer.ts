@@ -51,11 +51,22 @@ export class LineBuffer {
     return true;
   }
 
-  /** Feed a keydown. Returns true when the key changed the estimate. */
-  feedKey(ev: KeyLike): boolean {
+  /**
+   * Feed a keydown. Returns true when the key changed the estimate. With `awaitPrompt` (shell
+   * integration on) Enter / Ctrl-C / Ctrl-D leave the line *unknown* until the next prompt marker
+   * calls reset() — a fast second Enter must not find an "empty" line before the shell is back.
+   */
+  feedKey(ev: KeyLike, opts: { awaitPrompt?: boolean } = {}): boolean {
     if (ev.type && ev.type !== 'keydown') return false;
+    const submit = () => {
+      this.n = 0;
+      this.dirty = !!opts.awaitPrompt;
+      this.emit();
+      return true;
+    };
     if (ev.ctrlKey) {
-      if (ev.key === 'c' || ev.key === 'u' || ev.key === 'd') {
+      if (ev.key === 'c' || ev.key === 'd') return submit();
+      if (ev.key === 'u') {
         this.reset();
         return true;
       }
@@ -65,10 +76,7 @@ export class LineBuffer {
     if (ev.altKey && ev.key === '.') return this.soil(); // insert last argument
     if (ev.metaKey || ev.altKey) return false;
     if (HISTORY_KEYS.has(ev.key)) return this.soil();
-    if (ev.key === 'Enter') {
-      this.reset();
-      return true;
-    }
+    if (ev.key === 'Enter') return submit();
     if (ev.key === 'Backspace') {
       if (this.n > 0) {
         this.n--;
@@ -96,10 +104,16 @@ export class LineBuffer {
    * an IME commit or a middle-click — the line is dirty. Bracketed paste (ESC[200~…) counts too.
    * Returns true when the estimate changed.
    */
-  feedData(data: string): boolean {
-    if (data.length <= 1) return false;
+  feedData(data: string, fromKey = false): boolean {
+    if (data.length === 0) return false;
+    if (data.length === 1 && fromKey) return false; // an ordinary keystroke, already counted by feedKey
     if (data.startsWith(ESC) && !data.startsWith(ESC + '[200~')) return false; // arrow/function key sequence
-    return this.soil();
+    return this.soil(); // paste (even one character: middle-click / IME commit) — the line is unknown
+  }
+
+  /** The shell's state is unknown (e.g. a command finished without integration): hide the ghost until the human clears/submits the line. */
+  markUnknown(): void {
+    this.soil();
   }
 
   private emit(): void {

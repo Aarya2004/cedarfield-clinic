@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { BridgeClient, type WebSocketLike, NO_HELLO_CLOSE_CODE } from './client.ts';
 
 class FakeSocket implements WebSocketLike {
+  noPong = false;
   static all: FakeSocket[] = [];
   readyState = 0;
   sent: string[] = [];
@@ -17,6 +18,7 @@ class FakeSocket implements WebSocketLike {
     FakeSocket.all.push(this);
   }
   send(d: string) {
+    if (d.includes('"ping"') && !this.noPong) setTimeout(() => this.frame({ type: 'pong' }), 0);
     this.sent.push(d);
   }
   close(code = 1000, reason = '') {
@@ -221,5 +223,28 @@ test('regression (judge mode, 2026-08-28): an impossible resize is never sent (t
     assert.deepEqual(sock().parsed().map((f) => f.type), ['auth', 'resize']);
   } finally {
     client.close();
+  }
+});
+
+test('regression (Fable VERIFY P1): a socket that never opens times out and retries; three unanswered pings drop a half-open socket', async () => {
+  const { client, states } = make({ authTimeoutMs: 30 });
+  try {
+    client.connect(); // never call sock().open()
+    await new Promise((r) => setTimeout(r, 60));
+    assert.ok(states.includes('disconnected'), `never left connecting: ${states.join(',')}`);
+    assert.ok(client.reconnectAt !== null || client.state === 'connecting', 'no retry scheduled');
+  } finally {
+    client.close();
+  }
+  const b = make();
+  try {
+    b.client.connect();
+    b.sock().open();
+    b.sock().hello();
+    b.sock().noPong = true;
+    await new Promise((r) => setTimeout(r, 60)); // pingMs 5 → 3 unanswered pings well before this
+    assert.ok(b.states.includes('disconnected'), `half-open socket never dropped: ${b.states.join(',')}`);
+  } finally {
+    b.client.close();
   }
 });

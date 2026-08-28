@@ -48,6 +48,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
   const armedRef = useRef<string | null>(null);
   const insertedRef = useRef<string | null>(null);
   const lineBuf = useRef(new LineBuffer());
+  const lastKeyAt = useRef(0);
   const [lineEmpty, setLineEmpty] = useState(true);
   const [pending, setPending] = useState<Proposal | undefined>(undefined);
   // true while the bridge honestly reports a command running (shell integration only): a program
@@ -128,8 +129,17 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
       cleanup.push(client.on('exit', () => lineBuf.current.reset()));
       const dataDisp = term.onData((d) => {
         client.sendInput(d);
-        lineBuf.current.feedData(d); // paste / IME / middle-click → line is dirty
+        // data within 100 ms of a printable keydown is that keystroke; anything else (paste, IME,
+        // middle-click — even one character) makes the line unknown
+        lineBuf.current.feedData(d, performance.now() - lastKeyAt.current < 100);
       });
+      const liveAdapter = session.getAdapter();
+      if (liveAdapter) {
+        // a command that finished without shell integration leaves the line unknown until the human clears/submits it
+        cleanup.push(liveAdapter.subscribeResults((r) => {
+          if (r.measured === false) lineBuf.current.markUnknown();
+        }));
+      }
       cleanup.push(() => dataDisp.dispose());
       const selDisp = term.onSelectionChange(() => {
         const s = term?.getSelection() ?? '';
@@ -177,7 +187,8 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
             setInsertedId(null);
           }
         }
-        lineBuf.current.feedKey(ev);
+        if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) lastKeyAt.current = performance.now();
+        lineBuf.current.feedKey(ev, { awaitPrompt: !!session.snapshot().hello?.integration });
         return true;
       });
 
@@ -253,7 +264,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={hostRef} data-terminal className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-line bg-bg p-2">
+      <div ref={hostRef} data-terminal className="relative min-h-[160px] flex-1 overflow-hidden rounded-md border border-line bg-bg p-2">
         <div ref={ghostRef} className="ghost" style={{ position: 'absolute', display: 'none', zIndex: 5, overflow: 'hidden', textOverflow: 'ellipsis' }} />
       </div>
       <div className="mt-2 flex min-h-6 flex-wrap items-center gap-3 text-xs text-muted" data-ghost-bar>

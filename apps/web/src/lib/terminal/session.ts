@@ -7,6 +7,7 @@
  */
 import { BridgeClient, type ClientState, type HelloFrame } from '@/lib/ws/client';
 import { CLIENT_LEDGER_KINDS, configuredBridgeHosts, consumePairingHash, isAllowedBridgeUrl, type BridgeStatus } from '@/lib/ws/protocol';
+import { clearJudgePairing, loadJudgePairing, saveJudgePairing } from './judge-resume';
 import { gateAAdapter, getGateAShare, setGateAShare, setTerminalAdapter } from '@/lib/webmcp/adapter';
 import { ledger } from '@/lib/webmcp/ledger';
 import { forge } from '@/lib/webmcp/forge';
@@ -25,6 +26,8 @@ export interface SessionSnapshot {
   reconnects: number;
   pairMs: number | null;
   judge?: 'starting' | 'paired' | 'failed';
+  /** why the last pairing attempt could not even start (shown by the pairing card) */
+  pairError?: string | null;
 }
 
 function safeHost(ws: string): string {
@@ -64,6 +67,14 @@ class SessionStore {
     this.started = true;
     const p = consumePairingHash();
     if (!p) {
+      // A judge session from before a reload: resume it (takeover on the bridge wins over the old socket).
+      const stored = loadJudgePairing(typeof sessionStorage === 'undefined' ? null : sessionStorage);
+      if (stored) {
+        note('judge.resumed', { expires_in_s: Math.round((stored.expires_at - Date.now()) / 1000) });
+        this.set({ judge: 'paired' });
+        this.startWith({ ws: stored.ws, token: stored.token });
+        return;
+      }
       this.set({ mode: 'unpaired', state: 'unpaired', share: getGateAShare() });
       return;
     }
@@ -73,10 +84,18 @@ class SessionStore {
   /** Pair with an explicit target (judge sandbox response). Refuses hosts outside the allowlist. */
   startWith(p: { ws: string; token: string }): boolean {
     if (this.client) return false;
-    if (!isAllowedBridgeUrl(p.ws, configuredBridgeHosts())) {
-      note('pairing.refused', { host: safeHost(p.ws) });
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && p.ws.startsWith('ws://')) {
+      // Browsers block ws:// from an https page (mixed content) and never say why (Fable VERIFY P2).
+      note('pairing.mixed_content', { host: safeHost(p.ws) });
+      this.set({ mode: 'unpaired', state: 'unpaired', pairError: 'an insecure ws:// link cannot open from an https page — use the tunnel link the bridge prints, or open this app on http://localhost' });
       return false;
     }
+    if (!isAllowedBridgeUrl(p.ws, configuredBridgeHosts())) {
+      note('pairing.refused', { host: safeHost(p.ws) });
+      this.set({ mode: 'unpaired', state: 'unpaired', pairError: `bridge host not allowed: ${safeHost(p.ws)}` });
+      return false;
+    }
+    this.set({ pairError: null });
     this.started = true;
     const host = new URL(p.ws).host;
     const client = new BridgeClient({
@@ -103,6 +122,9 @@ class SessionStore {
       this.set({ state: s, hello: client.hello, reconnectAt: client.reconnectAt, reconnects: client.reconnects, pairMs: client.pairMs });
     });
     client.on('status', (st) => this.set({ lastStatus: st }));
+    client.on('error', (f) => {
+      if (f.code === 'timeout' || f.code === 'unauthorized') clearJudgePairing(typeof sessionStorage === 'undefined' ? null : sessionStorage);
+    });
     client.on('hello', (h) => this.set({ hello: h }));
     this.set({ mode: 'live', state: 'connecting', host });
     attachAgentRelay(client);
@@ -123,6 +145,7 @@ class SessionStore {
         return { ok: false, error: body.error ?? `HTTP ${r.status}`, retry_after_s: body.retry_after_s };
       }
       const ok = this.startWith({ ws: body.ws, token: body.token });
+      if (ok) saveJudgePairing(typeof sessionStorage === 'undefined' ? null : sessionStorage, { ws: body.ws, token: body.token }, body.ttl_ms ?? 0);
       const cold_ms = Math.round(performance.now() - t0);
       note('judge.session_started', { cold_ms, worker_cold_ms: body.cold_ms });
       this.set({ judge: ok ? 'paired' : 'failed' });

@@ -10,7 +10,7 @@
  */
 import { spawn, spawnSync, execSync } from 'node:child_process';
 import { createServer } from 'node:net';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -35,6 +35,34 @@ const freePort = () =>
   });
 const WEB_PORT = Number(process.env.ROKAN_EVAL_WEB_PORT) || (await freePort());
 const BRIDGE_PORT = Number(process.env.ROKAN_EVAL_BRIDGE_PORT) || (await freePort());
+// A stale `.next` (older than the newest source file, or absent) silently tests an old build — both
+// of Opus's VERIFY-pass failures were this after a `git pull`. Build first when that is the case.
+function newestMtime(dir) {
+  let m = 0;
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    const p = `${dir}/${ent.name}`;
+    m = Math.max(m, ent.isDirectory() ? newestMtime(p) : statSync(p).mtimeMs);
+  }
+  return m;
+}
+{
+  const web = `${root}apps/web`;
+  let buildAt = 0;
+  try {
+    buildAt = statSync(`${web}/.next/BUILD_ID`).mtimeMs;
+  } catch {
+    /* no build */
+  }
+  const srcAt = Math.max(newestMtime(`${web}/src`), statSync(`${web}/package.json`).mtimeMs);
+  if (buildAt < srcAt) {
+    console.log(`web build is ${buildAt ? 'older than the newest source file' : 'missing'} — building`);
+    const b = spawnSync('pnpm', ['build'], { cwd: web, stdio: 'inherit' });
+    if (b.status !== 0) {
+      console.error('web build failed');
+      process.exit(1);
+    }
+  }
+}
 const srv = spawn('pnpm', ['start', '-p', String(WEB_PORT)], { cwd: `${root}apps/web`, stdio: 'ignore', detached: true });
 let bridge = null;
 // Every exit path — success, the two startup failures, Ctrl-C, a pkill from another agent, an

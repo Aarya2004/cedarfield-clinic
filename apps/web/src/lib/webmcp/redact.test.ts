@@ -141,3 +141,13 @@ test('regression (judge mode, 2026-08-28): a truncated / unknown KEY name and a 
     assert.equal(r.lines[0], ok, `over-redacted: ${ok}`);
   }
 });
+
+test('regression (Codex + Fable verify): accounting is honest, key boundaries, plain names, and the ; after a secret survive', () => {
+  const s = one('session=Abcdefghijklmnopqrstuvwx1'); // one uppercase: deliberately not a secret shape
+  assert.equal(s.lines[0], 'session=Abcdefghijklmnopqrstuvwx1');
+  assert.equal(s.redactions.length, 0, 'reported a redaction it did not make');
+  for (const ok of ['keyboard=enabled', 'monkey=banana', 'build_id=AbCdEfghijklmnop12345678', 'commit=aB3dEfGhIjKlMnOpQrStUvWx', 'git_sha=aB3dEfGhIjKlMnOpQrStUvWx']) assert.equal(one(ok).lines[0], ok, ok);
+  for (const secret of ['api_key=AbCdEf1234567890abcdefghijk', 'ESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY', 'x=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY']) assert.ok(!one(secret).lines[0].includes('AbCdEf12') && !one(secret).lines[0].includes('wJalr'), secret);
+  const r = one('export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY; echo ok');
+  assert.equal(r.lines[0], 'export AWS_SECRET_ACCESS_KEY=[redacted]; echo ok');
+});

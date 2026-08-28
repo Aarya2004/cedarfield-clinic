@@ -72,6 +72,8 @@ export interface Invocation {
   proposal_ids: string[];
   activeIndex: number;
   startedAt: number;
+  /** set by unforge() while the current step is already running: finish and record it, then stop */
+  stopAfterCurrent?: boolean;
 }
 
 export interface ForgeListEntry {
@@ -366,7 +368,16 @@ export class ForgeEngine {
   unforge(name: string): { ok: true } | ForgeError {
     const t = this.toolMap.get(name);
     if (!t) return { error: 'unknown_tool' };
-    if (this.activeInv?.tool === t.tool) this.cancelActive('invocation_cancelled'); // never leave a dead invocation holding `busy`
+    if (this.activeInv?.tool === t.tool) {
+      const inv = this.activeInv;
+      const current = this.deps.store.get(inv.proposal_ids[inv.activeIndex]);
+      if (current?.status === 'accepted') {
+        // The human already pressed Enter: the command is running on the PTY. Let it finish and be
+        // recorded (executed_step), drop only the queued steps (Codex review P1).
+        inv.stopAfterCurrent = true;
+        this.dismissFrom(inv, inv.activeIndex + 1, 'invocation_cancelled');
+      } else this.cancelActive('invocation_cancelled'); // never leave a dead invocation holding `busy`
+    }
     if (t.visible) this.unregister(t, 'unforged');
     this.toolMap.delete(name);
     this.emit();
@@ -404,7 +415,7 @@ export class ForgeEngine {
     const ids: string[] = [];
     for (let i = 0; i < n; i++) {
       const why = `${t.tool} · step ${i + 1}/${n}`;
-      const opts = { queued: i > 0, invocation_id, step: i, dangerous: sub.dangerous[i] };
+      const opts = { queued: i > 0, invocation_id, step: i, dangerous: sub.dangerous[i] || isDangerousIn(sub.lines[i], adapter.mode) };
       const p: Proposal = i === 0 ? adapter.ghostType(sub.lines[i], why, opts) : store.propose(sub.lines[i], why, opts);
       ids.push(p.id);
     }
@@ -458,6 +469,7 @@ export class ForgeEngine {
           this.dismissFrom(inv, i + 1, 'prior_step_failed');
           return;
         }
+        if (inv.stopAfterCurrent) return; // unforged while this step ran: recorded above, nothing more
         if (i + 1 < ids.length) store.promote(ids[i + 1]);
         this.emit();
       }
