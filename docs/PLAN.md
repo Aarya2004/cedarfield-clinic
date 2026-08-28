@@ -116,7 +116,7 @@ Decisions inside the diagram:
 - **Judge sandbox** = Worker route `/api/session` → `getSandbox(env.Sandbox, id)` → start
   shell → return the WS URL for the xterm `SandboxAddon`. Container Dockerfile in
   `infra/sandbox/Dockerfile`. Rate limits: 1 session per IP per 10 min, 30-min TTL,
-  `rokan-do` runs limited by a wrapper that counts model calls and refuses past 20/session.
+  `rokan-do` inside the sandbox has no API key (none is injected, by design), so it can only replay seeds; a per-session model-call cap is therefore not implemented — it becomes necessary only if a key is ever wired in.
 - **Ledger** lives client-side (append-only array, mirrored to `localStorage`, exported as
   JSON) and is _also_ appended to `~/.rokan-terminal/ledger.jsonl` by the bridge (builder
   mode). One row per: proposal, keypress-execution, forge, forged-invocation, screen read.
@@ -140,10 +140,10 @@ its own `AbortController` so tools unregister when their pane unmounts. Feature-
 | 3   | `terminal_status`         | `{}`                                                                                                                                            | `readOnlyHint:true`                                                                                                                           | `{mode:"builder"                                                                                                                                                                      | "judge", cwd, running:boolean, last_exit_code, last_command_ms}`                                                                                                                                                                   | as left                              |
 | 4   | `terminal_wait`           | `{proposal_id}`                                                                                                                                 | `readOnlyHint:true`                                                                                                                           | Resolves when the human executes/dismisses that proposal, or returns `still_waiting` after **45 s** (re-callable; ALIGNMENT row 4). Lets the agent block on the human instead of polling. Honours `signal` when the consumer passes one (Chrome 152 does not).                                     | `{status:"executed"|"dismissed"|"still_waiting"|"unknown_proposal", waited_ms, exit_code?, ms?, tail:[…] (redacted, empty unless shared), shared, reason?, next_proposal_id?}` |
 | 5   | `forge_create`            | `{name ^[a-z][a-z0-9_]{1,28}$, description ≤ 300, commands: string[1..5] with {{param}} placeholders, params?: [{name ^[a-z][a-z0-9_]{0,19}$, description ≤ 150, example ≤ 80}] (≤ 6), kind: "read"\|"write"}` | `readOnlyHint:false` | Validates (control/bidi chars, placeholder ↔ param consistency, dry run with examples); `kind` forced to `write` when a command mutates; dangerous patterns → red banner + "Approve anyway". Opens a **Forge card**; ≤ 5 pending. Ledger `forge_requested`. | `{card_id, status:"awaiting_human", will_register_as:"forged_<name>", kind, note?, warning?, replaces_hash?}` or `{error, detail}` |
-| 6   | `forged_<name>` (dynamic) | from card params, `additionalProperties:false`, `examples` per param | `readOnlyHint: kind==="read"`; `write` descriptions start with `CONSEQUENTIAL:`; one `AbortController` per tool; content hash (12 hex) shown on the card and in every ledger row | Substitutes params (bare when clean, else POSIX-quoted; `$'…'` modelled), ghost-types step 1, queues steps 2..N (promoted after the prior step's measured exit; non-zero exit → `prior_step_failed`). One active invocation at a time. Ledger `invoked` + `executed` per step. | `{invocation_id, proposal_ids:[all], active, queued, hash}` · `{status:"busy", active_invocation_id, proposal_ids}` · `{error:"invalid_param"\|"unregistered"…}` |
+| 6   | `forged_<name>` (dynamic) | from card params, `additionalProperties:false`, `examples` per param | `readOnlyHint: kind==="read"`; `write` descriptions start with `CONSEQUENTIAL:`; one `AbortController` per tool; content hash (12 hex) shown on the card and in every ledger row | Substitutes params (bare when clean, else POSIX-quoted; `$'…'` modelled), ghost-types step 1, queues steps 2..N (promoted after the prior step's measured exit; non-zero exit → `prior_step_failed`). One active invocation at a time. Ledger `invoked` + `executed_step` per step (bridge-accepted client kind). | `{invocation_id, proposal_ids:[all], active, queued, hash}` · `{status:"busy", active_invocation_id, proposal_ids}` · `{error:"invalid_param"\|"unregistered"…}` |
 | 7   | `forge_list`              | `{}` | `readOnlyHint:true` | Every forged tool incl. evicted (`visible:false`), pin state, hash, params, measured stats. ≤ 1.5 K chars (params dropped first). | `{visible, budget:5, tools:[{name, tool, kind, hash, pinned, visible, params, runs, median_ms, last_exit, forged_at}], truncated?}` |
 
-Implemented deltas vs. the original rows (2026-08-28): `terminal_wait` default is **45 s** with `still_waiting` (re-callable), returns `unknown_proposal`, `next_proposal_id`/`invocation_id` for forged steps, `reason` on dismiss, `edited`/`interrupted`; `terminal_read_screen` returns `redactions`/`truncated`; `terminal_status` returns `cwd` only when Share is on and `measured` (shell integration). `forged_*` returns **all** proposal ids (queue) — not just the first.
+Implemented deltas vs. the original rows (2026-08-28): `terminal_wait` default is **45 s** with `still_waiting` (re-callable), returns `unknown_proposal`, `next_proposal_id`/`invocation_id` for forged steps, `reason` on dismiss, `edited`/`interrupted`; `terminal_read_screen` returns `redactions`/`truncated`; `terminal_status` returns `cwd` only when Share is on and `measured` (shell integration). `forged_*` returns **all** proposal ids (queue) — not just the first. Later the same day: `terminal_wait` adds `measured:false` (no shell integration) and `rokan:{ms,replayed,calls}` (only when the command line was rokan/rokan-do); `terminal_status` adds `measured` and `last_rokan`; client step rows are kind `executed_step`.
 
 Reverse direction (human → agent), UI only: select 1–5 lines in history → **Forge this** → card
 prefilled from the selection → same approval path → tool appears for the agent.
@@ -186,7 +186,7 @@ connection; idle timeout 30 min; `Ctrl-C` twice in the bridge kills the tunnel.
 
 **Judge sandbox**: non-root user, no network egress except an allowlist (PyPI mirror off; HN,
 lobste.rs, example.org, a demo Shopify store, and the Anthropic API host), 30-min TTL,
-1 session/IP/10 min, model-call cap 20/session, no persistent volume, image rebuilt from a
+3 sessions/IP/10 min (3 concurrent), no API key in the container (so no model-call cap is needed or implemented), no persistent volume, image rebuilt from a
 pinned Dockerfile. The `$`-capped Anthropic key lives in Worker secrets, never in the image.
 
 **Ledger**: append-only, every row signed with a per-session HMAC so the export can be checked
@@ -282,7 +282,7 @@ Gates are binary. A gate not green by its time triggers its kill rule (§10) —
 - 11:00 A + Ay: **challenge office hours** (Netlify/Render pages). Ask: are inert proposal tools
   OK; iframe/decl limits; any tool-count guidance; whether judges test in ChatGPT or Chrome.
 - C: seeded ops in the sandbox; `rokan do "top 5 HN titles"` → forge → `forged_hn_top({n})` →
-  0-call replay shows `calls:0 ms:<400` in the ledger; model-call cap; egress allowlist.
+  0-call replay shows `calls:0 ms:<400` in the ledger; no key in the container (no model calls possible); egress allowlist.
 - Ay: polish — empty states, error states (bridge down, tunnel died, WS reconnect), keyboard
   focus discipline, the 12-tool budget, mobile = "open on desktop" card.
 - C: `evals/` six cases green with the Chrome evals CLI; `docs/SECURITY.md`.

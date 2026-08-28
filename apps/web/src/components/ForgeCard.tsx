@@ -8,7 +8,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { forge, type ForgeCard as Card } from '@/lib/webmcp/forge';
 import { isMutating, validateForgeSpec, type ForgeParam, type ForgeSpec } from '@/lib/webmcp/forge-spec';
-import { isDangerous } from '@/lib/webmcp/schemas';
+import { isDangerousIn } from '@/lib/webmcp/schemas';
+import { session } from '@/lib/terminal/session';
 import { getModelContext } from '@/lib/webmcp/types';
 import { note } from '@/lib/webmcp/fieldnotes';
 
@@ -20,7 +21,7 @@ export function ForgeCardView({ card }: { card: Card }) {
   useEffect(() => setSpec(card.spec), [card.card_id, card.spec]);
 
   const validation = useMemo(() => validateForgeSpec(spec), [spec]);
-  const dangerous = spec.commands.some(isDangerous);
+  const dangerous = spec.commands.some((c) => isDangerousIn(c, session.snapshot().hello?.mode === 'judge' ? 'judge' : 'builder'));
   const mutating = spec.commands.some(isMutating);
   const kindForced = spec.kind === 'read' && mutating;
 

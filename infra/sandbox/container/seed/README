@@ -9,3 +9,6 @@ Try:
 
 Then ask your agent (ChatGPT desktop with GPT-5.6 Sol/Terra, or Chrome 149+ with WebMCP)
 to propose a command, press Enter, and forge what you just did into a tool.
+
+Note: `rokan do` is not installed in this sandbox yet (`rokan do …` → command not found). It runs
+on the builder's own machine (see docs/FIELD-NOTES.md R1–R5); the sandbox has no API key by design.

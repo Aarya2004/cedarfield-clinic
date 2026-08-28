@@ -54,7 +54,7 @@ discipline: Handset-scoped, every external fact verified today (Cloudflare docs 
 | session TTL | 30 min (bridge `--ttl-ms 1800000` exits; sandbox `sleepAfter:"35m"`; `destroy()` on `DELETE /api/session/:id` and from the bridge exit hook) | Worker + bridge |
 | instance | `basic` (1/4 vCPU, 1 GiB, 4 GB) — enough for zsh + node + rokan-do replay; `standard-1` if Chromium is needed on D3 | wrangler.jsonc |
 | egress | `enableInternet=false`, `allowedHosts`: `news.ycombinator.com`, `lobste.rs`, `example.org`, `api.anthropic.com` (D3) | Sandbox subclass |
-| model calls | 20/session (rokan-do wrapper, D3) | container |
+| model calls | none possible — no key is injected (a 20/session cap was planned; not implemented because not needed) | container |
 | user | non-root `judge` (uid 1000), home `/home/judge`, no sudo | Dockerfile |
 | tools in the shell | zsh, git, curl, python3.11 + uv (python image), node 20, rokan-do (D3) | Dockerfile |
 
@@ -95,7 +95,7 @@ infra/sandbox/
 - `DELETE /api/session/:sid`: `destroy()`.
 - The bridge in judge mode: after TTL, `process.exit(0)` (shell + PTY die with it); on exit it
   cannot call the Worker — the sandbox sleeps at `sleepAfter`; the next session id is new anyway.
-- Secrets: `APP_ORIGIN` var; `ANTHROPIC_API_KEY` Worker secret (D3), injected via `setEnvVars`/`startProcess` env, never in the image.
+- Secrets: `APP_ORIGIN` var; `SID_SECRET` Worker secret (session-id HMAC + expiry). No `ANTHROPIC_API_KEY` is wired — deliberately: the judge sandbox replays seeds only, nothing in it can spend.
 - Client: PairingCard "Try it now" → `fetch(`${NEXT_PUBLIC_SANDBOX_URL}/api/session`, {method:'POST'})` → `session.startWith`.
 
 ## 5. Security (delta from PLAN §4)

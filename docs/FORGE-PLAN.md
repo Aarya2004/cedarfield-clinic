@@ -331,7 +331,7 @@ text. Rokan palette, no new deps.
 | **WebCrypto** (`crypto.subtle`) | hashes + HMAC | tests pass in Node 25 + browser | secure context only (https/localhost) — fine |
 | **DoH 1.1.1.1** | tunnel DNS readiness | measured | — |
 | **rokan-do** wheels + `SKILL.md` + seeded ops (`~/dev/Rokan`, side branch; uncommitted work present — do not touch) | the star command to forge (D3) | — | kill rule §10.4: demo never depends on it |
-| **Anthropic API key** (Keychain `ANTHROPIC_API_KEY`) | judge sandbox rokan-do (D3) | present in Keychain | spend cap to be set (Worker secret) |
+| **Anthropic API key** (Keychain `ANTHROPIC_API_KEY`) | not wired into the judge sandbox (by design: seeds replay only, nothing can spend) | present in Keychain | spend cap to be set (Worker secret) |
 | GitHub Actions CI | typecheck/lint/build/bridge check on code paths | fixed tonight | path-filtered, cancel-in-progress |
 
 ---

@@ -50,7 +50,7 @@ function make(opts: { mc?: ModelContext | null; stepTimeoutMs?: number } = {}) {
   const { adapter, exits } = fakeAdapter(store);
   const ledger = new Ledger();
   const engine = new ForgeEngine({ modelContext: () => (opts.mc === undefined ? mc : opts.mc), adapter: () => adapter, store, ledger, stepTimeoutMs: opts.stepTimeoutMs });
-  return { engine, store, regs, live, exits, ledger };
+  return { engine, store, regs, live, exits, ledger, adapter };
 }
 
 const hn: ForgeSpec = {
@@ -344,4 +344,15 @@ test('regression (Fable pass 1 P2): unforging the tool whose invocation is activ
   const again = engine.invoke('hn_top', { n: '1' });
   assert.ok(!('status' in again && again.status === 'busy'), 'engine stayed busy after unforge');
   engine.dispose(); // never leave an invocation (and its step timer) alive after the test
+});
+
+test('regression (Fable pass 3 P2): the forge path flags judge-mode sudo like terminal_propose does', async () => {
+  const { engine, adapter } = make();
+  const spec: ForgeSpec = { ...hn, name: 'root_ls', commands: ['sudo ls /root'], params: [], kind: 'read' };
+  assert.equal(card(engine, spec).dangerous, false); // builder: sudo is the user's own machine
+  Object.defineProperty(adapter, 'mode', { value: 'judge', configurable: true });
+  const c = card(engine, { ...spec, name: 'root_ls2' });
+  assert.equal(c.dangerous, true);
+  const r = await engine.approve(c.card_id);
+  assert.equal('error' in r ? r.error : null, 'needs_confirmation');
 });

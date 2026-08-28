@@ -14,7 +14,7 @@ import { proposals as defaultStore, type Proposal, type ProposalStore, type Dism
 import { getTerminalAdapter, type TerminalAdapter, type ResolvedProposal } from './adapter.ts';
 import { ledger as defaultLedger, type Ledger } from './ledger.ts';
 import { note } from './fieldnotes.ts';
-import { isDangerous } from './schemas.ts';
+import { isDangerousIn } from './schemas.ts';
 import {
   FORGED_PREFIX,
   MAX_FORGED_VISIBLE,
@@ -209,7 +209,7 @@ export class ForgeEngine {
       card_id: id('c'),
       spec,
       origin: opts.origin,
-      dangerous: spec.commands.some(isDangerous),
+      dangerous: spec.commands.some((c) => isDangerousIn(c, this.deps.adapter().mode)),
       kindOverridden,
       ...(this.toolMap.has(spec.name) ? { previousHash: this.toolMap.get(spec.name)!.hash } : {}),
       createdAt: performance.now(),
@@ -237,7 +237,7 @@ export class ForgeEngine {
     const err = validateForgeSpec(merged);
     if (err) return err;
     if (merged.kind === 'read' && merged.commands.some(isMutating)) merged.kind = 'write';
-    const dangerous = merged.commands.some(isDangerous);
+    const dangerous = merged.commands.some((c) => isDangerousIn(c, this.deps.adapter().mode));
     if (dangerous && !opts.confirmDangerous) return { error: 'needs_confirmation', detail: 'a command matches a hard-blocked pattern; approve again to confirm' };
     const replacing = this.toolMap.get(merged.name);
     if (!this.budgetAllows(merged.name)) return { error: 'unpin_one', detail: `${MAX_FORGED_VISIBLE} forged tools are visible and all are pinned` };

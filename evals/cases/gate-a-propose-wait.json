@@ -16,5 +16,6 @@
   { "eval": "document.body.innerText.replace(/\\s+/g,' ').match(/~ \\$.{0,60}/)?.[0]" },
   { "key": "Enter" },
   { "sleep": 300 },
-  { "eval": "document.body.innerText.replace(/\\s+/g,' ').match(/p_[a-z0-9_]+ ls accepted \\d+ ms to decide/)?.[0]" }
+  { "eval": "window.__rokan.ledger().rows.some(r => r.kind === 'proposed' && r.fields.command === 'ls')", "equals": true },
+  { "eval": "document.body.innerText.replace(/\\s+/g,' ').includes('proposed ls')", "equals": true }
 ]

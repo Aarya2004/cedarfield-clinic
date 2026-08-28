@@ -30,7 +30,7 @@ export interface Env {
   MAX_CONCURRENT_PER_IP: string;
   /** secret: `wrangler secret put SID_SECRET` (any long random string); sessions are refused without it */
   SID_SECRET?: string;
-  ANTHROPIC_API_KEY?: string;
+  // No model key is wired into the sandbox on purpose: rokan-do there can only replay seeds; nothing can spend.
 }
 
 /** Egress: nothing but the demo hosts (HTTP/S only — the SDK cannot filter raw TCP/UDP; say so). */
@@ -73,7 +73,7 @@ export default {
       const ip = request.headers.get('cf-connecting-ip') ?? '0.0.0.0';
       const ttl = Number.parseInt(env.SESSION_TTL_MS, 10) || 1_800_000;
       const id = hex(12);
-      const sid = await issueSid(env.SID_SECRET, id);
+      const sid = await issueSid(env.SID_SECRET, id, Date.now() + ttl);
       const gate = env.Gate.get(env.Gate.idFromName(ip));
       const perWindow = Number.parseInt(env.SESSIONS_PER_IP_PER_10MIN, 10) || 1;
       const maxConcurrent = Number.parseInt(env.MAX_CONCURRENT_PER_IP, 10) || 3;
@@ -111,14 +111,14 @@ export default {
       return json({ sid, ws, token, ttl_ms: ttl, mode: 'judge', cold_ms: Date.now() - t0 }, 201, h);
     }
 
-    const wsm = /^\/ws\/([a-f0-9.]{1,64})$/.exec(url.pathname);
+    const wsm = /^\/ws\/([a-f0-9.]{1,96})$/.exec(url.pathname);
     if (wsm) {
       if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') return json({ error: 'websocket upgrade required' }, 426, h);
       // Verify the signature BEFORE getSandbox(): the SDK starts a container on first fetch, so an
       // unverified id would let anyone burn max_instances with random sids (Fable F4).
-      const id = env.SID_SECRET ? await verifySid(env.SID_SECRET, wsm[1]) : null;
-      if (!id) return json({ error: 'unknown session' }, 403, h);
-      const sandbox = getSandbox(env.Sandbox, id);
+      const id = env.SID_SECRET ? await verifySid(env.SID_SECRET, wsm[1], Date.now()) : null;
+      if (!id) return json({ error: 'unknown or expired session' }, 403, h);
+      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '35m' });
       return sandbox.wsConnect(request, BRIDGE_PORT);
     }
 

@@ -18,8 +18,7 @@ Entry for the **OpenAI WebMCP Challenge** (Devpost, deadline 2026-09-03 13:00 PT
    registration and call).
 2. Pair a shell: clone this repo and run `node packages/bridge/bin/rokan-terminal.js` (Node 20+; `npx rokan-terminal` once the package is published) on your own machine and open the link it prints. The **“Try it now — judge sandbox”** button (a throttled 30-minute Linux container, nothing to install) appears on the page as soon as the judge Worker is deployed — it is gated on a Cloudflare Workers Paid plan (status in `docs/PROGRESS.md`).
 3. Ask the agent: **“propose `ls`”** → ghost text appears at your prompt → press **Enter**.
-4. Select that line → **Forge this** → Approve → the site-tools list gains `forged_<name>` (no
-   reload) → ask the agent to call it → your Enter runs it → the ledger shows measured `exit · ms`.
+4. Select that line → **Forge this** → Approve → the site-tools list gains `forged_<name>` (no reload — measured in Chrome 152; in ChatGPT desktop the Site-tools refresh is unverified, PLAN §0.9 — reload if it does not) → ask the agent to call it → your Enter runs it → the ledger shows measured `exit · ms`.
 
 Add `?tour=1` for a three-step guide that verifies each step against real state.
 
@@ -35,7 +34,7 @@ Add `?tour=1` for a three-step guide that verifies each step against real state.
 | `forge_list` | every forged tool, its content hash, pin state, measured stats | — |
 | `forged_<name>` | substitutes params (shell-safe), ghost-types each step; each step needs your Enter | executes |
 
-Same tools, second protocol: `npx rokan-terminal mcp` serves them over MCP stdio to Claude Code,
+Same tools, second protocol: `node packages/bridge/bin/rokan-terminal.js mcp` (`npx rokan-terminal mcp` once published) serves them over MCP stdio to Claude Code,
 Cursor or Codex CLI — the page stays the single source of truth; the MCP process can never type.
 
 ## Security in one paragraph
@@ -51,7 +50,7 @@ bridge. Full model with tests: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ```
 pnpm install
-pnpm gate                  # typecheck · lint · 94 unit tests · real-PTY bridge smoke · headless WebMCP cases
+pnpm gate                  # typecheck · lint · 109 unit tests · real-PTY bridge smoke · headless WebMCP cases
 cd apps/web && pnpm dev    # http://localhost:3000
 node packages/bridge/bin/rokan-terminal.js --no-tunnel --app http://localhost:3000   # prints the pairing link
 ```
@@ -66,6 +65,6 @@ Headless WebMCP evals (Chrome 152 via the CDP `WebMCP` domain, no consumer neede
 - `apps/web` — Next.js 15 client: tools, xterm pane with ghost text, forge card, ledger.
 - `packages/bridge` — `npx rokan-terminal`: node-pty + WebSocket + Cloudflare quick tunnel + pairing token; `mcp` subcommand.
 - `infra/sandbox` — judge mode: Cloudflare Worker + Sandbox container running the same bridge.
-- `evals/` — headless harness + 12 cases; `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
+- `evals/` — headless harness + 15 cases (365 steps: 7 on the prompt line, 8 on a real PTY); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
 
 Every millisecond and call count shown on screen is measured by the code that shows it.
