@@ -206,3 +206,20 @@ test('ledger forward + countersign callback; resize sent only when paired', () =
   assert.deepEqual(sock().parsed().map((f) => f.type), ['auth', 'resize', 'ledger']);
   client.close();
 });
+
+test('regression (judge mode, 2026-08-28): an impossible resize is never sent (the bridge would refuse it)', () => {
+  const { client, sock } = make();
+  try {
+    client.connect();
+    sock().open();
+    sock().hello();
+    client.resize(0, 1);
+    client.resize(80, 1);
+    client.resize(Number.NaN, 24);
+    assert.deepEqual(sock().parsed().map((f) => f.type), ['auth']);
+    client.resize(100, 30);
+    assert.deepEqual(sock().parsed().map((f) => f.type), ['auth', 'resize']);
+  } finally {
+    client.close();
+  }
+});

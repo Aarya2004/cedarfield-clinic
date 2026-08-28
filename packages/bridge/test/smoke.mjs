@@ -108,6 +108,15 @@ await typeCommand('cd /tmp');
 const cwdStatus = await until(frames, (f) => f.type === 'status' && f.last_command === 'cd /tmp' && f.running === false, 8000);
 check('cwd tracked via OSC 7', /\/tmp$/.test(cwdStatus?.cwd ?? ''), JSON.stringify(cwdStatus?.cwd));
 
+// 2c. A resize with impossible dimensions must not end the session (judge mode, 2026-08-28: a
+// collapsed pane mid-layout sent rows:1 → close 4400 → the tab showed "link not valid").
+ws.send(JSON.stringify({ type: 'resize', cols: 0, rows: 1 }));
+const badDim = await until(frames, (f) => f.type === 'error' && f.code === 'bad_frame' && /dimensions/.test(f.message), 3000);
+await new Promise((r) => setTimeout(r, 200));
+check('bad resize → error frame, socket stays open', !!badDim && ws.readyState === ws.OPEN, JSON.stringify(badDim));
+const afterBad = await typeCommand('echo still_paired');
+check('session still works after a bad resize', afterBad?.last_command === 'echo still_paired', JSON.stringify(afterBad?.last_command));
+
 // 3. client-originated ledger row (with a nested object, so the digest must cover depth)
 ws.send(JSON.stringify({ type: 'ledger', row: { kind: 'proposed', proposal_id: 'p_smoke', command: 'ls', params: [{ name: 'n', example: '5' }] } }));
 const ack = await until(frames, (f) => f.type === 'ledger_ack');

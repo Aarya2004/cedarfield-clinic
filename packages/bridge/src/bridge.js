@@ -182,6 +182,9 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
       const parsed = parseClientFrame(isBinary ? null : raw.toString());
       if (!parsed.ok) {
         send(ws, { type: 'error', code: 'bad_frame', message: parsed.reason });
+        // A resize with impossible dimensions (a collapsed pane mid-layout — measured 2026-08-28 in
+        // judge mode: close 4400 ~1.5 s after pairing) is ignored, not a reason to end the session.
+        if (parsed.reason === 'bad dimensions') return;
         return ws.close(CLOSE.BAD_FRAME, 'bad frame');
       }
       const f = parsed.frame;

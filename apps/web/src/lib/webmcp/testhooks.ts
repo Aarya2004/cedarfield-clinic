@@ -58,6 +58,7 @@ export function installTestHooks(): boolean {
     },
     session: () => session.snapshot(),
     lastClose: () => session.getClient()?.lastClose ?? null,
+    sentTypes: () => session.getClient()?.sentTypes ?? [],
     agentTools: () => agentTools(),
     agentCall: (tool: string, input: unknown) => callAgentTool(tool, input),
     forgeThis: (lines: string[]) => forgeFromLines(lines),

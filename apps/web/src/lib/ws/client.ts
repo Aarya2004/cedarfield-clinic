@@ -75,6 +75,8 @@ export class BridgeClient {
   private everPaired = false;
   /** last close event (code + reason) — surfaced for diagnostics */
   lastClose: { code: number; reason: string; at: string } | null = null;
+  /** last 12 frame types sent (diagnostics only) */
+  sentTypes: string[] = [];
   private closedByUs = false;
   /** measured: ms from connect() to hello, last successful pairing */
   pairMs: number | null = null;
@@ -265,6 +267,7 @@ export class BridgeClient {
     const s = JSON.stringify(frame);
     if (this.socket && this.socket.readyState === OPEN && (this._state === 'paired' || frame.type === 'auth')) {
       this.socket.send(s);
+      if (frame.type !== 'ping') this.sentTypes = [...this.sentTypes.slice(-11), frame.type === 'ledger' ? `ledger:${frame.row.kind}` : frame.type];
       return true;
     }
     if (frame.type === 'input' && this._state === 'connecting') {
@@ -280,6 +283,8 @@ export class BridgeClient {
   }
 
   resize(cols: number, rows: number): void {
+    // A collapsed pane reports 0/1 rows mid-layout; the bridge refuses < 2 and there is nothing to draw anyway.
+    if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols < 2 || rows < 2 || cols > 1000 || rows > 1000) return;
     this.cols = cols;
     this.rows = rows;
     this.sendRaw({ type: 'resize', cols, rows });
