@@ -11,6 +11,7 @@
  *   {"key": "Enter"},                                // raw key event — NO focusing (a human doesn't get that)
  *   {"focus": "[data-prompt]"},                      // explicit focus, only when the flow genuinely includes a click
  *   {"eval": "…", "equals": 3} | {"eval": "…", "matches": "regex"}
+ *   {"shot": "docs/evidence/demo/01.png"}            // screenshot now (evidence per demo beat)
  *   {"eval": "document.title"},
  *   {"sleep": 500},
  *   {"expect": {"tool": "forged_hn_top"}}            // fails the run if not registered by now
@@ -63,7 +64,14 @@ const out = (o) => console.log(JSON.stringify(o));
 for (const step of steps) {
   const t0 = performance.now();
   try {
-    if (typeof step.query === 'string') {
+    if (typeof step.shot === 'string') {
+      // per-beat screenshot (evidence for the demo dry-run); full page at 1280 wide
+      await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+      await sleep(150);
+      const r = await send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(step.shot, Buffer.from(r.result.data, 'base64'));
+      out({ step: 'shot', file: step.shot, ms: Math.round(performance.now() - t0) });
+    } else if (typeof step.query === 'string') {
       out({ step: 'query', query: step.query }); // consumed by run-all.mjs (page URL params)
     } else if (step.list) {
       out({ step: 'list', tools: [...tools.values()].map((t) => ({ name: t.name, annotations: t.annotations })), ms: Math.round(performance.now() - t0) });
