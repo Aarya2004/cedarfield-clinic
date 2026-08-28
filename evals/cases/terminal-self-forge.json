@@ -1,0 +1,45 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+
+  { "invoke": "terminal_propose", "input": { "command": "mkdir -p /tmp/rokan-selfforge && cd /tmp/rokan-selfforge", "why": "step 1 of a workflow I want to remember" } },
+  { "eval": "(() => { window.__rokanP1 = window.__rokan.proposals.pending().id; return true; })()", "equals": true },
+  { "type": "\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanP1" }, "outputMatches": "\"status\":\"executed\".*\"exit_code\":0", "timeout": 10000 },
+
+  { "invoke": "terminal_propose", "input": { "command": "printf 'v1\\n' > VERSION", "why": "step 2" } },
+  { "eval": "(() => { window.__rokanP2 = window.__rokan.proposals.pending().id; return true; })()", "equals": true },
+  { "type": "\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanP2" }, "outputMatches": "\"status\":\"executed\".*\"exit_code\":0", "timeout": 10000 },
+
+  { "invoke": "terminal_propose", "input": { "command": "cat VERSION", "why": "step 3" } },
+  { "eval": "(() => { window.__rokanP3 = window.__rokan.proposals.pending().id; return true; })()", "equals": true },
+  { "type": "\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanP3" }, "outputMatches": "\"status\":\"executed\".*\"exit_code\":0", "timeout": 10000 },
+
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'proposed').length >= 3", "equals": true },
+
+  { "invoke": "forge_create", "input": { "name": "release_note", "description": "Write a VERSION file for a release tag and print it.", "commands": ["mkdir -p /tmp/rokan-selfforge && cd /tmp/rokan-selfforge", "printf '{{tag}}\\n' > VERSION", "cat VERSION"], "params": [{ "name": "tag", "description": "release tag", "example": "v2" }], "kind": "read" }, "outputMatches": "\"card_id\":\"c_" },
+  { "eval": "(() => { const c = window.__rokan.forge.cards()[0]; return [c.spec.kind, c.kindOverridden, c.dangerous]; })()", "equals": ["write", true, false] },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return [r.tool, r.registered]; })()", "equals": ["forged_release_note", true] },
+  { "sleep": 150 },
+  { "expect": { "tool": "forged_release_note" } },
+  { "eval": "window.__rokan.agentTools().find(t => t.name === 'forged_release_note').description.startsWith('CONSEQUENTIAL:')", "equals": true },
+  { "eval": "window.__rokan.agentTools().find(t => t.name === 'forged_release_note').annotations.readOnlyHint", "equals": false },
+
+  { "invoke": "forged_release_note", "input": { "tag": "v9" } },
+  { "waitFor": "document.querySelector('[data-ghost]')?.textContent === 'mkdir -p /tmp/rokan-selfforge && cd /tmp/rokan-selfforge'", "timeout": 3000 },
+  { "eval": "(() => { const a = window.__rokan.forge.active(); window.__rokanIds = a.proposal_ids; return a.proposal_ids.length; })()", "equals": 3 },
+  { "type": "\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanIds[0]" }, "outputMatches": "\"exit_code\":0.*\"next_proposal_id\":\"p_", "timeout": 10000 },
+  { "waitFor": "document.querySelector('[data-ghost]')?.textContent === \"printf 'v9\\\\n' > VERSION\"", "timeout": 3000 },
+  { "type": "\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanIds[1]" }, "outputMatches": "\"exit_code\":0", "timeout": 10000 },
+  { "waitFor": "document.querySelector('[data-ghost]')?.textContent === 'cat VERSION'", "timeout": 3000 },
+  { "type": "\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanIds[2]" }, "outputMatches": "\"exit_code\":0.*\"next_proposal_id\":null", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l === 'v9')", "timeout": 5000 },
+  { "waitFor": "window.__rokan.forge.active() === null", "timeout": 3000 },
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'executed_step').length", "equals": 3 },
+  { "invoke": "forge_list", "input": {}, "outputMatches": "\"kind\":\"write\".*\"runs\":1" }
+]
