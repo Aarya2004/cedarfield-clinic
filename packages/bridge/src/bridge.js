@@ -54,8 +54,10 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   let agentTools = []; // last tool list published by the tab
   // No tab paired for IDLE_TIMEOUT_MS → tell the caller, which exits (and so kills the tunnel).
   let unpairedTimer = null;
+  let closed = false; // after close() nothing may re-arm a timer (a late tab close used to keep the process alive)
   const armUnpairedTimer = () => {
     clearTimeout(unpairedTimer);
+    if (closed) return;
     unpairedTimer = setTimeout(() => {
       if (!client) onIdle?.();
     }, IDLE_TIMEOUT_MS);
@@ -117,6 +119,7 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   t.onExit(({ exitCode }) => {
     if (t !== term) return;
     termAlive = false;
+    if (closed) return; // close() killed it on purpose — never respawn a shell for a closed bridge
     log(`shell exited ${exitCode} — restarting`);
     ledger.append('shell_exited', { exit_code: exitCode });
     send(client, { type: 'exit', code: exitCode });
@@ -306,6 +309,7 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   });
   armUnpairedTimer();
   const close = () => {
+    closed = true;
     clearTimeout(unpairedTimer);
     cleanupShellEnv(env);
     for (const ws of wss.clients) ws.close(CLOSE.SHUTDOWN, 'bridge shutting down');

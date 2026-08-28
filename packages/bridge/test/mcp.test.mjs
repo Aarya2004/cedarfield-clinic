@@ -10,6 +10,7 @@ import WebSocket from 'ws';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { startBridge } from '../src/bridge.js';
+import { AgentLink } from '../src/mcp.js';
 
 const bin = fileURLToPath(new URL('../bin/rokan-terminal.js', import.meta.url));
 
@@ -104,5 +105,48 @@ test('agent role: input frames are refused; a second agent is busy; the tab abse
   assert.ok(busy);
   a.s.close();
   b.s.close();
+  bridge.close();
+});
+
+test('regression (Opus/Fable pass 2 P2): AgentLink reconnects after a bridge restart and gets the tool list back', async () => {
+  const token = randomBytes(16).toString('hex');
+  const port = 21000 + Math.floor(Math.random() * 20000);
+  const ledgerDir = mkdtempSync(join(tmpdir(), 'rokan-mcp-rc-'));
+  let bridge = await startBridge({ port, token, ledgerDir, shell: '/bin/zsh' });
+  const link = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token, backoffMs: [100, 100] });
+  const lists = [];
+  link.onToolsChanged = (t) => lists.push(t.map((x) => x.name));
+  await link.connect();
+  const publishOn = (sock) => {
+    sock.on('message', (m) => {
+      const f = JSON.parse(m.toString());
+      if (f.type === 'hello') sock.send(JSON.stringify({ type: 'agent_tools', tools: [{ name: 'terminal_status', description: 's', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } }] }));
+    });
+    sock.send(JSON.stringify({ type: 'auth', token, cols: 80, rows: 24 }));
+  };
+  const tab = new WebSocket(`ws://127.0.0.1:${port}`);
+  await new Promise((r) => tab.on('open', r));
+  publishOn(tab);
+  await new Promise((r) => setTimeout(r, 300));
+  assert.deepEqual(link.tools.map((t) => t.name), ['terminal_status']);
+
+  bridge.close(); // bridge goes away → list emptied, reconnect scheduled
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(link.socket, null);
+  assert.deepEqual(link.tools, []);
+  await assert.rejects(() => link.call('terminal_status', {}), /not connected/);
+
+  bridge = await startBridge({ port, token, ledgerDir, shell: '/bin/zsh' });
+  for (let i = 0; i < 40 && !(link.socket && link.socket.readyState === 1); i++) await new Promise((r) => setTimeout(r, 100));
+  assert.ok(link.socket && link.socket.readyState === 1, 'did not reconnect');
+  assert.ok(link.reconnects >= 1);
+  const tab2 = new WebSocket(`ws://127.0.0.1:${port}`);
+  await new Promise((r) => tab2.on('open', r));
+  publishOn(tab2);
+  await new Promise((r) => setTimeout(r, 300));
+  assert.deepEqual(link.tools.map((t) => t.name), ['terminal_status']);
+  assert.ok(lists.some((l) => l.length === 0), 'clients were never told the list emptied');
+  link.close();
+  tab2.close();
   bridge.close();
 });

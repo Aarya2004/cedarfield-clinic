@@ -27,22 +27,31 @@ export function readCurrent() {
 }
 
 /** Connects to the bridge as role "agent"; keeps the tool list; relays calls. */
+/** Reconnect backoff after the bridge goes away (restart, idle exit); capped, retried until close(). */
+export const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 15000];
+
 export class AgentLink {
-  constructor({ ws, token, log = () => {} }) {
+  constructor({ ws, token, log = () => {}, backoffMs = RECONNECT_BACKOFF_MS }) {
     this.url = ws;
     this.token = token;
     this.log = log;
+    this.backoffMs = backoffMs;
     this.tools = [];
     this.pending = new Map();
     this.onToolsChanged = () => {};
     this.socket = null;
     this.hello = null;
+    this.closedByUs = false;
+    this.attempt = 0;
+    this.reconnectTimer = null;
+    this.reconnects = 0;
   }
 
   connect() {
     return new Promise((resolve, reject) => {
       const s = new WebSocket(this.url);
       this.socket = s;
+      let gotHello = false;
       s.onopen = () => s.send(JSON.stringify({ type: 'auth', token: this.token, role: 'agent' }));
       s.onmessage = (ev) => {
         let f;
@@ -52,9 +61,11 @@ export class AgentLink {
           return;
         }
         if (f.type === 'hello') {
+          gotHello = true;
           this.hello = f;
+          this.attempt = 0;
           resolve(f);
-        } else if (f.type === 'error' && !this.hello) {
+        } else if (f.type === 'error' && !gotHello) {
           reject(new Error(f.message));
         } else if (f.type === 'agent_tools') {
           this.tools = Array.isArray(f.tools) ? f.tools : [];
@@ -72,10 +83,41 @@ export class AgentLink {
         this.log(`bridge closed (${ev.code} ${ev.reason})`);
         for (const [, p] of this.pending) p.reject(new Error('bridge disconnected'));
         this.pending.clear();
-        if (!this.hello) reject(new Error(`bridge closed before hello (${ev.code})`));
+        if (this.socket === s) this.socket = null;
+        if (!gotHello) {
+          reject(new Error(`bridge closed before hello (${ev.code})`));
+          return;
+        }
+        // The bridge served tools we can no longer call: tell MCP clients the list is empty now,
+        // then keep trying to come back (a restarted bridge replays the tab's list on hello).
+        if (this.tools.length) {
+          this.tools = [];
+          this.onToolsChanged(this.tools);
+        }
+        if (!this.closedByUs) this.scheduleReconnect();
       };
       s.onerror = () => {};
     });
+  }
+
+  scheduleReconnect() {
+    if (this.closedByUs || this.reconnectTimer) return;
+    const delay = this.backoffMs[Math.min(this.attempt, this.backoffMs.length - 1)];
+    this.attempt++;
+    this.log(`reconnecting to the bridge in ${delay} ms (attempt ${this.attempt})`);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect()
+        .then(() => {
+          this.reconnects++;
+          this.log('reconnected to the bridge');
+        })
+        .catch((e) => {
+          this.log(`reconnect failed: ${e instanceof Error ? e.message : String(e)}`);
+          this.scheduleReconnect();
+        });
+    }, delay);
+    this.reconnectTimer.unref?.();
   }
 
   call(tool, input) {
@@ -92,6 +134,9 @@ export class AgentLink {
   }
 
   close() {
+    this.closedByUs = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.socket?.close(4000, 'mcp exit');
   }
 }
@@ -105,7 +150,9 @@ export function createMcpServer(link) {
       name: t.name,
       description: t.description,
       inputSchema: t.inputSchema && typeof t.inputSchema === 'object' ? t.inputSchema : { type: 'object', properties: {} },
-      annotations: { readOnlyHint: !!t.annotations?.readOnlyHint, destructiveHint: !t.annotations?.readOnlyHint, openWorldHint: false },
+      // One registry, one claim: the page's own annotations. No tool executes anything — the human's
+      // Enter does — so nothing is destructive unless the page says so (it doesn't today).
+      annotations: { readOnlyHint: !!t.annotations?.readOnlyHint, destructiveHint: !!t.annotations?.destructiveHint, openWorldHint: false },
     })),
   }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
