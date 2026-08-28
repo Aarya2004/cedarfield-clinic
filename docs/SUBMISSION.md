@@ -21,13 +21,13 @@ terminal you and your agent share, where the page's tools are the trust boundary
 - **Nothing a tool does executes.** `terminal_propose` and every `forged_*` tool ghost-type; the
   human's Enter runs the command. That threads the consumer's per-call safety review honestly: the
   tools are inert by construction, not by description.
-- **Second protocol, same tools.** `npx rokan-terminal mcp` serves the identical tool list over MCP
+- **Second protocol, same tools.** `npx rokan-terminal mcp` **[Sep 2: only if published to npm — else `node packages/bridge/bin/rokan-terminal.js mcp`]** serves the identical tool list over MCP
   stdio to Claude Code / Cursor / Codex CLI; the page stays the single source of truth and the MCP
   process can never type. One library, two protocols.
 - **Measured, not claimed.** `docs/FIELD-NOTES.md` records what Chrome 152's WebMCP actually does
   (no `{signal}` passed to `execute`, `executeTool` wants a JSON string, `toolsRemoved` on abort,
   decorations need `allowProposedApi`) — measured by our headless harness that drives the CDP
-  `WebMCP` domain with no consumer in the loop. 12 cases, 250+ steps, run on every commit.
+  `WebMCP` domain with no consumer in the loop. 15 cases, 300+ steps (7 on the prompt line, 8 on a real PTY), run on every commit.
 
 ## The better experience
 
@@ -40,19 +40,21 @@ the human instead of polling, and real exit codes measured by the shell.
 
 The agent gets hands on a real shell without ever getting execution. The human gets to *teach by
 doing*: anything done once can be forged into a tool the agent calls next time — including
-`rokan do`, our browsing engine, which acts behind the user's own logins and replays at zero model
-calls. Neither side could grow that library alone, and the library is portable: it is WebMCP.
+`rokan do`, our browsing engine, which acts behind the user's own logins and replays its seeded
+operations at zero model calls — the ledger row shows `calls:0 ⚡` parsed from rokan-do's own result
+line (measured 312 ms on the demo machine). Neither side could grow that library alone, and the
+library is portable: it is WebMCP.
 
 ## Implementation
 
 Next.js 15 on Vercel; xterm.js 6 with ghost text drawn as an overlay (never through the PTY
 parser); a Node bridge (`node-pty` + WebSocket + Cloudflare quick tunnel + 128-bit pairing token in
 the URL fragment) with zsh shell integration (OSC 133/7) so `running`, exit codes and durations
-are measured, not inferred; judge mode = the same bridge inside a Cloudflare Sandbox container
-(non-root, egress allowlist, 1 session/IP/10 min, 30-min TTL); an append-only ledger HMAC-chained
+are measured, not inferred (bash/sh without integration resolve honestly as `measured:false`); judge mode = the same bridge inside a Cloudflare Sandbox container
+(non-root, HMAC-signed session ids, egress allowlist, 3 sessions/IP/10 min, 30-min TTL) — **[Sep 2: keep only if the Worker is deployed (Cloudflare Workers Paid); otherwise say "built and smoke-tested locally in Docker, not deployed"]**; an append-only ledger HMAC-chained
 in the tab and countersigned by the bridge; a single redaction choke point; forged tools carry a
 content hash (a changed hash requires a new approval — the "bind tool identity" mitigation from
-arXiv 2606.06387). Two independent adversarial reviews (36 findings) are fixed with tests.
+arXiv 2606.06387). Four adversarial review passes by two independent reviewers (54 findings) — every one fixed with a regression test in the same commit.
 
 WebMCP tool descriptions are hints to a cooperative agent, never a security boundary. **Our
 boundary is the keyboard.**
