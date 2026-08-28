@@ -230,3 +230,20 @@ both rejected. All pass-2 findings (mine and Fable's Worker ones) verified close
 - [x] P2 — `docs/PLAN.md:119,189,285` + `SANDBOX-PLAN.md:57` + `FORGE-PLAN.md:485` — the "model-call cap 20/session" abuse control is promised in four places and implemented in none; risk is nil (no key reaches the container) but the claim is unfulfilled — replace with the true, stronger "no API key in the judge container; unseeded tasks are refused" — Opus [C] — **fixed 523f462**
 - [x] P2 — `infra/sandbox/src/worker.ts:28` — `ANTHROPIC_API_KEY` is a declared-but-unused `Env` field, so `wrangler secret put ANTHROPIC_API_KEY` (which `PLAN §12.6` instructs) silently does nothing; delete it or comment why it is deliberately unwired — Opus [C] — **fixed 523f462**
 - [x] P2 — `evals/cases/gate-a-propose-wait.json:18` — the final "ledger row rendered" step is a bare `eval` with no `equals`/`matches`, so the harness defaults `ok:true`; its value is `null` on both localhost and live prod, i.e. it would fail if made asserting (stale Gate-A placeholder text vs the current pane UI). 1 of 18 steps asserts — sweep all cases for non-asserting `eval` steps — Opus [C] — **fixed 523f462**
+
+## Review findings (open) — Opus 5 reviewer, VERIFY pass, 2026-08-28
+
+Full report: `docs/reviews/2026-08-28-opus-verify.md`. Evidence: `docs/evidence/verify-opus/live-endpoints.txt`.
+Cold gate at `6cef16b` hit every expected number: web **114/114** · bridge check pass · bridge units
+**7/7** · smoke **36/36 in 2864 ms** + MCP **3/3** · sandbox **12/12** · prompt-line evals **7 cases,
+0 failed** · judge-mode evals **8 cases, 0 failed**. Live: page **200 in 196 ms** with nonce CSP +
+`strict-dynamic`; Worker health **200 in 58 ms**. Adversarial: trailer attribution **5/5** (3 bypasses
+I invented all refused, 2 positive controls still parse), forged sids **403 in 83–125 ms** with no
+instance started, cross-origin `POST /api/session` **403** before the Gate, `/tmp/pwned` never created.
+All pass-1/2/3 findings verified closed by measurement.
+
+- [ ] P1 — `evals/run-all.mjs:38,50,88,140` — the detached `next-server` is only reaped at line 140, **after** two unconditional `process.exit(1)` paths (line 50 "web app did not start", line 88 "bridge did not print a pairing link"), and there is **no** SIGINT/SIGTERM handler (`grep -c "process.on"` = 0), so every early exit or interruption leaks a 54 MB server; measured **16 orphans holding 767 MB**, oldest alive **2 h 33 m** — I reclaimed 767 MB. This is the likely proximate cause of today's laptop crash and it is in the one command every reviewer, the builder and CI run — wrap in try/finally + signal handlers — Opus [C]
+- [ ] P2 — `evals/run-all.mjs:38` — `pnpm start` serves whatever `.next` exists, so after a `git pull` that touches `apps/web` the suite silently tests a **stale build** and reports eval failures (or "web app did not start") instead of a build problem; both of my first-pass failures were this. Build, or stat `.next` against the working tree and refuse — Opus [C]
+- [ ] P2 — `infra/sandbox/wrangler.jsonc` — `wrangler containers list` shows **7 live instances** of 10 (`max_instances: 10`) while idle; with a 30-min TTL, sessions ending only on TTL/idle (J5) and 3 concurrent per IP, **four judge IPs exhaust the pool** and the next judge gets a failed start. J1 says the pile-up is pre-fix residue — re-measure cold before judging day and consider raising `max_instances` — Opus [C]
+- [ ] P2 — `docs/FORGE-PLAN.md:485` — still states "1 session/IP/10 min" (now 3) and "model-call cap" (deliberately not implemented); PLAN, SANDBOX-PLAN and SECURITY.md were all corrected, this judge-analysis row was missed — Opus [C]
+- [ ] P2 — `evals/cases/forge-birth.json`, `evals/cases/gate-a-propose-wait.json` — 2 of 141 eval steps still assert nothing (bare `eval`, no `equals`/`matches`); down from pass 3, not gone — Opus [C]

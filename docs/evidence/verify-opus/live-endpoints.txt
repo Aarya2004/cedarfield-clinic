@@ -1,0 +1,22 @@
+# Opus verify pass — live endpoint measurements (2026-08-28T22:41:03Z)
+
+## Live page
+HTTP/2 200 
+content-security-policy: default-src 'self'; script-src 'self' 'nonce-bzrVyQgqXsUqankYOXVoiQ==' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss://*.trycloudflare.com wss://rokan-sandbox.rokan-sandbox.workers.dev https://rokan-sandbox.rokan-sandbox.workers.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+referrer-policy: no-referrer
+x-content-type-options: nosniff
+x-frame-options: DENY
+http=200 time_total=0.196114s size=6059
+
+## Judge worker health
+{"ok":true,"mode":"judge"}
+http=200 time=0.057714s
+
+## Cross-origin POST /api/session (must be 403 before the Gate)
+{"error":"origin not allowed"}
+http=403
+
+## Forged sids over a real WS handshake (must be 403, no container)
+random sig   -> HTTP 403 handshake refused (125 ms)
+zero sig     -> HTTP 403 handshake refused (83 ms)
+ff sig       -> HTTP 403 handshake refused (83 ms)
