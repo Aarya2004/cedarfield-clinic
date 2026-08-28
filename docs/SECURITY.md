@@ -61,7 +61,8 @@ Everything below is implemented and covered by a test that fails when it regress
   version missed nested keys).
 - Clients cannot forge bridge-only kinds (`executed`, `paired`, `shell_exited`) or override
   `seq/t/session/origin`. Say "tamper-evident, countersigned by the bridge" — never "tamper-proof".
-- Tests: `ledger.test.ts`, smoke checks "nested tamper", "F7 reserved fields", "bridge-only kinds".
+- `npx rokan-terminal verify rokan-ledger-<session>.json` cross-checks a page export against the bridge ledger on that machine: every countersigned row must match the client signature the bridge stored and the bridge chain must verify (smoke: "crossVerify").
+- Tests: `ledger.test.ts`, smoke checks "nested tamper", "F7 reserved fields", "bridge-only kinds", "crossVerify".
 
 ## 6. Judge mode (Cloudflare Sandbox)
 

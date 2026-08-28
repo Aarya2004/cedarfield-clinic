@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import WebSocket from 'ws';
 import { startBridge } from '../src/bridge.js';
-import { verifyLedger } from '../src/ledger.js';
+import { crossVerify, verifyLedger } from '../src/ledger.js';
 
 const token = randomBytes(16).toString('hex');
 const ledgerDir = mkdtempSync(join(tmpdir(), 'rokan-ledger-'));
@@ -135,6 +135,18 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
   check('judge TTL ends the session and signals onIdle', !!ended && idle, JSON.stringify(ended));
   c.ws.close();
   j.close();
+}
+
+// 4c. cross-verify: a page export whose rows carry the bridge countersignature
+{
+  ws.send(JSON.stringify({ type: 'ledger', row: { kind: 'invoked', seq: 9, sig: 'a'.repeat(64), fields: { tool: 'forged_x' } } }));
+  const ack9 = await until(frames, (f) => f.type === 'ledger_ack' && f.client_seq === 9);
+  const good = { rows: [{ seq: 9, t: 'x', session: 'tab', kind: 'invoked', fields: { tool: 'forged_x' }, prev: '', sig: 'a'.repeat(64), bridge_sig: ack9.sig, bridge_seq: ack9.seq }] };
+  const cv = crossVerify(good, { dir: ledgerDir });
+  check('crossVerify: countersigned export row verifies against the bridge ledger', cv.ok && cv.verified === 1, JSON.stringify(cv));
+  const bad = { rows: [{ ...good.rows[0], sig: 'b'.repeat(64) }] };
+  const cv2 = crossVerify(bad, { dir: ledgerDir });
+  check('crossVerify: a re-signed export row is caught', !cv2.ok && cv2.mismatches.length === 1, JSON.stringify(cv2.mismatches));
 }
 
 // 5. ledger on disk + HMAC chain verifies

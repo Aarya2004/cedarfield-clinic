@@ -70,3 +70,42 @@ export function verifyLedger(session, { dir = LEDGER_DIR } = {}) {
   }
   return { ok: true, rows, firstBad: null };
 }
+
+/**
+ * Cross-verify a page export (`rokan-ledger-<session>.json`) against this machine's bridge ledger:
+ * for every client row that carries a bridge countersignature, the bridge must hold a row of kind
+ * `client:<kind>` whose stored `client_sig`/`client_seq` match and whose own HMAC verifies.
+ * Returns counts; `mismatches` lists seqs whose content differs from what the bridge signed.
+ */
+export function crossVerify(exportJson, { dir = LEDGER_DIR } = {}) {
+  const rows = Array.isArray(exportJson?.rows) ? exportJson.rows : [];
+  const lines = readFileSync(join(dir, 'ledger.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const bySession = new Map();
+  for (const r of lines) {
+    if (!bySession.has(r.session)) bySession.set(r.session, []);
+    bySession.get(r.session).push(r);
+  }
+  let countersigned = 0;
+  let verified = 0;
+  const mismatches = [];
+  for (const row of rows) {
+    if (!row.bridge_sig) continue;
+    countersigned++;
+    const match = lines.find((b) => b.sig === row.bridge_sig && b.seq === row.bridge_seq);
+    if (!match) {
+      mismatches.push({ seq: row.seq, reason: 'no bridge row with that signature' });
+      continue;
+    }
+    if (match.client_sig !== row.sig || match.client_seq !== row.seq || match.kind !== `client:${row.kind}`) {
+      mismatches.push({ seq: row.seq, reason: 'bridge row differs from the export (kind/seq/sig)' });
+      continue;
+    }
+    const v = verifyLedger(match.session, { dir });
+    if (!v.ok) {
+      mismatches.push({ seq: row.seq, reason: `bridge chain for session ${match.session}: ${v.firstBad}` });
+      continue;
+    }
+    verified++;
+  }
+  return { rows: rows.length, countersigned, verified, ok: mismatches.length === 0 && countersigned > 0, mismatches };
+}

@@ -54,6 +54,8 @@ cd apps/web && pnpm dev    # http://localhost:3000
 node packages/bridge/bin/rokan-terminal.js --no-tunnel --app http://localhost:3000   # prints the pairing link
 ```
 
+Verify a ledger export from the page against your bridge: `node packages/bridge/bin/rokan-terminal.js verify rokan-ledger-<session>.json`.
+
 Headless WebMCP evals (Chrome 152 via the CDP `WebMCP` domain, no consumer needed):
 `node evals/run-all.mjs` (prompt line) · `node evals/run-all.mjs --bridge` (real PTY).
 
