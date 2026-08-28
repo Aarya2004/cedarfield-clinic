@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 15:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 15:40 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -33,7 +33,9 @@ Last update: **2026-08-28 15:10 PT** by C (Arav's Claude). Branch `main`, all pu
 
 **Done 15:10 PT — MCP parity (PLAN §13.1):** `npx rokan-terminal mcp` is an MCP stdio server for Claude Code / Cursor / Codex CLI that lists the **same** tools the page registers with WebMCP (six fixed + forged, live `listChanged`) and relays calls to the tab; the page is the single source of truth; the agent socket can never send PTY input (tests: `packages/bridge/test/mcp.test.mjs` with a real MCP client over stdio; `terminal-forge-live.json` checks `agentTools()`/`agentCall()` in the page).
 
-**Now (C, in flight):** judge-facing README; then CSP nonces (Opus P2), evals-cli (Gao) if it installs in < 30 min, remote-box beat (§13.2) needs a Linux box from Arav.
+**Done 15:40 PT:** judge-facing README; nonce CSP (no `unsafe-inline` scripts); UI nits from a headed pass (params grid, ledger truncation, how-it-works card). Chrome's `evals-cli` is not on npm (`webmcp-tools` on npm is a third-party SDK) — our CDP harness + 12 cases is the evals story; cite it in the submission.
+
+**Now (C, in flight):** `docs/SUBMISSION.md` (Devpost text, PLAN §9 in the §0.9 order); then a Forge-this harness check; then idle-poll for the logins (Vercel → deploy; wrangler → judge sandbox live) and the reviewers' second pass.
 
 **Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 

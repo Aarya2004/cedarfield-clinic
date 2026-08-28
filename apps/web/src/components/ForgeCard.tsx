@@ -81,11 +81,11 @@ export function ForgeCardView({ card }: { card: Card }) {
       )}
       <div className="mt-2 text-xs text-muted">params</div>
       {spec.params.map((p, i) => (
-        <div key={i} className="mt-1 grid grid-cols-[6rem_1fr_6rem_1.5rem] gap-1">
-          <input value={p.name} onChange={(e) => setParam(i, { name: e.target.value })} placeholder="name" className="mono rounded border border-line px-2 py-1 text-xs" spellCheck={false} />
-          <input value={p.description} onChange={(e) => setParam(i, { description: e.target.value })} placeholder="description" className="rounded border border-line px-2 py-1 text-xs" />
-          <input value={p.example} onChange={(e) => setParam(i, { example: e.target.value })} placeholder="example" className="mono rounded border border-line px-2 py-1 text-xs" spellCheck={false} />
-          <button onClick={() => setSpec({ ...spec, params: spec.params.filter((_, j) => j !== i) })} className="text-xs text-muted">
+        <div key={i} className="mt-1 grid grid-cols-[minmax(0,5rem)_minmax(0,1fr)_minmax(0,4.5rem)_1rem] gap-1">
+          <input value={p.name} onChange={(e) => setParam(i, { name: e.target.value })} placeholder="name" title="param name" className="mono min-w-0 rounded border border-line px-1.5 py-1 text-xs" spellCheck={false} />
+          <input value={p.description} onChange={(e) => setParam(i, { description: e.target.value })} placeholder="description" title="what the agent reads" className="min-w-0 rounded border border-line px-1.5 py-1 text-xs" />
+          <input value={p.example} onChange={(e) => setParam(i, { example: e.target.value })} placeholder="e.g." title="example value" className="mono min-w-0 rounded border border-line px-1.5 py-1 text-xs" spellCheck={false} />
+          <button onClick={() => setSpec({ ...spec, params: spec.params.filter((_, j) => j !== i) })} className="text-xs text-muted" title="remove param">
             ✕
           </button>
         </div>

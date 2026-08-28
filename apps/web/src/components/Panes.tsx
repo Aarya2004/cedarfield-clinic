@@ -171,10 +171,10 @@ export function LedgerPane() {
       ) : (
         <ol className="mono mt-1 min-h-0 flex-1 space-y-0.5 overflow-auto text-[11px]">
           {[...rows].reverse().map((r) => (
-            <li key={r.seq} className="flex flex-wrap gap-1">
+            <li key={r.seq} className="flex gap-1 whitespace-nowrap" title={summarise(r)}>
               <span className="text-muted">{r.seq}</span>
               <span className={r.kind === 'forged' ? 'text-accent' : r.kind === 'executed' ? 'text-ok' : r.kind === 'dismissed' ? 'text-muted' : ''}>{r.kind}</span>
-              <span className="text-muted">{summarise(r)}</span>
+              <span className="min-w-0 truncate text-muted">{summarise(r)}</span>
               {r.bridge_sig && <span title="countersigned by the bridge">✓</span>}
             </li>
           ))}
@@ -200,6 +200,8 @@ function summarise(r: LedgerRow): string {
     case 'paired':
     case 'reconnected':
       return `${f.host} · ${f.pair_ms ?? '–'} ms`;
+    case 'registered':
+      return `${String(f.tools ?? '').split(',').length} tools · ${f.ms ?? '–'} ms`;
     default:
       return Object.entries(f)
         .slice(0, 3)

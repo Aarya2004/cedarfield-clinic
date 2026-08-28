@@ -104,6 +104,20 @@ export function App() {
             <>
               <PairingCard />
               <PromptLine />
+              <section className="rounded-md border border-line bg-white p-4 text-sm" data-how>
+                <h2 className="font-medium">How it works</h2>
+                <ol className="mt-2 grid gap-2 text-xs text-muted md:grid-cols-3">
+                  <li>
+                    <span className="text-ink">1 · The agent proposes.</span> `terminal_propose` ghost-types a command at your prompt. Nothing runs.
+                  </li>
+                  <li>
+                    <span className="text-ink">2 · You press Enter.</span> Your key runs it on your shell; exit code and duration are measured by the shell and shown here.
+                  </li>
+                  <li>
+                    <span className="text-ink">3 · Forge it.</span> Select what you ran → Forge this → Approve. A new WebMCP tool is registered live; the agent calls it; your Enter still gates each step.
+                  </li>
+                </ol>
+              </section>
             </>
           )}
         </div>
