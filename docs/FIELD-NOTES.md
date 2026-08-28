@@ -23,6 +23,10 @@ Harness: raw CDP over Node 25's built-in WebSocket, page = the Gate A build serv
 | 11 | `terminal_wait` blocked 705 ms until a real `Input.dispatchKeyEvent` Enter, returned `executed`; no consumer abort observed at that duration | 705 ms | 1 |
 | 12 | Human decision latency as rendered in the ledger (proposal → Enter) | 1809 – 1810 ms | 2 |
 | 13 | `navigator.modelContextTesting` (the Cloudflare Browser Run surface) | `undefined` under `WebMCP` feature; flag name unknown | 1 |
+| 14 | Aborting a registration `AbortSignal` → `WebMCP.toolsRemoved` **and** `toolchange` fire; the tool disappears from `getTools()`; a CDP `invokeTool` on it is refused (harness status `CDP_ERROR`) | yes (evals `forge-budget.json`; Fable review #1 agrees) | 3 |
+| 15 | Same name re-registered after abort | 0.2 ms (Fable review measurement) | 1 |
+| 16 | Duplicate name **without** abort | throws `InvalidStateError: Duplicate tool name` (Fable review) — engine always aborts first | 1 |
+| 17 | Runtime `registerTool` of a forged tool → visible to CDP `toolsAdded` | < 1 ms after `approve()` resolves (evals `forge-birth.json`, `approve_ms` printed) | 3 |
 
 Consequences already applied in code: `execute(input, options?)` with `options?.signal`
 (`types.ts`, `register.ts`). Per-call timeout budget of Chrome's own agent: **not yet measured**

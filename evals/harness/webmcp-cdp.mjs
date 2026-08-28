@@ -105,7 +105,12 @@ for (const step of steps) {
   }
 }
 const shot = flag('shot');
-if (shot) { const r = await send('Page.captureScreenshot', { format: 'png' }); writeFileSync(shot, Buffer.from(r.result.data, 'base64')); }
+if (shot) {
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1800, deviceScaleFactor: 1, mobile: false });
+  await sleep(300);
+  const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+  writeFileSync(shot, Buffer.from(r.result.data, 'base64'));
+}
 out({ summary: { steps: steps.length, failed, tools: [...tools.keys()] } });
 ws.close(); chrome.kill();
 process.exit(failed ? 1 : 0);
