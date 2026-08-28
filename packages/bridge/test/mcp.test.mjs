@@ -154,3 +154,19 @@ test('regression (Opus/Fable pass 2 P2): AgentLink reconnects after a bridge res
   tab2.close();
   bridge.close();
 });
+
+test('regression (Codex sessions, 2026-08-29): a replaced AgentLink stands down; the newer process keeps the slot', async () => {
+  const token = randomBytes(16).toString('hex');
+  const port = 21000 + Math.floor(Math.random() * 20000);
+  const bridge = await startBridge({ port, token, ledgerDir: mkdtempSync(join(tmpdir(), 'rokan-mcp-rp-')), shell: '/bin/zsh' });
+  const a = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token, backoffMs: [50, 50] });
+  await a.connect();
+  const b = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token, backoffMs: [50, 50] });
+  await b.connect();
+  await new Promise((r) => setTimeout(r, 600)); // long enough for a wrongful reconnect to have happened
+  assert.equal(a.socket, null, 'the replaced link must not reconnect');
+  assert.ok(b.socket && b.socket.readyState === 1, 'the newer link must keep the slot');
+  a.close();
+  b.close();
+  bridge.close();
+});

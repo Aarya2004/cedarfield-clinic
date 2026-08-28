@@ -65,6 +65,10 @@ export class AgentLink {
           this.hello = f;
           this.attempt = 0;
           resolve(f);
+        } else if (f.type === 'error' && f.code === 'replaced') {
+          // A newer agent process (a new Codex session) took the slot: stand down, never reconnect over it.
+          this.closedByUs = true;
+          this.log('replaced by a newer agent process — not reconnecting');
         } else if (f.type === 'error' && !gotHello) {
           reject(new Error(f.message));
         } else if (f.type === 'agent_tools') {
