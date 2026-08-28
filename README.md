@@ -16,7 +16,7 @@ Entry for the **OpenAI WebMCP Challenge** (Devpost, deadline 2026-09-03 13:00 PT
    **ChatGPT desktop on GPT-5.6 Sol or Terra** (Luna has site tools disabled) or in **Chrome 149+**
    with `chrome://flags/#enable-webmcp-testing` (DevTools → Application → WebMCP shows every
    registration and call).
-2. Pair a shell: clone this repo and run `node packages/bridge/bin/rokan-terminal.js` (Node 20+; `npx rokan-terminal` once the package is published) on your own machine and open the link it prints. The **“Try it now — judge sandbox”** button (a throttled 30-minute Linux container, nothing to install) appears on the page as soon as the judge Worker is deployed — it is gated on a Cloudflare Workers Paid plan (status in `docs/PROGRESS.md`).
+2. Click **“Try it now — judge sandbox”** (a throttled 30-minute Linux container on Cloudflare; nothing to install; measured cold start ≈ 5 s) — or clone this repo and run `node packages/bridge/bin/rokan-terminal.js` (Node 20+; `npx rokan-terminal` once the package is published) on your own machine and open the link it prints.
 3. Ask the agent: **“propose `ls`”** → ghost text appears at your prompt → press **Enter**.
 4. Select that line → **Forge this** → Approve → the site-tools list gains `forged_<name>` (no reload — measured in Chrome 152; in ChatGPT desktop the Site-tools refresh is unverified, PLAN §0.9 — reload if it does not) → ask the agent to call it → your Enter runs it → the ledger shows measured `exit · ms`.
 
