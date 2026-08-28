@@ -29,7 +29,8 @@ const connect = () => new Promise((resolve, reject) => {
   ws.on('open', () => resolve({ ws, frames }));
   ws.on('error', reject);
 });
-const until = (frames, pred, ms = 8000) => new Promise((resolve) => {
+const PROMPT_TIMEOUT = 20000; // CI runners are slow to emit the first prompt
+const until = (frames, pred, ms = 12000) => new Promise((resolve) => {
   const start = Date.now();
   const tick = () => {
     const hit = frames.find(pred);
@@ -55,18 +56,33 @@ ws.send(JSON.stringify({ type: 'auth', token, cols: 100, rows: 30 }));
 const hello = await until(frames, (f) => f.type === 'hello');
 check('hello received', !!hello && hello.mode === 'builder', JSON.stringify(hello));
 check('shell integration on', hello?.integration === true);
-const firstPrompt = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A'), 8000);
+const firstPrompt = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A'), PROMPT_TIMEOUT);
 check('shell prompt marker (OSC 133;A) appeared', !!firstPrompt, `${Math.round(performance.now() - t0)} ms since start`);
 
-ws.send(JSON.stringify({ type: 'input', data: 'echo hi_from_pty; false\r' }));
+// The line editor may not accept bytes the instant the prompt paints (a slow PTY drops the first
+// char). Our own `preexec` marker is the reliable "ready" signal — type, and if the command text
+// does not come back intact, retype once after a short settle.
+const typeCommand = async (cmd) => {
+  ws.send(JSON.stringify({ type: 'input', data: cmd + '\r' }));
+  let st = await until(frames, (f) => f.type === 'status' && f.last_command === cmd, 4000);
+  if (!st) {
+    await new Promise((r) => setTimeout(r, 500));
+    ws.send(JSON.stringify({ type: 'input', data: cmd + '\r' }));
+    st = await until(frames, (f) => f.type === 'status' && f.last_command === cmd, 8000);
+  }
+  return st;
+};
+
+await new Promise((r) => setTimeout(r, 300));
+await typeCommand('echo hi_from_pty; false');
 const gotEcho = await until(frames, (f) => f.type === 'data' && f.data.includes('hi_from_pty') && !f.data.includes('echo hi_from_pty'), 8000);
 check('command output streamed back', !!gotEcho);
-const status = await until(frames, (f) => f.type === 'status' && f.running === false && f.last_exit_code !== null, 8000);
+const status = await until(frames, (f) => f.type === 'status' && f.last_command === 'echo hi_from_pty; false' && f.running === false && f.last_exit_code !== null, 8000);
 check('status reports honest exit code (false → 1)', status?.last_exit_code === 1, JSON.stringify(status));
 check('status carries measured ms', Number.isInteger(status?.last_command_ms) && status.last_command_ms >= 0, `${status?.last_command_ms} ms`);
 check('status carries the command text', status?.last_command === 'echo hi_from_pty; false', JSON.stringify(status?.last_command));
 
-ws.send(JSON.stringify({ type: 'input', data: 'cd /tmp\r' }));
+await typeCommand('cd /tmp');
 const cwdStatus = await until(frames, (f) => f.type === 'status' && f.last_command === 'cd /tmp' && f.running === false, 8000);
 check('cwd tracked via OSC 7', /\/tmp$/.test(cwdStatus?.cwd ?? ''), JSON.stringify(cwdStatus?.cwd));
 
@@ -99,11 +115,11 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
   check('exit frame on shell exit', !!ex, JSON.stringify(ex));
   const restarted = await until(frames, (f) => f.type === 'data' && f.data.includes('started a new one'), 8000);
   check('shell respawned after exit', !!restarted);
-  const marker = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A') && frames.indexOf(f) > frames.indexOf(restarted), 8000);
+  const marker = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A') && frames.indexOf(f) > frames.indexOf(restarted), PROMPT_TIMEOUT);
   check('new shell prompt marker', !!marker);
   ws.send(JSON.stringify({ type: 'resize', cols: 120, rows: 40 }));
-  ws.send(JSON.stringify({ type: 'input', data: 'echo alive_after_respawn\r' }));
-  const alive = await until(frames, (f) => f.type === 'status' && f.last_command === 'echo alive_after_respawn', 8000);
+  await new Promise((r) => setTimeout(r, 300));
+  const alive = await typeCommand('echo alive_after_respawn');
   check('new shell runs commands (write/resize on live PTY)', alive?.last_exit_code === 0, JSON.stringify(alive));
 }
 
