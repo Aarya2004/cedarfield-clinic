@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 16:20 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 17:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -37,7 +37,9 @@ Last update: **2026-08-28 16:20 PT** by C (Arav's Claude). Branch `main`, all pu
 
 **Done 16:20 PT:** `docs/SUBMISSION.md` draft; Forge-this as a tested lib (`forge-this.ts`, prompt stripping + name grammar) with a harness path (selection → card → approve → `forged_ls_*`).
 
-**Now (C, in flight):** CI runs the real-PTY bridge smoke on Linux; `rokan-terminal verify <export.json>` (ledger cross-check); then an automated demo dry-run (one harness case per §8 beat with screenshots + timings). Still blocked on Arav: ChatGPT Sol/Terra, `vercel login`, `wrangler login`.
+**Done 17:10 PT:** CI runs the real-PTY smoke + MCP relay on Linux; `rokan-terminal verify` (ledger cross-check, smoke 29/29); **automated demo dry-run** — every §8 beat on a real PTY with a screenshot per beat (`docs/evidence/demo/`, 47 steps, 0 failed). **Incident:** `bin/rokan-terminal.js` was committed empty by a truncating edit (6c9d3d0) and restored in 072f11c; `check` now requires a non-empty bin.
+
+**Now (C):** waiting on Arav for ChatGPT Sol/Terra, `vercel login`, `wrangler login`; meanwhile polishing (headed QA of the card/ledger, FIELD-NOTES), and ready for the reviewers' second pass.
 
 **Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 

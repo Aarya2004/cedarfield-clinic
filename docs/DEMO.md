@@ -28,6 +28,7 @@ Switch to `demo-backup.mp4` if: pairing not green in 10 s · any tool call not v
 ## Rehearsal log (5 runs with a stopwatch before recording)
 | run | date/time PT | total | failed beat | fix |
 | --- | --- | --- | --- | --- |
+| 0 (automated) | 2026-08-28 17:10 | 47 harness steps, 0 failed, real PTY | none | `evals/cases/terminal-demo-dryrun.json` → `docs/evidence/demo/beat*.png` (every §8 beat except ChatGPT's own UI) |
 | 1 | | | | |
 | 2 | | | | |
 | 3 | | | | |
