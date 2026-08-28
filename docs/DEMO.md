@@ -41,3 +41,7 @@ Hacker News is **not** in rokan-do's seed pack. For the `calls:0 ⚡` beat type 
 `rokan do "what is the current status at githubstatus.com"` or
 `rokan do "what is the latest version of pydantic at pypi.org/project/pydantic"` (312 ms replay measured for the docs.github.com seed).
 `rokan do "top 5 HN titles"` is honest too — it is the model-call path (`calls:null`, needs the key) or an abstention; say which one you are showing.
+
+## Freeze rule — judge Worker
+
+A `wrangler deploy` of `infra/sandbox` replaces the container fleet and drops every live judge session (measured 2026-08-28). No Worker deploys from the Tue 09-01 12:00 PT freeze until results. Web-only redeploys (Vercel) are safe for judge sessions.
