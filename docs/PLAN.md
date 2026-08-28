@@ -3,8 +3,8 @@
 > **This is a hackathon entry** (OpenAI WebMCP Challenge, Devpost, 10 days, $35K, top-10, 7 judges).
 > **Status: PROPOSED. Nothing built. Arav + Aarya both say "go" before any code.**
 > Written 2026-08-28 night. Deadline **2026-09-03 13:00 PT** (Devpost rules; ignore
-> "5pm"/"Sep 4"/"Aug 31" from secondary sources). Research: `docs/WEBMCP-MASTERY-2026-08-28.md`.
-> Decision trail: `docs/IDEA-LEDGER.md` §S. This file follows the Handset discipline
+> "5pm"/"Sep 4"/"Aug 31" from secondary sources). Research: `docs/WEBMCP-RESEARCH.md`.
+> Decision trail: `docs/IDEA-LEDGER.md` §S (in the Rokan repo, not here). This file follows the Handset discipline
 > (`~/YC Hack VA MAY26/handset/{CONTEXT,EXECUTION_PLAN,DEMO_SCRIPT,TEST_PROTOCOL,REDTEAM}.md`)
 > folded into one document: §0 locked decisions · §1 product · §2 architecture · §3 tool
 > contracts · §4 security · §5 repo · §6 schedule · §7 test protocol · §8 demo + video ·
