@@ -39,7 +39,9 @@ export class Ledger {
 
   /** Appends one row and returns it (with sig). `fields` must be JSON-serialisable. */
   append(kind, fields = {}) {
-    const row = { seq: ++this.seq, t: new Date().toISOString(), session: this.session, kind, ...fields, prev: this.prev };
+    // Reserved keys are set last so no caller-supplied field can override them (Fable review F7).
+    const row = { ...fields, seq: ++this.seq, t: new Date().toISOString(), session: this.session, kind, prev: this.prev };
+    delete row.sig;
     const sig = createHmac('sha256', this.key).update(this.prev + canonical(row)).digest('hex');
     const signed = { ...row, sig };
     appendFileSync(this.file, JSON.stringify(signed) + '\n');

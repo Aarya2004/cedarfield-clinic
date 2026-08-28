@@ -37,11 +37,13 @@ test('JWT', () => {
 });
 
 test('key=value secrets keep the key, drop the value', () => {
-  const r = one('password=hunter2 token: abc123 API_KEY="xyz" not_secret=keep');
+  const r = one('password=hunter2 token: abc123 API_KEY="xyz" retry_count=3');
   assert.ok(r.lines[0].includes(`password=${REDACTED}`), r.lines[0]);
   assert.ok(r.lines[0].includes(`token: ${REDACTED}`), r.lines[0]);
   assert.ok(r.lines[0].includes(`API_KEY="${REDACTED}"`), r.lines[0]);
-  assert.ok(r.lines[0].includes('not_secret=keep'), r.lines[0]);
+  assert.ok(r.lines[0].includes('retry_count=3'), r.lines[0]);
+  // any identifier containing a secret keyword is treated as a secret (security over precision)
+  assert.ok(one('not_secret=keep').lines[0].includes(REDACTED));
 });
 
 test('Authorization header', () => {
@@ -87,4 +89,42 @@ test('clean lines pass through untouched', () => {
 test('redactLine reports every kind hit on a line', () => {
   const { kinds } = redactLine('AKIAIOSFODNN7EXAMPLE xoxp-12345678-abcdefgh');
   assert.deepEqual(kinds.sort(), ['aws_access_key', 'slack_token']);
+});
+
+// Fable review F1 (2026-08-28): the 18 lines that leaked. Every one must redact the secret.
+const leaks: [string, string][] = [
+  ['AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY', 'wJalrXUtnFEMI'],
+  ['export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG', 'wJalrXUtnFEMI'],
+  ['PGPASSWORD=hunter2 psql -h db', 'hunter2'],
+  ['MYSQL_PWD=hunter2', 'hunter2'],
+  ['{"password": "hunter2"}', 'hunter2'],
+  ['  "api_key": "abc123",', 'abc123'],
+  ['DATABASE_URL=postgres://admin:s3cretpw@db.example:5432/app', 's3cretpw'],
+  ['psql --password hunter2 -U admin', 'hunter2'],
+  ['STRIPE_SECRET_KEY=sk_live_abcdefghijklmnop', 'sk_live_abcdefghijklmnop'],
+  ['GOOGLE_API_KEY=AIzaSyA-abcdefghijklmnopqrstuvwxyz0123', 'AIzaSyA-abcdefghijklmnopqrstuvwxyz0123'],
+  ['VERCEL_TOKEN=Abcdefghijklmnopqrstuvwx', 'Abcdefghijklmnopqrstuvwx'],
+  ['CLOUDFLARE_API_TOKEN=Abcdefghijklmnopqrstuvwxyz0123456789', 'Abcdefghijklmnopqrstuvwxyz0123456789'],
+  ['npm_token=npm_abcdefghijklmnopqrstuvwxyz012345', 'npm_abcdefghijklmnopqrstuvwxyz012345'],
+  ['curl -u admin:hunter2 https://x.example', 'hunter2'],
+  ['TOKEN="abc def"', 'abc def'],
+  ['  "PASSWORD": "hunter2",', 'hunter2'],
+  ["export OPENAI_API_KEY='sk-proj-abcdefghijklmnop'", 'sk-proj-abcdefghijklmnop'],
+  ['rk_test_abcdefghijklmnop', 'rk_test_abcdefghijklmnop'],
+];
+for (const [line, secret] of leaks) {
+  test(`F1 leak fixed: ${line.slice(0, 40)}`, () => {
+    const r = one(line);
+    assert.ok(!r.lines[0].includes(secret), `still leaks: ${r.lines[0]}`);
+    assert.ok(r.redactions.length > 0);
+  });
+}
+
+test('F1: keys are kept, values dropped; user in URL creds kept; public key untouched', () => {
+  assert.ok(one('AWS_SECRET_ACCESS_KEY=abc').lines[0].startsWith('AWS_SECRET_ACCESS_KEY='));
+  assert.equal(one('{"password": "hunter2"}').lines[0], `{"password": "${REDACTED}"}`);
+  assert.equal(one('DATABASE_URL=postgres://admin:pw@db/app').lines[0], `DATABASE_URL=postgres://admin:${REDACTED}@db/app`);
+  assert.equal(one('curl -u admin:pw https://x').lines[0], `curl -u admin:${REDACTED} https://x`);
+  assert.equal(one('ssh-rsa AAAAB3NzaC1yc2E user@host').redactions.length, 0);
+  assert.equal(one('tokenizer.encode(text)').redactions.length, 0);
 });

@@ -235,15 +235,21 @@ export class ForgeEngine {
     const replacing = this.toolMap.get(merged.name);
     if (!this.budgetAllows(merged.name)) return { error: 'unpin_one', detail: `${MAX_FORGED_VISIBLE} forged tools are visible and all are pinned` };
     const hash = await this.deps.hash(merged);
-    const t = await this.register(merged, hash, replacing);
+    let t: Internal;
+    try {
+      t = await this.register(merged, hash, replacing);
+    } catch (e) {
+      note('forge.register_failed', { message: e instanceof Error ? e.message : String(e) });
+      return { error: 'unsupported', detail: `registerTool failed: ${e instanceof Error ? e.message : String(e)}` };
+    }
     this.cardList = this.cardList.filter((c) => c.card_id !== card_id);
     void this.deps.ledger.append('forged', {
       name: t.name,
       tool: t.tool,
       hash,
       kind: merged.kind,
-      commands: merged.commands.length,
-      params: merged.params.map((p) => p.name).join(','),
+      commands: JSON.stringify(merged.commands),
+      params: JSON.stringify(merged.params),
       previous_hash: replacing?.hash ?? null,
       origin: card.origin,
       decision_ms: Math.round(performance.now() - card.createdAt),
@@ -281,7 +287,14 @@ export class ForgeEngine {
       ac: null,
     };
     this.toolMap.set(spec.name, t);
-    await this.registerWithBrowser(t);
+    try {
+      await this.registerWithBrowser(t);
+    } catch (e) {
+      // A rejected registerTool must not leave a phantom tool (Fable review P2).
+      this.toolMap.delete(spec.name);
+      if (replacing) this.toolMap.set(spec.name, { ...replacing, ac: null, visible: false, registered: false });
+      throw e;
+    }
     this.evictIfOver(t.name);
     return t;
   }

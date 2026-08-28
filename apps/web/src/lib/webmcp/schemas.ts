@@ -66,7 +66,9 @@ export function validateProposedCommand(command: unknown): string | null {
 
 /** PLAN §4 hard-blocked patterns: shown with a red banner + second confirmation, never auto-dismissed. */
 export const DANGEROUS_PATTERNS: RegExp[] = [
-  /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\s+\/(\s|$)/,
+  // rm with a recursive flag (any order/case, possibly split: -r -f) targeting /, /*, ~, ~/, $HOME
+  /\brm\s+(?:-[a-zA-Z]+\s+)*-[a-zA-Z]*[rR][a-zA-Z]*\s+(?:-[a-zA-Z]+\s+)*(?:\/\*?|~\/?|\$HOME\/?|\$\{HOME\}\/?)(?:\s|$)/,
+  /\brm\s+(?:-[a-zA-Z]+\s+)*--recursive\b[^|;&]*\s(?:\/\*?|~\/?|\$HOME\/?)(?:\s|$)/,
   /:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:/,
   /\bmkfs(\.|\s)/,
   /\bdd\s+if=/,

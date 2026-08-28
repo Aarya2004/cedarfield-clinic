@@ -75,6 +75,29 @@ ws.send(JSON.stringify({ type: 'ledger', row: { kind: 'proposed', proposal_id: '
 const ack = await until(frames, (f) => f.type === 'ledger_ack');
 check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' && ack.sig.length === 64);
 
+// 3b. F7: a client row cannot claim a bridge kind or override reserved fields
+{
+  const okRow = { type: 'ledger', row: { kind: 'forged', seq: 1, t: '1999-01-01T00:00:00Z', session: 'sessB', fields: { origin: 'bridge', seq: 1, session: 'sessB', hash: 'abc' } } };
+  ws.send(JSON.stringify(okRow));
+  const ack2 = await until(frames, (f) => f.type === 'ledger_ack' && f.client_seq === 1);
+  check('override attempt acked as client row', !!ack2);
+}
+
+// 3c. F3: shell exit → respawn; the pairing survives and the new shell works
+{
+  ws.send(JSON.stringify({ type: 'input', data: 'exit\r' }));
+  const ex = await until(frames, (f) => f.type === 'exit', 8000);
+  check('exit frame on shell exit', !!ex, JSON.stringify(ex));
+  const restarted = await until(frames, (f) => f.type === 'data' && f.data.includes('started a new one'), 8000);
+  check('shell respawned after exit', !!restarted);
+  const marker = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A') && frames.indexOf(f) > frames.indexOf(restarted), 8000);
+  check('new shell prompt marker', !!marker);
+  ws.send(JSON.stringify({ type: 'resize', cols: 120, rows: 40 }));
+  ws.send(JSON.stringify({ type: 'input', data: 'echo alive_after_respawn\r' }));
+  const alive = await until(frames, (f) => f.type === 'status' && f.last_command === 'echo alive_after_respawn', 8000);
+  check('new shell runs commands (write/resize on live PTY)', alive?.last_exit_code === 0, JSON.stringify(alive));
+}
+
 // 4. second client refused while paired
 {
   const second = await connect();
@@ -87,7 +110,12 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
 // 5. ledger on disk + HMAC chain verifies
 const lines = readFileSync(join(ledgerDir, 'ledger.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
 const kinds = lines.map((r) => r.kind);
-check('ledger has paired/executed/proposed rows', kinds.includes('paired') && kinds.includes('executed') && kinds.includes('proposed'), kinds.join(','));
+check('ledger has paired/executed/client:proposed rows', kinds.includes('paired') && kinds.includes('executed') && kinds.includes('client:proposed'), kinds.join(','));
+const clientRow = lines.find((r) => r.kind === 'client:proposed');
+check('client row is nested under client{} with bridge-owned seq/session/origin', clientRow?.origin === 'client' && clientRow?.client?.command === 'ls' && clientRow?.client?.params?.[0]?.example === '5' && clientRow.session === bridge.sessionId, JSON.stringify(clientRow).slice(0, 200));
+const override = lines.find((r) => r.kind === 'client:forged');
+check('F7: reserved fields are bridge-owned on the override attempt', override?.origin === 'client' && override?.session === bridge.sessionId && override?.seq !== 1 && override?.client?.origin === 'bridge' && !override?.t.startsWith('1999'), JSON.stringify(override).slice(0, 220));
+check('F7: bridge-only kinds cannot be forwarded', !kinds.includes('executed_from_client') && kinds.filter((k) => k === 'executed').length === 3, kinds.join(','));
 const v = verifyLedger(bridge.sessionId, { dir: ledgerDir });
 check('HMAC chain verifies', v.ok && v.rows === lines.length, JSON.stringify(v));
 // tamper (top-level scalar) → must fail
@@ -97,7 +125,7 @@ writeFileSync(join(ledgerDir, 'ledger.jsonl'), tampered.map((r) => JSON.stringif
 const v2 = verifyLedger(bridge.sessionId, { dir: ledgerDir });
 check('tampered ledger detected (top-level)', v2.ok === false, JSON.stringify(v2));
 // tamper (nested key) → must also fail — the Opus-review regression
-const nested = lines.map((r) => (r.kind === 'proposed' ? { ...r, params: [{ name: 'n', example: '999' }] } : r));
+const nested = lines.map((r) => (r.kind === 'client:proposed' ? { ...r, client: { ...r.client, params: [{ name: 'n', example: '999' }] } } : r));
 writeFileSync(join(ledgerDir, 'ledger.jsonl'), nested.map((r) => JSON.stringify(r)).join('\n') + '\n');
 const v3 = verifyLedger(bridge.sessionId, { dir: ledgerDir });
 check('tampered ledger detected (nested object)', v3.ok === false, JSON.stringify(v3));

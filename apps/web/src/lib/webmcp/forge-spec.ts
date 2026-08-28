@@ -62,7 +62,7 @@ const PLACEHOLDER_RE = /\{\{\s*([a-z][a-z0-9_]{0,19})\s*\}\}/g;
 const BARE_VALUE_RE = /^[A-Za-z0-9_./:@%+=,-]{1,80}$/;
 /** Verbs that make a command mutating regardless of what the agent declared. */
 const MUTATING_RE =
-  /(\b(rm|mv|dd|mkfs|git\s+push|git\s+reset|git\s+checkout|deploy|publish|kill|killall|chmod|chown|shutdown|reboot|curl\s+-X\s*(POST|PUT|DELETE|PATCH)|npm\s+publish|uv\s+publish|docker\s+(rm|push))\b|>>?\s*\S)/i;
+  /(\b(rm|mv|dd|mkfs|git\s+push|git\s+reset|git\s+checkout|deploy|publish|kill|killall|chmod|chown|shutdown|reboot|curl\s+-X\s*(POST|PUT|DELETE|PATCH)|npm\s+publish|uv\s+publish|docker\s+(rm|push))\b|(?<![0-9])>>?\s*(?!&)\S)/i;
 
 export function isMutating(command: string): boolean {
   return isDangerous(command) || MUTATING_RE.test(command);
@@ -169,10 +169,12 @@ export function renderParamValue(name: string, raw: unknown): { value: string } 
  */
 export function substituteLine(command: string, values: Record<string, string>): string {
   let out = '';
-  let q: "'" | '"' | null = null;
+  // q: current quote context. "$'" = ANSI-C string (backslash escapes are interpreted inside).
+  let q: "'" | '"' | "$'" | null = null;
   for (let i = 0; i < command.length; i++) {
     const c = command[i];
     if (c === '\\' && q !== "'") {
+      // in "…", $'…' and bare context a backslash escapes the next char (incl. a quote)
       out += c + (command[i + 1] ?? '');
       i++;
       continue;
@@ -182,14 +184,22 @@ export function substituteLine(command: string, values: Record<string, string>):
       if (m && m[1] in values) {
         const v = values[m[1]];
         if (q === "'") out += v.replace(/'/g, "'\\''");
+        else if (q === "$'") out += v.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); // ANSI-C: \\ and \' are literal
         else if (q === '"') out += BARE_VALUE_RE.test(v) ? v : '"' + "'" + v.replace(/'/g, "'\\''") + "'" + '"';
         else out += BARE_VALUE_RE.test(v) ? v : "'" + v.replace(/'/g, "'\\''") + "'";
         i += m[0].length - 1;
         continue;
       }
     }
+    if (q === null && c === '$' && command[i + 1] === "'") {
+      q = "$'";
+      out += "$'";
+      i++;
+      continue;
+    }
     if (q === null && (c === "'" || c === '"')) q = c;
-    else if (q !== null && c === q) q = null;
+    else if (q === "$'" && c === "'") q = null;
+    else if ((q === "'" || q === '"') && c === q) q = null;
     out += c;
   }
   return out;

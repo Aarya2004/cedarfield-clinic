@@ -96,7 +96,7 @@ export async function registerTerminalTools(onState: (s: RegistrationState) => v
             return { error: 'busy: a forged tool is mid-invocation; wait for it with terminal_wait', active_invocation_id: active.invocation_id };
           }
           const command = input.command as string;
-          const why = typeof input.why === 'string' ? input.why.slice(0, 200) : undefined;
+          const why = sanitiseWhy(input.why);
           const prev = proposals.pending();
           if (prev) proposals.resolve(prev.id, 'dismissed', 'superseded'); // one ghost text at a time; its terminal_wait resolves
           const p = getTerminalAdapter().ghostType(command, why, { dangerous: isDangerous(command) });
@@ -288,6 +288,13 @@ export async function registerTerminalTools(onState: (s: RegistrationState) => v
     forge.dispose();
     void ledger.append('unregistered', { tools: FIXED_TOOL_NAMES.join(',') });
   };
+}
+
+/** `why` is rendered beside the command: strip C0/C1 controls and Unicode format chars (bidi), cap 200. */
+export function sanitiseWhy(why: unknown): string | undefined {
+  if (typeof why !== 'string') return undefined;
+  const clean = why.replace(/[\x00-\x1f\x7f-\x9f]|\p{Cf}/gu, '').trim().slice(0, 200);
+  return clean.length ? clean : undefined;
 }
 
 /** For a step of a forged invocation, the id of the following step (or null when last / not a step). */

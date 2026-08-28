@@ -126,7 +126,7 @@ export function TerminalTools() {
           {pending ? (
             <span className={pending.dangerous ? 'text-red-700' : 'text-accent/80'}>
               {pending.command}
-              <span className="ml-3 text-xs text-muted">
+              <span className="ml-3 text-xs text-muted [unicode-bidi:isolate]" dir="auto">
                 ← {pending.why ?? 'proposed'} · Enter / Esc
                 {pending.dangerous ? (armed === pending.id ? ' · ⚠ press Enter again to confirm' : ' · ⚠ hard-blocked pattern: Enter twice') : ''}
               </span>

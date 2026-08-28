@@ -159,3 +159,21 @@ test('coerceInput handles string, object, garbage', () => {
   assert.deepEqual(coerceInput(undefined), {});
   assert.deepEqual(coerceInput('"str"'), {});
 });
+
+test("F4: ANSI-C $'…' strings cannot be broken out of (executes literally in zsh/bash)", () => {
+  const v = (cmd: string, x: unknown) => {
+    const r = substituteParams([cmd], [{ name: 'x', description: 'd', example: 'e' }], { x });
+    if ('error' in r) throw new Error(JSON.stringify(r));
+    return r.lines[0];
+  };
+  assert.equal(v("echo $'hello {{x}}'", "a\\'; touch m #"), "echo $'hello a\\\\\\'; touch m #'");
+  assert.equal(v("echo $'hello {{x}}'", 'plain'), "echo $'hello plain'");
+  assert.equal(v("echo $'a' {{x}}", '$(id)'), "echo $'a' '$(id)'");
+  assert.equal(v('echo $"{{x}}"', '$(id)'), 'echo $""' + "'$(id)'" + '""'); // splice keeps it literal
+});
+
+test('isMutating: 2>&1 is not a write; rm variants are', () => {
+  assert.equal(isMutating('pytest -q 2>&1'), false);
+  assert.equal(isMutating('ls 2>/dev/null'), false); // stderr redirect is not a write of state
+  assert.equal(isMutating('cat x > y'), true);
+});

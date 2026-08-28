@@ -140,7 +140,15 @@ export class OscParser {
     }
     if (body.startsWith('7;')) {
       const m = /^7;file:\/\/[^/]*(\/.*)$/.exec(body);
-      if (m) return { kind: 'cwd', cwd: decodeURIComponent(m[1]) };
+      if (m) {
+        let cwd = m[1];
+        try {
+          cwd = decodeURIComponent(m[1]);
+        } catch {
+          /* zsh emits $PWD raw; a stray % is not an escape (Fable review F2) */
+        }
+        return { kind: 'cwd', cwd };
+      }
     }
     return null;
   }
