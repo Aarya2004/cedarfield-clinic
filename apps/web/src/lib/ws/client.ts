@@ -73,6 +73,8 @@ export class BridgeClient {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   /** set after the first hello; keystrokes queued during a *re*-pair are dropped, not replayed into a new shell */
   private everPaired = false;
+  /** last close event (code + reason) — surfaced for diagnostics */
+  lastClose: { code: number; reason: string; at: string } | null = null;
   private closedByUs = false;
   /** measured: ms from connect() to hello, last successful pairing */
   pairMs: number | null = null;
@@ -207,6 +209,7 @@ export class BridgeClient {
   }
 
   private onClosed(ev: { code: number; reason: string }): void {
+    this.lastClose = { code: ev.code, reason: ev.reason, at: new Date().toISOString() };
     if (this.authTimer) clearTimeout(this.authTimer);
     if (this.pingTimer) clearInterval(this.pingTimer);
     this.pingTimer = null;

@@ -17,6 +17,9 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const withBridge = process.argv.includes('--bridge');
 const judgeUrl = process.argv.find((a) => a.startsWith('--judge='))?.slice(8) ?? null;
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
+// --bridge --mode=judge: run the local bridge exactly as the container does (judge mode, TTL) to reproduce judge-only failures without a sandbox session
+const bridgeMode = process.argv.find((a) => a.startsWith('--mode='))?.slice(7) ?? 'builder';
+const bridgeModeArgs = bridgeMode === 'judge' ? ['--mode', 'judge', '--ttl-ms', '1800000'] : [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Take free ports (never kill someone else's :3311 — a second reviewer / Aarya may be serving there).
@@ -59,7 +62,7 @@ async function judgeHash() {
 }
 if (judgeUrl) pairingHash = await judgeHash();
 if (withBridge) {
-  bridge = spawn('node', [`${root}packages/bridge/bin/rokan-terminal.js`, '--no-tunnel', '--port', String(BRIDGE_PORT), '--app', `http://localhost:${WEB_PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
+  bridge = spawn('node', [`${root}packages/bridge/bin/rokan-terminal.js`, '--no-tunnel', ...bridgeModeArgs, '--port', String(BRIDGE_PORT), '--app', `http://localhost:${WEB_PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
   let link = '';
   const t0 = Date.now();
   await new Promise((resolve) => {
@@ -116,7 +119,7 @@ for (const f of cases) {
     bridge.kill('SIGTERM');
     await sleep(300);
     if (bridge.exitCode === null) bridge.kill('SIGKILL');
-    bridge = spawn('node', [`${root}packages/bridge/bin/rokan-terminal.js`, '--no-tunnel', '--port', String(BRIDGE_PORT), '--app', `http://localhost:${WEB_PORT}`, '--token', pairingHash.split('&t=')[1]], { stdio: ['ignore', 'pipe', 'pipe'] });
+    bridge = spawn('node', [`${root}packages/bridge/bin/rokan-terminal.js`, '--no-tunnel', ...bridgeModeArgs, '--port', String(BRIDGE_PORT), '--app', `http://localhost:${WEB_PORT}`, '--token', pairingHash.split('&t=')[1]], { stdio: ['ignore', 'pipe', 'pipe'] });
     await new Promise((resolve) => {
       const onData = (buf) => {
         if (/#ws=/.test(buf.toString())) resolve();

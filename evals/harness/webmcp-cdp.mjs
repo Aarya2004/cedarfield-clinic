@@ -63,7 +63,7 @@ let failed = 0;
 const out = (o) => console.log(JSON.stringify(o));
 // On the first failure of a run, dump what the page knows (session, last status, pending proposal,
 // screen tail, recent field notes) so a remote failure (judge sandbox) is diagnosable from the log.
-const DIAG = "(() => { const r = window.__rokan; if (!r) return 'no test hooks'; const s = r.session(); return { state: s.state, mode: s.mode, host: s.host, hello: s.hello && { mode: s.hello.mode, shell: s.hello.shell, integration: s.hello.integration }, lastStatus: s.lastStatus, reconnects: s.reconnects, reconnectAt: s.reconnectAt, share: s.share, pending: r.proposals.pending(), lineEmpty: !!document.querySelector('[data-ghost]'), screen: r.screen(8) ?? null, notes: r.fieldNotes().slice(-14) }; })()";
+const DIAG = "(() => { const r = window.__rokan; if (!r) return 'no test hooks'; const s = r.session(); return { state: s.state, mode: s.mode, host: s.host, hello: s.hello && { mode: s.hello.mode, shell: s.hello.shell, integration: s.hello.integration }, lastStatus: s.lastStatus, reconnects: s.reconnects, reconnectAt: s.reconnectAt, lastClose: r.lastClose ? r.lastClose() : null, share: s.share, pending: r.proposals.pending(), lineEmpty: !!document.querySelector('[data-ghost]'), screen: r.screen(8) ?? null, notes: r.fieldNotes().slice(-14) }; })()";
 let diagDone = false;
 const fail = async () => {
   failed++;

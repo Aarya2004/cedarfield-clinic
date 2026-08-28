@@ -57,6 +57,7 @@ export function installTestHooks(): boolean {
       return getGateAShare();
     },
     session: () => session.snapshot(),
+    lastClose: () => session.getClient()?.lastClose ?? null,
     agentTools: () => agentTools(),
     agentCall: (tool: string, input: unknown) => callAgentTool(tool, input),
     forgeThis: (lines: string[]) => forgeFromLines(lines),
