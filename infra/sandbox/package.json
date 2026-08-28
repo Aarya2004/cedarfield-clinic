@@ -1,0 +1,24 @@
+{
+  "name": "rokan-sandbox",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "sh scripts/sync-bridge.sh",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "check": "pnpm typecheck && pnpm test",
+    "smoke:image": "sh scripts/smoke-image.sh",
+    "deploy:dry": "pnpm sync && wrangler deploy --dry-run",
+    "deploy": "pnpm sync && wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/sandbox": "0.12.9"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260828.1",
+    "typescript": "^5",
+    "wrangler": "^4.127.0"
+  }
+}

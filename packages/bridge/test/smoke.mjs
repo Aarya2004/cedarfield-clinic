@@ -116,6 +116,27 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
   second.ws.close();
 }
 
+// 4b. judge mode: hello carries ttl/expires; TTL ends the session and calls onIdle
+{
+  let idle = false;
+  const j = await startBridge({ port: port + 1, token, ledgerDir: mkdtempSync(join(tmpdir(), 'rokan-judge-')), shell: '/bin/zsh', mode: 'judge', ttlMs: 1500, onIdle: () => (idle = true) });
+  const c = await new Promise((resolve, reject) => {
+    const s = new WebSocket(`ws://127.0.0.1:${port + 1}`);
+    const fr = [];
+    s.on('message', (m) => fr.push(JSON.parse(m.toString())));
+    s.on('open', () => resolve({ ws: s, frames: fr }));
+    s.on('error', reject);
+  });
+  c.ws.send(JSON.stringify({ type: 'auth', token, cols: 80, rows: 24 }));
+  const h = await until(c.frames, (f) => f.type === 'hello');
+  check('judge hello carries mode/ttl/expires', h?.mode === 'judge' && h?.ttl_ms === 1500 && typeof h?.expires_at === 'string', JSON.stringify(h));
+  const ended = await until(c.frames, (f) => f.type === 'error' && f.code === 'timeout', 5000);
+  await new Promise((r) => setTimeout(r, 100));
+  check('judge TTL ends the session and signals onIdle', !!ended && idle, JSON.stringify(ended));
+  c.ws.close();
+  j.close();
+}
+
 // 5. ledger on disk + HMAC chain verifies
 const lines = readFileSync(join(ledgerDir, 'ledger.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
 const kinds = lines.map((r) => r.kind);

@@ -8,6 +8,10 @@
  *   --no-tunnel            skip cloudflared; link points at ws://127.0.0.1:<port>
  *   --token <hex>          reuse a token (default: fresh 128-bit)
  *   --shell <path>         shell to spawn (default: $SHELL)
+ *   --mode builder|judge   judge = hosted sandbox session (hello carries ttl/expires)
+ *   --ttl-ms <n>           end the session after n ms (judge mode)
+ *   --host <ip>            bind address (default 127.0.0.1; 0.0.0.0 inside the judge container)
+ *   --origin <url>         extra allowed page origin for the WebSocket Origin check
  */
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -24,6 +28,10 @@ const port = Number.parseInt(flag('port', '7331'), 10);
 const app = (flag('app', process.env.ROKAN_TERMINAL_APP || 'https://rokan-terminal.vercel.app')).replace(/\/$/, '');
 const token = flag('token', randomBytes(16).toString('hex'));
 const shell = flag('shell', undefined);
+const mode = flag('mode', 'builder') === 'judge' ? 'judge' : 'builder';
+const ttlMs = flag('ttl-ms', undefined) ? Number.parseInt(flag('ttl-ms', '0'), 10) : null;
+const host = flag('host', '127.0.0.1');
+const origin = flag('origin', undefined);
 const log = (m) => process.stderr.write(`[rokan-terminal] ${m}\n`);
 let tunnel = null;
 
@@ -31,12 +39,15 @@ let bridge;
 try {
   bridge = await startBridge({
   port,
+  host,
   token,
   shell,
   log,
-  allowedOrigins: [new URL(app).origin],
+  mode,
+  ttlMs,
+  allowedOrigins: [new URL(app).origin, ...(origin ? [new URL(origin).origin] : [])],
   onIdle: () => {
-    log('no tab paired for 30 min — stopping the bridge and the tunnel');
+    log(mode === 'judge' ? 'session over — stopping the bridge' : 'no tab paired for 30 min — stopping the bridge and the tunnel');
     tunnel?.kill('SIGTERM');
     bridge.close();
     process.exit(0);
@@ -46,10 +57,10 @@ try {
   log(e.message);
   process.exit(1);
 }
-log(`bridge on ws://127.0.0.1:${bridge.port}  shell integration: ${bridge.integration ? 'on' : 'off (zsh only)'}  ledger: ${bridge.ledgerFile}`);
+log(`bridge on ws://${host}:${bridge.port}  mode: ${mode}${bridge.expiresAt ? ` (expires ${bridge.expiresAt})` : ''}  shell integration: ${bridge.integration ? 'on' : 'off (zsh only)'}  ledger: ${bridge.ledgerFile}`);
 
 if (has('no-tunnel')) {
-  printLink(`ws://127.0.0.1:${bridge.port}`);
+  printLink(`ws://${host === '0.0.0.0' ? '127.0.0.1' : host}:${bridge.port}`);
 } else {
   tunnel = spawn('cloudflared', ['tunnel', '--url', `http://127.0.0.1:${bridge.port}`, '--no-autoupdate'], { stdio: ['ignore', 'pipe', 'pipe'] });
   tunnel.on('error', (e) => {

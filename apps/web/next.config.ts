@@ -12,7 +12,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss://*.trycloudflare.com",
+  `connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss://*.trycloudflare.com${(process.env.NEXT_PUBLIC_BRIDGE_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean).map((h) => ` wss://${h} https://${h}`).join('')}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

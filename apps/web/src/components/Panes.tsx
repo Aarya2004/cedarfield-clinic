@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { session, type SessionSnapshot } from '@/lib/terminal/session';
 import { forge, type ForgedTool } from '@/lib/webmcp/forge';
 import { ledger, type LedgerRow } from '@/lib/webmcp/ledger';
@@ -42,7 +42,8 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
       <span className="ml-auto flex flex-wrap items-center gap-2 text-xs">
         {s.mode === 'unpaired' && chip('no shell', 'muted')}
         {s.state === 'connecting' && chip('pairing…', 'accent')}
-        {s.state === 'paired' && chip(`paired · ${s.hello?.shell ?? 'shell'}${s.hello?.integration ? '' : ' · no shell integration'}`, 'ok')}
+        {s.state === 'paired' && chip(`${s.hello?.mode === 'judge' ? 'judge sandbox' : 'paired'} · ${s.hello?.shell ?? 'shell'}${s.hello?.integration ? '' : ' · no shell integration'}`, 'ok')}
+        {s.state === 'paired' && s.hello?.expires_at && <Countdown until={s.hello.expires_at} />}
         {s.state === 'disconnected' && chip(s.reconnectAt ? `disconnected · retrying` : 'disconnected', 'danger')}
         {s.state === 'busy' && chip('another tab is paired', 'danger')}
         {s.state === 'unauthorized' && chip('link not valid', 'danger')}
@@ -65,6 +66,20 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
         )}
       </span>
     </header>
+  );
+}
+
+function Countdown({ until }: { until: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const left = Math.max(0, Math.round((new Date(until).getTime() - now) / 1000));
+  return (
+    <span className="mono text-muted" data-expires>
+      expires in {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
+    </span>
   );
 }
 
@@ -193,14 +208,41 @@ function summarise(r: LedgerRow): string {
   }
 }
 
+const SANDBOX_URL = process.env.NEXT_PUBLIC_SANDBOX_URL ?? '';
+
 export function PairingCard() {
   const s = useSession();
   const cmd = 'npx rokan-terminal';
+  const [judgeErr, setJudgeErr] = useState<string | null>(null);
+  const [coldMs, setColdMs] = useState<number | null>(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (s.judge !== 'starting') return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [s.judge]);
+  const tryJudge = async () => {
+    setJudgeErr(null);
+    setTick(0);
+    const r = await session.startJudge(SANDBOX_URL);
+    if (!r.ok) setJudgeErr(r.retry_after_s ? `${r.error} (retry in ${r.retry_after_s} s)` : r.error);
+    else setColdMs(r.cold_ms);
+  };
   return (
     <section className="rounded-md border border-line bg-white p-4 text-sm" data-pairing>
       <h2 className="font-medium">
         {s.state === 'busy' ? 'Another tab is already paired with this bridge' : s.state === 'unauthorized' ? 'This pairing link is not valid' : 'Pair your terminal'}
       </h2>
+      {SANDBOX_URL && s.state === 'unpaired' && (
+        <div className="mt-2 rounded border border-accent/40 bg-amber-50 p-2 text-xs">
+          <button data-judge onClick={tryJudge} disabled={s.judge === 'starting'} className="rounded bg-ink px-3 py-1 text-white disabled:opacity-40">
+            {s.judge === 'starting' ? `starting a sandbox… ${tick} s` : 'Try it now — judge sandbox, nothing to install'}
+          </button>
+          <span className="ml-2 text-muted">A throttled 30-minute Linux container on Cloudflare; 1 per IP per 10 min.</span>
+          {coldMs !== null && <span className="ml-2 text-muted">ready in {coldMs} ms</span>}
+          {judgeErr && <p className="mt-1 text-danger">{judgeErr}</p>}
+        </div>
+      )}
       {s.state === 'busy' && <p className="mt-1 text-xs text-muted">Close the other tab, or start a new bridge and use its link.</p>}
       {s.state === 'unauthorized' && <p className="mt-1 text-xs text-muted">Run the bridge again and open the new link it prints. Links carry a one-time token.</p>}
       <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted">

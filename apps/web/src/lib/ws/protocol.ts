@@ -66,6 +66,10 @@ export type BridgeFrame =
       version: number;
       /** true when the zsh integration is active and status fields are trustworthy */
       integration: boolean;
+      started_at?: string;
+      /** judge mode: the session ends at expires_at */
+      ttl_ms?: number;
+      expires_at?: string;
     }
   | { type: 'data'; data: string }
   | ({ type: 'status' } & BridgeStatus)
@@ -102,12 +106,18 @@ export function isAllowedBridgeUrl(ws: string, extraHosts: readonly string[] = [
   return extraHosts.some((h) => h.toLowerCase() === host);
 }
 
+/** Extra bridge hosts allowed by deployment config (the judge Worker), comma-separated. */
+export function configuredBridgeHosts(): string[] {
+  const raw = process.env.NEXT_PUBLIC_BRIDGE_HOSTS ?? '';
+  return raw.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean);
+}
+
 /**
  * Read the pairing params from `location.hash` and immediately remove them from the address bar
  * (history.replaceState) so the token is neither on camera nor readable later by a third-party
  * script. The params live only in memory afterwards.
  */
-export function consumePairingHash(extraHosts: readonly string[] = []): PairingParams | null {
+export function consumePairingHash(extraHosts: readonly string[] = configuredBridgeHosts()): PairingParams | null {
   if (typeof window === 'undefined') return null;
   const p = parsePairingHash(window.location.hash, extraHosts);
   if (window.location.hash) {

@@ -6,7 +6,7 @@
  * When unpaired, the prompt-line adapter (`gateAAdapter`) stays installed so every tool works.
  */
 import { BridgeClient, type ClientState, type HelloFrame } from '@/lib/ws/client';
-import { CLIENT_LEDGER_KINDS, consumePairingHash, type BridgeStatus } from '@/lib/ws/protocol';
+import { CLIENT_LEDGER_KINDS, configuredBridgeHosts, consumePairingHash, isAllowedBridgeUrl, type BridgeStatus } from '@/lib/ws/protocol';
 import { gateAAdapter, getGateAShare, setGateAShare, setTerminalAdapter } from '@/lib/webmcp/adapter';
 import { ledger } from '@/lib/webmcp/ledger';
 import { forge } from '@/lib/webmcp/forge';
@@ -23,6 +23,15 @@ export interface SessionSnapshot {
   reconnectAt: number | null;
   reconnects: number;
   pairMs: number | null;
+  judge?: 'starting' | 'paired' | 'failed';
+}
+
+function safeHost(ws: string): string {
+  try {
+    return new URL(ws).host;
+  } catch {
+    return 'invalid';
+  }
 }
 
 type Listener = () => void;
@@ -57,6 +66,17 @@ class SessionStore {
       this.set({ mode: 'unpaired', state: 'unpaired', share: getGateAShare() });
       return;
     }
+    this.startWith(p);
+  }
+
+  /** Pair with an explicit target (judge sandbox response). Refuses hosts outside the allowlist. */
+  startWith(p: { ws: string; token: string }): boolean {
+    if (this.client) return false;
+    if (!isAllowedBridgeUrl(p.ws, configuredBridgeHosts())) {
+      note('pairing.refused', { host: safeHost(p.ws) });
+      return false;
+    }
+    this.started = true;
     const host = new URL(p.ws).host;
     const client = new BridgeClient({
       ws: p.ws,
@@ -85,6 +105,30 @@ class SessionStore {
     client.on('hello', (h) => this.set({ hello: h }));
     this.set({ mode: 'live', state: 'connecting', host });
     client.connect();
+    return true;
+  }
+
+  /** Judge mode: request a sandbox session from the Worker, then pair. Measured cold start. */
+  async startJudge(workerUrl: string): Promise<{ ok: true; cold_ms: number } | { ok: false; error: string; retry_after_s?: number }> {
+    const t0 = performance.now();
+    this.set({ judge: 'starting' });
+    try {
+      const r = await fetch(`${workerUrl.replace(/\/$/, '')}/api/session`, { method: 'POST' });
+      const body = (await r.json().catch(() => ({}))) as { ws?: string; token?: string; ttl_ms?: number; cold_ms?: number; error?: string; retry_after_s?: number };
+      if (!r.ok || !body.ws || !body.token) {
+        this.set({ judge: 'failed' });
+        note('judge.session_failed', { status: r.status, error: body.error });
+        return { ok: false, error: body.error ?? `HTTP ${r.status}`, retry_after_s: body.retry_after_s };
+      }
+      const ok = this.startWith({ ws: body.ws, token: body.token });
+      const cold_ms = Math.round(performance.now() - t0);
+      note('judge.session_started', { cold_ms, worker_cold_ms: body.cold_ms });
+      this.set({ judge: ok ? 'paired' : 'failed' });
+      return ok ? { ok: true, cold_ms } : { ok: false, error: 'bridge host not allowed' };
+    } catch (e) {
+      this.set({ judge: 'failed' });
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
   }
 
   /** The xterm instance exists: build the live adapter and make the tools use it. */

@@ -26,10 +26,12 @@ function repairSpawnHelper() {
   }
 }
 
-export async function startBridge({ port = 7331, host = '127.0.0.1', token, shell, cwd, ledgerDir, log = () => {}, onIdle, allowedOrigins = [] } = {}) {
+export async function startBridge({ port = 7331, host = '127.0.0.1', token, shell, cwd, ledgerDir, log = () => {}, onIdle, allowedOrigins = [], mode = 'builder', ttlMs = null } = {}) {
   repairSpawnHelper();
   const pty = await import('node-pty');
   const sessionId = randomBytes(6).toString('hex');
+  const startedAtIso = new Date().toISOString();
+  const expiresAt = ttlMs ? new Date(Date.now() + ttlMs).toISOString() : null;
   const shellPath = shell || process.env.SHELL || '/bin/zsh';
   const { env, integration } = prepareShellEnv(shellPath, process.env);
   const tokenBuf = Buffer.from(token, 'utf8');
@@ -183,13 +185,15 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
         }
         send(ws, {
           type: 'hello',
-          mode: 'builder',
+          mode,
           shell: shellName(shellPath),
           cwd: state.cwd,
           pid: term.pid,
           session_id: sessionId,
           version: PROTOCOL_VERSION,
           integration,
+          started_at: startedAtIso,
+          ...(ttlMs ? { ttl_ms: ttlMs, expires_at: expiresAt } : {}),
         });
         // Replay recent scrollback so a reconnecting tab sees where it left off.
         for (const chunk of scrollback) send(ws, { type: 'data', data: chunk });
@@ -268,5 +272,17 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
       /* already gone */
     }
   };
-  return { port, host, sessionId, ledgerFile: ledger.file, integration, close, state };
+  let ttlTimer = null;
+  if (ttlMs) {
+    // Judge mode: the session ends at TTL — tell the tab, then let the caller exit.
+    ttlTimer = setTimeout(() => {
+      log(`ttl ${ttlMs} ms reached — ending the session`);
+      ledger.append('session_ended', { reason: 'ttl', ttl_ms: ttlMs });
+      send(client, { type: 'error', code: 'timeout', message: 'session ended: the sandbox time limit was reached' });
+      client?.close(CLOSE.SHUTDOWN, 'ttl');
+      close();
+      onIdle?.();
+    }, ttlMs);
+  }
+  return { port, host, sessionId, ledgerFile: ledger.file, integration, close: () => { clearTimeout(ttlTimer); close(); }, state, mode, expiresAt };
 }

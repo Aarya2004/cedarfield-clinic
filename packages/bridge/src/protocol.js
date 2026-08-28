@@ -10,7 +10,7 @@
  *   {type:"ping"}
  *
  * Bridge → client
- *   {type:"hello", mode:"builder", shell, cwd, pid, session_id, version, integration:boolean}
+ *   {type:"hello", mode:"builder"|"judge", shell, cwd, pid, session_id, version, integration:boolean, started_at, ttl_ms?, expires_at?}
  *   {type:"data", data}
  *   {type:"status", cwd, running, last_exit_code, last_command_ms, last_command}
  *   {type:"exit", code}
