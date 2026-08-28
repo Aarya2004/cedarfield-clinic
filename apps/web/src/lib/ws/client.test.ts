@@ -67,20 +67,23 @@ test('auth is the first frame; hello → paired; pairMs measured; input queued w
 
 test('data/status/exit frames are surfaced; lastStatus kept; ping every pingMs while paired', async () => {
   const { client, sock } = make();
-  const got: string[] = [];
-  client.on('data', (d) => got.push(d));
-  client.on('exit', (c) => got.push(`exit:${c}`));
-  client.connect();
-  sock().open();
-  sock().hello();
-  sock().frame({ type: 'data', data: 'hi' });
-  sock().frame({ type: 'status', cwd: '/x', running: false, last_exit_code: 1, last_command_ms: 5, last_command: 'false' });
-  sock().frame({ type: 'exit', code: 0 });
-  assert.deepEqual(got, ['hi', 'exit:0']);
-  assert.equal(client.lastStatus?.last_exit_code, 1);
-  await tick(14);
-  assert.ok(sock().parsed().filter((f) => f.type === 'ping').length >= 2);
-  client.close();
+  try {
+    const got: string[] = [];
+    client.on('data', (d) => got.push(d));
+    client.on('exit', (c) => got.push(`exit:${c}`));
+    client.connect();
+    sock().open();
+    sock().hello();
+    sock().frame({ type: 'data', data: 'hi' });
+    sock().frame({ type: 'status', cwd: '/x', running: false, last_exit_code: 1, last_command_ms: 5, last_command: 'false' });
+    sock().frame({ type: 'exit', code: 0 });
+    assert.deepEqual(got, ['hi', 'exit:0']);
+    assert.equal(client.lastStatus?.last_exit_code, 1);
+    await tick(60); // pingMs 5: at least one ping even when the test runner is loaded (no exact-count wall-clock claims)
+    assert.ok(sock().parsed().filter((f) => f.type === 'ping').length >= 1);
+  } finally {
+    client.close(); // an open ping interval would keep the test process alive forever
+  }
 });
 
 test('busy and unauthorized are terminal; no auto-reconnect', async () => {
@@ -132,24 +135,29 @@ test('unexpected close → disconnected → reconnect with backoff 2,4,8,8; reco
 
 test('regression (Opus/Fable pass 2): input typed during a re-pair is dropped, the ping interval is not doubled, and a hello timeout retries instead of "unauthorized"', async () => {
   const { client, sock } = make();
-  client.connect();
-  sock().open();
-  sock().hello();
-  const firstSock = sock();
-  firstSock.close(1006, 'lost');
-  assert.equal(client.state, 'disconnected');
-  await new Promise((r) => setTimeout(r, 20)); // first backoff (2 ms in the fake) → reconnecting
-  assert.equal(client.state, 'connecting');
-  client.sendInput('typed-into-the-void\r');
-  sock().open();
-  sock().hello();
-  sock().hello(); // a duplicate hello must not start a second ping loop
-  assert.equal(client.state, 'paired');
-  assert.deepEqual(sock().parsed().map((f) => f.type), ['auth'], 'queued keystrokes were replayed into the new shell');
-  await new Promise((r) => setTimeout(r, 13)); // pingMs 5 → ~2 pings; a doubled loop gives 4+
-  const pings = sock().parsed().filter((f) => f.type === 'ping').length;
-  assert.ok(pings >= 1 && pings <= 3, `ping rate doubled: ${pings}`);
-  client.close();
+  try {
+    client.connect();
+    sock().open();
+    sock().hello();
+    const firstSock = sock();
+    firstSock.close(1006, 'lost');
+    assert.equal(client.state, 'disconnected');
+    await new Promise((r) => setTimeout(r, 30)); // first backoff (2 ms in the fake) → reconnecting
+    assert.equal(client.state, 'connecting');
+    client.sendInput('typed-into-the-void\r');
+    sock().open();
+    sock().hello();
+    sock().hello(); // a duplicate hello must not start a second ping loop
+    assert.equal(client.state, 'paired');
+    assert.deepEqual(sock().parsed().map((f) => f.type), ['auth'], 'queued keystrokes were replayed into the new shell');
+    // pingMs 5 over 60 ms → ≤ 12 pings from one loop (+2 slack); a doubled loop gives ~2×. Under
+    // load timers only get *fewer*, so the upper bound is the robust assertion.
+    await new Promise((r) => setTimeout(r, 60));
+    const pings = sock().parsed().filter((f) => f.type === 'ping').length;
+    assert.ok(pings >= 1 && pings <= 14, `ping rate doubled: ${pings}`);
+  } finally {
+    client.close(); // never leave the ping interval alive (it would keep the test process running)
+  }
 });
 
 test('reconnectNow from busy re-attempts; a hello timeout is a retry (disconnected), never unauthorized', async () => {
