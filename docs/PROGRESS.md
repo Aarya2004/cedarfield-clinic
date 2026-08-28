@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 18:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 19:35 PT** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
 
 ## Gates
 
@@ -10,7 +10,7 @@ Last update: **2026-08-28 18:10 PT** by C (Arav's Claude). Branch `main`, all pu
 | **A** — inert `terminal_propose` invoked by a consumer | 🟡 **Chrome half green; ChatGPT half blocked on human** | C → A | `docs/evidence/gate-a/`, `docs/FIELD-NOTES.md` |
 | B — terminal + ghost-typing E2E | 🟡 **headless half GREEN on a real PTY** (Chrome 152 + `packages/bridge` via `--no-tunnel`): pair → propose → ghost decoration → Enter → measured `exit_code`/`ms`/redacted tail → bridge countersign; Tab-insert/edit; dangerous double-Enter; Share-screen gate + `[redacted]` on a real `AWS_SECRET_ACCESS_KEY`; forged tool born → invoked → Enter → `exit 0` → `forge_list median_ms`. **Headed Chrome 152 via the real `executeTool` API also green** (ghost at the cursor 12 ms, Enter runs on the shell, `exit_code 1` back to the agent). Only the ChatGPT-desktop take (through a tunnel, recorded) needs Arav | C → A | `evals/cases/terminal-*.json` (98 steps), `docs/evidence/gate-b/*.png|jpg` |
 | C — forge → tool appears → invoked (**decoupled from B, PLAN §0.9**) | 🟡 **prompt-line half GREEN** (headless Chrome 152: `forge_create` → approve → `forged_hn_top` in `toolsAdded` → invoke → ghost text → Enter → `terminal_wait` executed → `forge_list runs:1`); live-terminal half after the Terminal plan; ChatGPT `toolchange` refresh unmeasured | C | `docs/evidence/gate-c/2026-08-28-forge-birth-chrome152.png`, `evals/cases/forge-*.json` (150 steps, 0 failed) |
-| D — judge mode live URL | 🟡 **image green locally** (our bridge inside `cloudflare/sandbox:0.12.9-python`: hello 1079 ms, uid 1000 `judge`, honest `exit 1 · 23 ms`, TTL ends session); Worker + Gate typecheck/tests green; **deploy blocked on `! wrangler login`** | C → A | `infra/sandbox/scripts/smoke-image.sh` output in FIELD-NOTES |
+| D — judge mode live URL | 🟡 **image green locally** (our bridge inside `cloudflare/sandbox:0.12.9-python`: hello 1079 ms, uid 1000 `judge`, honest `exit 1 · 23 ms`, TTL ends session); Worker + Gate typecheck/tests green; **deploy blocked on the Workers Paid plan** (19:00 PT: wrangler logged in, image builds, Worker script uploads, container rollout → `401 Unauthorized: … requires the Workers Paid plan`; only Arav can upgrade) — earlier: blocked on `! wrangler login`** | C → A | `infra/sandbox/scripts/smoke-image.sh` output in FIELD-NOTES |
 
 ## What is green right now (all measured — see FIELD-NOTES)
 
@@ -39,11 +39,11 @@ Last update: **2026-08-28 18:10 PT** by C (Arav's Claude). Branch `main`, all pu
 
 **Done 17:10 PT:** CI runs the real-PTY smoke + MCP relay on Linux; `rokan-terminal verify` (ledger cross-check, smoke 29/29); **automated demo dry-run** — every §8 beat on a real PTY with a screenshot per beat (`docs/evidence/demo/`, 47 steps, 0 failed). **Incident:** `bin/rokan-terminal.js` was committed empty by a truncating edit (6c9d3d0) and restored in 072f11c; `check` now requires a non-empty bin.
 
-**State (C): idle, everything login-free is done and green.** Since 17:10: `useForgedTools()` hook (§13.7), judge-Worker self-audit (generic 503, no secret in code, self-audit note in SECURITY.md). `pnpm gate` green on macOS; **CI green on Linux** (real-PTY smoke + MCP relay + sandbox check).
+**State (C, 19:35 PT): web is LIVE at https://rokan-terminal.vercel.app with all pass-2 P1s (8/8 fixed with regression tests, 17 findings ticked below); judge sandbox blocked on Workers Paid; remaining open items are P2s, being fixed now.** Since 17:10: `useForgedTools()` hook (§13.7), judge-Worker self-audit (generic 503, no secret in code, self-audit note in SECURITY.md). `pnpm gate` green on macOS; **CI green on Linux** (real-PTY smoke + MCP relay + sandbox check).
 
 **The moment a login lands (C runs immediately, no further decisions needed):**
-- **`vercel login` done** → `cd apps/web && vercel link --project rokan-terminal --yes && vercel pull --yes && vercel --prod` (Root Directory = `apps/web`; set `NEXT_PUBLIC_SANDBOX_URL` + `NEXT_PUBLIC_BRIDGE_HOSTS` after the Worker URL exists). Then open the prod URL in Chrome 152 for a smoke, screenshot to `docs/evidence/gate-a/`.
-- **`wrangler login` done** (Workers Paid) → `cd infra/sandbox && pnpm deploy` → capture the Worker URL → set the two Vercel env vars + `NEXT_PUBLIC_SANDBOX_URL` → redeploy web → `node evals/run-all.mjs --judge=<worker-url>` (real judge sandbox) → cold-start numbers to FIELD-NOTES.
+- **DONE 18:35 PT** — `vercel link --project rokan-terminal --yes` (from `apps/web`, cwd deploy) + `vercel --prod` → **https://rokan-terminal.vercel.app** (200, nonce CSP, HSTS, `X-Frame-Options: DENY`, `?tour=1` 200); redeployed 19:20 PT with the pass-2 P1 fixes. Still to set after the Worker exists: `NEXT_PUBLIC_SANDBOX_URL` + `NEXT_PUBLIC_BRIDGE_HOSTS`, then `vercel --prod` again.
+- **wrangler login DONE; BLOCKED on Workers Paid** (container rollout 401). The moment the plan is upgraded: `cd infra/sandbox && pnpm deploy` → `openssl rand -hex 32 | npx wrangler secret put SID_SECRET` (Worker refuses sessions until set — fail closed) → `curl <worker>/api/health` → `cd apps/web && vercel env add NEXT_PUBLIC_SANDBOX_URL production` (`https://<worker>.workers.dev`) + `vercel env add NEXT_PUBLIC_BRIDGE_HOSTS production` (host only) → `vercel --prod` → `node evals/run-all.mjs --judge=<worker-url>` → cold-start numbers to FIELD-NOTES.
 - **ChatGPT desktop on Sol/Terra confirmed** → measure the ChatGPT half of Gates A/B (does the Site tools list refresh on `toolchange` without reload?), FIELD-NOTES + `docs/evidence/gate-a|b/`.
 
 **Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
@@ -59,8 +59,8 @@ Last update: **2026-08-28 18:10 PT** by C (Arav's Claude). Branch `main`, all pu
 ## Blocked on Arav (do these first — Gate A deadline Fri 23:59 PT)
 
 1. **ChatGPT desktop is installed; confirm GPT-5.6 Sol or Terra is available in the model picker** (Luna has site tools disabled; free tier may not have Sol/Terra). This is the only thing between us and the ChatGPT half of Gates A/B.
-1b. **`! wrangler login`** — Workers Paid account; needed to `pnpm --filter rokan-sandbox deploy` the judge sandbox (everything else is built and smoke-tested locally).
-2. **`vercel login`** in a terminal (device-code flow). The Vercel MCP account returned 403 "can't create a project". After login: `cd apps/web && vercel link --project rokan-terminal && vercel --prod`. Then open the URL in ChatGPT desktop → Site tools arrow → "propose ls" → screenshot into `docs/evidence/gate-a/`.
+1b. **Upgrade the Cloudflare account to Workers Paid ($5/mo)** at https://dash.cloudflare.com/?to=/:account/workers/plans — wrangler login is done and the image builds, but the container rollout answers `401 Unauthorized: You do not have access to Cloudflare Containers. Deploying containers requires the Workers Paid plan.` Nothing else is needed from you; C runs the whole deploy + env wiring + judge evals the moment it's upgraded (exact commands above).
+2. **DONE** (18:35 PT — live at https://rokan-terminal.vercel.app). ~~`vercel login`~~ in a terminal (device-code flow). The Vercel MCP account returned 403 "can't create a project". After login: `cd apps/web && vercel link --project rokan-terminal && vercel --prod`. Then open the URL in ChatGPT desktop → Site tools arrow → "propose ls" → screenshot into `docs/evidence/gate-a/`.
 3. Claude's Chrome extension wasn't connected, so no *headed* Chrome screenshot yet. Optional: open `http://localhost:3311` (`cd apps/web && pnpm start -p 3311`) in Chrome with `chrome://flags/#enable-webmcp-testing` on, DevTools → Application → WebMCP, screenshot.
 4. Kill-rule watch: if #1 can't happen by Fri 23:59 PT, PLAN §10 #1 applies — Chrome + Inspector becomes the primary demo browser and README says so. The Chrome half is already green, so the entry does not die on this.
 
