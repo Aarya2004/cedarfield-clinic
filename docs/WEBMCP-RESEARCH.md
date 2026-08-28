@@ -164,6 +164,120 @@ Libraries: `@mcp-b/webmcp-polyfill`, `@mcp-b/global`, `@mcp-b/react-webmcp`, `us
 
 Saturated lanes: **storefront/cart, restaurant/hotel/flight booking, puzzle games, diagram/3D editors, site-scoring tools, "any MCP server → page tools" bridges.** A judge has seen each of these ten times by Sep 4.
 
+### 6b. The LIVE field, measured 2026-08-28 (day 4 of 10) — added by the Rokan session
+
+> **Read this before §6's saturated-lane list.** That list was built from
+> pre-hackathon demos (Chrome Labs, sponsors, community libraries). This one is
+> built from repositories created **after 2026-08-25**, i.e. the actual entries.
+> **The two lists disagree about what is crowded, and this one is the one that
+> decides how a judge files us.**
+
+**Method + caveats.** A research agent enumerated ~379 public repos created after
+the hackathon opened and classified them by description; a second pass
+priority-classified them (a repo counts once, in its dominant lane).
+Not independently re-counted by me — treat the shares as ±5pp, not exact.
+Devpost's project gallery is unpublished until judging, so no submission count
+exists and none should be quoted. **Reddit was uncrawlable; X/Twitter has no
+fetchable route since nitter.net and xcancel.com were shut by an X Corp C&D on
+2026-08-24** — one day before this hackathon opened. So "quiet on social" is
+*absence of evidence*, and the repo activity says the opposite: **~150 live
+deploys, median 8 commits, ~40% at ≥10 commits.** This is a builder-heavy,
+marketer-light field. Anyone scouting it via Twitter will badly underestimate it.
+
+**The shares:**
+
+| lane | share of live entries |
+| --- | --- |
+| **"governed human-agent workspace"** — a shared surface where the agent proposes and a human approves | **~48%** |
+| dev tools / bridges | ~13% |
+| commerce | ~7% |
+| games | ~4% |
+
+* **~29%** of descriptions use approval / gating / human-in-the-loop language.
+* **~28%** use the shared-surface metaphor: *workspace, canvas, desk, board,
+  studio, bench, **console***.
+* Commerce is **not** dominant despite Shopify sponsoring. The sponsors steered
+  toward commerce and the field went to governance instead.
+
+**Competitor one-liners, verbatim:**
+
+> *"An agent may propose any screening decision and may never enact one"*
+> *"Every write is a costed proposal that blocks until a human decides"*
+> *"Filing is not one of the tools."*
+
+**Why this matters to us, stated plainly.** Our own one-line is *"A terminal you
+and your agent share. Your Enter is the trust boundary."* That is the same
+sentence as the two above. **We dodged the retrofit lane and landed in the single
+most crowded lane in the event.** Nothing about the plan is wrong; the
+*ordering of the pitch* is what a judge sees first, and led with the terminal we
+are filed with ~200 others in ten seconds.
+
+**The retrofit / wrapper-generation lane is CONTESTED, not open.** Verified
+directly against the GitHub API on 2026-08-28, all created during the hackathon:
+
+| repo | ★ | created | description |
+| --- | --- | --- | --- |
+| `himanshu748/graft-webmcp` | 0 | 08-26 | "A governed tool layer for websites that never shipped one, **built for the WebMCP Challenge**." |
+| `andepants/sitemcp` | 0 | 08-27 | "Paste-anywhere script that turns a website into WebMCP tools" |
+| `alpic-ai/webmcp` | **15** | 08-26 | "Plugin to make your existing website MCP compatible" |
+| `pauloportella/auto-webmcp-chrome` | **12** | 08-27 | "Turn standard web forms into structured WebMCP tools" |
+| `respira-press/webmcp-for-wordpress` | 0 | 08-26 | "Any WordPress site becomes agent-ready… first WordPress site with working site tools in ChatGPT" |
+
+~10 entries deep, four days in — and **the only two repos in the whole field with
+meaningful stars are both in this lane.** §0.1's decision to keep DOM-driving out
+of the WebMCP layer was right for judge reasons; it is *also* right for field
+reasons. Do not drift back toward it.
+
+**One lane that is still empty:** GitHub repo search returns **zero** for
+source-derived generation (bundle + source maps → typed operations) — the lever
+pre-registered in `plans/SOURCE-LEVER-SPIKE-2026-08-26.md` in the Rokan repo.
+Caveat: repo search covers name/description/topics only, so absence there is weak
+evidence. Not proposed for this entry — recorded so it is not lost.
+
+### 6c. What this implies for the entry (one recommendation, argue with it)
+
+**Forge is the differentiator, not the terminal — so it should lead.**
+
+`forge_create` registers a **new, named WebMCP tool at runtime**, made by the user,
+that did not exist when the page loaded. Nearly every other entry registers a
+**fixed list at load**. Dynamic `registerTool` is the strongest available reading of
+criterion #1 — *"WebMCP Leverage: thorough, skillful, non-trivial, working"* — which
+is also **tiebreak #1**. Nothing in the ~48% governance lane does this: they gate an
+existing surface; we grow the surface.
+
+Consequences, if this is accepted:
+
+1. **§11 rule 1 inverts.** Today: *"Terminal + ghost-typing is the product. Forge is
+   the second beat."* The terminal is the *vehicle*; the forge is the *story*.
+2. **§10 risk 3's kill rule inverts.** Today a red Gate B drops forge to
+   "buttons only" and ships terminal + ghost-typing + ledger — i.e. it **drops the
+   differentiator and keeps the commodity**, into a field that is half commodity.
+   If something must die, kill terminal polish, not the forge.
+3. The 15-second hero moment should end on **a tool being born and immediately
+   called**, not on a command being approved.
+
+### 6d. The tactical edge, re-confirmed
+
+Already locked in `PLAN.md` §0.4, and worth restating because the field will not
+all have it: **the declarative API silently does not work in ChatGPT** ("Tools
+defined through HTML form attributes aren't available as site tools"), **iframe
+tools are not discovered**, and `navigator.modelContext` was renamed to
+`document.modelContext` around 2026-08-10 **with the old name kept as an alias** —
+so broken code keeps working locally and fails only in the judge's ChatGPT. Google's
+own docs and many demos push declarative. **A large share of submissions will be
+non-functional on judging day.** Testing in the real ChatGPT in-app browser on day
+one may separate us from the field more cheaply than any feature.
+
+Also confirmed from the rules: **multiple submissions are allowed** if "unique and
+substantially different" (one prize each); **Quebec is excluded, Ontario is fine**;
+Render office hours **Aug 31, 11:00 PT**. Prize breakdown: OpenAI $3,000 cash +
+Netlify $500 cash = the $35,000 headline over 10 winners.
+
+**Unverified, do not quote:** `webmcpdirectory.com` "115 sites / 314 tools live";
+the Sarah Drasner "genuinely useful implementations, not just demos" line (second-hand
+via daily.dev, no primary source found); spec issue #256's near-zero-invocation
+report (single-author, self-reported).
+
 ---
 
 ## 7. Open problems the spec admits it hasn't solved (= where a project can be _ambitious_)
