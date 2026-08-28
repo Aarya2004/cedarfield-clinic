@@ -5,6 +5,9 @@ tool your agent can call — registered at runtime with `document.modelContext.r
 made by you, absent at page load. Nothing a tool does executes: every tool ghost-types, and only
 your Enter runs a command. The terminal is the vehicle; the forge is the story.
 
+![Rokan Terminal — forge a tool, invoke it, Enter runs it; frames from the automated real-PTY dry-run](docs/demo.gif)
+
+
 Entry for the **OpenAI WebMCP Challenge** (Devpost, deadline 2026-09-03 13:00 PT). Apache-2.0.
 
 ## For judges — 60 seconds

@@ -8,7 +8,7 @@
 - [ ] Judge sandbox: "Try it now" → paired in < 15 s (measured chip visible)
 - [ ] `rokan do "top 5 HN titles"` seeded (calls:0 on replay) — D3; if not seeded, the beat uses `seq`/`git log` honestly
 - [ ] Share screen **off**; ledger empty; forged tools none; 1440×900; Dock hidden; second laptop mirrors
-- [ ] `demo-backup.mp4` one keypress away; trigger written on a sticky note (below)
+- [x] backup one keypress away: `docs/evidence/demo-backup.gif` (9 captioned frames from the automated real-PTY dry-run, 3 s each; open it in a browser tab, `F` for fullscreen). A camera-recorded `demo-backup.mp4` of the live run is still better — record it at rehearsal #3 (homebrew ffmpeg is currently broken on this Mac: missing `libxcb`; QuickTime screen recording works). Trigger written on a sticky note (below)
 
 ## Shot list (narration recorded separately; on-screen numbers are the measured ones)
 | t | shot | say |
