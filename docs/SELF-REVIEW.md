@@ -339,3 +339,13 @@ Also open but unranked: Netlify credits form deadline Sep 1 12:00 PT (Arav); off
 - **Per-pane React error boundaries** so a render fault cannot abort the six tools (`App.tsx:23-44`; FIELD-NOTES xterm #2).
 - **`forge.cancelActive()` on bridge disconnect** (`session.ts:118`) and `stopAfterCurrent` on unforge mid-step (`forge.ts:368-385`).
 - **`rokan` shim on the PTY PATH** (`packages/bridge/shims/rokan`) — README does not mention that `rokan do` is a shim over `rokan-do` (FIELD-NOTES R1 does).
+
+
+## Progress against the ranked gaps (C, 2026-08-29 01:30 PT)
+
+- Gap 5 (TTL → "session ended", retry countdown): **done 3884c16**.
+- Gap 6 (hash + schema preview on the card; `hash` in `forge_create` result): **done 3884c16**.
+- Gap 12 (doc drift: 6 fixed tools, `sandbox_status`, PLAN §8 `calls:1`, SECURITY takeover, README counts, DEMO HN): **done 3884c16**.
+- Gap 4 (rokan do in the judge image): wheels built (`vendor/`), `Dockerfile.rokan` staged + lints, seeds + SKILL.md staged, egress allowlist = seeded hosts (`3884c16`); **blocked on Arav's Docker go** for the build + smoke + image switch.
+- Gap 15 (busy case): builder-mode "second tab → busy" is a smoke check (`smoke.mjs`), judge-mode takeover is a smoke check + measured live (J6).
+- Gaps 1, 2, 3, 7, 9, 10, 11: human / money / account (see owners above).
