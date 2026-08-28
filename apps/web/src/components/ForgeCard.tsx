@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { forge, type ForgeCard as Card } from '@/lib/webmcp/forge';
-import { isMutating, validateForgeSpec, type ForgeParam, type ForgeSpec } from '@/lib/webmcp/forge-spec';
+import { forgedInputSchema, isMutating, validateForgeSpec, type ForgeParam, type ForgeSpec } from '@/lib/webmcp/forge-spec';
 import { isDangerousIn } from '@/lib/webmcp/schemas';
 import { session } from '@/lib/terminal/session';
 import { getModelContext } from '@/lib/webmcp/types';
@@ -37,6 +37,17 @@ export function ForgeCardView({ card }: { card: Card }) {
     note('card.approved_ui', { edited: JSON.stringify(spec) !== JSON.stringify(card.spec) });
   };
 
+  // Identity before approval: the hash the tool will carry and the exact schema the agent will see (SELF-REVIEW gap 6).
+  const [hash, setHash] = useState<string>('…');
+  useEffect(() => {
+    let live = true;
+    const t = setTimeout(() => void forge.hashOf(spec).then((h) => live && setHash(h)).catch(() => live && setHash('?')), 120);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [spec]);
+  const schemaPreview = useMemo(() => JSON.stringify(forgedInputSchema(spec)), [spec]);
   const setParam = (i: number, patch: Partial<ForgeParam>) => setSpec({ ...spec, params: spec.params.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const setCommand = (i: number, v: string) => setSpec({ ...spec, commands: spec.commands.map((c, j) => (j === i ? v : c)) });
 
@@ -48,8 +59,8 @@ export function ForgeCardView({ card }: { card: Card }) {
           <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] uppercase ${spec.kind === 'write' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>{spec.kind}</span>
         </h3>
         <span className="text-xs text-muted">
-          from {card.origin}
-          {card.previousHash ? ` · replaces ${card.previousHash}` : ''}
+          from {card.origin} · hash <code className="mono" data-card-hash>{hash}</code>
+          {card.previousHash ? ` · replaces ${card.previousHash} →` : ''}
         </span>
       </div>
       {dangerous && <p className="mt-1 text-xs text-danger">⚠ A command matches a hard-blocked pattern. Approve twice to confirm.</p>}
@@ -106,6 +117,10 @@ export function ForgeCardView({ card }: { card: Card }) {
         </label>
       </div>
       <p className="mt-2 text-xs text-muted">The agent can call this. Each command still needs your Enter.</p>
+      <details className="mt-1 text-xs text-muted">
+        <summary>schema the agent will see</summary>
+        <code className="mono block whitespace-pre-wrap break-all" data-card-schema>{schemaPreview}</code>
+      </details>
       {validation && (
         <p className="mt-1 text-xs text-danger" data-card-error>
           {validation.error}

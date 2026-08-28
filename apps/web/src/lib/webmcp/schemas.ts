@@ -232,4 +232,3 @@ export const FORGE_LIST_DESCRIPTION =
 
 /** The fixed tools this page registers at load (forged_* are added at runtime). */
 export const FIXED_TOOL_NAMES = ['terminal_propose', 'terminal_read_screen', 'terminal_status', 'terminal_wait', 'forge_create', 'forge_list'] as const;
-export const MAX_VISIBLE_TOOLS = 12;

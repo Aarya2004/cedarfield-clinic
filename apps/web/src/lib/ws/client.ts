@@ -5,7 +5,7 @@
  */
 import { AUTH_TIMEOUT_MS, CLOSE_CODES, type AgentToolDef, type BridgeFrame, type BridgeStatus, type ClientFrame, type ClientLedgerRow } from './protocol.ts';
 
-export type ClientState = 'idle' | 'connecting' | 'paired' | 'busy' | 'unauthorized' | 'disconnected' | 'closed';
+export type ClientState = 'idle' | 'connecting' | 'paired' | 'busy' | 'unauthorized' | 'disconnected' | 'closed' | 'ended';
 export type HelloFrame = Extract<BridgeFrame, { type: 'hello' }>;
 export type ErrorFrame = Extract<BridgeFrame, { type: 'error' }>;
 
@@ -220,7 +220,11 @@ export class BridgeClient {
         this.emit('error', f);
         if (f.code === 'busy') this.setState('busy');
         else if (f.code === 'replaced') this.closedByUs = true; // a newer tab took over: never reconnect over it
-        else if (f.code === 'unauthorized' || f.code === 'timeout') this.setState('unauthorized');
+        else if (f.code === 'timeout' && this.everPaired) {
+          // The session reached its TTL (judge mode): a finished session, not a bad link (SELF-REVIEW gap 5)
+          this.closedByUs = true;
+          this.setState('ended');
+        } else if (f.code === 'unauthorized' || f.code === 'timeout') this.setState('unauthorized');
         break;
       case 'ledger_ack':
         if (f.client_seq !== null && this.onCountersign) this.onCountersign(f.client_seq, f.seq, f.sig);
@@ -246,7 +250,7 @@ export class BridgeClient {
     this.socket = null;
     this.queue.length = 0; // whatever was typed at a dead link never reaches a different shell
     if (this.closedByUs) {
-      this.setState('closed');
+      if (this._state !== 'ended') this.setState('closed');
       return;
     }
     // terminal states never auto-retry

@@ -68,7 +68,7 @@ honest numbers (§0.6); WebMCP-touching code public; timestamped commits after 0
 - **Card**: a pending spec awaiting the human (edit → Approve / Reject). One card visible at a
   time; others queue FIFO (max 5 pending; 6th `forge_create` → `{error:'too_many_pending'}`).
 - **Forged tool**: an approved spec registered as WebMCP tool `forged_<name>`.
-- **Visible**: currently registered (≤ 5 forged visible; 7 fixed + 5 = 12 = §0.4 cap).
+- **Visible**: currently registered (≤ 5 forged visible; 6 fixed + 5 = 11 ≤ the §0.4 cap of 12; `sandbox_status` was never built).
 - **Pinned**: exempt from eviction. **Evicted**: unregistered by budget, still listed, restorable.
 - **Hash**: 12-hex prefix of SHA-256 over canonical `{name, description, params, commands, kind}`.
 - **Invocation**: one call of a forged tool → 1..5 sequential proposals (steps).

@@ -237,8 +237,10 @@ export function fixedToolDefs(): ToolDef[] {
           return card;
         }
         note('forge_create.called', { handler_ms: Math.round((performance.now() - t) * 100) / 100, kind_overridden: card.kindOverridden, dangerous: card.dangerous });
+        const hash = await forge.hashOf(card.spec);
         return {
           card_id: card.card_id,
+          hash,
           status: 'awaiting_human' as const,
           will_register_as: `forged_${card.spec.name}`,
           kind: card.spec.kind,

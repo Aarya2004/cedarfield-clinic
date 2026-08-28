@@ -113,7 +113,7 @@ class SessionStore {
         });
         void ledger.append(client.reconnects > 0 ? 'reconnected' : 'paired', { host, pair_ms: client.pairMs, shell: client.hello?.shell ?? null, integration: client.hello?.integration ?? false });
         note(client.reconnects > 0 ? 'bridge.reconnected' : 'bridge.paired', { pair_ms: client.pairMs ?? undefined });
-      } else if (s === 'disconnected' || s === 'closed') {
+      } else if (s === 'disconnected' || s === 'closed' || s === 'ended') {
         ledger.setForward(null);
         if (forge.active()) forge.cancelActive('invocation_cancelled');
         void ledger.append('disconnected', { host, reconnect_at: client.reconnectAt });

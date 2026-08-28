@@ -44,7 +44,8 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
         {s.state === 'connecting' && chip('pairing…', 'accent')}
         {s.state === 'paired' && chip(`${s.hello?.mode === 'judge' ? 'judge sandbox' : 'paired'} · ${s.hello?.shell ?? 'shell'}${s.hello?.integration ? '' : ' · no shell integration'}`, 'ok')}
         {s.state === 'paired' && s.hello?.expires_at && <Countdown until={s.hello.expires_at} />}
-        {s.state === 'disconnected' && chip(s.reconnectAt ? `disconnected · retrying` : 'disconnected', 'danger')}
+        {s.state === 'disconnected' && (s.reconnectAt ? <RetryChip at={s.reconnectAt} /> : chip('disconnected', 'danger'))}
+        {s.state === 'ended' && chip('session ended · start a new one below', 'muted')}
         {s.state === 'busy' && chip('another tab is paired', 'danger')}
         {s.state === 'unauthorized' && chip('link not valid', 'danger')}
         {s.pairError && s.state === 'unpaired' && chip(s.pairError, 'danger')}
@@ -68,6 +69,16 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
       </span>
     </header>
   );
+}
+
+function RetryChip({ at }: { at: number }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, []);
+  const s = Math.max(0, Math.ceil((at - now) / 1000));
+  return <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] text-red-800">{s > 0 ? `disconnected · retrying in ${s} s` : 'disconnected · retrying…'}</span>;
 }
 
 function Countdown({ until }: { until: string }) {
@@ -236,7 +247,7 @@ export function PairingCard() {
       <h2 className="font-medium">
         {s.state === 'busy' ? 'Another tab is already paired with this bridge' : s.state === 'unauthorized' ? 'This pairing link is not valid' : 'Pair your terminal'}
       </h2>
-      {SANDBOX_URL && s.state === 'unpaired' && (
+      {SANDBOX_URL && (s.state === 'unpaired' || s.state === 'ended') && (
         <div className="mt-2 rounded border border-accent/40 bg-amber-50 p-2 text-xs">
           <button data-judge onClick={tryJudge} disabled={s.judge === 'starting'} className="rounded bg-ink px-3 py-1 text-white disabled:opacity-40">
             {s.judge === 'starting' ? `starting a sandbox… ${tick} s` : 'Try it now — judge sandbox, nothing to install'}

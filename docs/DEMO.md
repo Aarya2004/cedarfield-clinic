@@ -6,7 +6,7 @@
 - [ ] Same URL in Chrome 152 + `chrome://flags/#enable-webmcp-testing`; DevTools → Application → WebMCP lists 6
 - [ ] `npx rokan-terminal` from a **fresh clone**, pairing link opened, status bar `paired · zsh`
 - [ ] Judge sandbox: "Try it now" → paired in < 15 s (measured chip visible)
-- [ ] `rokan do "top 5 HN titles"` seeded (calls:0 on replay) — D3; if not seeded, the beat uses `seq`/`git log` honestly
+- [x] `rokan do` beats measured on the video path (FIELD-NOTES V5–V7): seeded site → `347ms ⚡` (0 calls); HN → real titles `2186ms` (1 model call, not seedable — R7). Say which one you are showing
 - [ ] Share screen **off**; ledger empty; forged tools none; 1440×900; Dock hidden; second laptop mirrors
 - [x] backup one keypress away: `docs/evidence/demo-backup.gif` (9 captioned frames from the automated real-PTY dry-run, 3 s each; open it in a browser tab, `F` for fullscreen). A camera-recorded `demo-backup.mp4` of the live run is still better — record it at rehearsal #3 (homebrew ffmpeg is currently broken on this Mac: missing `libxcb`; QuickTime screen recording works). Trigger written on a sticky note (below)
 

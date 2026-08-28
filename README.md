@@ -50,7 +50,7 @@ bridge. Full model with tests: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ```
 pnpm install
-pnpm gate                  # typecheck · lint · 109 unit tests · real-PTY bridge smoke · headless WebMCP cases
+pnpm gate                  # typecheck · lint · 120 unit tests · real-PTY bridge smoke · headless WebMCP cases
 cd apps/web && pnpm dev    # http://localhost:3000
 node packages/bridge/bin/rokan-terminal.js --no-tunnel --app http://localhost:3000   # prints the pairing link
 ```
@@ -65,6 +65,6 @@ Headless WebMCP evals (Chrome 152 via the CDP `WebMCP` domain, no consumer neede
 - `apps/web` — Next.js 15 client: tools, xterm pane with ghost text, forge card, ledger.
 - `packages/bridge` — `npx rokan-terminal`: node-pty + WebSocket + Cloudflare quick tunnel + pairing token; `mcp` subcommand.
 - `infra/sandbox` — judge mode: Cloudflare Worker + Sandbox container running the same bridge.
-- `evals/` — headless harness + 15 cases (365 steps: 7 on the prompt line, 8 on a real PTY); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
+- `evals/` — headless harness + 16 cases (7 on the prompt line, 9 on a real PTY, the 9 also run against the live judge sandbox); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
 
 Every millisecond and call count shown on screen is measured by the code that shows it.

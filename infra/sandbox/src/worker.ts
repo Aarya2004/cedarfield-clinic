@@ -36,7 +36,8 @@ export interface Env {
 /** Egress: nothing but the demo hosts (HTTP/S only — the SDK cannot filter raw TCP/UDP; say so). */
 export class RokanSandbox extends Sandbox<Env> {
   enableInternet = false;
-  allowedHosts = ['news.ycombinator.com', 'lobste.rs', 'example.org', 'api.anthropic.com'];
+  // The demo hosts + every host rokan-do's seeds replay against (SELF-REVIEW gap 4). No model host: no key is injected.
+  allowedHosts = ["curl.se", "developer.mozilla.org", "developers.cloudflare.com", "discordstatus.com", "docs.aws.amazon.com", "docs.github.com", "docs.oracle.com", "docs.python.org", "docs.stripe.com", "en.wikipedia.org", "example.org", "flask.palletsprojects.com", "githubstatus.com", "httpwg.org", "learn.microsoft.com", "lobste.rs", "neonstatus.com", "news.ycombinator.com", "nginx.org", "numpy.org", "peps.python.org", "prometheus.io", "pypi.org", "redis.io", "status.1password.com", "status.anthropic.com", "status.auth0.com", "status.datadoghq.com", "status.digitalocean.com", "status.dropbox.com", "status.figma.com", "status.hubspot.com", "status.mistral.ai", "status.npmjs.org", "status.okta.com", "status.openrouter.ai", "status.perplexity.ai", "status.pinecone.io", "status.python.org", "status.render.com", "status.squarespace.com", "ubuntu.com", "www.debian.org", "www.dockerstatus.com", "www.gov.uk", "www.iana.org", "www.netlifystatus.com", "www.postgresql.org", "www.redditstatus.com", "www.rfc-editor.org", "www.shopifystatus.com", "www.sqlite.org", "www.unicode.org", "www.vercel-status.com"];
 }
 
 const BRIDGE_PORT = 7331;

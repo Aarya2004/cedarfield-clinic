@@ -248,3 +248,20 @@ test('regression (Fable VERIFY P1): a socket that never opens times out and retr
     b.client.close();
   }
 });
+
+test('regression (SELF-REVIEW gap 5): a TTL timeout after pairing is `ended`, never "unauthorized", and never reconnects', async () => {
+  const { client, sock, states } = make();
+  try {
+    client.connect();
+    sock().open();
+    sock().hello();
+    sock().frame({ type: 'error', code: 'timeout', message: 'session ended: the sandbox time limit was reached' });
+    sock().close(4000, 'ttl');
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(client.state, 'ended');
+    assert.ok(!states.includes('unauthorized'), states.join(','));
+    assert.equal(client.reconnectAt, null);
+  } finally {
+    client.close();
+  }
+});

@@ -199,6 +199,11 @@ export class ForgeEngine {
 
   // ---------- cards ----------
 
+  /** Content hash of a spec as it would be registered (the card shows it before approval). */
+  hashOf(spec: ForgeSpec): Promise<string> {
+    return this.deps.hash(spec);
+  }
+
   openCard(input: unknown, opts: { origin: 'agent' | 'human' }): ForgeCard | ForgeError {
     const err = validateForgeSpec(input);
     if (err) return err;

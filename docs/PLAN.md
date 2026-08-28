@@ -148,7 +148,7 @@ Implemented deltas vs. the original rows (2026-08-28): `terminal_wait` default i
 Reverse direction (human → agent), UI only: select 1–5 lines in history → **Forge this** → card
 prefilled from the selection → same approval path → tool appears for the agent.
 
-Tool budget: 7 fixed + up to 5 forged visible; beyond 5, `forge_list` still returns all and the
+Tool budget: 6 fixed + up to 5 forged visible (11 ≤ the 12 cap); beyond 5, `forge_list` still returns all and the
 oldest unpinned forged tools unregister (the human pins from the card).
 
 Chrome DevTools → Application → WebMCP panel must show every registration and invocation
@@ -371,7 +371,7 @@ laptop (Aarya) mirrors the setup for a second take. `demo-backup.mp4` one keypre
 | 0:20–0:35 | "top 3 now" → agent calls `forged_hn_top({n:3})` → ghost-typed → Enter → ledger `calls:0 · 0.36s`                                                                | "The agent calls it. My Enter runs it. Zero model calls — the model left the hot path." |
 | 0:35–0:55 | Rewind: "how did that command get there?" — ask "what's in this repo, are tests passing?" → `ls` ghost-typed → Enter → `pytest -q` → Enter → agent reads screen → answer | "Every command the agent wants is a proposal. It can't type Enter."                  |
 | 0:55–1:10 | Share-screen off → `{shared:false}`; on → a fake key renders `[redacted]`                                                                                          | "It reads what I let it read. Secrets never leave the tab."                           |
-| 1:10–1:40 | "get me the top 5 HN titles" → `rokan do …` proposed → Enter → browser does it → ledger `calls:1 · 4.2s` — _this is the command we forged at 0:00_                | "`rokan do` browses for real — the model plans once, the page verifies."              |
+| 1:10–1:40 | "get me the top 5 HN titles" → `rokan do …` proposed → Enter → browser does it → terminal shows the answer + `2186ms` (planned: 1 model call, no ⚡; counts are not printed — FIELD-NOTES R5/R7) — _this is the command we forged at 0:00_                | "`rokan do` browses for real — the model plans once, the page verifies."              |
 | 1:40–2:05 | Second birth, agent-initiated: three approved commands → agent calls `forge_create` → card → approve → `forged_deploy` (kind: write, **CONSEQUENTIAL** banner) → invoke → Enter | "It forged its own workflow after I approved it three times. Writes are marked. Still my Enter." |
 | 2:05–2:25 | Recovery beat: forged tool exits non-zero → agent reads the redacted tail → proposes the fix → Enter → ledger fail→fix                                             | "When it breaks, it reads, proposes, and I decide."                                   |
 | 2:25–2:40 | Ledger scroll: registered / proposed / executed / forged / invoked, each with ms and calls; export JSON, HMAC-verified                                            | "Every tool, who made it, who called it, what it cost. Do it once. Now it's a tool."  |
@@ -404,7 +404,7 @@ execution. The human gets to _teach by doing_: anything done once can be forged 
 agent calls next time — including `rokan do`, which browses the web behind your logins and
 replays at zero model calls. Neither could grow that library alone.
 
-**Implementation.** Next.js 15 on Vercel; `document.modelContext.registerTool` × 7 fixed +
+**Implementation.** Next.js 15 on Vercel; `document.modelContext.registerTool` × 6 fixed +
 dynamic `forged_*` tools, each with an `AbortController`; `readOnlyHint` /
 `untrustedContentHint` on reads, "CONSEQUENTIAL:" on writes; redaction before any screen
 leaves the tab; xterm.js ↔ WebSocket ↔ `node-pty` on your machine via Cloudflare Tunnel, or a
