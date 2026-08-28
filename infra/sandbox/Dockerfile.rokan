@@ -24,6 +24,7 @@ COPY container/vendor /opt/rokan-wheels
 RUN pip install --no-cache-dir --root-user-action=ignore uv \
   && uv pip install --system --no-cache /opt/rokan-wheels/rokan_mcp-*.whl /opt/rokan-wheels/rokan_agent-*.whl /opt/rokan-wheels/rokan_do-*.whl \
   && python3 -m playwright install --with-deps chromium \
+  && uv pip install --system --no-cache pytest \
   && rokan-do --help >/dev/null && echo 'rokan-do ok'
 
 COPY --chown=judge:judge container/seed/ /home/judge/
