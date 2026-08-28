@@ -45,3 +45,14 @@ Hacker News is **not** in rokan-do's seed pack. For the `calls:0 ⚡` beat type 
 ## Freeze rule — judge Worker
 
 A `wrangler deploy` of `infra/sandbox` replaces the container fleet and drops every live judge session (measured 2026-08-28). No Worker deploys from the Tue 09-01 12:00 PT freeze until results. Web-only redeploys (Vercel) are safe for judge sessions.
+
+## Demo shell: the key for the `rokan do` model beat (builder mode only)
+
+The live key is Keychain service `rokan-anthropic-key` (account `rokan`); the `ANTHROPIC_API_KEY` Keychain entry is dead (401). Before starting the bridge in the demo shell:
+
+```
+export ANTHROPIC_API_KEY="$(security find-generic-password -s rokan-anthropic-key -a rokan -w)"
+node packages/bridge/bin/rokan-terminal.js
+```
+
+The PTY inherits the env, so `rokan do "top 5 HN titles at news.ycombinator.com"` plans (1 model call, ~4 s) and the seeded questions replay at ⚡. Never in the judge container (no key by design).
