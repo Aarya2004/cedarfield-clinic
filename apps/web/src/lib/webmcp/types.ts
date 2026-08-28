@@ -39,6 +39,8 @@ export interface ModelContext extends EventTarget {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   registerTool(tool: ModelContextTool<any>, options?: RegisterToolOptions): Promise<void>;
   getTools(options?: { fromOrigins?: string[] }): Promise<RegisteredTool[]>;
+  /** Spec: input object; Chrome 152 requires a JSON string (FIELD-NOTES #6). Returns a serialised result. */
+  executeTool(tool: RegisteredTool, input?: unknown, options?: { signal?: AbortSignal }): Promise<string>;
   ontoolchange: ((ev: Event) => void) | null;
 }
 

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@xterm/xterm/css/xterm.css";
 
 :root {
   --bg: #fafaf6;
@@ -23,3 +24,29 @@ html, body {
 }
 
 .mono { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+:root {
+  --ok: #047857;
+  --danger: #b91c1c;
+}
+@theme inline {
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+}
+
+/* ghost text drawn by xterm's decoration API — never written to the PTY */
+.ghost {
+  color: rgba(217, 119, 6, 0.75);
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: pre;
+  pointer-events: none;
+  unicode-bidi: isolate;
+}
+.ghost-danger {
+  color: rgba(185, 28, 28, 0.85);
+}
+.xterm .xterm-viewport {
+  background: transparent !important;
+}

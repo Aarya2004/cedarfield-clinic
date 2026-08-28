@@ -1,5 +1,5 @@
-import { TerminalTools } from '@/components/TerminalTools';
+import { ClientApp } from '@/components/ClientApp';
 
 export default function Home() {
-  return <TerminalTools />;
+  return <ClientApp />;
 }
