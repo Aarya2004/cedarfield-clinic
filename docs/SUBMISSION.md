@@ -21,7 +21,7 @@ terminal you and your agent share, where the page's tools are the trust boundary
 - **Nothing a tool does executes.** `terminal_propose` and every `forged_*` tool ghost-type; the
   human's Enter runs the command. That threads the consumer's per-call safety review honestly: the
   tools are inert by construction, not by description.
-- **Second protocol, same tools.** `npx rokan-terminal mcp` **[Sep 2: only if published to npm — else `node packages/bridge/bin/rokan-terminal.js mcp`]** serves the identical tool list over MCP
+- **Second protocol, same tools.** `npx rokan-terminal mcp` **[Sep 2: only if published to npm — else `node packages/bridge/bin/rokan-terminal.js mcp`]** serves the identical tool list over MCP — measured with Codex CLI as the agent: it proposed, forged a tool, and called it from a new session, each step gated by the human's Enter (FIELD-NOTES C1–C6) —
   stdio to Claude Code / Cursor / Codex CLI; the page stays the single source of truth and the MCP
   process can never type. One library, two protocols.
 - **Measured, not claimed.** `docs/FIELD-NOTES.md` records what Chrome 152's WebMCP actually does

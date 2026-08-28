@@ -89,7 +89,11 @@ call count on screen must be produced by the code that shows it.
    bridge mid-case (measured). Reviewers get their own `git worktree`; the freeze verification is run
    by one agent on a quiet machine.
 
-## 6. What is still genuinely blocked on a human (only one thing)
+## 6. What is still genuinely blocked on a human
+
+(Updated 2026-08-29 02:20 PT by C.) 1) **ChatGPT desktop on Sol/Terra** — the Site-tools refresh measurement below. 2) **"docker go"** — build `infra/sandbox/Dockerfile.rokan` (rokan-do + Chromium + seeds in the judge image; staged, lints clean), smoke it, measure one replay under ¼ vCPU, switch the image, deploy before the Tue 12:00 PT freeze. 3) The Sep 2 items: repo public, npm publish, video, Devpost. 4) Optional beats needing accounts/money: Netlify/Render consequential write, a Linux VM for the any-machine beat.
+
+### The ChatGPT measurement (original text)
 
 **ChatGPT desktop must be on GPT-5.6 Sol or Terra** (Luna has site tools disabled) to measure the
 ChatGPT half of Gates A/B — specifically whether the Site-tools list picks up a runtime

@@ -34,7 +34,7 @@ Add `?tour=1` for a three-step guide that verifies each step against real state.
 | `forge_list` | every forged tool, its content hash, pin state, measured stats | — |
 | `forged_<name>` | substitutes params (shell-safe), ghost-types each step; each step needs your Enter | executes |
 
-Same tools, second protocol: `node packages/bridge/bin/rokan-terminal.js mcp` (`npx rokan-terminal mcp` once published) serves them over MCP stdio to Claude Code,
+Same tools, second protocol: `node packages/bridge/bin/rokan-terminal.js mcp` (`npx rokan-terminal mcp` once published) serves them over MCP stdio to Claude Code, **Codex CLI (measured end to end — FIELD-NOTES C1–C6: Codex proposes, forges, and calls its own forged tool from a new session; Codex reads MCP tool lists once per session)**,
 Cursor or Codex CLI — the page stays the single source of truth; the MCP process can never type.
 
 ## Security in one paragraph
