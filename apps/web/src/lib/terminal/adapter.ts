@@ -35,7 +35,7 @@ export interface TermLike {
       cursorX: number;
       cursorY: number;
       baseY: number;
-      getLine(y: number): { translateToString(trimRight?: boolean): string } | undefined;
+      getLine(y: number): { translateToString(trimRight?: boolean): string; isWrapped?: boolean } | undefined;
     };
   };
 }
@@ -177,11 +177,20 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     },
     shareScreen: () => deps.share(),
     screenLines: (n) => {
+      // Logical lines, not visual rows: a long line wraps into rows flagged `isWrapped`, and the
+      // redactor must see `KEY=value` whole — split across rows the bare value leaked (measured in
+      // judge mode 2026-08-28: a longer prompt wrapped the export line).
       const b = deps.term.buffer.active;
       const out: string[] = [];
       let seenContent = false;
-      for (let y = b.length - 1; y >= 0 && out.length < n; y--) {
-        const s = b.getLine(y)?.translateToString(true) ?? '';
+      let y = b.length - 1;
+      while (y >= 0 && out.length < n) {
+        let start = y;
+        while (start > 0 && b.getLine(start)?.isWrapped) start--;
+        let s = '';
+        for (let k = start; k <= y; k++) s += (b.getLine(k)?.translateToString(k === y) ?? '').replace(/\s+$/, k === y ? '' : '$&');
+        s = s.replace(/\s+$/, '');
+        y = start - 1;
         if (!seenContent && s.trim() === '') continue; // drop trailing blank rows below the cursor
         seenContent = true;
         out.push(s);

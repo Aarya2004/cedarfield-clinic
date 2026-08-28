@@ -8,8 +8,8 @@ import type { BridgeStatus } from '../ws/protocol.ts';
 const ESC = String.fromCharCode(27);
 const BEL = String.fromCharCode(7);
 
-function fakeTerm(lines: string[]): TermLike {
-  return { buffer: { active: { length: lines.length, cursorX: 4, cursorY: lines.length - 1, baseY: 0, getLine: (y) => ({ translateToString: () => lines[y] ?? '' }) } } };
+function fakeTerm(lines: string[], wrapped: number[] = []): TermLike {
+  return { buffer: { active: { length: lines.length, cursorX: 4, cursorY: lines.length - 1, baseY: 0, getLine: (y) => ({ translateToString: (trim?: boolean) => (trim ? (lines[y] ?? '').replace(/\s+$/, '') : lines[y] ?? ''), isWrapped: wrapped.includes(y) }) } } };
 }
 
 function fakeClient() {
@@ -45,8 +45,8 @@ const status = (o: Partial<BridgeStatus>): BridgeStatus => ({ cwd: '/h', running
 
 test('screenLines: last n lines, trailing blanks dropped, order preserved', () => {
   const a = createTerminalAdapter({ term: fakeTerm(['~ $ ls', 'a  b', '~ $ ', '', '']), client: fakeClient(), share: () => true, store: new ProposalStore() });
-  assert.deepEqual(a.screenLines(10), ['~ $ ls', 'a  b', '~ $ ']);
-  assert.deepEqual(a.screenLines(2), ['a  b', '~ $ ']);
+  assert.deepEqual(a.screenLines(10), ['~ $ ls', 'a  b', '~ $']); // trimmed right, as xterm's translateToString(true) does
+  assert.deepEqual(a.screenLines(2), ['a  b', '~ $']);
 });
 
 test('status: null unless paired; integration from hello', () => {
@@ -271,4 +271,12 @@ test('rokan-do trailer parsed by the bridge rides along on the resolved proposal
   assert.deepEqual(r?.rokan, { ms: 312, replayed: true });
   assert.equal(a.status()?.last_rokan?.replayed, true);
   a.destroy();
+});
+
+test('regression (judge mode, 2026-08-28): wrapped rows are joined into logical lines so a KEY=value split by wrapping is redactable', () => {
+  // 30-col terminal: the export line wraps; row 2 is a continuation (isWrapped)
+  const rows = ['judge@rokan:/tmp/demo % export ', 'AWS_SECRET_ACCESS_KEY=wJalrXUtnF', 'EMI/K7MDENG/bPxRfiCYEXAMPLEKEY', 'marker_ok', 'judge@rokan:/tmp/demo % ', ''];
+  const a = createTerminalAdapter({ term: fakeTerm(rows, [1, 2]), client: fakeClient(), share: () => true, store: new ProposalStore() });
+  assert.deepEqual(a.screenLines(10), ['judge@rokan:/tmp/demo % export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY', 'marker_ok', 'judge@rokan:/tmp/demo %']);
+  assert.deepEqual(a.screenLines(1), ['judge@rokan:/tmp/demo %']);
 });

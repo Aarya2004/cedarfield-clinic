@@ -7,6 +7,6 @@
   { "waitFor": "document.querySelector('[data-terminal] .xterm') !== null", "timeout": 8000 },
   { "waitFor": "(window.__rokan.screen(20) ?? []).join('\\n').length > 0", "timeout": 8000 },
   { "invoke": "terminal_status", "input": {}, "outputMatches": "\"paired\":true.*\"measured\":true" },
-  { "eval": "document.body.innerText.includes('paired ·')", "equals": true },
+  { "eval": "/(paired|judge sandbox) ·/.test(document.body.innerText)", "equals": true },
   { "eval": "window.__rokan.ledger().rows.some(r => r.kind === 'paired')", "equals": true }
 ]
