@@ -103,7 +103,7 @@ export function App() {
       {showTour && <Tour judge={s.hello?.mode === 'judge'} onClose={() => setTour('off')} />}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)]">
         <div className="flex min-h-0 flex-col gap-3">
-          {s.mode === 'live' && s.state !== 'busy' && s.state !== 'unauthorized' ? (
+          {s.mode === 'live' && s.state !== 'busy' && s.state !== 'unauthorized' && s.state !== 'ended' ? (
             <Boundary name="terminal">
               <Terminal onForgeThis={forgeThis} />
             </Boundary>
@@ -115,13 +115,13 @@ export function App() {
                 <h2 className="font-medium">How it works</h2>
                 <ol className="mt-2 grid gap-2 text-xs text-muted md:grid-cols-3">
                   <li>
-                    <span className="text-ink">1 · The agent proposes.</span> `terminal_propose` ghost-types a command at your prompt. Nothing runs.
+                    <span className="text-ink">1 · Do it once, forge it.</span> Select lines you ran → Forge this → Approve. `forged_&lt;name&gt;` is registered as a live WebMCP tool — born at runtime, hash on the card.
                   </li>
                   <li>
-                    <span className="text-ink">2 · You press Enter.</span> Your key runs it on your shell; exit code and duration are measured by the shell and shown here.
+                    <span className="text-ink">2 · The agent calls it.</span> The tool only ghost-types; your Enter runs each step. Exit code and duration are measured by the shell.
                   </li>
                   <li>
-                    <span className="text-ink">3 · Forge it.</span> Select what you ran → Forge this → Approve. A new WebMCP tool is registered live; the agent calls it; your Enter still gates each step.
+                    <span className="text-ink">3 · Or the agent proposes.</span> `terminal_propose` ghost-types any command; Share screen lets it read a redacted screen. Nothing runs without your key.
                   </li>
                 </ol>
               </section>
