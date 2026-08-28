@@ -40,7 +40,10 @@ Consequences already applied in code: `execute(input, options?)` with `options?.
 | 2 | An exception thrown inside a React effect in a production build unmounts the whole tree → the `registerTerminalTools` cleanup aborts every tool → CDP `toolsRemoved` for all six | now fenced by per-pane error boundaries | 1 |
 | 3 | `Input.insertText` (CDP) bypasses keydown, so a page that keys off `keydown` never sees "typing" — the harness types with real key events | harness rule | 1 |
 | 4 | Returning `false` from `attachCustomKeyEventHandler` for Tab does **not** stop the browser default: focus leaves the xterm textarea and every later key is lost — `preventDefault()` is required on consumed keys | measured on a real PTY | 1 |
-| 5 | Bridge pair time seen by the page (`pairMs`, WebSocket open → `hello`) over loopback | 11 ms | 3 |
+| 5 | Bridge pair time seen by the page (`pairMs`, WebSocket open → `hello`) over loopback | 11 ms headless · 63–83 ms headed | 5 |
+| 6 | xterm's decoration API (`registerDecoration` + `onRender`) does **not** paint on a static prompt under the WebGL renderer in headed Chrome — the element exists but `onRender` never fires until a render frame; ghost text is now an overlay positioned from `buffer.active.cursorX/Y` and the `.xterm-screen` cell size | overlay | 2 |
+| 7 | `fontFamily: 'var(--font-mono)'` makes xterm measure glyphs with an unresolvable canvas font → tiny, letter-spaced text; resolve the CSS variable to concrete family names first | fixed | 1 |
+| 8 | Headed Chrome 152, real `document.modelContext.executeTool`: first call after load 1206 ms, warm 12 ms; `terminal_wait` resolving an already-finished command 3 ms | measured | 2 |
 
 ## ChatGPT desktop (GPT-5.6 Sol/Terra) — not yet measured
 

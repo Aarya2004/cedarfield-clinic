@@ -7,7 +7,7 @@
  * need Enter twice.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { Terminal as XTerm, IDecoration, IMarker } from '@xterm/xterm';
+import type { Terminal as XTerm } from '@xterm/xterm';
 import { session } from '@/lib/terminal/session';
 import { LineBuffer } from '@/lib/terminal/linebuffer';
 import { PromptDetector } from '@/lib/terminal/osc';
@@ -78,13 +78,20 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
       const [{ Terminal: XTermCtor }, { FitAddon }, { WebglAddon }] = await Promise.all([import('@xterm/xterm'), import('@xterm/addon-fit'), import('@xterm/addon-webgl')]);
       if (disposed) return;
       const t0 = performance.now();
-      term = new XTermCtor({ cursorBlink: true, scrollback: 5000, fontFamily: 'var(--font-mono), ui-monospace, Menlo, monospace', fontSize: 13, lineHeight: 1.2, theme: THEME, allowProposedApi: true /* decorations API (ghost text) is proposed in xterm 6.0.0 */ });
+      // xterm measures glyphs with a canvas font string; CSS variables do not resolve there
+      // (measured 2026-08-28: letter-spaced tiny text). Resolve the family to concrete names.
+      const monoVar = getComputedStyle(document.body).getPropertyValue('--font-mono').trim();
+      const fontFamily = `${monoVar ? monoVar + ', ' : ''}ui-monospace, Menlo, monospace`;
+      term = new XTermCtor({ cursorBlink: true, scrollback: 5000, fontFamily, fontSize: 13, lineHeight: 1.2, theme: THEME, allowProposedApi: true /* decorations API (ghost text) is proposed in xterm 6.0.0 */ });
       termRef.current = term;
       const fit = new FitAddon();
       term.loadAddon(fit);
       term.open(host);
       let renderer = 'dom';
+      // `?renderer=dom` forces the DOM renderer (evidence screenshots, headless runs, WSL/SwiftShader).
+      const forceDom = new URLSearchParams(window.location.search).get('renderer') === 'dom';
       try {
+        if (forceDom) throw new Error('renderer=dom requested');
         const webgl = new WebglAddon();
         webgl.onContextLoss(() => {
           webgl.dispose();
@@ -98,7 +105,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
       fit.fit();
       client.resize(term.cols, term.rows);
       session.attachTerm(term);
-      note('xterm.opened', { ms: Math.round(performance.now() - t0), renderer, cols: term.cols, rows: term.rows });
+      note('xterm.opened', { ms: Math.round(performance.now() - t0), renderer, cols: term.cols, rows: term.rows, font: fontFamily.slice(0, 40) });
 
       const detector = new PromptDetector();
       cleanup.push(client.on('data', (d) => {
@@ -182,42 +189,59 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
     };
   }, []);
 
-  // ghost decoration
+  // Ghost overlay: our own element positioned at the cursor cell. xterm's decoration API only
+  // updates on render frames (measured 2026-08-28: invisible on a static prompt under WebGL), so
+  // the overlay is placed from the buffer's cursor and the screen's cell size instead.
+  const ghostRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const term = termRef.current;
-    if (!term) return;
-    const show = pending && lineEmpty && insertedId !== pending.id;
-    if (!show) return;
-    let marker: IMarker | undefined;
-    let deco: IDecoration | undefined;
-    const draw = () => {
-      deco?.dispose();
-      marker?.dispose();
+    const host = hostRef.current;
+    const ghost = ghostRef.current;
+    if (!term || !host || !ghost) return;
+    const show = !!pending && lineEmpty && insertedId !== pending.id;
+    if (!show) {
+      ghost.style.display = 'none';
+      ghost.removeAttribute('data-ghost');
+      return;
+    }
+    const place = () => {
+      const screen = host.querySelector<HTMLElement>('.xterm-screen');
+      if (!screen) return;
+      const hostRect = host.getBoundingClientRect();
+      const rect = screen.getBoundingClientRect();
+      const cellW = rect.width / term.cols;
+      const cellH = rect.height / term.rows;
       const b = term.buffer.active;
-      marker = term.registerMarker(0);
-      if (!marker) return;
-      deco = term.registerDecoration({ marker, x: b.cursorX, layer: 'top' });
-      deco?.onRender((el) => {
-        el.textContent = pending.command;
-        el.className = `ghost ${pending.dangerous ? 'ghost-danger' : ''}`;
-        el.setAttribute('dir', 'auto');
-        el.setAttribute('data-ghost', pending.id);
-      });
+      const row = b.cursorY + b.baseY - b.viewportY;
+      ghost.style.display = row >= 0 && row < term.rows ? 'block' : 'none';
+      ghost.style.left = `${rect.left - hostRect.left + b.cursorX * cellW}px`;
+      ghost.style.top = `${rect.top - hostRect.top + row * cellH}px`;
+      ghost.style.height = `${cellH}px`;
+      ghost.style.lineHeight = `${cellH}px`;
+      ghost.style.maxWidth = `${rect.width - b.cursorX * cellW}px`;
     };
-    draw();
-    const d1 = term.onWriteParsed(() => draw());
-    const d2 = term.onResize(() => draw());
+    ghost.textContent = pending.command;
+    ghost.className = `ghost ${pending.dangerous ? 'ghost-danger' : ''}`;
+    ghost.setAttribute('data-ghost', pending.id);
+    ghost.setAttribute('dir', 'auto');
+    place();
+    const d1 = term.onWriteParsed(place);
+    const d2 = term.onResize(place);
+    const d3 = term.onScroll(place);
+    const d4 = term.onCursorMove(place);
     return () => {
       d1.dispose();
       d2.dispose();
-      deco?.dispose();
-      marker?.dispose();
+      d3.dispose();
+      d4.dispose();
     };
   }, [pending, lineEmpty, insertedId]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={hostRef} data-terminal className="min-h-0 flex-1 overflow-hidden rounded-md border border-line bg-bg p-2" />
+      <div ref={hostRef} data-terminal className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-line bg-bg p-2">
+        <div ref={ghostRef} className="ghost" style={{ position: 'absolute', display: 'none', zIndex: 5, overflow: 'hidden', textOverflow: 'ellipsis' }} />
+      </div>
       <div className="mt-2 flex min-h-6 flex-wrap items-center gap-3 text-xs text-muted" data-ghost-bar>
         {pending ? (
           <span className={pending.dangerous ? 'text-danger' : ''} dir="auto">
