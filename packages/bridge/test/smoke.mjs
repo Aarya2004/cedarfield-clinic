@@ -1,0 +1,104 @@
+/**
+ * Real-PTY smoke: start the bridge on a random port with a temp ledger dir, pair over ws,
+ * run `echo hi; exit-code probe`, assert data + honest status + ledger rows + HMAC chain +
+ * second-client refusal + bad-token refusal. Exit 0 only if everything holds.
+ */
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+import WebSocket from 'ws';
+import { startBridge } from '../src/bridge.js';
+import { verifyLedger } from '../src/ledger.js';
+
+const token = randomBytes(16).toString('hex');
+const ledgerDir = mkdtempSync(join(tmpdir(), 'rokan-ledger-'));
+const port = 20000 + Math.floor(Math.random() * 20000);
+const t0 = performance.now();
+const bridge = await startBridge({ port, token, ledgerDir, shell: '/bin/zsh' });
+const results = [];
+const check = (name, ok, detail = '') => {
+  results.push({ name, ok, detail });
+  console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ' — ' + detail : ''}`);
+};
+
+const connect = () => new Promise((resolve, reject) => {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}`);
+  const frames = [];
+  ws.on('message', (m) => frames.push(JSON.parse(m.toString())));
+  ws.on('open', () => resolve({ ws, frames }));
+  ws.on('error', reject);
+});
+const until = (frames, pred, ms = 8000) => new Promise((resolve) => {
+  const start = Date.now();
+  const tick = () => {
+    const hit = frames.find(pred);
+    if (hit) return resolve(hit);
+    if (Date.now() - start > ms) return resolve(null);
+    setTimeout(tick, 25);
+  };
+  tick();
+});
+
+// 1. bad token refused
+{
+  const { ws, frames } = await connect();
+  ws.send(JSON.stringify({ type: 'auth', token: 'nope' }));
+  const err = await until(frames, (f) => f.type === 'error');
+  check('bad token refused', err?.code === 'unauthorized', JSON.stringify(err));
+  ws.close();
+}
+
+// 2. pair, run a command, read status
+const { ws, frames } = await connect();
+ws.send(JSON.stringify({ type: 'auth', token, cols: 100, rows: 30 }));
+const hello = await until(frames, (f) => f.type === 'hello');
+check('hello received', !!hello && hello.mode === 'builder', JSON.stringify(hello));
+check('shell integration on', hello?.integration === true);
+const firstPrompt = await until(frames, (f) => f.type === 'data' && f.data.includes(']133;A'), 8000);
+check('shell prompt marker (OSC 133;A) appeared', !!firstPrompt, `${Math.round(performance.now() - t0)} ms since start`);
+
+ws.send(JSON.stringify({ type: 'input', data: 'echo hi_from_pty; false\r' }));
+const gotEcho = await until(frames, (f) => f.type === 'data' && f.data.includes('hi_from_pty') && !f.data.includes('echo hi_from_pty'), 8000);
+check('command output streamed back', !!gotEcho);
+const status = await until(frames, (f) => f.type === 'status' && f.running === false && f.last_exit_code !== null, 8000);
+check('status reports honest exit code (false → 1)', status?.last_exit_code === 1, JSON.stringify(status));
+check('status carries measured ms', Number.isInteger(status?.last_command_ms) && status.last_command_ms >= 0, `${status?.last_command_ms} ms`);
+check('status carries the command text', status?.last_command === 'echo hi_from_pty; false', JSON.stringify(status?.last_command));
+
+ws.send(JSON.stringify({ type: 'input', data: 'cd /tmp\r' }));
+const cwdStatus = await until(frames, (f) => f.type === 'status' && f.last_command === 'cd /tmp' && f.running === false, 8000);
+check('cwd tracked via OSC 7', /\/tmp$/.test(cwdStatus?.cwd ?? ''), JSON.stringify(cwdStatus?.cwd));
+
+// 3. client-originated ledger row
+ws.send(JSON.stringify({ type: 'ledger', row: { kind: 'proposed', proposal_id: 'p_smoke', command: 'ls' } }));
+const ack = await until(frames, (f) => f.type === 'ledger_ack');
+check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' && ack.sig.length === 64);
+
+// 4. second client refused while paired
+{
+  const second = await connect();
+  second.ws.send(JSON.stringify({ type: 'auth', token }));
+  const err = await until(second.frames, (f) => f.type === 'error');
+  check('second tab refused (busy)', err?.code === 'busy', JSON.stringify(err));
+  second.ws.close();
+}
+
+// 5. ledger on disk + HMAC chain verifies
+const lines = readFileSync(join(ledgerDir, 'ledger.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+const kinds = lines.map((r) => r.kind);
+check('ledger has paired/executed/proposed rows', kinds.includes('paired') && kinds.includes('executed') && kinds.includes('proposed'), kinds.join(','));
+const v = verifyLedger(bridge.sessionId, { dir: ledgerDir });
+check('HMAC chain verifies', v.ok && v.rows === lines.length, JSON.stringify(v));
+// tamper → must fail
+const tampered = lines.map((r) => (r.kind === 'executed' ? { ...r, exit_code: 0 } : r));
+const { writeFileSync } = await import('node:fs');
+writeFileSync(join(ledgerDir, 'ledger.jsonl'), tampered.map((r) => JSON.stringify(r)).join('\n') + '\n');
+const v2 = verifyLedger(bridge.sessionId, { dir: ledgerDir });
+check('tampered ledger detected', v2.ok === false, JSON.stringify(v2));
+
+ws.close();
+bridge.close();
+const failed = results.filter((r) => !r.ok);
+console.log(`\n${results.length - failed.length}/${results.length} checks passed in ${Math.round(performance.now() - t0)} ms (N=1 run)`);
+process.exit(failed.length ? 1 : 0);

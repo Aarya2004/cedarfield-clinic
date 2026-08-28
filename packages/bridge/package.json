@@ -1,0 +1,20 @@
+{
+  "name": "rokan-terminal",
+  "version": "0.0.1",
+  "description": "Local bridge for Rokan Terminal: node-pty + ws + Cloudflare quick tunnel + pairing token. Nothing here executes on an agent's behalf; every keystroke comes from the human's browser tab.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": { "rokan-terminal": "bin/rokan-terminal.js" },
+  "files": ["bin", "src"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "check": "node --check bin/rokan-terminal.js && node --check src/bridge.js && node --check src/protocol.js && node --check src/ledger.js && node --check src/shell-integration.js",
+    "smoke": "node test/smoke.mjs",
+    "typecheck": "pnpm check",
+    "lint": "pnpm check"
+  },
+  "dependencies": {
+    "node-pty": "^1.1.0-beta34",
+    "ws": "^8.18.0"
+  }
+}
