@@ -31,7 +31,7 @@
   { "invoke": "terminal_read_screen", "input": { "lines": 20 }, "outputMatches": "\"shared\":false" },
   { "eval": "window.__rokan.share(true)", "equals": true },
   { "type": "export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\r" },
-  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l.includes('AWS_SECRET_ACCESS_KEY'))", "timeout": 5000 },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l.includes('CYEXAMPLEKEY'))", "timeout": 5000 },
   { "invoke": "terminal_read_screen", "input": { "lines": 30 }, "outputMatches": "\\[redacted\\]" },
   { "shot": "docs/evidence/demo/beat3-share-redacted.png" },
   { "eval": "window.__rokan.share(false)", "equals": false },
