@@ -33,6 +33,7 @@ export const MAX_FRAME_BYTES = 64 * 1024;
 export const CLOSE = {
   UNAUTHORIZED: 4401,
   BUSY: 4409,
+  REPLACED: 4410, // judge mode: a newer tab with the valid token took over (page reload)
   BAD_FRAME: 4400,
   IDLE: 4408,
   SHUTDOWN: 4000,

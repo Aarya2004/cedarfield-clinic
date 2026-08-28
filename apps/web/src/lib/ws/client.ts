@@ -189,6 +189,7 @@ export class BridgeClient {
       case 'error':
         this.emit('error', f);
         if (f.code === 'busy') this.setState('busy');
+        else if (f.code === 'replaced') this.closedByUs = true; // a newer tab took over: never reconnect over it
         else if (f.code === 'unauthorized' || f.code === 'timeout') this.setState('unauthorized');
         break;
       case 'ledger_ack':
@@ -217,6 +218,11 @@ export class BridgeClient {
     }
     // terminal states never auto-retry
     if (this._state === 'busy' || this._state === 'unauthorized') return;
+    if (ev.code === CLOSE_CODES.REPLACED) {
+      this.closedByUs = true;
+      this.setState('closed');
+      return;
+    }
     if (ev.code === CLOSE_CODES.BUSY) {
       this.setState('busy');
       return;

@@ -13,6 +13,7 @@ export const MAX_FRAME_BYTES = 64 * 1024;
 export const CLOSE_CODES = {
   UNAUTHORIZED: 4401,
   BUSY: 4409,
+  REPLACED: 4410,
   BAD_FRAME: 4400,
   IDLE: 4408,
   SHUTDOWN: 4000,
@@ -92,7 +93,7 @@ export type BridgeFrame =
   | { type: 'data'; data: string }
   | ({ type: 'status' } & BridgeStatus)
   | { type: 'exit'; code: number }
-  | { type: 'error'; code: 'unauthorized' | 'busy' | 'bad_frame' | 'timeout'; message: string }
+  | { type: 'error'; code: 'unauthorized' | 'busy' | 'bad_frame' | 'timeout' | 'replaced'; message: string }
   | { type: 'ledger_ack'; seq: number; sig: string; client_seq: number | null }
   | { type: 'agent_call'; call_id: string; tool: string; input: Record<string, unknown> }
   | { type: 'pong' };

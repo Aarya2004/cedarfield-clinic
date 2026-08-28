@@ -167,10 +167,24 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
   c.ws.send(JSON.stringify({ type: 'auth', token, cols: 80, rows: 24 }));
   const h = await until(c.frames, (f) => f.type === 'hello');
   check('judge hello carries mode/ttl/expires', h?.mode === 'judge' && h?.ttl_ms === 1500 && typeof h?.expires_at === 'string', JSON.stringify(h));
-  const ended = await until(c.frames, (f) => f.type === 'error' && f.code === 'timeout', 5000);
+  // Judge mode: a second tab presenting the valid token takes over (page reload, or a socket the
+  // Cloudflare proxy has not closed yet) — never `busy`; the old tab is told `replaced`.
+  const c2 = await new Promise((resolve, reject) => {
+    const s = new WebSocket(`ws://127.0.0.1:${port + 1}`);
+    const fr = [];
+    s.on('message', (m) => fr.push(JSON.parse(m.toString())));
+    s.on('open', () => resolve({ ws: s, frames: fr }));
+    s.on('error', reject);
+  });
+  c2.ws.send(JSON.stringify({ type: 'auth', token, cols: 80, rows: 24 }));
+  const h2 = await until(c2.frames, (f) => f.type === 'hello', 3000);
+  const rep = await until(c.frames, (f) => f.type === 'error' && f.code === 'replaced', 3000);
+  check('judge mode: a newer tab with the token takes over; the old tab is told `replaced`', !!h2 && !!rep, JSON.stringify({ h2: h2?.mode, rep: rep?.code }));
+  const ended = await until(c2.frames, (f) => f.type === 'error' && f.code === 'timeout', 5000);
   await new Promise((r) => setTimeout(r, 100));
   check('judge TTL ends the session and signals onIdle', !!ended && idle, JSON.stringify(ended));
   c.ws.close();
+  c2.ws.close();
   j.close();
 }
 

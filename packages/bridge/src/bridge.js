@@ -210,8 +210,18 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
           return;
         }
         if (client && client.readyState === client.OPEN) {
-          send(ws, { type: 'error', code: 'busy', message: 'another tab is already paired with this bridge' });
-          return ws.close(CLOSE.BUSY, 'busy');
+          if (mode !== 'judge') {
+            send(ws, { type: 'error', code: 'busy', message: 'another tab is already paired with this bridge' });
+            return ws.close(CLOSE.BUSY, 'busy');
+          }
+          // Judge mode: the token is the credential and a stranger has exactly one; a reload (or a
+          // socket the proxy has not yet closed — measured 2026-08-28 through the Cloudflare DO
+          // proxy) must not lock them out for 30 min. Newest tab wins; the old one is told why.
+          const old = client;
+          send(old, { type: 'error', code: 'replaced', message: 'another tab paired with your token; this tab was released' });
+          old.close(CLOSE.REPLACED, 'replaced');
+          ledger.append('tab_replaced', {});
+          log('tab replaced by a newer one (judge mode)');
         }
         authed = true;
         clearTimeout(authTimer);
