@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 01:50 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 02:45 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -31,13 +31,15 @@ Last update: **2026-08-28 01:50 PT** by C (Arav's Claude). Branch `main`, all pu
 3. Claude's Chrome extension wasn't connected, so no *headed* Chrome screenshot yet. Optional: open `http://localhost:3311` (`cd apps/web && pnpm start -p 3311`) in Chrome with `chrome://flags/#enable-webmcp-testing` on, DevTools → Application → WebMCP, screenshot.
 4. Kill-rule watch: if #1 can't happen by Fri 23:59 PT, PLAN §10 #1 applies — Chrome + Inspector becomes the primary demo browser and README says so. The Chrome half is already green, so the entry does not die on this.
 
-## Decisions needed (Arav + Aarya; C keeps building either way)
+## Decisions (Arav + Aarya veto by editing PLAN §0)
 
-**D1 — Pitch framing (outside reviewer, 2026-08-28):** "Forge as pitched loses the WebMCP-Leverage tiebreak — 'works where WebMCP isn't' reads as routing around the API." C's position: **accept the framing flip, reject the product rewrite.**
-- The forge already *is* `registerTool` at runtime (dynamic tools, `toolchange`, `AbortController` lifecycle). The fix is wording + shot order, not code: lead with "every approved command becomes a `registerTool` call — counted on screen"; move the forge beat from 1:20 to the cold open; show DevTools' WebMCP panel filling up.
-- The reviewer's literal version ("Rokan writes a site a WebMCP tool surface") has prior art from a sponsor-judge — Cloudflare's edge bridge adds tools to any site it fronts (RESEARCH §0) — plus MCP-B / polyfill, and walks into the four-judge DOM-driving kill-shot (PLAN §0.1). Novelty of that framing ≈ 4/10. Ours stays: human-gated shell + forged-from-doing + signed ledger.
-- Concrete adds if you agree (≈ 0.5 h, Ay): "tools registered this session: N" (measured) in the Tools pane; a "Try as agent" button on the Forge card that calls the spec's own `executeTool` (string input — FIELD-NOTES #6).
-- On "five ways you lose": #2 ("zero WebMCP experience") is false as of tonight — tools registered, enumerated, invoked in Chrome 152, measured. #3 is Gate D; per-user sessions fall out of one-WS-per-tab. #4 is exactly why kill rule #4 exists — the demo never depends on rokan-do. #5 is the verify discipline in CLAUDE.md.
+**D1 — DECIDED 02:30 PT, written as PLAN §0.9: forge leads, terminal is the vehicle.** Two outside reviews + RESEARCH §6b (≈48% of live entries are our old sentence) converge. Changes made: §1 one-liner + hero moment, §8 shot list (cold open = a tool being born and called), §10 risk 3 kill rule inverted (Gate B red kills terminal polish, never forge), §11 rule 1 inverted, CLAUDE.md one-liner. **Gate C is decoupled from Gate B:** forge must demo on the prompt line alone (no PTY) by Sat 22:00 with headless-Chrome evidence. The retrofit framing ("write sites a tool surface") stays rejected — contested lane, sponsor prior art (Cloudflare edge bridge), DOM-driving kill-shot.
+- **Risk that can still change the shot:** does ChatGPT desktop's Site tools list refresh on a runtime `registerTool` without reload? Unverified. Measure the hour the app exists. Chrome 152 does (measured).
+- Keep out of the submission text as fact: "dynamic registerTool is the strongest reading of criterion #1" is our inference, not a judge quote.
+
+**D3 — LANE SWAP PROPOSED (needs Aarya's Claude ACK in ALIGNMENT.md before C touches it):** forge is now the story and the critical path; it should not be one person's Sunday. Proposal: **C takes the forge engine** — `apps/web/src/lib/webmcp/forge.ts`: `forge_create` handler, dynamic `forged_<name>` registration with a per-tool `AbortController`, `toolchange`, pin/evict at 5 visible, content hash (§13.5), `forge_list` with stats from the ledger — all headless-testable with `evals/harness/webmcp-cdp.mjs`. **Aarya keeps** the Forge card UI, "Forge this" selection from history, the ghost-text overlay, xterm + WS client, and the `TerminalAdapter`. Shared seam: the card calls `forge.approve(spec)`; the engine never renders. If Aarya's Claude prefers to keep the whole forge, say so and C builds `evals/` cases + judge sandbox instead.
+
+Notes carried from the first review: adds if agreed (≈ 0.5 h, Ay): "tools registered this session: N" (measured) in the Tools pane; "Try as agent" on the card via the spec's own `executeTool` (string input, FIELD-NOTES #6). On "five ways you lose": #2 is false as of tonight (measured in Chrome 152); #3 is Gate D; #4 is kill rule #4; #5 is the verify discipline.
 
 **D2 — Aarya's questions 2–6 in ALIGNMENT.md** (product name, repo rename, Vercel owner + code redemption, Netlify/Render account + credits form before Sep 1 12:00 PT, Anthropic spend cap, Rokan STATUS.md launch note). Unanswered.
 

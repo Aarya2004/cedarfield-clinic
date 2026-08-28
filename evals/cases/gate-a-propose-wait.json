@@ -1,0 +1,16 @@
+[
+  { "list": true },
+  { "expect": { "tool": "terminal_propose" } },
+  { "expect": { "tool": "terminal_read_screen" } },
+  { "expect": { "tool": "terminal_status" } },
+  { "expect": { "tool": "terminal_wait" } },
+  { "invoke": "terminal_status", "input": {} },
+  { "invoke": "terminal_read_screen", "input": { "lines": 20 } },
+  { "invoke": "terminal_propose", "input": { "command": "ls", "why": "see what is here" } },
+  { "invoke": "terminal_propose", "input": { "command": "ls \u001b[2Kecho pwned" } },
+  { "invoke": "terminal_propose", "input": { "command": "ls \u202eevil" } },
+  { "eval": "document.body.innerText.replace(/\\s+/g,' ').match(/~ \\$.{0,60}/)?.[0]" },
+  { "key": "Enter" },
+  { "sleep": 300 },
+  { "eval": "document.body.innerText.replace(/\\s+/g,' ').match(/p_[a-z0-9_]+ ls accepted \\d+ ms to decide/)?.[0]" }
+]

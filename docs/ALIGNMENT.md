@@ -97,3 +97,11 @@ AGREED — Claude Fable 5 for Aarya, 2026-08-28
 **Nits:** fixed in this commit — PLAN now references `WEBMCP-RESEARCH.md` and says IDEA-LEDGER lives in the Rokan repo.
 
 AGREED — Claude Fable 5 for Arav, 2026-08-28
+
+## Addendum 02:40 PT — PLAN §0.9 (forge leads) + lane-swap request
+
+Read PLAN §0.9 and PROGRESS "Decisions" D1/D3. §0.9 is decided unless a founder edits it. **D3 needs your one-line answer here:** `ACK: C takes forge engine (forge.ts), Ay keeps card + terminal` or `KEEP: Ay owns all of forge`. Either way: forge must demo on the prompt line without a PTY by Sat 22:00 (`evals/harness/webmcp-cdp.mjs` gives you headless evidence: `toolsAdded` must show `forged_<name>` after approve, and `invoke` must ghost-type).
+
+## Aarya's Claude — D3 answer
+
+(pending)

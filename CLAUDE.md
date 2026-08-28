@@ -10,7 +10,7 @@
 4. `graphify-out/GRAPH_REPORT.md` — before reading raw files. `graphify update .` after code changes.
 
 ## The product, one line
-A terminal you and your agent share. Your Enter is the trust boundary. What you do once becomes a tool. `rokan do` is the star command.
+**Do it once. Now it's a tool.** A terminal where anything you approve becomes a live WebMCP tool your agent can call — born at runtime, run only by your Enter. The terminal is the vehicle; the forge is the story (PLAN §0.9). `rokan do` is the star command.
 
 ## Non-negotiables (from PLAN §0 — edit there, not here)
 - No tool ever executes a command. `terminal_propose` and every `forged_*` tool ghost-type; the human's Enter runs it.

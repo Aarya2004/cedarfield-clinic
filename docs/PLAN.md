@@ -34,19 +34,38 @@
    shows it. No synthetic telemetry (Handset REDTEAM L1). N is stated wherever a % appears.
 7. **Launch = submission.** Public repo, live URL, video, and (Arav's call) PyPI on Sep 2.
 8. **Kill rules (§10) are binding.** Gate B (terminal + ghost-typing green in ChatGPT desktop)
-   by Sat 22:00 PT or we ship _that_ alone.
+   by Sat 22:00 PT or we ship _that_ alone — **superseded by §0.9 for what "alone" means.**
+9. **Forge leads; the terminal is the vehicle.** (Decided 2026-08-28 02:30 PT by C on
+   RESEARCH §6b–6c and two outside reviews; Arav/Aarya veto by editing this line.) The pitch,
+   the hero moment (§1), the cold open (§8) and the README's first line lead with _a WebMCP
+   tool born at runtime from something the human just did, then called by the agent_.
+   Governance ("your Enter is the trust boundary") is the second sentence — the safety story,
+   never the headline. WHY: ~48% of live entries are the governance lane and use our sentence;
+   nearly all register a fixed tool list at load. Runtime `registerTool` of a user-made tool is
+   the one shot nobody else has and the strongest reading of tiebreak #1. Retrofit stays out
+   (§0.1). Consequences: §11 rule 1 inverted; §10 risk 3 inverted (Gate B red kills terminal
+   _polish_, never forge); **Gate C is decoupled from Gate B** — forge must demo on the
+   prompt line alone (no PTY; forged tools only ghost-type) by Sat 22:00 with headless-Chrome
+   evidence, and on the live terminal by Sun 22:00. **Open measurement that can still change
+   the shot:** whether ChatGPT desktop's Site tools list picks up a runtime registration
+   (`toolchange`) without a page reload — measure the hour the app is installed; if it does
+   not, the hero shot uses DevTools → WebMCP for the birth and ChatGPT after a reload, stated
+   honestly. Chrome 152 does (measured: one `toolsAdded` per runtime `registerTool`).
 
 ---
 
 ## 1. Product
 
-**One line:** A terminal you and your agent share. Your Enter is the trust boundary. What you
-do once becomes a tool.
+**One line (§0.9 order):** **Do it once. Now it's a tool.** Rokan Terminal is a terminal where
+anything you approve becomes a live WebMCP tool your agent can call — born at runtime, run only
+by your Enter. (Old order, kept as the second sentence: a terminal you and your agent share;
+your Enter is the trust boundary.)
 
-**Hero moment (the 15 seconds that must land):** ChatGPT proposes a command → it appears
-ghost-typed in _your_ prompt → you press Enter → it runs on _your_ machine → the agent reads the
-result → you select what you just did → "Forge this" → a named tool appears in ChatGPT's
-site-tools list → the agent calls it → 0 model calls, sub-second.
+**Hero moment (the 15 seconds that must land):** a command you ran a minute ago is in the
+history → select it → **Forge** → card (name `hn_top`, param `n`) → approve → **`forged_hn_top`
+appears in the agent's site-tools list without a reload** → "top 3 now" → the agent calls
+`forged_hn_top({n:3})` → ghost-typed → your Enter → `calls:0 · 0.36s` in the ledger. _Then_ the
+second act: proposals, Share-screen + redaction, the signed ledger — why the birth was safe.
 
 **Audience (Impact criterion):** developers whose ChatGPT/Codex needs to act on their machine,
 their dashboards, their deploys — with a human present and every keystroke visible. Provencher
@@ -346,14 +365,14 @@ laptop (Aarya) mirrors the setup for a second take. `demo-backup.mp4` one keypre
 
 | t         | shot                                                                                                                                                             | narration (short)                                                                     |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 0:00–0:12 | Cold open on the empty terminal + ChatGPT side panel showing "Site tools · 7"                                                                                    | "This is a terminal. ChatGPT can see it. It can't type Enter."                        |
-| 0:12–0:35 | Ask: "what's in this repo and are the tests passing?" → `ls` ghost-typed → Enter → `pytest -q` proposed → Enter → agent reads screen → answer                    | "Every command it wants is a proposal. My Enter is the trust boundary."               |
-| 0:35–0:50 | Toggle "Share screen" off → agent asks to see the screen → `{shared:false}`; toggle on; a fake key on screen renders `[redacted]`                                | "It reads what I let it read. Secrets never leave the tab."                           |
-| 0:50–1:20 | Ask: "get me the top 5 Hacker News titles" → `rokan do "top 5 HN titles"` proposed → Enter → browser does it (rokan output) → ledger `calls:1 · 4.2s`            | "`rokan do` browses for real — the model plans once, the page verifies."              |
-| 1:20–1:45 | Select the line → **Forge this** → card: `hn_top`, param `n` → approve → **ChatGPT's site-tools list gains `forged_hn_top`** (cut to DevTools WebMCP panel, 2 s) | "What I did once is now a tool — in WebMCP's own format."                             |
-| 1:45–2:05 | Ask: "top 3 now" → agent calls `forged_hn_top({n:3})` → ghost-typed → Enter → ledger `calls:0 · 0.36s`                                                           | "Second time: zero model calls. The model left the hot path."                         |
-| 2:05–2:25 | Agent: "deploy the docs" → `netlify deploy --prod` proposed, banner **CONSEQUENTIAL** → Enter → forge as `deploy` (kind: write)                                  | "Writes are marked. Still my Enter."                                                  |
-| 2:25–2:40 | Ledger scroll: proposed / executed / forged / invoked, each with ms and calls; export JSON                                                                       | "Every action, who did it, what it cost. Rokan Terminal. Your Enter is the boundary." |
+| 0:00–0:20 | **Cold open on the birth.** History shows `rokan do "top 5 HN titles"` already run. Select → **Forge** → card `hn_top`, param `n` → approve → cut to the agent's site-tools list: **`forged_hn_top` appears** (DevTools WebMCP panel 2 s) | "I did this once. Now it's a tool. Registered live — it didn't exist when the page loaded." |
+| 0:20–0:35 | "top 3 now" → agent calls `forged_hn_top({n:3})` → ghost-typed → Enter → ledger `calls:0 · 0.36s`                                                                | "The agent calls it. My Enter runs it. Zero model calls — the model left the hot path." |
+| 0:35–0:55 | Rewind: "how did that command get there?" — ask "what's in this repo, are tests passing?" → `ls` ghost-typed → Enter → `pytest -q` → Enter → agent reads screen → answer | "Every command the agent wants is a proposal. It can't type Enter."                  |
+| 0:55–1:10 | Share-screen off → `{shared:false}`; on → a fake key renders `[redacted]`                                                                                          | "It reads what I let it read. Secrets never leave the tab."                           |
+| 1:10–1:40 | "get me the top 5 HN titles" → `rokan do …` proposed → Enter → browser does it → ledger `calls:1 · 4.2s` — _this is the command we forged at 0:00_                | "`rokan do` browses for real — the model plans once, the page verifies."              |
+| 1:40–2:05 | Second birth, agent-initiated: three approved commands → agent calls `forge_create` → card → approve → `forged_deploy` (kind: write, **CONSEQUENTIAL** banner) → invoke → Enter | "It forged its own workflow after I approved it three times. Writes are marked. Still my Enter." |
+| 2:05–2:25 | Recovery beat: forged tool exits non-zero → agent reads the redacted tail → proposes the fix → Enter → ledger fail→fix                                             | "When it breaks, it reads, proposes, and I decide."                                   |
+| 2:25–2:40 | Ledger scroll: registered / proposed / executed / forged / invoked, each with ms and calls; export JSON, HMAC-verified                                            | "Every tool, who made it, who called it, what it cost. Do it once. Now it's a tool."  |
 
 Trigger to switch to backup: tunnel not connected in 10 s, or any tool call not visible in
 ChatGPT within 15 s. Say it plainly on camera if live; in the edit, use the backup take.
@@ -402,7 +421,7 @@ implementation experience (MCP-B) — not "originator"; Shopify is an origin-tri
 | --- | -------------------------------------------------- | ---- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | 1   | ChatGPT safety review blocks `terminal_propose`    | CRIT | Gate A on D0; name/description make inertness explicit                        | Gate A ❌ → Chrome 149 + Inspector is the primary demo; ChatGPT shown only for tool discovery; say so in README             |
 | 2   | Quick tunnel drops WebSocket                       | HIGH | test D1 morning; named tunnel fallback; ngrok as last resort (not in video)   | none — 2 h fix                                                                                                              |
-| 3   | Terminal + ghost-typing not E2E by Sat 22:00       | CRIT | two people on it all day; nothing else scheduled                              | **Gate B ❌ → forge becomes "buttons only" (human-made, no `forge_create`), submission = terminal + ghost-typing + ledger** |
+| 3   | Terminal + ghost-typing not E2E by Sat 22:00       | CRIT | bridge already green (D0); risk is the xterm/ghost-text UI; forge decoupled (§0.9) | **Gate B ❌ → cut terminal _polish_ (webgl, theme, reconnect UX, layout); floor = one prompt line + bridge `input`/`status`; forge ships regardless. Never the reverse.** |
 | 4   | Sandbox container can't run Chromium / too slow    | HIGH | seeded 0-call ops need no browser at replay; keep Chromium for unseeded       | Gate D ❌ on rokan → judge sandbox ships without `rokan do`; rokan beat in video only                                       |
 | 5   | Forge card half-done → "gimmick"                   | HIGH | Aarya owns the card end-to-end D2; design review Sun 18:00                    | card not approvable by Sun 22:00 → cut "Forge this" (reverse) keep `forge_create`                                           |
 | 6   | Integration sprawl (Vercel+Workers+Tunnel+Netlify) | HIGH | no DO relay; Netlify only in the video; Render as substitute                  | any vendor > 2 h of yak → drop it                                                                                           |
@@ -415,7 +434,7 @@ implementation experience (MCP-B) — not "originator"; Shopify is an origin-tri
 
 ## 11. Rules (the Handset discipline, adapted — read every morning)
 
-1. **One feature.** Terminal + ghost-typing is the product. Forge is the second beat. Everything else is cut.
+1. **One story.** A tool is born from what you just did, and the agent calls it. Terminal + ghost-typing is the vehicle that makes the birth real and safe. Everything else is cut. (Inverted 2026-08-28, §0.9.)
 2. **Verified-state table first.** Every standup starts with "what is green _right now_", not what's planned. `docs/PROGRESS.md` holds it.
 3. **Gates are binary and dated.** A red gate triggers its kill rule the same hour. No "one more try".
 4. **Never fake a number.** ms and calls come from the code that ran. Label what is measured. State N.
