@@ -55,7 +55,13 @@ let pairingHash = '';
 async function judgeHash() {
   const t0 = Date.now();
   const r = await fetch(`${judgeUrl.replace(/\/$/, '')}/api/session`, { method: 'POST' });
-  const body = await r.json();
+  const text = await r.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error(`judge session: non-JSON reply ${r.status} ${r.headers.get('content-type')}: ${text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 240)}`);
+  }
   if (!r.ok) throw new Error(`judge session refused: ${r.status} ${JSON.stringify(body)}`);
   console.log(`judge sandbox ready: cold_ms=${body.cold_ms} (worker) / ${Date.now() - t0} ms (client)`);
   return `#ws=${encodeURIComponent(body.ws)}&t=${body.token}`;
