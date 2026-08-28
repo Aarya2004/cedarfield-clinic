@@ -6,7 +6,7 @@
  * When unpaired, the prompt-line adapter (`gateAAdapter`) stays installed so every tool works.
  */
 import { BridgeClient, type ClientState, type HelloFrame } from '@/lib/ws/client';
-import { consumePairingHash, type BridgeStatus } from '@/lib/ws/protocol';
+import { CLIENT_LEDGER_KINDS, consumePairingHash, type BridgeStatus } from '@/lib/ws/protocol';
 import { gateAAdapter, getGateAShare, setGateAShare, setTerminalAdapter } from '@/lib/webmcp/adapter';
 import { ledger } from '@/lib/webmcp/ledger';
 import { forge } from '@/lib/webmcp/forge';
@@ -68,7 +68,9 @@ class SessionStore {
     this.client = client;
     client.on('state', (s) => {
       if (s === 'paired') {
-        ledger.setForward((row) => void client.forwardLedger(row));
+        ledger.setForward((row) => {
+          if (CLIENT_LEDGER_KINDS.has(row.kind)) client.forwardLedger(row);
+        });
         void ledger.append(client.reconnects > 0 ? 'reconnected' : 'paired', { host, pair_ms: client.pairMs, shell: client.hello?.shell ?? null, integration: client.hello?.integration ?? false });
         note(client.reconnects > 0 ? 'bridge.reconnected' : 'bridge.paired', { pair_ms: client.pairMs ?? undefined });
       } else if (s === 'disconnected' || s === 'closed') {

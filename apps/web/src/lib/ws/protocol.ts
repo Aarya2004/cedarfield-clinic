@@ -18,6 +18,12 @@ export const CLOSE_CODES = {
   SHUTDOWN: 4000,
 } as const;
 
+/** Kinds the bridge accepts from a client (mirrors `CLIENT_LEDGER_KINDS` in protocol.js). */
+export const CLIENT_LEDGER_KINDS: ReadonlySet<string> = new Set([
+  'proposed', 'dismissed', 'screen_read', 'registered', 'unregistered', 'forge_requested', 'forge_rejected',
+  'forged', 'invoked', 'restored', 'pinned', 'executed_step', 'paired', 'reconnected', 'disconnected',
+]);
+
 /** The client's own signed ledger row, forwarded verbatim; the bridge countersigns it. */
 export interface ClientLedgerRow {
   seq: number;

@@ -78,7 +78,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
       const [{ Terminal: XTermCtor }, { FitAddon }, { WebglAddon }] = await Promise.all([import('@xterm/xterm'), import('@xterm/addon-fit'), import('@xterm/addon-webgl')]);
       if (disposed) return;
       const t0 = performance.now();
-      term = new XTermCtor({ cursorBlink: true, scrollback: 5000, fontFamily: 'var(--font-mono), ui-monospace, Menlo, monospace', fontSize: 13, lineHeight: 1.2, theme: THEME, allowProposedApi: false });
+      term = new XTermCtor({ cursorBlink: true, scrollback: 5000, fontFamily: 'var(--font-mono), ui-monospace, Menlo, monospace', fontSize: 13, lineHeight: 1.2, theme: THEME, allowProposedApi: true /* decorations API (ghost text) is proposed in xterm 6.0.0 */ });
       termRef.current = term;
       const fit = new FitAddon();
       term.loadAddon(fit);
@@ -120,28 +120,35 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
         if (ev.type !== 'keydown') return true;
         const p = pendingRef.current;
         const adapter = session.getAdapter();
+        // When we consume a key we must also stop the browser default (Tab would move focus
+        // out of the terminal; measured 2026-08-28 on a real PTY).
+        const consume = () => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          return false;
+        };
         if (p && adapter) {
           if (ev.key === 'Escape') {
             proposals.resolve(p.id, 'dismissed');
             setArmed(null);
-            return false;
+            return consume();
           }
           if (lineBuf.current.empty && insertedRef.current !== p.id) {
             if (ev.key === 'Enter') {
               if (p.dangerous && armedRef.current !== p.id) {
                 setArmed(p.id);
-                return false;
+                return consume();
               }
               setArmed(null);
               adapter.acceptProposal(p.id);
-              return false;
+              return consume();
             }
             if (ev.key === 'Tab') {
               client.sendInput(p.command);
               lineBuf.current.feedText(p.command);
               setInsertedId(p.id);
               note('ghost.tab_inserted');
-              return false;
+              return consume();
             }
           } else if (ev.key === 'Enter' && insertedRef.current === p.id) {
             // human edited the inserted text and pressed Enter: xterm sends "\r"; record edited

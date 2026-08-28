@@ -36,7 +36,7 @@ const CLIENT_TYPES = new Set(['auth', 'input', 'resize', 'ledger', 'ping']);
 /** Kinds a client may forward. `executed` / `paired` / `shell_exited` are bridge-only facts. */
 export const CLIENT_LEDGER_KINDS = new Set([
   'proposed', 'dismissed', 'screen_read', 'registered', 'unregistered', 'forge_requested', 'forge_rejected',
-  'forged', 'invoked', 'restored', 'pinned', 'executed_step',
+  'forged', 'invoked', 'restored', 'pinned', 'executed_step', 'paired', 'reconnected', 'disconnected',
 ]);
 
 /** Parse + validate one client frame. Returns {ok:true, frame} or {ok:false, reason}. */
@@ -61,7 +61,6 @@ export function parseClientFrame(raw) {
       break;
     case 'ledger':
       if (!f.row || typeof f.row !== 'object' || typeof f.row.kind !== 'string') return { ok: false, reason: 'ledger.row.kind required' };
-      if (!CLIENT_LEDGER_KINDS.has(f.row.kind)) return { ok: false, reason: `ledger.row.kind not allowed for clients: ${f.row.kind}` };
       break;
     default:
       break;

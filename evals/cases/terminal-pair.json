@@ -1,0 +1,12 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "eval": "location.hash", "equals": "" },
+  { "eval": "window.__rokan.session().mode", "equals": "live" },
+  { "eval": "window.__rokan.session().hello?.integration", "equals": true },
+  { "eval": "typeof window.__rokan.session().pairMs", "equals": "number" },
+  { "waitFor": "document.querySelector('[data-terminal] .xterm') !== null", "timeout": 8000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('\\n').length > 0", "timeout": 8000 },
+  { "invoke": "terminal_status", "input": {}, "outputMatches": "\"paired\":true.*\"measured\":true" },
+  { "eval": "document.body.innerText.includes('paired ·')", "equals": true },
+  { "eval": "window.__rokan.ledger().rows.some(r => r.kind === 'paired')", "equals": true }
+]

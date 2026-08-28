@@ -83,6 +83,15 @@ check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' &&
   check('override attempt acked as client row', !!ack2);
 }
 
+// 3b'. a bridge-only kind from the client → error frame, socket stays paired
+{
+  ws.send(JSON.stringify({ type: 'ledger', row: { kind: 'executed', seq: 2, fields: { command: 'rm -rf /', exit_code: 0 } } }));
+  const err = await until(frames, (f) => f.type === 'error' && /not allowed/.test(f.message));
+  ws.send(JSON.stringify({ type: 'ping' }));
+  const pong = await until(frames, (f) => f.type === 'pong');
+  check('bridge-only ledger kind rejected without disconnect', !!err && !!pong, JSON.stringify(err));
+}
+
 // 3c. F3: shell exit → respawn; the pairing survives and the new shell works
 {
   ws.send(JSON.stringify({ type: 'input', data: 'exit\r' }));

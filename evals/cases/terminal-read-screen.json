@@ -1,0 +1,15 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+  { "invoke": "terminal_read_screen", "input": { "lines": 20 }, "outputMatches": "\"shared\":false" },
+  { "invoke": "terminal_status", "input": {}, "outputMatches": "\"cwd\":null" },
+  { "eval": "window.__rokan.share(true)", "equals": true },
+  { "type": "export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY; echo marker_ok\r" },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l === 'marker_ok')", "timeout": 5000 },
+  { "invoke": "terminal_read_screen", "input": { "lines": 30 }, "outputMatches": "\"shared\":true.*\\[redacted\\].*marker_ok" },
+  { "eval": "(async () => { const ts = await document.modelContext.getTools(); const t = ts.find(x => x.name === 'terminal_read_screen'); const r = JSON.parse(await document.modelContext.executeTool(t, JSON.stringify({ lines: 30 }))); return r.lines.some(l => l.includes('wJalrXUtnFEMI')); })()", "equals": false },
+  { "invoke": "terminal_status", "input": {}, "outputMatches": "\"cwd\":\"/" },
+  { "eval": "window.__rokan.share(false)", "equals": false },
+  { "invoke": "terminal_read_screen", "input": {}, "outputMatches": "\"shared\":false" },
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'screen_read').length", "equals": 4 }
+]

@@ -9,8 +9,9 @@
 import { forge } from './forge';
 import { proposals } from './proposals';
 import { ledger } from './ledger';
-import { setGateAShare, getGateAShare } from './adapter';
+import { getGateAShare } from './adapter';
 import { fieldNotes } from './fieldnotes';
+import { session } from '@/lib/terminal/session';
 import type { ForgeSpec } from './forge-spec';
 
 export function testHooksEnabled(): boolean {
@@ -50,9 +51,12 @@ export function installTestHooks(): boolean {
     ledger: () => ledger.export(),
     fieldNotes: () => fieldNotes(),
     share: (on?: boolean) => {
-      if (typeof on === 'boolean') setGateAShare(on);
+      if (typeof on === 'boolean') session.setShare(on);
       return getGateAShare();
     },
+    session: () => session.snapshot(),
+    screen: (n = 40) => session.getAdapter()?.screenLines(n) ?? null,
+    reconnect: () => session.reconnectNow(),
   };
   return true;
 }

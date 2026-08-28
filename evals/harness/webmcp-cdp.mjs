@@ -35,10 +35,12 @@ if (!targets) { console.error('chrome did not start'); process.exit(1); }
 const ws = new WebSocket(targets.find((t) => t.type === 'page').webSocketDebuggerUrl);
 await new Promise((r) => (ws.onopen = r));
 let id = 0; const pending = new Map();
-const tools = new Map(); const responded = [];
+const tools = new Map(); const responded = []; const pageErrors = [];
 ws.onmessage = (ev) => {
   const m = JSON.parse(ev.data);
   if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); return; }
+  if (m.method === 'Runtime.exceptionThrown') pageErrors.push(m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text ?? 'exception');
+  if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') pageErrors.push('console.error: ' + m.params.args.map((a) => a.value ?? a.description ?? '').join(' ').slice(0, 300));
   if (m.method === 'WebMCP.toolsAdded') for (const t of m.params.tools) tools.set(t.name, { ...t, addedAt: Date.now() });
   if (m.method === 'WebMCP.toolsRemoved') for (const n of m.params.toolNames ?? m.params.tools?.map((t) => t.name) ?? []) tools.delete(n);
   if (m.method === 'WebMCP.toolResponded') responded.push(m.params);
@@ -82,6 +84,33 @@ for (const step of steps) {
     } else if (step.focus) {
       // Explicit only. Harness rule: never arrange a precondition a human would not have.
       out({ step: 'focus', selector: step.focus, ok: await evalJs(`(() => { const el = document.querySelector(${JSON.stringify(step.focus)}); if (!el) return false; el.focus(); return document.activeElement === el; })()`) });
+    } else if (typeof step.type === 'string') {
+      // Type into the focused element (xterm's textarea when the terminal has focus). "\r" = Enter.
+      // Real key events (keydown → keypress/input → keyup), the way a human types; never insertText.
+      for (const ch of step.type) {
+        if (ch === '\r') {
+          await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+          await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+        } else {
+          const upper = ch.toUpperCase();
+          const code = /[a-z]/i.test(ch) ? `Key${upper}` : /[0-9]/.test(ch) ? `Digit${ch}` : ch === ' ' ? 'Space' : undefined;
+          await send('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, code, text: ch, unmodifiedText: ch, windowsVirtualKeyCode: /[a-z0-9]/i.test(ch) ? upper.charCodeAt(0) : 0 });
+          await send('Input.dispatchKeyEvent', { type: 'keyUp', key: ch, code });
+        }
+      }
+      out({ step: 'type', text: step.type, ms: Math.round(performance.now() - t0) });
+    } else if (step.waitFor) {
+      // Poll an expression until truthy (default 8 s). Measured wait printed.
+      const budget = step.timeout ?? 8000;
+      let v = null;
+      while (performance.now() - t0 < budget) {
+        v = await evalJs(step.waitFor);
+        if (v) break;
+        await sleep(50);
+      }
+      const ok = !!v;
+      if (!ok) failed++;
+      out({ step: 'waitFor', expr: step.waitFor, ok, value: v, ms: Math.round(performance.now() - t0) });
     } else if (step.key) {
       await send('Input.dispatchKeyEvent', { type: 'keyDown', key: step.key, code: step.key, windowsVirtualKeyCode: step.key === 'Enter' ? 13 : step.key === 'Escape' ? 27 : 0 });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', key: step.key, code: step.key });
@@ -111,6 +140,6 @@ if (shot) {
   const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
   writeFileSync(shot, Buffer.from(r.result.data, 'base64'));
 }
-out({ summary: { steps: steps.length, failed, tools: [...tools.keys()] } });
+out({ summary: { steps: steps.length, failed, tools: [...tools.keys()], pageErrors: pageErrors.slice(0, 5) } });
 ws.close(); chrome.kill();
 process.exit(failed ? 1 : 0);

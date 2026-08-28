@@ -8,7 +8,7 @@ import { chmodSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
-import { AUTH_TIMEOUT_MS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_VERSION, parseClientFrame } from './protocol.js';
+import { AUTH_TIMEOUT_MS, CLIENT_LEDGER_KINDS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_VERSION, parseClientFrame } from './protocol.js';
 import { OscParser, cleanupShellEnv, prepareShellEnv, shellName } from './shell-integration.js';
 import { Ledger } from './ledger.js';
 
@@ -213,6 +213,11 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
           // covers the client's own sig — the two ledgers cross-verify (Opus review P2).
           // Only whitelisted kinds (protocol.js) and only these named fields — nothing from the client
           // can set seq/t/session/origin/prev/sig on the bridge row (Fable review F7).
+          // A disallowed (bridge-only) kind is answered with an error frame, never a disconnect.
+          if (!CLIENT_LEDGER_KINDS.has(f.row.kind)) {
+            send(ws, { type: 'error', code: 'bad_frame', message: `ledger kind not allowed for clients: ${String(f.row.kind).slice(0, 40)}` });
+            break;
+          }
           const { kind, seq: client_seq, sig: client_sig, t: client_t, session: client_session, fields, ...rest } = f.row;
           const clientFields = fields && typeof fields === 'object' ? fields : rest;
           const row = ledger.append(`client:${kind}`, {

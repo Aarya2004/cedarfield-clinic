@@ -198,7 +198,7 @@ Focus rings visible; reduced-motion respected; contrast ≥ 4.5:1 on text.
 
 | component | version (verified) | facts relied on |
 | --- | --- | --- |
-| `@xterm/xterm` | 6.0.0 | `registerMarker(cursorYOffset)`, `registerDecoration({marker, x, width, height, layer, anchor})` + `IDecoration.onRender(HTMLElement)`, `buffer.active.{cursorX,cursorY,baseY,length,getLine(y)?.translateToString(trimRight)}`, `onData`, `onResize`, `onLineFeed`, `onRender`, `attachCustomKeyEventHandler(ev => boolean)`, `write`, `scrollToBottom`, `loadAddon` |
+| `@xterm/xterm` | 6.0.0 | **`allowProposedApi: true` is required for `registerDecoration` (measured)**; `registerMarker(cursorYOffset)`, `registerDecoration({marker, x, width, height, layer, anchor})` + `IDecoration.onRender(HTMLElement)`, `buffer.active.{cursorX,cursorY,baseY,length,getLine(y)?.translateToString(trimRight)}`, `onData`, `onResize`, `onLineFeed`, `onRender`, `attachCustomKeyEventHandler(ev => boolean)`, `write`, `scrollToBottom`, `loadAddon` |
 | `@xterm/addon-fit` | 0.11.0 | `fit()`, `proposeDimensions()` |
 | `@xterm/addon-webgl` | 0.19.0 | `new WebglAddon()`, `onContextLoss`, `dispose()`; throws if WebGL2 unavailable → catch → DOM renderer |
 | `next/font/google` | Next 15.5 | Instrument Serif + Geist self-hosted (CSP `font-src 'self'` stays) |

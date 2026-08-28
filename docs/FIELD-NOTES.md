@@ -32,6 +32,14 @@ Consequences already applied in code: `execute(input, options?)` with `options?.
 (`types.ts`, `register.ts`). Per-call timeout budget of Chrome's own agent: **not yet measured**
 (no built-in agent in 152 stable; Inspector extension not exercised headless).
 
+## xterm 6.0.0 (measured 2026-08-28 via the real-PTY harness)
+
+| # | Observation | Value | N |
+|---|---|---|---|
+| 1 | `registerDecoration` throws `You must set the allowProposedApi option to true to use proposed API` — the decorations API is still proposed in 6.0.0 despite being in the public typings | `allowProposedApi: true` required for ghost text | 1 |
+| 2 | An exception thrown inside a React effect in a production build unmounts the whole tree → the `registerTerminalTools` cleanup aborts every tool → CDP `toolsRemoved` for all six | now fenced by per-pane error boundaries | 1 |
+| 3 | `Input.insertText` (CDP) bypasses keydown, so a page that keys off `keydown` never sees "typing" — the harness types with real key events | harness rule | 1 |
+
 ## ChatGPT desktop (GPT-5.6 Sol/Terra) — not yet measured
 
 Blocked 2026-08-28 night: no ChatGPT desktop app on this Mac. To measure: open the deployed URL,

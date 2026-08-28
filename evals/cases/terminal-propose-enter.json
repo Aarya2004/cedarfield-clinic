@@ -1,0 +1,22 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+  { "invoke": "terminal_propose", "input": { "command": "echo hi_from_pty; false", "why": "prove the loop" } },
+  { "waitFor": "document.querySelector('[data-ghost]')?.textContent === 'echo hi_from_pty; false'", "timeout": 3000 },
+  { "eval": "(() => { window.__rokanPid = window.__rokan.proposals.pending().id; return !!window.__rokanPid; })()", "equals": true },
+  { "eval": "document.body.innerText.includes('Tab insert · Enter run · Esc dismiss')", "equals": true },
+  { "type": "\r" },
+  { "waitFor": "window.__rokan.proposals.all().find(p => p.id === window.__rokanPid)?.status === 'accepted'", "timeout": 3000 },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanPid" }, "outputMatches": "\"status\":\"executed\".*\"exit_code\":1", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l.includes('hi_from_pty') && !l.includes('echo'))", "timeout": 5000 },
+  { "eval": "document.querySelector('[data-ghost]')", "equals": null },
+  { "eval": "document.querySelector('[data-last-exit]')?.textContent?.startsWith('exit 1')", "equals": true },
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'proposed').length", "equals": 1 },
+  { "waitFor": "window.__rokan.ledger().rows.some(r => r.kind === 'proposed' && r.bridge_sig)", "timeout": 3000 },
+
+  { "invoke": "terminal_propose", "input": { "command": "echo second", "why": "share off → empty tail" } },
+  { "waitFor": "document.querySelector('[data-ghost]') !== null", "timeout": 3000 },
+  { "eval": "(() => { window.__rokanPid2 = window.__rokan.proposals.pending().id; return true; })()", "equals": true },
+  { "type": "\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanPid2" }, "outputMatches": "\"exit_code\":0.*\"tail\":\\[\\],\"shared\":false", "timeout": 10000 }
+]

@@ -4,18 +4,42 @@
  * App shell: status bar · terminal (or prompt line + pairing card) · Tools / Forge / Ledger.
  * Registers the six fixed tools once; installs test hooks when enabled.
  */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Component, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { registerTerminalTools, type RegistrationState } from '@/lib/webmcp/register';
 import { forge, type ForgeCard as Card } from '@/lib/webmcp/forge';
 import { installTestHooks } from '@/lib/webmcp/testhooks';
 import { session } from '@/lib/terminal/session';
-import { clearFieldNotes, fieldNotes, subscribeFieldNotes } from '@/lib/webmcp/fieldnotes';
+import { clearFieldNotes, fieldNotes, note, subscribeFieldNotes } from '@/lib/webmcp/fieldnotes';
 import { Terminal } from './Terminal';
 import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
 import { LedgerPane, MobileCard, PairingCard, StatusBar, ToolsPane, useSession } from './Panes';
 
 const EMPTY: never[] = [];
+
+/** A render fault in one pane must never unmount the app (that would abort every registered tool). */
+class Boundary extends Component<{ name: string; children: ReactNode }, { error: string | null }> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(e: unknown) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+  componentDidCatch(e: unknown) {
+    note('ui.pane_error', { pane: this.props.name, message: e instanceof Error ? e.message : String(e) });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <section className="rounded-md border border-danger bg-white p-3 text-xs text-danger" data-pane-error={this.props.name}>
+          {this.props.name} failed to render: {this.state.error}.{' '}
+          <button className="underline" onClick={() => this.setState({ error: null })}>
+            retry
+          </button>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function useCards(): Card[] {
   return useSyncExternalStore((fn) => forge.subscribe(fn), () => forge.cards(), () => EMPTY);
@@ -67,7 +91,11 @@ export function App() {
       <StatusBar reg={reg} />
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)]">
         <div className="flex min-h-0 flex-col gap-3">
-          {s.mode === 'live' && s.state !== 'busy' && s.state !== 'unauthorized' ? <Terminal onForgeThis={forgeThis} /> : (
+          {s.mode === 'live' && s.state !== 'busy' && s.state !== 'unauthorized' ? (
+            <Boundary name="terminal">
+              <Terminal onForgeThis={forgeThis} />
+            </Boundary>
+          ) : (
             <>
               <PairingCard />
               <PromptLine />
@@ -75,12 +103,18 @@ export function App() {
           )}
         </div>
         <div className="flex min-h-0 flex-col gap-3 overflow-auto">
-          <ToolsPane reg={reg} />
+          <Boundary name="tools">
+            <ToolsPane reg={reg} />
+          </Boundary>
           <section className="rounded-md border border-line bg-white p-3 text-sm" data-forge-pane>
             <h2 className="font-medium">Forge</h2>
-            {cards.length === 0 ? <p className="text-xs text-muted">Select 1–5 lines in the terminal and press “Forge this”, or let the agent call forge_create. A card appears here for your approval.</p> : cards.map((c) => <ForgeCardView key={c.card_id} card={c} />)}
+            <Boundary name="forge card">
+              {cards.length === 0 ? <p className="text-xs text-muted">Select 1–5 lines in the terminal and press “Forge this”, or let the agent call forge_create. A card appears here for your approval.</p> : cards.map((c) => <ForgeCardView key={c.card_id} card={c} />)}
+            </Boundary>
           </section>
-          <LedgerPane />
+          <Boundary name="ledger">
+            <LedgerPane />
+          </Boundary>
           <section className="rounded-md border border-line bg-white p-3 text-xs text-muted">
             <button onClick={() => setShowNotes((v) => !v)} className="underline">
               {showNotes ? 'hide' : 'show'} field notes ({notes.length}, measured on this device)

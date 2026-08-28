@@ -1,0 +1,35 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+
+  { "invoke": "terminal_propose", "input": { "command": "echo typed_first", "why": "typing hides ghost" } },
+  { "waitFor": "document.querySelector('[data-ghost]') !== null", "timeout": 3000 },
+  { "type": "ec" },
+  { "waitFor": "document.querySelector('[data-ghost]') === null", "timeout": 2000 },
+  { "eval": "document.body.innerText.includes('finish or clear your line')", "equals": true },
+  { "type": "ho manual_line\r" },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l === 'manual_line')", "timeout": 5000 },
+  { "waitFor": "document.querySelector('[data-ghost]') !== null", "timeout": 3000 },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "echo typed_first" },
+  { "key": "Escape" },
+  { "waitFor": "window.__rokan.proposals.pending() === null", "timeout": 2000 },
+
+  { "invoke": "terminal_propose", "input": { "command": "echo inserted", "why": "tab inserts" } },
+  { "waitFor": "document.querySelector('[data-ghost]') !== null", "timeout": 3000 },
+  { "eval": "(() => { window.__rokanPid = window.__rokan.proposals.pending().id; return true; })()", "equals": true },
+  { "key": "Tab" },
+  { "waitFor": "document.body.innerText.includes('inserted — edit, then Enter')", "timeout": 2000 },
+  { "type": "_edited\r" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanPid" }, "outputMatches": "\"status\":\"executed\".*\"edited\":true", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l === 'inserted_edited')", "timeout": 5000 },
+
+  { "invoke": "terminal_propose", "input": { "command": "rm -rf /", "why": "dangerous needs two enters" } },
+  { "waitFor": "document.querySelector('[data-ghost]')?.classList.contains('ghost-danger')", "timeout": 3000 },
+  { "eval": "document.body.innerText.includes('hard-blocked pattern: Enter twice')", "equals": true },
+  { "type": "\r" },
+  { "waitFor": "document.body.innerText.includes('press Enter again to confirm')", "timeout": 2000 },
+  { "eval": "window.__rokan.proposals.pending()?.status", "equals": "awaiting_human" },
+  { "key": "Escape" },
+  { "waitFor": "window.__rokan.proposals.pending() === null", "timeout": 2000 },
+  { "eval": "(window.__rokan.screen(30) ?? []).some(l => l.startsWith('rm -rf /'))", "equals": false }
+]
