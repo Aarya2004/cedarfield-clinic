@@ -128,3 +128,16 @@ test('F1: keys are kept, values dropped; user in URL creds kept; public key unto
   assert.equal(one('ssh-rsa AAAAB3NzaC1yc2E user@host').redactions.length, 0);
   assert.equal(one('tokenizer.encode(text)').redactions.length, 0);
 });
+
+test('regression (judge mode, 2026-08-28): a truncated / unknown KEY name and a bare high-entropy value are still redacted', () => {
+  const scrolled = one('<ESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY; echo marker_ok');
+  assert.ok(!scrolled.lines[0].includes('wJalrXUtnFEMI'), scrolled.lines[0]);
+  assert.ok(scrolled.lines[0].includes('echo marker_ok'));
+  const bare = one('x=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
+  assert.ok(!bare.lines[0].includes('wJalrXUtnFEMI'), bare.lines[0]);
+  assert.ok(bare.redactions.some((r) => r.kind === 'high_entropy_value'));
+  for (const ok of ['PATH=/usr/local/bin:/usr/bin:/bin', 'LANG=en_US.UTF-8', 'FOO=hello_world_2024', 'NODE_OPTIONS=--max-old-space-size=4096', 'total 0', 'drwxr-xr-x@  5 aravkekane  wheel   160 Aug 28 14:30 .', 'url=https://example.org/some/path/here']) {
+    const r = one(ok);
+    assert.equal(r.lines[0], ok, `over-redacted: ${ok}`);
+  }
+});
