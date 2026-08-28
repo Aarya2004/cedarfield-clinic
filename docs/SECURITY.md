@@ -75,5 +75,5 @@ container; the Worker never stores tokens. Tests: `infra/sandbox/test/gate.test.
 - Option injection through params (see §2). Human-visible before Enter.
 - Tool descriptions can still be ignored by a non-cooperative agent — by design nothing depends on them.
 - `hex_run` redaction hides git SHAs from the agent (not from the human).
-- No CSP nonces yet (`script-src 'unsafe-inline'` for Next hydration); `connect-src` is the enforced part.
+- CSP: per-request nonce + `'strict-dynamic'` for scripts (no `unsafe-inline`); `style-src` still allows inline styles (Tailwind); `connect-src` is the WebSocket allowlist.
 - Raw TCP/UDP egress from the judge sandbox is not filtered by the SDK.
