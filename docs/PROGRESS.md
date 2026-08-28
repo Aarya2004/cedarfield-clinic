@@ -59,11 +59,12 @@ node packages/bridge/bin/rokan-terminal.js --no-tunnel --app http://localhost:30
 ```
 Drop `--no-tunnel` to get a `wss://…trycloudflare.com` link (≈ 15–20 s, waits for DNS). Smoke: `cd packages/bridge && pnpm smoke`.
 
-## Next (C, Sat 08-29 PT) — bridge done a day early; remaining lane work
+## Next (C) — D1 lane work landed on D0; what remains
 
-- 10:00 `redact.ts` + tests (every PLAN §4 pattern); client `ledger.ts` (append-only, HMAC, mirrors to bridge via `{type:'ledger'}`).
-- 14:00 `terminal_read_screen` (Share-screen gate + redact), `terminal_status` (from `status` frames), `terminal_wait` on real exit codes — wired to whatever `useBridge()`/terminal buffer Aarya's client exposes; I'll code against `protocol.ts` and a tiny adapter interface so the wiring is a one-line hook-up.
-- 20:00 joint E2E from the deployed URL. 22:00 Gate B.
+- **Sat morning:** ChatGPT-desktop measurements the moment Arav has the app (FIELD-NOTES "ChatGPT" section); Vercel prod deploy once logged in; headed-Chrome screenshot with DevTools → WebMCP panel.
+- **Sat:** help Aarya wire `TerminalAdapter` to xterm + the WS client (I'll review, not edit `apps/web/src/components`); bridge `rokan-do` trailer parsing; `docs/SECURITY.md` first draft.
+- **Sat 20:00** joint E2E from the deployed URL through a real tunnel. **22:00 Gate B.**
+- **Sun:** `infra/sandbox` (Worker + Sandbox SDK + Dockerfile) — judge mode.
 
 ## Objections
 
