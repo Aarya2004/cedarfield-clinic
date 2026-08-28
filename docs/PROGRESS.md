@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 05:50 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 10:40 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -8,7 +8,7 @@ Last update: **2026-08-28 05:50 PT** by C (Arav's Claude). Branch `main`, all pu
 | --- | --- | --- | --- |
 | Plan | AGREED both sides (`docs/ALIGNMENT.md`) | A + Ay | ALIGNMENT.md |
 | **A** — inert `terminal_propose` invoked by a consumer | 🟡 **Chrome half green; ChatGPT half blocked on human** | C → A | `docs/evidence/gate-a/`, `docs/FIELD-NOTES.md` |
-| B — terminal + ghost-typing E2E | ⬜ | Ay + C | — |
+| B — terminal + ghost-typing E2E | 🟡 **headless half GREEN on a real PTY** (Chrome 152 + `packages/bridge` via `--no-tunnel`): pair → propose → ghost decoration → Enter → measured `exit_code`/`ms`/redacted tail → bridge countersign; Tab-insert/edit; dangerous double-Enter; Share-screen gate + `[redacted]` on a real `AWS_SECRET_ACCESS_KEY`; forged tool born → invoked → Enter → `exit 0` → `forge_list median_ms`. Human half (ChatGPT desktop through a tunnel, recorded) needs Arav | C → A | `evals/cases/terminal-*.json` (98 steps), `docs/evidence/gate-b/` |
 | C — forge → tool appears → invoked (**decoupled from B, PLAN §0.9**) | 🟡 **prompt-line half GREEN** (headless Chrome 152: `forge_create` → approve → `forged_hn_top` in `toolsAdded` → invoke → ghost text → Enter → `terminal_wait` executed → `forge_list runs:1`); live-terminal half after the Terminal plan; ChatGPT `toolchange` refresh unmeasured | C | `docs/evidence/gate-c/2026-08-28-forge-birth-chrome152.png`, `evals/cases/forge-*.json` (150 steps, 0 failed) |
 | D — judge mode live URL | ⬜ | C | — |
 
@@ -24,11 +24,12 @@ Last update: **2026-08-28 05:50 PT** by C (Arav's Claude). Branch `main`, all pu
 - Shared contracts under `contract:`: `schemas.ts` v1 (all four fixed tools, `validateProposedCommand`, `DANGEROUS_PATTERNS`/`isDangerous`, `OUTPUT_BUDGET_CHARS`) and `apps/web/src/lib/ws/protocol.ts` v1 (frames + `parsePairingHash`).
 - **Forge engine green** (`forge.ts`, 16 unit tests; `forge-spec.ts`, 15): cards with kind override + dangerous double-confirm, runtime `registerTool` with a per-tool `AbortController`, content hash, budget 5 + pin/evict/restore, sequential queue with `prior_step_failed`/`step_timeout`/`superseded`, stats, `forge_create` + `forge_list` tools, `terminal_wait` chaining (`next_proposal_id`, `unknown_proposal`), `window.__rokan` test hooks behind `?test=1`. Chrome 152 measured: abort → `toolsRemoved` + `toolchange` (FIELD-NOTES 14–17).
 - **Security fixes from reviews**: recursive canonical HMAC (bridge), client key never exported (bridge countersign = the proof), pairing-host allowlist, CSP + `consumePairingHash`, redaction covers `PREFIX_TOKEN=`/JSON/URL creds/CLI flags/Stripe/Google/npm (18 leak tests), ANSI-C `$'…'` quoting, `why` sanitised, client ledger kinds allowlisted + reserved fields bridge-owned, Origin check, shell respawn, OSC 7 safe decode.
+- **Live terminal (TERMINAL-PLAN) green headless:** `BridgeClient` (auth-first, backoff 1·2·4·8·15 s, ping, countersign; 6 tests), `PromptDetector` + `LineBuffer` (4), live `TerminalAdapter` (Enter sends exact bytes; end marker → measured exit/ms/tail; interrupted; Tab-insert `edited`; 7 tests), xterm 6 pane with ghost **decoration** (never through the PTY parser), session store, status bar / tools / forge / ledger panes, editable Forge card + “Try as agent” (`executeTool`), pairing/busy/unauthorized/mobile states, error boundaries per pane. `pnpm gate` = web 93/93 · bridge 25/25 · prompt-line evals 154 steps · real-PTY evals 98 steps, all 0 failed.
 - **Seam for the terminal UI: `apps/web/src/lib/webmcp/adapter.ts`.** Implement `TerminalAdapter` (`shareScreen`, `screenLines(n)` from the xterm buffer, `status()` from the latest `status` frame, `ghostType`, `waitProposal` with `exit_code/ms/tail` after Enter) and call `setTerminalAdapter(...)` once — the tools need no other change. Until then `gateAAdapter` keeps everything working with no shell.
 
 ## Now / Next / Done / In flight (C builds everything — Arav 03:10 PT; Aarya takes the next *unstarted* item here, never a stale one)
 
-**Now (C, in flight):** Terminal plan (next, in chat then executed) — xterm + WS client + real `TerminalAdapter` + ghost overlay + card UX. Files about to be touched: `apps/web/src/components/**`, `apps/web/src/lib/ws/client.ts`, `apps/web/src/lib/webmcp/adapter.ts`.
+**Now (C, in flight):** Terminal plan execution is complete headless (`docs/TERMINAL-PLAN.md`); next: headed Chrome screenshots (DevTools WebMCP panel), then the **Sandbox plan** (judge mode) — files about to be touched: `infra/sandbox/**`, `apps/web/src/lib/terminal/session.ts` (judge-mode WS target), `docs/SANDBOX-PLAN.md`.
 
 **Done since 03:30 PT:** forge engine + contracts + 6 fixed tools + test hooks + placeholder card + 5 harness cases (`1fe5ca7`…`faf5038`); both reviewers' first passes fixed (Opus 16/16 ticked, Fable 7/7 P1 + 6 P2 ticked below). `pnpm gate`: web 76/76 · bridge smoke 24/24 · evals 150 steps 0 failed.
 

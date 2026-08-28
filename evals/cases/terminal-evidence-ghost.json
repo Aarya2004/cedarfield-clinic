@@ -1,0 +1,11 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+  { "invoke": "forge_create", "input": { "name": "hn_top", "description": "Top N Hacker News titles via rokan do.", "commands": ["rokan do \"top {{n}} HN titles\""], "params": [{ "name": "n", "description": "How many titles", "example": "5" }], "kind": "read" } },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.tool; })()", "equals": "forged_hn_top" },
+  { "sleep": 150 },
+  { "expect": { "tool": "forged_hn_top" } },
+  { "invoke": "forged_hn_top", "input": { "n": "3" } },
+  { "waitFor": "document.querySelector('[data-ghost]')?.textContent === 'rokan do \"top 3 HN titles\"'", "timeout": 3000 },
+  { "sleep": 300 }
+]
