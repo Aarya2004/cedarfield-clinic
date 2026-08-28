@@ -15,5 +15,5 @@ export function originAllowed(appOrigin: string, origin: string): boolean {
 /** CORS headers for an allowed origin; `{}` when the request carries no Origin. */
 export function corsHeaders(appOrigin: string, origin: string | null): Record<string, string> {
   if (origin === null || !originAllowed(appOrigin, origin)) return {};
-  return { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'POST, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' };
+  return { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' };
 }

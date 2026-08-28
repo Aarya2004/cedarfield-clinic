@@ -2,14 +2,17 @@
  * rokan-sandbox — judge mode. A stranger gets a throttled container running OUR bridge; the
  * page pairs over the same protocol as builder mode. Routes:
  *   POST   /api/session        → { sid, ws, token, ttl_ms, mode:"judge", cold_ms }   (rate-limited per IP)
- *   DELETE /api/session/:sid   → destroys the sandbox
  *   GET    /ws/:sid            → WebSocket upgrade proxied to the bridge inside the sandbox (port 7331)
  *   GET    /api/health         → { ok:true }
+ * `sid` is HMAC-signed with the `SID_SECRET` secret (`wrangler secret put SID_SECRET`); `/ws/:sid`
+ * verifies it before touching a sandbox, so an unissued id never starts a container. There is no
+ * DELETE route: nothing calls one, and an unauthenticated one let a third party destroy a session.
  * The bridge token is issued once and never stored by the Worker; the bridge verifies it.
  */
 import { getSandbox, Sandbox } from '@cloudflare/sandbox';
 import { Gate } from './gate';
 import { corsHeaders, originAllowed } from './origin';
+import { issueSid, verifySid } from './sid';
 
 export { Gate };
 
@@ -20,6 +23,8 @@ export interface Env {
   SESSION_TTL_MS: string;
   SESSIONS_PER_IP_PER_10MIN: string;
   MAX_CONCURRENT_PER_IP: string;
+  /** secret: `wrangler secret put SID_SECRET` (any long random string); sessions are refused without it */
+  SID_SECRET?: string;
   ANTHROPIC_API_KEY?: string;
 }
 
@@ -30,7 +35,6 @@ export class RokanSandbox extends Sandbox<Env> {
 }
 
 const BRIDGE_PORT = 7331;
-const SID_RE = /^[a-f0-9]{24}$/;
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extra } });
@@ -53,9 +57,14 @@ export default {
     if (url.pathname === '/api/health') return json({ ok: true, mode: 'judge' }, 200, h);
 
     if (url.pathname === '/api/session' && request.method === 'POST') {
+      if (!env.SID_SECRET) {
+        console.error('SID_SECRET is not set — refusing to issue sessions (wrangler secret put SID_SECRET)');
+        return json({ error: 'the sandbox is not configured; please try again later' }, 503, h);
+      }
       const ip = request.headers.get('cf-connecting-ip') ?? '0.0.0.0';
       const ttl = Number.parseInt(env.SESSION_TTL_MS, 10) || 1_800_000;
-      const sid = hex(12);
+      const id = hex(12);
+      const sid = await issueSid(env.SID_SECRET, id);
       const gate = env.Gate.get(env.Gate.idFromName(ip));
       const d = await gate.allow(sid, ttl, Number.parseInt(env.SESSIONS_PER_IP_PER_10MIN, 10) || 1, Number.parseInt(env.MAX_CONCURRENT_PER_IP, 10) || 3);
       if (!d.ok) {
@@ -63,7 +72,7 @@ export default {
       }
       const t0 = Date.now();
       const token = hex(16);
-      const sandbox = getSandbox(env.Sandbox, sid, { sleepAfter: '35m' });
+      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '35m' });
       try {
         await sandbox.startProcess(`node /opt/bridge/bin/rokan-terminal.js --no-tunnel --mode judge --host 0.0.0.0 --port ${BRIDGE_PORT} --token ${token} --ttl-ms ${ttl} --app ${env.APP_ORIGIN}`);
         // wait until the bridge answers on its port (measured cold start)
@@ -88,20 +97,14 @@ export default {
       return json({ sid, ws, token, ttl_ms: ttl, mode: 'judge', cold_ms: Date.now() - t0 }, 201, h);
     }
 
-    const del = /^\/api\/session\/([a-f0-9]{24})$/.exec(url.pathname);
-    if (del && request.method === 'DELETE') {
-      const sid = del[1];
-      const ip = request.headers.get('cf-connecting-ip') ?? '0.0.0.0';
-      await env.Gate.get(env.Gate.idFromName(ip)).release(sid);
-      await getSandbox(env.Sandbox, sid).destroy().catch(() => undefined);
-      return json({ ok: true }, 200, h);
-    }
-
-    const wsm = /^\/ws\/([a-f0-9]{24})$/.exec(url.pathname);
+    const wsm = /^\/ws\/([a-f0-9.]{1,64})$/.exec(url.pathname);
     if (wsm) {
       if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') return json({ error: 'websocket upgrade required' }, 426, h);
-      if (!SID_RE.test(wsm[1])) return json({ error: 'bad session id' }, 400, h);
-      const sandbox = getSandbox(env.Sandbox, wsm[1]);
+      // Verify the signature BEFORE getSandbox(): the SDK starts a container on first fetch, so an
+      // unverified id would let anyone burn max_instances with random sids (Fable F4).
+      const id = env.SID_SECRET ? await verifySid(env.SID_SECRET, wsm[1]) : null;
+      if (!id) return json({ error: 'unknown session' }, 403, h);
+      const sandbox = getSandbox(env.Sandbox, id);
       return sandbox.wsConnect(request, BRIDGE_PORT);
     }
 

@@ -22,7 +22,7 @@
   "vars": {
     "APP_ORIGIN": "https://rokan-terminal.vercel.app",
     "SESSION_TTL_MS": "1800000",
-    "SESSIONS_PER_IP_PER_10MIN": "1",
+    "SESSIONS_PER_IP_PER_10MIN": "3",
     "MAX_CONCURRENT_PER_IP": "3"
   },
   "observability": { "enabled": true }
