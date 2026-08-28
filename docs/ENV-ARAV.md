@@ -17,7 +17,7 @@ Verified 2026-08-28. Update when something changes; never guess.
 - Anthropic key: Keychain `ANTHROPIC_API_KEY` (`security find-generic-password -l ANTHROPIC_API_KEY -w`). Never print; never commit.
 - Local web server: `cd apps/web && pnpm build && pnpm start -p 3311` (kill: `lsof -ti :3311 | xargs kill`). Bridge test ports 7331/7332.
 
-## Auth states (2026-08-28 03:00 PT)
+**Auth states (2026-08-28 19:10 PT)**: Vercel CLI logged in (`medportgeneral-7293`, team `team_zFUXxKJdD4R9mCPNEYCKVZhj`); project `rokan-terminal` (`prj_t1EeVQv2omNViz2RRtDGN1SAtRzJ`) linked from `apps/web` (cwd deploy, no root-directory setting; the app is self-contained) → `cd apps/web && vercel --prod`; live at `https://rokan-terminal.vercel.app`. wrangler logged in (OAuth, account `a19fd0968c7f16f66da537eda2b212b0`, workers write). Docker Desktop 29.3.1 running, sandbox images cached. Cloudflare Claude plugin installed (skills `cloudflare:*`, `cloudflare-docs` MCP) — nothing to install. GitHub push works. Judge Worker needs `wrangler secret put SID_SECRET` once after the first deploy (fail-closed until then).
 Vercel CLI **not** logged in (`! vercel login`; team `team_zFUXxKJdD4R9mCPNEYCKVZhj`, hobby; Vercel MCP → 403 on project create). wrangler **not** logged in (`! wrangler login`). Cloudflare Claude plugin installed (`/reload-plugins`). GitHub push works.
 
 ## Gotchas (each cost time once — never again)
