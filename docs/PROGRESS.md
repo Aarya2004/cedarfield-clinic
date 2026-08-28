@@ -176,3 +176,22 @@ and all 174 eval steps.
 - [ ] P2 — `apps/web/src/lib/ws/client.ts:164` — ping `setInterval` assigned without clearing an existing timer; a duplicate `hello` leaks an interval and doubles the ping rate — Opus [C]
 - [ ] P2 — `apps/web/src/lib/ws/client.ts:251` — input queued during `connecting` is flushed on `hello`, so after a shell respawn those bytes land in a different shell than the one the human was typing at — Opus [C]
 - [ ] P2 — `packages/bridge/src/mcp.js:42` — `AgentLink` never reconnects; after a bridge restart the MCP server serves a stale tool list and every call rejects with no recovery — Opus [C]
+
+## Review findings (open) — Fable 5 reviewer, pass #2, 2026-08-28 evening
+
+Full report: `docs/reviews/2026-08-28-fable-2.md`. Gate re-run once at `7a32314`: typecheck/lint/build clean, web 98/98, smoke 28/28 (2156 ms), evals 6 cases / 174 steps / 0 failed. Pass-#1 fixes re-verified (incl. `$'…'`/`$"…"` safe on zsh+bash). All new findings are on the live-terminal / judge paths; F1–F3 reproduced on a real PTY (`scratchpad/pty-probe.ts`).
+
+- [ ] P1 — `packages/bridge/src/bridge.js:95-113` + `apps/web/src/lib/terminal/adapter.ts:89-102` — end `status` is sent *before* the `data` chunk carrying the end marker, so the adapter finishes `tail` early: measured 2/3, 1/3, 1/3 output lines on `echo a; echo b; echo c` — the recovery beat reads a partial tail — Fable [C]
+- [ ] P1 — `apps/web/src/components/Terminal.tsx:143-152` + `lib/terminal/adapter.ts:169-178` — Enter on a ghost ignores the bridge's honest `running:true`; measured: with `cat` running, `acceptProposal` → true and the proposal went into cat's stdin (same for vim/ssh/python) — Fable [C]
+- [ ] P1 — `apps/web/src/lib/terminal/adapter.ts:172` + `Terminal.tsx:150-152` — without OSC integration (bash/sh/fish) `inflight` never clears: measured `--shell /bin/bash` accept #1 true, `waitProposal` null, accept #2 **false** and the Enter key is consumed silently; same wedge in zsh via Tab-insert → Ctrl-U → Enter — Fable [C]
+- [ ] P1 — `infra/sandbox/src/worker.ts:102-108, 93-100` — `/ws/:sid` and `DELETE` call `getSandbox()` for any well-formed sid; SDK `wsConnect`→`containerFetch`→`startAndWaitForPorts` (containers/dist/lib/container.js:864-870) starts a container on a never-issued sid — bypasses the Gate, 10 requests exhaust `max_instances: 10`; sign the sid (HMAC with a Worker secret) or check the Gate row before `getSandbox` — Fable [C]
+- [ ] P1 — `apps/web/src/lib/terminal/linebuffer.ts:39-73` + `Terminal.tsx:116-119` — the Enter-gate is blind to paste (`onData` never counted) and ↑/↓/Ctrl-R history (arrows return false): after ⌘V or ↑ the ghost shows on a full line and Enter appends `command\r` to it; SECURITY.md §1 "Enter never sends a proposal over partial input" overclaims (code path) — Fable [C]
+- [ ] P2 — `apps/web/src/lib/terminal/agent-relay.ts:23` — republishes the full tool list on every forge emit (11 sites) → `listChanged` spam to MCP clients per ghost/Enter; publish on definition-key change only — Fable [C]
+- [ ] P2 — `forge.ts:447` vs `ws/protocol.ts:24` / `bridge/src/protocol.js:48` / `ledger.ts:15` — forged steps append kind `executed`, the forward allowlist has `executed_step` (emitted nowhere), so step rows are never countersigned (no ✓) — contract drift — Fable [C]
+- [ ] P2 — `apps/web/src/lib/ws/client.ts:135-137, 214-217` — the 5 s no-hello timer closes with 4401 → terminal `unauthorized` state, no retry; a slow cold judge pair shows "unauthorized" — Fable [C]
+- [ ] P2 — `docs/SECURITY.md` §4/§6 — "bridge binds loopback only" is false in judge mode (`--host 0.0.0.0`, worker.ts:70); state it + "reachable only via the Worker proxy" — Fable [C]
+- [ ] P2 — `infra/sandbox/wrangler.jsonc:25` — 1 session/IP/10 min blocks two judges behind one NAT for 10 min; 3/10 min is safe with `MAX_CONCURRENT_PER_IP=3` — Fable [C]
+- [ ] P2 — `packages/bridge/src/mcp.js:42-79` — `AgentLink` never reconnects after a bridge restart; stale tools, every call errors — Fable [C]
+- [ ] P2 — `components/Terminal.tsx:150-152` — `acceptProposal` return ignored + key consumed → silent dead Enter with no reason shown — Fable [C]
+- [ ] P2 — `apps/web/src/lib/ws/client.ts:163, 251-253` — keystrokes queued while `connecting` are replayed into the shell after a *re*-pair; flush only on first connect — Fable [C]
+- [ ] P2 — `infra/sandbox/src/worker.ts:93-100` — unauthenticated, unused `DELETE /api/session/:sid`; remove or bind to the token — Fable [C]
