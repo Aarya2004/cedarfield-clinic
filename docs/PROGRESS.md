@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 13:50 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 15:10 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -31,7 +31,9 @@ Last update: **2026-08-28 13:50 PT** by C (Arav's Claude). Branch `main`, all pu
 
 **Done 13:50 PT:** `?tour=1` guided first-60-seconds (auto in judge mode; verified by real state; `evals/cases/tour.json`), `docs/SECURITY.md`, `AGENTS.md`, `docs/DEMO.md`, PLAN §3 synced. `wrangler deploy --dry-run` green.
 
-**Now (C, in flight):** MCP parity (PLAN §13.1) — `rokan-terminal mcp` serves the page's fixed + forged tools over stdio; bridge relays `agent_call`/`agent_result` between the MCP process and the tab; the page stays the single source of truth (no duplicated substitution logic). Files: `packages/bridge/{bin,src/mcp.js,src/protocol.js}`, `apps/web/src/lib/terminal/session.ts`, `apps/web/src/lib/webmcp/agent-relay.ts`.
+**Done 15:10 PT — MCP parity (PLAN §13.1):** `npx rokan-terminal mcp` is an MCP stdio server for Claude Code / Cursor / Codex CLI that lists the **same** tools the page registers with WebMCP (six fixed + forged, live `listChanged`) and relays calls to the tab; the page is the single source of truth; the agent socket can never send PTY input (tests: `packages/bridge/test/mcp.test.mjs` with a real MCP client over stdio; `terminal-forge-live.json` checks `agentTools()`/`agentCall()` in the page).
+
+**Now (C, in flight):** judge-facing README; then CSP nonces (Opus P2), evals-cli (Gao) if it installs in < 30 min, remote-box beat (§13.2) needs a Linux box from Arav.
 
 **Earlier — `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 
