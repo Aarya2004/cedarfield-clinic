@@ -35,9 +35,19 @@ export interface ClientLedgerRow {
   sig: string;
 }
 
+/** A tool definition as published to an MCP process via the bridge (same shape as WebMCP's). */
+export interface AgentToolDef {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean };
+}
+
 /** Client → bridge */
 export type ClientFrame =
-  | { type: 'auth'; token: string; cols?: number; rows?: number }
+  | { type: 'auth'; token: string; cols?: number; rows?: number; role?: 'human' | 'agent' }
+  | { type: 'agent_tools'; tools: AgentToolDef[] }
+  | { type: 'agent_result'; call_id: string; result?: unknown; error?: string }
   | { type: 'input'; data: string }
   | { type: 'resize'; cols: number; rows: number }
   | { type: 'ledger'; row: ClientLedgerRow }
@@ -76,6 +86,7 @@ export type BridgeFrame =
   | { type: 'exit'; code: number }
   | { type: 'error'; code: 'unauthorized' | 'busy' | 'bad_frame' | 'timeout'; message: string }
   | { type: 'ledger_ack'; seq: number; sig: string; client_seq: number | null }
+  | { type: 'agent_call'; call_id: string; tool: string; input: Record<string, unknown> }
   | { type: 'pong' };
 
 export interface PairingParams {

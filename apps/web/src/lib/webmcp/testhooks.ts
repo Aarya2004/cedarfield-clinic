@@ -12,6 +12,7 @@ import { ledger } from './ledger';
 import { getGateAShare } from './adapter';
 import { fieldNotes } from './fieldnotes';
 import { session } from '@/lib/terminal/session';
+import { agentTools, callAgentTool } from './register';
 import type { ForgeSpec } from './forge-spec';
 
 export function testHooksEnabled(): boolean {
@@ -55,6 +56,8 @@ export function installTestHooks(): boolean {
       return getGateAShare();
     },
     session: () => session.snapshot(),
+    agentTools: () => agentTools(),
+    agentCall: (tool: string, input: unknown) => callAgentTool(tool, input),
     screen: (n = 40) => session.getAdapter()?.screenLines(n) ?? null,
     reconnect: () => session.reconnectNow(),
   };

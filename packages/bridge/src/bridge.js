@@ -8,7 +8,7 @@ import { chmodSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
-import { AUTH_TIMEOUT_MS, CLIENT_LEDGER_KINDS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_VERSION, parseClientFrame } from './protocol.js';
+import { AUTH_TIMEOUT_MS, CLIENT_LEDGER_KINDS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_VERSION, isAgentFrameAllowed, parseClientFrame } from './protocol.js';
 import { OscParser, cleanupShellEnv, prepareShellEnv, shellName } from './shell-integration.js';
 import { Ledger } from './ledger.js';
 
@@ -49,7 +49,9 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   let cols = 100;
   let rows = 30;
 
-  let client = null; // the single authenticated socket
+  let client = null; // the single authenticated human socket (the tab)
+  let agent = null; // an optional MCP process socket (role "agent"); relayed to/from the tab only
+  let agentTools = []; // last tool list published by the tab
   // No tab paired for IDLE_TIMEOUT_MS → tell the caller, which exits (and so kills the tunnel).
   let unpairedTimer = null;
   const armUnpairedTimer = () => {
@@ -169,6 +171,23 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
           send(ws, { type: 'error', code: 'unauthorized', message: 'bad token' });
           return ws.close(CLOSE.UNAUTHORIZED, 'bad token');
         }
+        if (f.role === 'agent') {
+          // MCP relay socket: never the PTY. One at a time; replaces a dead one.
+          if (agent && agent.readyState === agent.OPEN) {
+            send(ws, { type: 'error', code: 'busy', message: 'an agent process is already connected' });
+            return ws.close(CLOSE.BUSY, 'busy');
+          }
+          authed = true;
+          ws.role = 'agent';
+          clearTimeout(authTimer);
+          agent = ws;
+          touch();
+          send(ws, { type: 'hello', mode, shell: shellName(shellPath), cwd: state.cwd, pid: term.pid, session_id: sessionId, version: PROTOCOL_VERSION, integration, role: 'agent', tab_connected: !!(client && client.readyState === client.OPEN) });
+          send(ws, { type: 'agent_tools', tools: agentTools });
+          ledger.append('agent_connected', {});
+          log('agent (MCP) connected');
+          return;
+        }
         if (client && client.readyState === client.OPEN) {
           send(ws, { type: 'error', code: 'busy', message: 'another tab is already paired with this bridge' });
           return ws.close(CLOSE.BUSY, 'busy');
@@ -203,7 +222,28 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
         return;
       }
       touch();
+      if (ws.role === 'agent') {
+        if (!isAgentFrameAllowed(f.type)) {
+          send(ws, { type: 'error', code: 'bad_frame', message: `agents may not send ${f.type}` });
+          return;
+        }
+        if (f.type === 'agent_call') {
+          if (!client || client.readyState !== client.OPEN) return send(ws, { type: 'agent_result', call_id: f.call_id, error: 'no tab is paired with this bridge' });
+          ledger.append('agent_call', { call_id: f.call_id, tool: f.tool });
+          send(client, { type: 'agent_call', call_id: f.call_id, tool: f.tool, input: f.input ?? {} });
+          return;
+        }
+        if (f.type === 'ping') send(ws, { type: 'pong' });
+        return;
+      }
       switch (f.type) {
+        case 'agent_tools':
+          agentTools = f.tools;
+          send(agent, { type: 'agent_tools', tools: agentTools });
+          break;
+        case 'agent_result':
+          send(agent, { type: 'agent_result', call_id: f.call_id, result: f.result, error: f.error });
+          break;
         case 'input':
           safe(() => term.write(f.data));
           break;
@@ -250,6 +290,10 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
         client = null;
         log('client left (shell kept alive for reconnect)');
         armUnpairedTimer();
+      }
+      if (agent === ws) {
+        agent = null;
+        log('agent (MCP) left');
       }
     });
   });

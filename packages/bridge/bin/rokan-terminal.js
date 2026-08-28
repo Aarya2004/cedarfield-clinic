@@ -15,9 +15,38 @@
  */
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { startBridge } from '../src/bridge.js';
+import { CURRENT_FILE, readCurrent, runMcp } from '../src/mcp.js';
 
 const args = process.argv.slice(2);
+
+// `rokan-terminal mcp [--ws url --token hex]` — MCP stdio server relaying the tab's tools (PLAN §13.1)
+if (args[0] === 'mcp') {
+  const f = (name) => {
+    const i = args.indexOf(`--${name}`);
+    return i === -1 ? undefined : args[i + 1];
+  };
+  const cur = readCurrent();
+  const ws = f('ws') ?? cur?.ws;
+  const token = f('token') ?? cur?.token;
+  const mlog = (m) => process.stderr.write(`[rokan-terminal mcp] ${m}\n`);
+  if (!ws || !token) {
+    mlog(`no running bridge found (${CURRENT_FILE} missing) — start \`npx rokan-terminal\` first, or pass --ws and --token`);
+    process.exit(1);
+  }
+  try {
+    await runMcp({ ws, token, log: mlog });
+  } catch (e) {
+    mlog(`cannot connect to the bridge at ${ws}: ${e.message}`);
+    process.exit(1);
+  }
+} else {
+  await main();
+}
+
+async function main() {
 const flag = (name, dflt) => {
   const i = args.indexOf(`--${name}`);
   return i === -1 ? dflt : args[i + 1];
@@ -108,6 +137,21 @@ async function waitForDns(host, budgetMs) {
   return false;
 }
 
+// Advertise this bridge to `rokan-terminal mcp` on the same machine (token stays on disk, 0600).
+try {
+  mkdirSync(dirname(CURRENT_FILE), { recursive: true, mode: 0o700 });
+  writeFileSync(CURRENT_FILE, JSON.stringify({ ws: `ws://127.0.0.1:${bridge.port}`, token, pid: process.pid, mode, started_at: new Date().toISOString() }), { mode: 0o600 });
+  process.on('exit', () => {
+    try {
+      rmSync(CURRENT_FILE, { force: true });
+    } catch {
+      /* ignore */
+    }
+  });
+} catch (e) {
+  log(`could not write ${CURRENT_FILE}: ${e.message}`);
+}
+
 let interrupts = 0;
 process.on('SIGINT', () => {
   interrupts++;
@@ -120,3 +164,4 @@ process.on('SIGINT', () => {
   bridge.close();
   process.exit(0);
 });
+} // main

@@ -142,6 +142,22 @@ test('reconnectNow from busy re-attempts; auth timeout closes as unauthorized', 
   client.close();
 });
 
+test('agent relay: agent_call is surfaced; agent_tools / agent_result are sent when paired', () => {
+  const { client, sock } = make();
+  const calls: unknown[] = [];
+  client.on('agent_call', (c) => calls.push(c));
+  assert.equal(client.publishAgentTools([]), false);
+  client.connect();
+  sock().open();
+  sock().hello();
+  assert.equal(client.publishAgentTools([{ name: 'terminal_status', description: 'd', inputSchema: {} }]), true);
+  sock().frame({ type: 'agent_call', call_id: 'c1', tool: 'terminal_status', input: {} });
+  assert.deepEqual(calls, [{ call_id: 'c1', tool: 'terminal_status', input: {} }]);
+  assert.equal(client.sendAgentResult('c1', { ok: true }), true);
+  assert.deepEqual(sock().parsed().map((f) => f.type), ['auth', 'agent_tools', 'agent_result']);
+  client.close();
+});
+
 test('ledger forward + countersign callback; resize sent only when paired', () => {
   const acks: [number, number, string][] = [];
   const { client, sock } = make({ onCountersign: (c, b, s) => acks.push([c, b, s]) });

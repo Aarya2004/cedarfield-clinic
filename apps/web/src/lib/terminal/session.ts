@@ -12,6 +12,7 @@ import { ledger } from '@/lib/webmcp/ledger';
 import { forge } from '@/lib/webmcp/forge';
 import { note } from '@/lib/webmcp/fieldnotes';
 import { createTerminalAdapter, type LiveTerminalAdapter, type TermLike } from './adapter';
+import { attachAgentRelay } from './agent-relay';
 
 export interface SessionSnapshot {
   mode: 'unpaired' | 'live';
@@ -104,6 +105,7 @@ class SessionStore {
     client.on('status', (st) => this.set({ lastStatus: st }));
     client.on('hello', (h) => this.set({ hello: h }));
     this.set({ mode: 'live', state: 'connecting', host });
+    attachAgentRelay(client);
     client.connect();
     return true;
   }

@@ -3,7 +3,7 @@
  * reconnect with backoff, ping keep-alive, ledger forwarding with bridge countersignatures.
  * The socket is injectable so the state machine is unit-tested without a browser.
  */
-import { AUTH_TIMEOUT_MS, CLOSE_CODES, type BridgeFrame, type BridgeStatus, type ClientFrame, type ClientLedgerRow } from './protocol.ts';
+import { AUTH_TIMEOUT_MS, CLOSE_CODES, type AgentToolDef, type BridgeFrame, type BridgeStatus, type ClientFrame, type ClientLedgerRow } from './protocol.ts';
 
 export type ClientState = 'idle' | 'connecting' | 'paired' | 'busy' | 'unauthorized' | 'disconnected' | 'closed';
 export type HelloFrame = Extract<BridgeFrame, { type: 'hello' }>;
@@ -42,6 +42,7 @@ type Events = {
   exit: number;
   error: ErrorFrame;
   pong: undefined;
+  agent_call: { call_id: string; tool: string; input: Record<string, unknown> };
 };
 
 const OPEN = 1;
@@ -187,6 +188,9 @@ export class BridgeClient {
       case 'pong':
         this.emit('pong', undefined);
         break;
+      case 'agent_call':
+        this.emit('agent_call', { call_id: f.call_id, tool: f.tool, input: f.input ?? {} });
+        break;
       default:
         break;
     }
@@ -264,6 +268,15 @@ export class BridgeClient {
 
   forwardLedger(row: ClientLedgerRow): boolean {
     return this.sendRaw({ type: 'ledger', row });
+  }
+
+  /** MCP relay: publish the tool list the bridge hands to an agent process. */
+  publishAgentTools(tools: AgentToolDef[]): boolean {
+    return this.sendRaw({ type: 'agent_tools', tools });
+  }
+
+  sendAgentResult(call_id: string, result?: unknown, error?: string): boolean {
+    return this.sendRaw({ type: 'agent_result', call_id, result, error });
   }
 
   close(): void {

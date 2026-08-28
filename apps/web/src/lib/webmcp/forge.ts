@@ -165,6 +165,13 @@ export class ForgeEngine {
     return () => this.listeners.delete(fn);
   }
 
+  /** Definitions of the visible forged tools, for a second protocol (MCP relay); same shapes as WebMCP. */
+  toolDefs(): { name: string; description: string; inputSchema: Record<string, unknown>; annotations: { readOnlyHint: boolean } }[] {
+    return [...this.toolMap.values()]
+      .filter((t) => t.visible)
+      .map((t) => ({ name: t.tool, description: forgedDescription(t.spec), inputSchema: forgedInputSchema(t.spec), annotations: { readOnlyHint: t.spec.kind === 'read' } }));
+  }
+
   list(): { visible: number; budget: number; tools: ForgeListEntry[] } {
     const tools = [...this.toolMap.values()]
       .sort((a, b) => a.forgedAt - b.forgedAt)
