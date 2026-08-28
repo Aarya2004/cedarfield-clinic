@@ -1,0 +1,42 @@
+[
+  { "expect": { "tool": "forge_create" } },
+  { "invoke": "forge_create", "input": { "name": "deploy", "description": "build, test, deploy", "commands": ["pnpm build", "pnpm test -- {{filter}}", "netlify deploy --prod"], "params": [{ "name": "filter", "description": "test filter", "example": "unit" }], "kind": "write" } },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.tool; })()", "equals": "forged_deploy" },
+  { "sleep": 100 },
+  { "expect": { "tool": "forged_deploy" } },
+
+  { "invoke": "forged_deploy", "input": { "filter": "a b" } },
+  { "eval": "(() => { const a = window.__rokan.forge.active(); window.__rokanIds = a.proposal_ids; return a.proposal_ids.length; })()", "equals": 3 },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "pnpm build" },
+  { "eval": "window.__rokan.proposals.all().filter(p => p.status === 'queued').length", "equals": 2 },
+
+  { "invoke": "forged_deploy", "input": { "filter": "x" } },
+  { "eval": "window.__rokan.proposals.all().filter(p => p.status === 'awaiting_human').length", "equals": 1 },
+
+  { "invoke": "terminal_propose", "input": { "command": "ls" } },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "pnpm build" },
+
+  { "key": "Enter" },
+  { "sleep": 100 },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "pnpm test -- 'a b'" },
+  { "invoke": "terminal_wait", "input": {}, "inputFrom": { "proposal_id": "window.__rokanIds[0]" }, "outputMatches": "\"status\":\"executed\".*\"next_proposal_id\":\"p_" },
+
+  { "key": "Enter" },
+  { "sleep": 100 },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "netlify deploy --prod" },
+  { "eval": "window.__rokan.proposals.pending()?.why", "equals": "forged_deploy · step 3/3" },
+  { "key": "Escape" },
+  { "sleep": 100 },
+  { "eval": "window.__rokan.forge.active()", "equals": null },
+  { "eval": "window.__rokan.proposals.all().find(p => p.id === window.__rokanIds[2]).reason", "equals": "dismissed_by_human" },
+  { "eval": "window.__rokan.forge.list().tools[0].runs", "equals": 1 },
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'executed').length", "equals": 2 },
+
+  { "invoke": "forged_deploy", "input": { "filter": "unit" } },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "pnpm build" },
+  { "key": "Escape" },
+  { "sleep": 100 },
+  { "eval": "window.__rokan.proposals.all().filter(p => p.status === 'queued').length", "equals": 0 },
+  { "eval": "window.__rokan.proposals.all().slice(-2).map(p => p.reason)", "equals": ["dismissed_by_human", "dismissed_by_human"] },
+  { "eval": "window.__rokan.forge.active()", "equals": null }
+]

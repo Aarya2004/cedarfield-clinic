@@ -18,12 +18,15 @@ export const CLOSE_CODES = {
   SHUTDOWN: 4000,
 } as const;
 
-/** Kinds the client may append to the bridge ledger (bridge adds `executed` + `paired` itself). */
-export type ClientLedgerKind = 'proposed' | 'dismissed' | 'screen_read' | 'forged' | 'invoked';
-
+/** The client's own signed ledger row, forwarded verbatim; the bridge countersigns it. */
 export interface ClientLedgerRow {
-  kind: ClientLedgerKind;
-  [k: string]: string | number | boolean | null | undefined;
+  seq: number;
+  t: string;
+  session: string;
+  kind: string;
+  fields: Record<string, string | number | boolean | null>;
+  prev: string;
+  sig: string;
 }
 
 /** Client → bridge */
@@ -62,7 +65,7 @@ export type BridgeFrame =
   | ({ type: 'status' } & BridgeStatus)
   | { type: 'exit'; code: number }
   | { type: 'error'; code: 'unauthorized' | 'busy' | 'bad_frame' | 'timeout'; message: string }
-  | { type: 'ledger_ack'; seq: number; sig: string }
+  | { type: 'ledger_ack'; seq: number; sig: string; client_seq: number | null }
   | { type: 'pong' };
 
 export interface PairingParams {
@@ -70,13 +73,54 @@ export interface PairingParams {
   token: string;
 }
 
-/** Parse `#ws=…&t=…` from `location.hash`. Returns null when absent or malformed. */
-export function parsePairingHash(hash: string): PairingParams | null {
+/**
+ * Hosts a pairing link may point at. Anything else is refused — a crafted link would otherwise
+ * turn the tab into a keylogger with a spoofed screen (Opus review P1, 2026-08-28).
+ *  - loopback over ws:// (local bridge)
+ *  - *.trycloudflare.com over wss:// (quick tunnel)
+ *  - hosts listed in `extraHosts` (named tunnel / judge sandbox), exact match, wss:// only
+ */
+export function isAllowedBridgeUrl(ws: string, extraHosts: readonly string[] = []): boolean {
+  let u: URL;
+  try {
+    u = new URL(ws);
+  } catch {
+    return false;
+  }
+  if (u.username || u.password || u.search || u.hash) return false;
+  if (u.pathname !== '/' && u.pathname !== '') return false;
+  const host = u.hostname.toLowerCase();
+  if (u.protocol === 'ws:') return host === '127.0.0.1' || host === 'localhost' || host === '[::1]';
+  if (u.protocol !== 'wss:') return false;
+  if (/^[a-z0-9-]+\.trycloudflare\.com$/.test(host)) return true;
+  return extraHosts.some((h) => h.toLowerCase() === host);
+}
+
+/**
+ * Read the pairing params from `location.hash` and immediately remove them from the address bar
+ * (history.replaceState) so the token is neither on camera nor readable later by a third-party
+ * script. The params live only in memory afterwards.
+ */
+export function consumePairingHash(extraHosts: readonly string[] = []): PairingParams | null {
+  if (typeof window === 'undefined') return null;
+  const p = parsePairingHash(window.location.hash, extraHosts);
+  if (window.location.hash) {
+    try {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch {
+      /* ignore */
+    }
+  }
+  return p;
+}
+
+/** Parse `#ws=…&t=…` from `location.hash`. Returns null when absent, malformed or not allowed. */
+export function parsePairingHash(hash: string, extraHosts: readonly string[] = []): PairingParams | null {
   const q = new URLSearchParams(hash.replace(/^#/, ''));
   const ws = q.get('ws');
   const token = q.get('t');
   if (!ws || !token) return null;
-  if (!/^wss?:\/\//.test(ws)) return null;
   if (!/^[a-f0-9]{16,64}$/.test(token)) return null;
+  if (!isAllowedBridgeUrl(ws, extraHosts)) return null;
   return { ws, token };
 }

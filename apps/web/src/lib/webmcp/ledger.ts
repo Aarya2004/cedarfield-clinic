@@ -1,9 +1,11 @@
 /**
  * Client-side ledger: append-only, one row per proposal / keypress-execution / screen read /
  * forge / forged invocation. Each row is HMAC-SHA256-chained with a per-session WebCrypto key
- * so an export can be checked for tampering (`verifyExport`). Mirrored to localStorage and,
- * when a bridge is paired, forwarded as `{type:'ledger'}` frames so the same row also lands in
- * `~/.rokan-terminal/ledger.jsonl`.
+ * held in memory only (never persisted, never exported by default) — that makes the chain
+ * *tamper-evident within the tab*. The proof a third party can check is the **bridge
+ * countersignature**: when paired, every row is forwarded as `{type:'ledger'}`, the bridge signs
+ * it with a key the page never sees and answers `ledger_ack {seq, sig}`, stored as `bridge_sig`.
+ * Say "tamper-evident, countersigned by the bridge" — never "tamper-proof".
  *
  * Every `ms` / `calls` value stored here is measured by the caller that observed it.
  */
@@ -29,12 +31,17 @@ export interface LedgerRow {
   fields: Record<string, string | number | boolean | null>;
   prev: string;
   sig: string;
+  /** HMAC by the bridge (key on the user's disk, never in the page); set on `ledger_ack`. */
+  bridge_sig?: string;
+  bridge_seq?: number;
 }
 
 export interface LedgerExport {
   session: string;
-  key_hex: string;
+  /** present only when exported with `{ includeKey: true }` (tests / self-check) */
+  key_hex?: string;
   rows: LedgerRow[];
+  countersigned: number;
 }
 
 const STORAGE_KEY = 'rokan-terminal.ledger.v1';
@@ -91,21 +98,48 @@ export class Ledger {
   /** Append is serialised so `prev` chains are never interleaved. Resolves with the signed row. */
   append(kind: LedgerKind, fields: LedgerRow['fields'] = {}): Promise<LedgerRow> {
     let out!: LedgerRow;
-    this.chain = this.chain.then(async () => {
+    const step = this.chain.then(async () => {
       const base = { seq: this.rows.length + 1, t: new Date().toISOString(), session: this.session, kind, fields, prev: this.prev };
-      const sig = await hmac(this.keyHex, this.prev + canonical(base));
+      let sig: string;
+      try {
+        sig = await hmac(this.keyHex, this.prev + canonical(base));
+      } catch (e) {
+        // No WebCrypto (e.g. plain http:// on a LAN): keep the ledger alive, mark the row unsigned.
+        sig = 'unsigned:' + (e instanceof Error ? e.name : 'error');
+      }
       out = { ...base, sig };
       this.rows = [...this.rows, out];
       this.prev = sig;
       this.persist();
-      this.forward?.(out);
+      try {
+        this.forward?.(out);
+      } catch {
+        /* bridge forward must never break the chain */
+      }
       this.listeners.forEach((fn) => fn());
     });
-    return this.chain.then(() => out);
+    // A rejected step must never poison the chain for later appends (Opus review P2).
+    this.chain = step.catch(() => undefined);
+    return step.then(() => out);
   }
 
-  export(): LedgerExport {
-    return { session: this.session, key_hex: this.keyHex, rows: this.rows };
+  /** Attach the bridge's countersignature to a row (from a `ledger_ack` frame). */
+  countersign(seq: number, bridgeSeq: number, sig: string): void {
+    const i = this.rows.findIndex((r) => r.seq === seq);
+    if (i === -1 || this.rows[i].bridge_sig) return;
+    const next = { ...this.rows[i], bridge_sig: sig, bridge_seq: bridgeSeq };
+    this.rows = this.rows.map((r, j) => (j === i ? next : r));
+    this.persist();
+    this.listeners.forEach((fn) => fn());
+  }
+
+  export(opts: { includeKey?: boolean } = {}): LedgerExport {
+    return {
+      session: this.session,
+      ...(opts.includeKey ? { key_hex: this.keyHex } : {}),
+      rows: this.rows,
+      countersigned: this.rows.filter((r) => r.bridge_sig).length,
+    };
   }
 
   private persist(): void {
@@ -119,6 +153,7 @@ export class Ledger {
 
 /** Re-computes the chain of an export. `{ok:true}` or the first bad seq. */
 export async function verifyExport(x: LedgerExport): Promise<{ ok: boolean; rows: number; firstBad: number | null }> {
+  if (!x.key_hex) return { ok: false, rows: 0, firstBad: null };
   let prev = '';
   for (const r of x.rows) {
     if (r.prev !== prev) return { ok: false, rows: r.seq - 1, firstBad: r.seq };

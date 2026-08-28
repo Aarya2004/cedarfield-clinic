@@ -6,7 +6,7 @@
  *   {type:"auth", token, cols?, rows?}   must be the first frame, within AUTH_TIMEOUT_MS
  *   {type:"input", data}                 raw keystrokes from the human's tab (the only path to the PTY)
  *   {type:"resize", cols, rows}
- *   {type:"ledger", row}                 client-originated row (proposed / screen_read / forged …); bridge signs + appends
+ *   {type:"ledger", row}                 the client's signed row {seq, kind, fields, sig, …}; bridge countersigns + appends
  *   {type:"ping"}
  *
  * Bridge → client
@@ -14,6 +14,7 @@
  *   {type:"data", data}
  *   {type:"status", cwd, running, last_exit_code, last_command_ms, last_command}
  *   {type:"exit", code}
+ *   {type:"ledger_ack", seq, sig, client_seq}   bridge countersignature for the client row
  *   {type:"error", code, message}        code ∈ unauthorized | busy | bad_frame | timeout
  *   {type:"pong"}
  */

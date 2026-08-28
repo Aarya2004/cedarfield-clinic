@@ -1,0 +1,31 @@
+[
+  { "expect": { "tool": "forge_create" } },
+  { "eval": "(async () => { const out = []; for (let i = 1; i <= 6; i++) { const c = window.__rokan.forge.open({ name: 't' + i, description: 'tool ' + i, commands: ['echo ' + i], params: [], kind: 'read' }); const r = await window.__rokan.forge.approve(c.card_id); out.push(r.tool ?? r.error); await new Promise(r => setTimeout(r, 30)); } return out; })()", "equals": ["forged_t1", "forged_t2", "forged_t3", "forged_t4", "forged_t5", "forged_t6"] },
+  { "sleep": 200 },
+  { "list": true },
+  { "expect": { "noTool": "forged_t1" } },
+  { "expect": { "tool": "forged_t6" } },
+  { "eval": "window.__rokan.forge.list().visible", "equals": 5 },
+  { "eval": "window.__rokan.forge.list().tools.find(t => t.name === 't1').visible", "equals": false },
+  { "eval": "(async () => (await document.modelContext.getTools()).filter(t => t.name.startsWith('forged_')).length)()", "equals": 5 },
+
+  { "invoke": "forged_t1", "input": {}, "expectStatus": "CDP_ERROR", "timeout": 1500 },
+
+  { "eval": "window.__rokan.forge.pin('t2', true).ok", "equals": true },
+  { "eval": "(async () => { const c = window.__rokan.forge.open({ name: 't7', description: 'tool 7', commands: ['echo 7'], params: [], kind: 'read' }); const r = await window.__rokan.forge.approve(c.card_id); return r.tool; })()", "equals": "forged_t7" },
+  { "sleep": 100 },
+  { "eval": "window.__rokan.forge.list().tools.filter(t => t.visible).map(t => t.name)", "equals": ["t2", "t4", "t5", "t6", "t7"] },
+
+  { "eval": "['t4','t5','t6','t7'].map(n => window.__rokan.forge.pin(n, true).ok)", "equals": [true, true, true, true] },
+  { "eval": "(async () => { const c = window.__rokan.forge.open({ name: 't8', description: 'tool 8', commands: ['echo 8'], params: [], kind: 'read' }); const r = await window.__rokan.forge.approve(c.card_id); return r.error; })()", "equals": "unpin_one" },
+  { "eval": "window.__rokan.forge.cards().length", "equals": 1 },
+  { "eval": "window.__rokan.forge.pin('t7', false).ok", "equals": true },
+  { "eval": "(async () => { const r = await window.__rokan.forge.restore('t1'); return [r.tool, r.visible]; })()", "equals": ["forged_t1", true] },
+  { "sleep": 100 },
+  { "expect": { "tool": "forged_t1" } },
+  { "expect": { "noTool": "forged_t7" } },
+  { "eval": "window.__rokan.forge.list().visible", "equals": 5 },
+
+  { "eval": "(async () => { const before = (await document.modelContext.getTools()).length; window.__rokan.forge.unforge('t1'); await new Promise(r => setTimeout(r, 50)); const after = (await document.modelContext.getTools()).length; return before - after; })()", "equals": 1 },
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'unregistered').map(r => r.fields.reason)", "equals": ["evicted", "evicted", "evicted", "unforged"] }
+]

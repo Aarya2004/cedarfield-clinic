@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import { AUTH_TIMEOUT_MS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_VERSION, parseClientFrame } from './protocol.js';
-import { OscParser, prepareShellEnv, shellName } from './shell-integration.js';
+import { OscParser, cleanupShellEnv, prepareShellEnv, shellName } from './shell-integration.js';
 import { Ledger } from './ledger.js';
 
 const require = createRequire(import.meta.url);
@@ -26,7 +26,7 @@ function repairSpawnHelper() {
   }
 }
 
-export async function startBridge({ port = 7331, host = '127.0.0.1', token, shell, cwd, ledgerDir, log = () => {} } = {}) {
+export async function startBridge({ port = 7331, host = '127.0.0.1', token, shell, cwd, ledgerDir, log = () => {}, onIdle } = {}) {
   repairSpawnHelper();
   const pty = await import('node-pty');
   const sessionId = randomBytes(6).toString('hex');
@@ -45,6 +45,14 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   let scrollbackBytes = 0;
 
   let client = null; // the single authenticated socket
+  // No tab paired for IDLE_TIMEOUT_MS → tell the caller, which exits (and so kills the tunnel).
+  let unpairedTimer = null;
+  const armUnpairedTimer = () => {
+    clearTimeout(unpairedTimer);
+    unpairedTimer = setTimeout(() => {
+      if (!client) onIdle?.();
+    }, IDLE_TIMEOUT_MS);
+  };
 
   const send = (ws, obj) => {
     if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
@@ -121,6 +129,7 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
         }
         authed = true;
         clearTimeout(authTimer);
+        clearTimeout(unpairedTimer);
         client = ws;
         touch();
         if (f.cols && f.rows) term.resize(f.cols, f.rows);
@@ -150,9 +159,11 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
           term.resize(f.cols, f.rows);
           break;
         case 'ledger': {
-          const { kind, ...fields } = f.row;
-          const row = ledger.append(kind, { origin: 'client', ...fields });
-          send(ws, { type: 'ledger_ack', seq: row.seq, sig: row.sig });
+          // The client's signed row is stored verbatim under `client` so the bridge signature
+          // covers the client's own sig — the two ledgers cross-verify (Opus review P2).
+          const { kind, seq: client_seq, sig: client_sig, fields, ...rest } = f.row;
+          const row = ledger.append(kind, { origin: 'client', client_seq: client_seq ?? null, client_sig: client_sig ?? null, client: fields ?? rest });
+          send(ws, { type: 'ledger_ack', seq: row.seq, sig: row.sig, client_seq: client_seq ?? null });
           break;
         }
         case 'ping':
@@ -168,12 +179,16 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
       if (client === ws) {
         client = null;
         log('client left (shell kept alive for reconnect)');
+        armUnpairedTimer();
       }
     });
   });
 
   await new Promise((resolve) => http.listen(port, host, resolve));
+  armUnpairedTimer();
   const close = () => {
+    clearTimeout(unpairedTimer);
+    cleanupShellEnv(env);
     for (const ws of wss.clients) ws.close(CLOSE.SHUTDOWN, 'bridge shutting down');
     wss.close();
     http.close();

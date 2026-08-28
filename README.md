@@ -21,8 +21,9 @@ Deadline **2026-09-03 13:00 PT**.
 
 - `apps/web` — Next.js client: tools, ghost text, forge card, ledger. `pnpm typecheck && pnpm lint && pnpm build && pnpm test`.
 - `packages/bridge` — `npx rokan-terminal`: node-pty + WebSocket + Cloudflare quick tunnel + pairing token. `pnpm smoke` runs a real PTY.
-- `infra/sandbox` — judge mode (Cloudflare Sandbox container).
+- `infra/sandbox` — judge mode (Cloudflare Sandbox container). **Not built yet** (D2).
 - `evals/` — headless WebMCP harness + cases.
-- `docs/PLAN.md` (locked decisions §0, contracts §3, security §4) · `docs/PROGRESS.md` (what is green *right now*) · `docs/FIELD-NOTES.md` (measured consumer behaviour) · `docs/WEBMCP-RESEARCH.md`.
+- `vendor/` — rokan-do wheels. **Empty until D3.**
+- `docs/PLAN.md` (locked decisions §0, contracts §3, security §4) · `docs/FORGE-PLAN.md` · `docs/PROGRESS.md` (what is green *right now*) · `docs/FIELD-NOTES.md` (measured consumer behaviour) · `docs/WEBMCP-RESEARCH.md`.
 
 Every millisecond and call count shown on screen is measured by the code that shows it.

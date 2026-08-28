@@ -5,7 +5,7 @@
  * Every timestamp is `performance.now()` at the moment it happened.
  */
 export type ProposalStatus = 'queued' | 'awaiting_human' | 'accepted' | 'dismissed';
-export type DismissReason = 'dismissed_by_human' | 'prior_step_failed' | 'step_timeout' | 'invocation_cancelled';
+export type DismissReason = 'dismissed_by_human' | 'prior_step_failed' | 'step_timeout' | 'invocation_cancelled' | 'superseded';
 
 export interface Proposal {
   id: string;

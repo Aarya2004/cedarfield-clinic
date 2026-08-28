@@ -143,11 +143,71 @@ export interface TerminalWaitInput {
 export type TerminalWaitResult =
   | { status: 'still_waiting'; waited_ms: number }
   | { status: 'unknown_proposal' }
-  | { status: 'dismissed'; waited_ms: number }
-  | { status: 'executed'; waited_ms: number; exit_code?: number | null; ms?: number | null; tail: string[]; shared: boolean };
+  | { status: 'dismissed'; waited_ms: number; reason: string; invocation_id?: string }
+  | {
+      status: 'executed';
+      waited_ms: number;
+      exit_code?: number | null;
+      ms?: number | null;
+      tail: string[];
+      shared: boolean;
+      /** set when the proposal was a step of a forged invocation */
+      invocation_id?: string;
+      next_proposal_id?: string | null;
+    };
 
 export const TERMINAL_WAIT_DESCRIPTION =
   'Block until the human presses Enter (executed) or Esc (dismissed) on the given proposal_id, or ' +
   `return status "still_waiting" after ${WAIT_DEFAULT_MS / 1000} s — call again with the same id to keep ` +
-  'waiting. On executed, returns the exit code, duration and a redacted tail of the output (tail is ' +
-  'empty unless Share screen is on). Never executes anything itself.';
+  'waiting. On executed, returns the exit code, duration, a redacted tail of the output (empty unless ' +
+  'Share screen is on) and, for forged tools, next_proposal_id for the following step. Never executes anything itself.';
+
+// ---------- forge_create / forge_list (engine: forge.ts; spec helpers: forge-spec.ts) ----------
+
+export const forgeCreateSchema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', pattern: '^[a-z][a-z0-9_]{1,28}$', description: 'Tool name; becomes forged_<name>.' },
+    description: { type: 'string', maxLength: 300, description: 'What the tool does, for the agent that will call it.' },
+    commands: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 5,
+      items: { type: 'string', maxLength: 400 },
+      description: "Shell command lines, run in order, each needing the human's Enter. Use {{param}} placeholders.",
+    },
+    params: {
+      type: 'array',
+      maxItems: 6,
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', pattern: '^[a-z][a-z0-9_]{0,19}$' },
+          description: { type: 'string', maxLength: 150 },
+          example: { type: 'string', maxLength: 80 },
+        },
+        required: ['name', 'description', 'example'],
+        additionalProperties: false,
+      },
+    },
+    kind: { type: 'string', enum: ['read', 'write'], description: 'read = only observes; write = changes state (marked CONSEQUENTIAL).' },
+  },
+  required: ['name', 'description', 'commands', 'kind'],
+  additionalProperties: false,
+} as const;
+
+export const FORGE_CREATE_DESCRIPTION =
+  'Propose a new, named tool built from 1–5 shell commands the human has run or will approve. Opens a ' +
+  'Forge card the human must review and approve before anything registers; nothing runs. Use {{param}} ' +
+  'placeholders in commands and declare each param. kind is "read" if the commands only observe, else ' +
+  '"write". Returns a card_id; the tool appears as forged_<name> only after approval.';
+
+export const forgeListSchema = { type: 'object', properties: {}, additionalProperties: false } as const;
+
+export const FORGE_LIST_DESCRIPTION =
+  'List every forged tool (visible or evicted) with its hash, kind, params, pin state and measured stats: ' +
+  'runs, median_ms, last_exit. Visible tools are callable as forged_<name>.';
+
+/** The fixed tools this page registers at load (forged_* are added at runtime). */
+export const FIXED_TOOL_NAMES = ['terminal_propose', 'terminal_read_screen', 'terminal_status', 'terminal_wait', 'forge_create', 'forge_list'] as const;
+export const MAX_VISIBLE_TOOLS = 12;

@@ -1,0 +1,58 @@
+[
+  { "expect": { "tool": "forge_create" } },
+  { "invoke": "forge_create", "input": { "name": "hn_top", "description": "d", "commands": ["rokan do \"top {{n}} HN titles\""], "params": [{ "name": "n", "description": "count", "example": "5" }], "kind": "read" } },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.tool; })()", "equals": "forged_hn_top" },
+  { "sleep": 100 },
+  { "expect": { "tool": "forged_hn_top" } },
+
+  { "invoke": "forged_hn_top", "input": { "n": "3; rm -rf /" } },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "rokan do \"top \"'3; rm -rf /'\" HN titles\"" },
+  { "key": "Escape" },
+  { "sleep": 50 },
+
+  { "invoke": "forged_hn_top", "input": { "n": "$(id)" } },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "rokan do \"top \"'$(id)'\" HN titles\"" },
+  { "key": "Escape" },
+  { "sleep": 50 },
+
+  { "invoke": "forged_hn_top", "input": { "n": "‮3" } },
+  { "eval": "window.__rokan.proposals.pending()", "equals": null },
+  { "invoke": "forged_hn_top", "input": { "n": "a\nb" } },
+  { "eval": "window.__rokan.proposals.pending()", "equals": null },
+
+  { "invoke": "forge_create", "input": { "name": "bad", "description": "d", "commands": ["echo {{x}}"], "params": [], "kind": "read" } },
+  { "eval": "window.__rokan.forge.cards().length", "equals": 0 },
+
+  { "invoke": "forge_create", "input": { "name": "cleanup", "description": "remove build dir", "commands": ["rm -rf build"], "params": [], "kind": "read" } },
+  { "eval": "window.__rokan.forge.cards()[0].kindOverridden", "equals": true },
+  { "eval": "window.__rokan.forge.cards()[0].spec.kind", "equals": "write" },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.tool; })()", "equals": "forged_cleanup" },
+  { "sleep": 100 },
+  { "list": true },
+  { "eval": "(async () => { const ts = await document.modelContext.getTools(); const t = ts.find(x => x.name === 'forged_cleanup'); return [t.annotations?.readOnlyHint ?? null, t.description.startsWith('CONSEQUENTIAL: ')]; })()", "equals": [false, true] },
+
+  { "invoke": "forge_create", "input": { "name": "nuke", "description": "wipe", "commands": ["rm -rf /"], "params": [], "kind": "write" } },
+  { "eval": "window.__rokan.forge.cards()[0].dangerous", "equals": true },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.error; })()", "equals": "needs_confirmation" },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id, undefined, true); return r.tool; })()", "equals": "forged_nuke" },
+  { "sleep": 100 },
+  { "invoke": "forged_nuke", "input": {} },
+  { "eval": "window.__rokan.proposals.pending()?.dangerous", "equals": true },
+  { "eval": "document.body.innerText.includes('Enter twice')", "equals": true },
+  { "key": "Enter" },
+  { "sleep": 50 },
+  { "eval": "window.__rokan.proposals.pending()?.status", "equals": "awaiting_human" },
+  { "eval": "document.body.innerText.includes('press Enter again')", "equals": true },
+  { "key": "Escape" },
+  { "sleep": 50 },
+  { "eval": "window.__rokan.proposals.pending()", "equals": null },
+
+  { "invoke": "terminal_propose", "input": { "command": "rm -rf /" } },
+  { "eval": "window.__rokan.proposals.pending()?.dangerous", "equals": true },
+  { "key": "Enter" },
+  { "sleep": 50 },
+  { "eval": "window.__rokan.proposals.pending()?.status", "equals": "awaiting_human" },
+  { "key": "Enter" },
+  { "sleep": 50 },
+  { "eval": "window.__rokan.proposals.all().slice(-1)[0].status", "equals": "accepted" }
+]

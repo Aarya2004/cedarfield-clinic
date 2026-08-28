@@ -2,7 +2,8 @@
 // Restart the built web app on :3311 and run every evals/cases/*.json through the CDP harness.
 import { spawn, spawnSync, execSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
-const root = new URL('..', import.meta.url).pathname;
+import { fileURLToPath } from 'node:url';
+const root = fileURLToPath(new URL('..', import.meta.url));
 try { execSync('lsof -ti :3311 | xargs kill', { stdio: 'ignore', shell: '/bin/zsh' }); } catch {}
 const srv = spawn('pnpm', ['start', '-p', '3311'], { cwd: `${root}apps/web`, stdio: 'ignore', detached: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -12,7 +12,7 @@ test('rows chain and verify; tampering is detected', async () => {
   await l.append('screen_read', { lines: 60, redactions: 1 });
   assert.deepEqual(forwarded, ['screen_read']);
 
-  const x = l.export();
+  const x = l.export({ includeKey: true });
   assert.equal(x.rows.length, 3);
   assert.equal(x.rows[0].prev, '');
   assert.equal(x.rows[1].prev, x.rows[0].sig);
@@ -27,7 +27,20 @@ test('rows chain and verify; tampering is detected', async () => {
 test('concurrent appends never interleave the chain', async () => {
   const l = new Ledger();
   await Promise.all([1, 2, 3, 4, 5].map((i) => l.append('proposed', { i })));
-  const x = l.export();
+  const x = l.export({ includeKey: true });
   assert.deepEqual(x.rows.map((r) => r.seq), [1, 2, 3, 4, 5]);
   assert.equal((await verifyExport(x)).ok, true);
+});
+
+test('export never carries the key unless asked; countersign attaches bridge_sig once', async () => {
+  const l = new Ledger();
+  await l.append('proposed', { command: 'ls' });
+  assert.equal(l.export().key_hex, undefined);
+  assert.equal(l.export().countersigned, 0);
+  assert.equal((await verifyExport(l.export())).ok, false); // cannot verify without the key — by design
+  l.countersign(1, 7, 'a'.repeat(64));
+  l.countersign(1, 8, 'b'.repeat(64)); // second ack ignored
+  assert.equal(l.export().rows[0].bridge_sig, 'a'.repeat(64));
+  assert.equal(l.export().rows[0].bridge_seq, 7);
+  assert.equal(l.export().countersigned, 1);
 });

@@ -12,8 +12,17 @@ import { join } from 'node:path';
 export const LEDGER_DIR = join(homedir(), '.rokan-terminal');
 export const LEDGER_FILE = join(LEDGER_DIR, 'ledger.jsonl');
 
-function canonical(obj) {
-  return JSON.stringify(obj, Object.keys(obj).sort());
+/**
+ * Canonical JSON: keys sorted recursively at every depth. (A replacer *array* in JSON.stringify
+ * is a recursive allowlist, not a sorter — nested keys absent from the top level would be dropped
+ * from the digest. Found by the Opus review 2026-08-28; covered by smoke check "nested tamper".)
+ */
+function canonical(value) {
+  if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
+  if (value && typeof value === 'object') {
+    return '{' + Object.keys(value).sort().map((k) => JSON.stringify(k) + ':' + canonical(value[k])).join(',') + '}';
+  }
+  return JSON.stringify(value === undefined ? null : value);
 }
 
 export class Ledger {

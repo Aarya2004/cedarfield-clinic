@@ -1,0 +1,39 @@
+[
+  { "list": true },
+  { "expect": { "tool": "forge_create" } },
+  { "expect": { "tool": "forge_list" } },
+  { "eval": "Object.keys(window.__rokan ?? {}).length > 0", "equals": true },
+  { "invoke": "forge_list", "input": {} },
+  { "eval": "window.__rokan.forge.tools().length", "equals": 0 },
+  {
+    "invoke": "forge_create",
+    "input": {
+      "name": "hn_top",
+      "description": "Top N Hacker News titles via rokan do.",
+      "commands": ["rokan do \"top {{n}} HN titles\""],
+      "params": [{ "name": "n", "description": "How many titles", "example": "5" }],
+      "kind": "read"
+    }
+  },
+  { "eval": "window.__rokan.forge.cards().length", "equals": 1 },
+  { "eval": "document.querySelector('[data-card]') !== null", "equals": true },
+  { "expect": { "noTool": "forged_hn_top" } },
+  { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const t0 = performance.now(); const r = await window.__rokan.forge.approve(c.card_id); return { tool: r.tool, hash: r.hash, registered: r.registered, approve_ms: Math.round(performance.now() - t0) }; })()" },
+  { "sleep": 200 },
+  { "expect": { "tool": "forged_hn_top" } },
+  { "list": true },
+  { "eval": "window.__rokan.forge.cards().length", "equals": 0 },
+  { "eval": "window.__rokan.forge.list().visible", "equals": 1 },
+  { "invoke": "forged_hn_top", "input": { "n": "3" } },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "rokan do \"top 3 HN titles\"" },
+  { "eval": "document.body.innerText.replace(/\\s+/g,' ').includes('~ $ rokan do \"top 3 HN titles\"')", "equals": true },
+  { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return p.why; })()", "equals": "forged_hn_top · step 1/1" },
+  { "key": "Enter" },
+  { "sleep": 100 },
+  { "eval": "window.__rokan.proposals.all().find(p => p.id === window.__rokanPid).status", "equals": "accepted" },
+  { "eval": "window.__rokan.forge.active()", "equals": null },
+  { "invoke": "forge_list", "input": {} },
+  { "eval": "window.__rokan.forge.list().tools[0].runs", "equals": 1 },
+  { "eval": "window.__rokan.ledger().rows.map(r => r.kind).filter(k => ['forge_requested','forged','invoked','executed'].includes(k))", "equals": ["forge_requested", "forged", "invoked", "executed"] },
+  { "eval": "document.body.innerText.replace(/\\s+/g,' ').includes('forged_hn_top')", "equals": true }
+]

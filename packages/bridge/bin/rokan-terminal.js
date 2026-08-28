@@ -25,11 +25,22 @@ const app = (flag('app', process.env.ROKAN_TERMINAL_APP || 'https://rokan-termin
 const token = flag('token', randomBytes(16).toString('hex'));
 const shell = flag('shell', undefined);
 const log = (m) => process.stderr.write(`[rokan-terminal] ${m}\n`);
+let tunnel = null;
 
-const bridge = await startBridge({ port, token, shell, log });
+const bridge = await startBridge({
+  port,
+  token,
+  shell,
+  log,
+  onIdle: () => {
+    log('no tab paired for 30 min — stopping the bridge and the tunnel');
+    tunnel?.kill('SIGTERM');
+    bridge.close();
+    process.exit(0);
+  },
+});
 log(`bridge on ws://127.0.0.1:${bridge.port}  shell integration: ${bridge.integration ? 'on' : 'off (zsh only)'}  ledger: ${bridge.ledgerFile}`);
 
-let tunnel = null;
 if (has('no-tunnel')) {
   printLink(`ws://127.0.0.1:${bridge.port}`);
 } else {

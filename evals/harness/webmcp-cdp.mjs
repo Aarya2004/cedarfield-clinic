@@ -7,8 +7,10 @@
  *
  * steps.json = [
  *   {"list": true},                                  // tools seen so far (toolsAdded/toolsRemoved)
- *   {"invoke": "terminal_propose", "input": {"command": "ls"}},
- *   {"key": "Enter"},                                // focus [data-prompt] (or section[tabindex]) then key
+ *   {"invoke": "terminal_propose", "input": {"command": "ls"}},   // + "inputFrom": {"proposal_id": "<js expr>"} for dynamic values
+ *   {"key": "Enter"},                                // raw key event — NO focusing (a human doesn't get that)
+ *   {"focus": "[data-prompt]"},                      // explicit focus, only when the flow genuinely includes a click
+ *   {"eval": "…", "equals": 3} | {"eval": "…", "matches": "regex"}
  *   {"eval": "document.title"},
  *   {"sleep": 500},
  *   {"expect": {"tool": "forged_hn_top"}}            // fails the run if not registered by now
@@ -41,7 +43,13 @@ ws.onmessage = (ev) => {
   if (m.method === 'WebMCP.toolsRemoved') for (const n of m.params.toolNames ?? m.params.tools?.map((t) => t.name) ?? []) tools.delete(n);
   if (m.method === 'WebMCP.toolResponded') responded.push(m.params);
 };
-const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+const SEND_TIMEOUT_MS = 15000;
+const send = (method, params = {}) => new Promise((r) => {
+  const i = ++id;
+  const timer = setTimeout(() => { if (pending.has(i)) { pending.delete(i); r({ error: { message: `timeout after ${SEND_TIMEOUT_MS} ms: ${method}` } }); } }, SEND_TIMEOUT_MS);
+  pending.set(i, (m) => { clearTimeout(timer); r(m); });
+  ws.send(JSON.stringify({ id: i, method, params }));
+});
 const evalJs = async (expression) => { const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); return r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description ?? null; };
 await send('Page.enable'); await send('Runtime.enable'); await send('WebMCP.enable');
 const nav = await send('Page.navigate', { url });
@@ -57,19 +65,32 @@ for (const step of steps) {
       out({ step: 'list', tools: [...tools.values()].map((t) => ({ name: t.name, annotations: t.annotations })), ms: Math.round(performance.now() - t0) });
     } else if (step.invoke) {
       const before = responded.length;
-      await send('WebMCP.invokeTool', { frameId, toolName: step.invoke, input: step.input ?? {} });
+      const input = { ...(step.input ?? {}) };
+      // inputFrom: {field: "<js expression>"} — resolve dynamic values (ids minted earlier in the run)
+      for (const [k, expr] of Object.entries(step.inputFrom ?? {})) input[k] = await evalJs(expr);
+      const inv = await send('WebMCP.invokeTool', { frameId, toolName: step.invoke, input });
       const budget = step.timeout ?? 5000;
-      while (responded.length === before && performance.now() - t0 < budget) await sleep(20);
+      while (responded.length === before && !inv.error && performance.now() - t0 < budget) await sleep(20);
       const r = responded[before];
-      out({ step: 'invoke', tool: step.invoke, input: step.input ?? {}, status: r?.status ?? 'NO_RESPONSE', output: r?.output ?? r?.exception?.description ?? null, ms: Math.round(performance.now() - t0) });
-      if (!r || r.status !== (step.expectStatus ?? 'Completed')) failed++;
+      // CDP_ERROR = the browser refused the call (e.g. the tool was unregistered); NO_RESPONSE = handler never answered
+      const status = inv.error ? 'CDP_ERROR' : (r?.status ?? 'NO_RESPONSE');
+      const output = r?.output ?? r?.exception?.description ?? inv.error?.message ?? null;
+      let ok = status === (step.expectStatus ?? 'Completed');
+      if (ok && step.outputMatches && !new RegExp(step.outputMatches).test(JSON.stringify(output))) ok = false;
+      if (!ok) failed++;
+      out({ step: 'invoke', tool: step.invoke, input, status, output, ...(step.outputMatches ? { outputMatches: step.outputMatches, ok } : {}), ms: Math.round(performance.now() - t0) });
+    } else if (step.focus) {
+      // Explicit only. Harness rule: never arrange a precondition a human would not have.
+      out({ step: 'focus', selector: step.focus, ok: await evalJs(`(() => { const el = document.querySelector(${JSON.stringify(step.focus)}); if (!el) return false; el.focus(); return document.activeElement === el; })()`) });
     } else if (step.key) {
-      await evalJs("(document.querySelector('[data-prompt]') ?? document.querySelector('section[tabindex]') ?? document.body).focus()");
       await send('Input.dispatchKeyEvent', { type: 'keyDown', key: step.key, code: step.key, windowsVirtualKeyCode: step.key === 'Enter' ? 13 : step.key === 'Escape' ? 27 : 0 });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', key: step.key, code: step.key });
       out({ step: 'key', key: step.key, ms: Math.round(performance.now() - t0) });
     } else if (step.eval) {
-      out({ step: 'eval', expr: step.eval, value: await evalJs(step.eval), ms: Math.round(performance.now() - t0) });
+      const value = await evalJs(step.eval);
+      const ok = 'equals' in step ? JSON.stringify(value) === JSON.stringify(step.equals) : 'matches' in step ? new RegExp(step.matches).test(String(value)) : true;
+      if (!ok) failed++;
+      out({ step: 'eval', expr: step.eval, value, ...('equals' in step ? { equals: step.equals, ok } : {}), ...('matches' in step ? { matches: step.matches, ok } : {}), ms: Math.round(performance.now() - t0) });
     } else if (step.sleep) {
       await sleep(step.sleep);
       out({ step: 'sleep', ms: step.sleep });

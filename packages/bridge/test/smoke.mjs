@@ -70,8 +70,8 @@ ws.send(JSON.stringify({ type: 'input', data: 'cd /tmp\r' }));
 const cwdStatus = await until(frames, (f) => f.type === 'status' && f.last_command === 'cd /tmp' && f.running === false, 8000);
 check('cwd tracked via OSC 7', /\/tmp$/.test(cwdStatus?.cwd ?? ''), JSON.stringify(cwdStatus?.cwd));
 
-// 3. client-originated ledger row
-ws.send(JSON.stringify({ type: 'ledger', row: { kind: 'proposed', proposal_id: 'p_smoke', command: 'ls' } }));
+// 3. client-originated ledger row (with a nested object, so the digest must cover depth)
+ws.send(JSON.stringify({ type: 'ledger', row: { kind: 'proposed', proposal_id: 'p_smoke', command: 'ls', params: [{ name: 'n', example: '5' }] } }));
 const ack = await until(frames, (f) => f.type === 'ledger_ack');
 check('client ledger row acknowledged with sig', typeof ack?.sig === 'string' && ack.sig.length === 64);
 
@@ -90,12 +90,22 @@ const kinds = lines.map((r) => r.kind);
 check('ledger has paired/executed/proposed rows', kinds.includes('paired') && kinds.includes('executed') && kinds.includes('proposed'), kinds.join(','));
 const v = verifyLedger(bridge.sessionId, { dir: ledgerDir });
 check('HMAC chain verifies', v.ok && v.rows === lines.length, JSON.stringify(v));
-// tamper → must fail
-const tampered = lines.map((r) => (r.kind === 'executed' ? { ...r, exit_code: 0 } : r));
+// tamper (top-level scalar) → must fail
 const { writeFileSync } = await import('node:fs');
+const tampered = lines.map((r) => (r.kind === 'executed' ? { ...r, exit_code: 0 } : r));
 writeFileSync(join(ledgerDir, 'ledger.jsonl'), tampered.map((r) => JSON.stringify(r)).join('\n') + '\n');
 const v2 = verifyLedger(bridge.sessionId, { dir: ledgerDir });
-check('tampered ledger detected', v2.ok === false, JSON.stringify(v2));
+check('tampered ledger detected (top-level)', v2.ok === false, JSON.stringify(v2));
+// tamper (nested key) → must also fail — the Opus-review regression
+const nested = lines.map((r) => (r.kind === 'proposed' ? { ...r, params: [{ name: 'n', example: '999' }] } : r));
+writeFileSync(join(ledgerDir, 'ledger.jsonl'), nested.map((r) => JSON.stringify(r)).join('\n') + '\n');
+const v3 = verifyLedger(bridge.sessionId, { dir: ledgerDir });
+check('tampered ledger detected (nested object)', v3.ok === false, JSON.stringify(v3));
+// key order must not matter
+const reordered = lines.map((r) => Object.fromEntries(Object.entries(r).reverse()));
+writeFileSync(join(ledgerDir, 'ledger.jsonl'), reordered.map((r) => JSON.stringify(r)).join('\n') + '\n');
+const v4 = verifyLedger(bridge.sessionId, { dir: ledgerDir });
+check('key order does not affect verification', v4.ok === true, JSON.stringify(v4));
 
 ws.close();
 bridge.close();

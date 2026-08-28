@@ -6,7 +6,7 @@
  *
  * zsh only. Other shells spawn without integration and status fields stay null.
  */
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, basename } from 'node:path';
 
@@ -51,6 +51,18 @@ export function prepareShellEnv(shellPath, baseEnv) {
   return { env, integration: true };
 }
 
+/** Remove the throwaway ZDOTDIR created by `prepareShellEnv` (one per bridge run). */
+export function cleanupShellEnv(env) {
+  const dir = env?.ZDOTDIR;
+  if (dir && dir.includes('rokan-zdotdir-')) {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      /* best effort */
+    }
+  }
+}
+
 /**
  * Incremental OSC parser. Feed PTY chunks; get back events:
  *   {kind:"prompt"} | {kind:"start", command} | {kind:"end", code} | {kind:"cwd", cwd}
@@ -93,7 +105,8 @@ export class OscParser {
       i = end + endLen;
       lastSafe = i;
     }
-    this.carry = '';
+    // A chunk ending in a lone ESC may be the first byte of an OSC split at that boundary.
+    this.carry = text.endsWith(ESC) ? ESC : '';
     void lastSafe;
     return events;
   }
