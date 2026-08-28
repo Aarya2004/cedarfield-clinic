@@ -214,7 +214,7 @@ const SANDBOX_URL = process.env.NEXT_PUBLIC_SANDBOX_URL ?? '';
 
 export function PairingCard() {
   const s = useSession();
-  const cmd = 'npx rokan-terminal';
+  const cmd = 'node packages/bridge/bin/rokan-terminal.js'; // `npx rokan-terminal` once published
   const [judgeErr, setJudgeErr] = useState<string | null>(null);
   const [coldMs, setColdMs] = useState<number | null>(null);
   const [tick, setTick] = useState(0);
@@ -240,7 +240,7 @@ export function PairingCard() {
           <button data-judge onClick={tryJudge} disabled={s.judge === 'starting'} className="rounded bg-ink px-3 py-1 text-white disabled:opacity-40">
             {s.judge === 'starting' ? `starting a sandbox… ${tick} s` : 'Try it now — judge sandbox, nothing to install'}
           </button>
-          <span className="ml-2 text-muted">A throttled 30-minute Linux container on Cloudflare; 1 per IP per 10 min.</span>
+          <span className="ml-2 text-muted">A throttled 30-minute Linux container on Cloudflare; 3 per IP per 10 min.</span>
           {coldMs !== null && <span className="ml-2 text-muted">ready in {coldMs} ms</span>}
           {judgeErr && <p className="mt-1 text-danger">{judgeErr}</p>}
         </div>
