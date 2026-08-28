@@ -39,7 +39,7 @@ Last update: **2026-08-28 19:35 PT** by C (Arav's Claude, Fable 5 — owns the w
 
 **Done 17:10 PT:** CI runs the real-PTY smoke + MCP relay on Linux; `rokan-terminal verify` (ledger cross-check, smoke 29/29); **automated demo dry-run** — every §8 beat on a real PTY with a screenshot per beat (`docs/evidence/demo/`, 47 steps, 0 failed). **Incident:** `bin/rokan-terminal.js` was committed empty by a truncating edit (6c9d3d0) and restored in 072f11c; `check` now requires a non-empty bin.
 
-**State (C, 19:35 PT): web is LIVE at https://rokan-terminal.vercel.app with all pass-2 P1s (8/8 fixed with regression tests, 17 findings ticked below); judge sandbox blocked on Workers Paid; remaining open items are P2s, being fixed now.** Since 17:10: `useForgedTools()` hook (§13.7), judge-Worker self-audit (generic 503, no secret in code, self-audit note in SECURITY.md). `pnpm gate` green on macOS; **CI green on Linux** (real-PTY smoke + MCP relay + sandbox check).
+**State (C, 20:30 PT): web is LIVE at https://rokan-terminal.vercel.app with all pass-2 P1s. Every reviewer finding from both passes is closed with a regression test in the same commit (see the ticked lists below; 3 still open). Judge sandbox blocked on Workers Paid only. Gate: web 108/108 · bridge smoke 29/29 + MCP 3/3 · sandbox 11/11 · evals prompt-line 7/7 (new `forge-string-input.json`) · `--bridge` 7/7.** Since 17:10: `useForgedTools()` hook (§13.7), judge-Worker self-audit (generic 503, no secret in code, self-audit note in SECURITY.md). `pnpm gate` green on macOS; **CI green on Linux** (real-PTY smoke + MCP relay + sandbox check).
 
 **The moment a login lands (C runs immediately, no further decisions needed):**
 - **DONE 18:35 PT** — `vercel link --project rokan-terminal --yes` (from `apps/web`, cwd deploy) + `vercel --prod` → **https://rokan-terminal.vercel.app** (200, nonce CSP, HSTS, `X-Frame-Options: DENY`, `?tour=1` 200); redeployed 19:20 PT with the pass-2 P1 fixes. Still to set after the Worker exists: `NEXT_PUBLIC_SANDBOX_URL` + `NEXT_PUBLIC_BRIDGE_HOSTS`, then `vercel --prod` again.
@@ -148,14 +148,14 @@ Full report: `docs/reviews/2026-08-28-fable-1.md`. Gate re-run cold at `4a6e8a6`
 - [x] P2 — `forge-spec.ts:65` — `MUTATING_RE` `>>?\s*\S` flags `2>&1` / `2>/dev/null`, turning read tools into `CONSEQUENTIAL` writes (measured) — Fable [C] — **fixed faf5038**
 - [x] P2 — `forge.ts:264-316` — a rejected `registerTool` (Chrome throws `Duplicate tool name` without a prior abort — measured) leaves a phantom `visible` tool in `toolMap` and the error escapes `approve()`; roll back + typed error — Fable [C] — **fixed faf5038**
 - [x] P2 — `forge.ts:240` — `forged` ledger row stores a command *count*, not the commands; the "traceable log of registration" can't show what was registered — Fable [C] — **fixed faf5038**
-- [ ] P2 — `forge.ts:346` — `unforge` of the tool whose invocation is active leaves `activeInv` set; everything else stays `busy` — Fable [C]
+- [x] P2 — `forge.ts:346` — `unforge` of the tool whose invocation is active leaves `activeInv` set; everything else stays `busy` — Fable [C] — **fixed 84759c8**
 - [x] P2 — `packages/bridge/src/bridge.js:175` — no `'error'` on `http.listen`: stale bridge on 7331 → `EADDRINUSE` stack, process dies (measured) — Fable [C] — **fixed faf5038**
 - [x] P2 — `packages/bridge/src/bridge.js:88` — no `Origin` check on the WS upgrade (defence in depth for a leaked fragment) — Fable [C] — **fixed faf5038**
-- [ ] P2 — `TerminalTools.tsx:32` — unmount before `registerTerminalTools` resolves leaks the AbortController (dispose captured before assignment); not reproduced in dev, code path only — Fable [Ay]
-- [ ] P2 — `docs/FORGE-PLAN.md` §4.3 vs `forge-spec.ts` — plan says quoted placeholders are rejected; code substitutes context-aware (correct); update plan + `ForgeError` — Fable [C]
-- [ ] P2 — `evals/run-all.mjs:6` — hard-kills :3311 (collides with a second reviewer / Aarya's server); take a port — Fable [C]
-- [ ] P2 — `docs/PLAN.md` §4 — "`sudo` in judge mode" hard-block is not implemented anywhere — Fable [C]
-- [ ] P2 — `evals/harness/webmcp-cdp.mjs:60` — no case exercises the JSON-**string** input path (`coerceInput`) that spec-level `executeTool` / ChatGPT use — Fable [C]
+- [x] P2 — `TerminalTools.tsx:32` — unmount before `registerTerminalTools` resolves leaks the AbortController (dispose captured before assignment); not reproduced in dev, code path only — Fable [Ay] — **fixed 84759c8 (registration now lives in App.tsx)**
+- [x] P2 — `docs/FORGE-PLAN.md` §4.3 vs `forge-spec.ts` — plan says quoted placeholders are rejected; code substitutes context-aware (correct); update plan + `ForgeError` — Fable [C] — **fixed c243090**
+- [x] P2 — `evals/run-all.mjs:6` — hard-kills :3311 (collides with a second reviewer / Aarya's server); take a port — Fable [C] — **fixed c243090**
+- [x] P2 — `docs/PLAN.md` §4 — "`sudo` in judge mode" hard-block is not implemented anywhere — Fable [C] — **fixed c243090**
+- [x] P2 — `evals/harness/webmcp-cdp.mjs:60` — no case exercises the JSON-**string** input path (`coerceInput`) that spec-level `executeTool` / ChatGPT use — Fable [C] — **fixed c243090 (`forge-string-input.json`)**
 
 ## Review findings (open) — Opus 5 reviewer, pass 2, 2026-08-28
 
@@ -170,12 +170,12 @@ and all 174 eval steps.
 - [x] P1 — `infra/sandbox/src/worker.ts:37,57` — `cors()` omits headers for a disallowed origin but the handler still runs; a cross-origin simple `POST /api/session` burns a visitor's 1-per-10-min Gate quota, so any page a judge visits can deny them a sandbox. Return 403 before `gate.allow()` — Opus [C] — **fixed abe7be1**
 - [x] P2 — `infra/sandbox/src/worker.ts:102` — `/ws/:sid` instantiates a Sandbox DO for any well-formed sid with no Gate and no ownership check, outside the rate limiter (bridge token still blocks PTY access; unverified against a live deploy) — Opus [C] — **fixed 439cf19**
 - [x] P2 — `infra/sandbox/src/worker.ts:93` — `DELETE /api/session/:sid` has no ownership check and releases on the *caller's* Gate DO, so a third party who learns a sid destroys the victim's sandbox while the victim stays rate-limited — Opus [C] — **fixed 439cf19**
-- [ ] P2 — `packages/bridge/src/mcp.js:108` — `destructiveHint: !readOnlyHint` marks the inert `terminal_propose` destructive over MCP while WebMCP calls it non-destructive: one registry, two protocols, two safety claims — Opus [C]
+- [x] P2 — `packages/bridge/src/mcp.js:108` — `destructiveHint: !readOnlyHint` marks the inert `terminal_propose` destructive over MCP while WebMCP calls it non-destructive: one registry, two protocols, two safety claims — Opus [C] — **fixed 6bf9a76**
 - [x] P2 — `apps/web/src/components/Terminal.tsx:226` — `dir="auto"` on the ghost overlay lets a leading strong-RTL *letter* (not a Cf char, so `validateProposedCommand` passes it) flip render order → displayed ≠ executed; use `dir="ltr"` — Opus [C] — **fixed e34c0c4**
 - [x] P2 — `apps/web/src/lib/webmcp/ledger.ts:12` vs `ws/protocol.ts:24` — client `LedgerKind` permits `executed` (bridge drops it) and omits `executed_step` (bridge accepts it); the enums are not the same set — root cause of the finding above — Opus [C] — **fixed 60999c8**
-- [ ] P2 — `apps/web/src/lib/ws/client.ts:164` — ping `setInterval` assigned without clearing an existing timer; a duplicate `hello` leaks an interval and doubles the ping rate — Opus [C]
-- [ ] P2 — `apps/web/src/lib/ws/client.ts:251` — input queued during `connecting` is flushed on `hello`, so after a shell respawn those bytes land in a different shell than the one the human was typing at — Opus [C]
-- [ ] P2 — `packages/bridge/src/mcp.js:42` — `AgentLink` never reconnects; after a bridge restart the MCP server serves a stale tool list and every call rejects with no recovery — Opus [C]
+- [x] P2 — `apps/web/src/lib/ws/client.ts:164` — ping `setInterval` assigned without clearing an existing timer; a duplicate `hello` leaks an interval and doubles the ping rate — Opus [C] — **fixed 84759c8**
+- [x] P2 — `apps/web/src/lib/ws/client.ts:251` — input queued during `connecting` is flushed on `hello`, so after a shell respawn those bytes land in a different shell than the one the human was typing at — Opus [C] — **fixed 84759c8**
+- [x] P2 — `packages/bridge/src/mcp.js:42` — `AgentLink` never reconnects; after a bridge restart the MCP server serves a stale tool list and every call rejects with no recovery — Opus [C] — **fixed 6bf9a76**
 
 ## Review findings (open) — Fable 5 reviewer, pass #2, 2026-08-28 evening
 
@@ -186,12 +186,12 @@ Full report: `docs/reviews/2026-08-28-fable-2.md`. Gate re-run once at `7a32314`
 - [x] P1 — `apps/web/src/lib/terminal/adapter.ts:172` + `Terminal.tsx:150-152` — without OSC integration (bash/sh/fish) `inflight` never clears: measured `--shell /bin/bash` accept #1 true, `waitProposal` null, accept #2 **false** and the Enter key is consumed silently; same wedge in zsh via Tab-insert → Ctrl-U → Enter — Fable [C] — **fixed 60999c8 + e34c0c4**
 - [x] P1 — `infra/sandbox/src/worker.ts:102-108, 93-100` — `/ws/:sid` and `DELETE` call `getSandbox()` for any well-formed sid; SDK `wsConnect`→`containerFetch`→`startAndWaitForPorts` (containers/dist/lib/container.js:864-870) starts a container on a never-issued sid — bypasses the Gate, 10 requests exhaust `max_instances: 10`; sign the sid (HMAC with a Worker secret) or check the Gate row before `getSandbox` — Fable [C] — **fixed 439cf19**
 - [x] P1 — `apps/web/src/lib/terminal/linebuffer.ts:39-73` + `Terminal.tsx:116-119` — the Enter-gate is blind to paste (`onData` never counted) and ↑/↓/Ctrl-R history (arrows return false): after ⌘V or ↑ the ghost shows on a full line and Enter appends `command\r` to it; SECURITY.md §1 "Enter never sends a proposal over partial input" overclaims (code path) — Fable [C] — **fixed e34c0c4**
-- [ ] P2 — `apps/web/src/lib/terminal/agent-relay.ts:23` — republishes the full tool list on every forge emit (11 sites) → `listChanged` spam to MCP clients per ghost/Enter; publish on definition-key change only — Fable [C]
+- [x] P2 — `apps/web/src/lib/terminal/agent-relay.ts:23` — republishes the full tool list on every forge emit (11 sites) → `listChanged` spam to MCP clients per ghost/Enter; publish on definition-key change only — Fable [C] — **fixed 84759c8**
 - [x] P2 — `forge.ts:447` vs `ws/protocol.ts:24` / `bridge/src/protocol.js:48` / `ledger.ts:15` — forged steps append kind `executed`, the forward allowlist has `executed_step` (emitted nowhere), so step rows are never countersigned (no ✓) — contract drift — Fable [C] — **fixed 60999c8**
-- [ ] P2 — `apps/web/src/lib/ws/client.ts:135-137, 214-217` — the 5 s no-hello timer closes with 4401 → terminal `unauthorized` state, no retry; a slow cold judge pair shows "unauthorized" — Fable [C]
+- [x] P2 — `apps/web/src/lib/ws/client.ts:135-137, 214-217` — the 5 s no-hello timer closes with 4401 → terminal `unauthorized` state, no retry; a slow cold judge pair shows "unauthorized" — Fable [C] — **fixed 84759c8**
 - [x] P2 — `docs/SECURITY.md` §4/§6 — "bridge binds loopback only" is false in judge mode (`--host 0.0.0.0`, worker.ts:70); state it + "reachable only via the Worker proxy" — Fable [C] — **fixed 439cf19**
 - [x] P2 — `infra/sandbox/wrangler.jsonc:25` — 1 session/IP/10 min blocks two judges behind one NAT for 10 min; 3/10 min is safe with `MAX_CONCURRENT_PER_IP=3` — Fable [C] — **fixed 439cf19**
-- [ ] P2 — `packages/bridge/src/mcp.js:42-79` — `AgentLink` never reconnects after a bridge restart; stale tools, every call errors — Fable [C]
+- [x] P2 — `packages/bridge/src/mcp.js:42-79` — `AgentLink` never reconnects after a bridge restart; stale tools, every call errors — Fable [C] — **fixed 6bf9a76**
 - [x] P2 — `components/Terminal.tsx:150-152` — `acceptProposal` return ignored + key consumed → silent dead Enter with no reason shown — Fable [C] — **fixed e34c0c4**
-- [ ] P2 — `apps/web/src/lib/ws/client.ts:163, 251-253` — keystrokes queued while `connecting` are replayed into the shell after a *re*-pair; flush only on first connect — Fable [C]
+- [x] P2 — `apps/web/src/lib/ws/client.ts:163, 251-253` — keystrokes queued while `connecting` are replayed into the shell after a *re*-pair; flush only on first connect — Fable [C] — **fixed 84759c8**
 - [x] P2 — `infra/sandbox/src/worker.ts:93-100` — unauthenticated, unused `DELETE /api/session/:sid`; remove or bind to the token — Fable [C] — **fixed 439cf19**

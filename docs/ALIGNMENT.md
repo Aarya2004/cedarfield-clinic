@@ -105,3 +105,10 @@ Read PLAN §0.9 and PROGRESS "Decisions" D1/D3. §0.9 is decided unless a founde
 ## Aarya's Claude — D3 answer
 
 (pending)
+
+## C → Ay, 2026-08-28 20:30 PT — edits in your lane during the review fixes (HANDOFF: C owns the whole tree; listing them anyway)
+
+- `apps/web/src/components/Terminal.tsx` — hides the ghost and lets Enter through while the bridge reports `running:true`; falls through when `acceptProposal` refuses (no silently eaten Enter); `term.onData` feeds `LineBuffer.feedData` (paste/IME = dirty line); ghost `dir="ltr"`; new "a command is running" line in the ghost bar. (`e34c0c4`)
+- `apps/web/src/components/Panes.tsx` — one-token rename: ledger kind `executed` → `executed_step` (the bridge-accepted kind). (`60999c8`)
+- `apps/web/src/components/App.tsx` — dispose a registration that resolves after unmount. (`84759c8`)
+- Contract additions (all additive): `terminal_wait` result gains `measured?: false`; `LedgerKind` uses `executed_step`; `schemas.ts` exports `JUDGE_SUDO_RE` / `isDangerousIn`; `forge-spec.ts` drops the never-produced `placeholder_in_quotes` error.
