@@ -16,7 +16,7 @@
   { "eval": "window.__rokan.agentTools().map(t => t.name)", "equals": ["terminal_propose", "terminal_read_screen", "terminal_status", "terminal_wait", "forge_create", "forge_list", "forged_count_to"] },
   { "eval": "(async () => { const r = await window.__rokan.agentCall('terminal_status', {}); return [r.paired, r.measured]; })()", "equals": [true, true] },
   { "eval": "(async () => { const r = await window.__rokan.agentCall('forged_count_to', { n: '2' }); const ok = typeof r.invocation_id === 'string'; window.__rokan.forge.cancel(); await new Promise(res => setTimeout(res, 50)); return ok; })()", "equals": true },
-  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'executed').map(r => r.fields.exit_code)", "equals": [0] },
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'executed_step').map(r => r.fields.exit_code)", "equals": [0] },
 
   { "invoke": "forge_create", "input": { "name": "two_step", "description": "fail then never", "commands": ["false", "echo never_runs"], "params": [], "kind": "read" } },
   { "eval": "(async () => { const c = window.__rokan.forge.cards()[0]; const r = await window.__rokan.forge.approve(c.card_id); return r.tool; })()", "equals": "forged_two_step" },

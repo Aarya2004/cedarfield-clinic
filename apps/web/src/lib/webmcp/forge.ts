@@ -444,7 +444,8 @@ export class ForgeEngine {
         }
         const stat: RunStat = { t: new Date().toISOString(), invocation_id: inv.invocation_id, step: i, exit_code: p!.exit_code ?? null, ms: p!.ms ?? null };
         t.stats = [...t.stats, stat].slice(-STATS_WINDOW);
-        void this.deps.ledger.append('executed', { tool: t.tool, invocation_id: inv.invocation_id, step: i, exit_code: stat.exit_code, ms: stat.ms });
+        // `executed_step`, not `executed`: the bridge owns `executed` (from OSC markers) and rejects it from clients.
+        void this.deps.ledger.append('executed_step', { tool: t.tool, invocation_id: inv.invocation_id, step: i, exit_code: stat.exit_code, ms: stat.ms });
         if (typeof stat.exit_code === 'number' && stat.exit_code !== 0) {
           this.dismissFrom(inv, i + 1, 'prior_step_failed');
           return;

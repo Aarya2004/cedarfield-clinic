@@ -142,3 +142,42 @@ test('tail is capped at TAIL_MAX_LINES', async () => {
   const r = await a.waitProposal(p.id, 10);
   assert.equal(r?.tail?.length, 200);
 });
+
+test('regression (Opus pass 2 P1): no shell integration → completes on output silence, unmeasured; next proposal not wedged', async () => {
+  const c = fakeClient();
+  Object.assign(c, { hello: { ...c.hello!, shell: 'bash', integration: false } });
+  const store = new ProposalStore();
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store, quietMs: 20 });
+  const { id } = a.ghostType('echo probe_marker; false', 'probe');
+  assert.equal(a.acceptProposal(id), true);
+  assert.equal(c.sent.at(-1), 'echo probe_marker; false\r');
+  const wait = a.waitProposal(id, 2000);
+  // bash emits no OSC 133 markers and no status frames — only raw output
+  c.emit('data', 'echo probe_marker; false\r\nprobe_');
+  c.emit('data', 'marker\r\n$ ');
+  const r = await wait;
+  assert.ok(r);
+  assert.equal(r.status, 'accepted');
+  assert.equal(r.exit_code, null);
+  assert.equal(r.ms, null);
+  assert.equal(r.measured, false);
+  assert.deepEqual(r.tail, ['echo probe_marker; false', 'probe_marker', '$ ']);
+  assert.equal(a.inFlight(), null);
+  const second = a.ghostType('ls', 'next');
+  assert.equal(a.acceptProposal(second.id), true, 'second proposal must not be refused');
+  a.destroy();
+});
+
+test('with integration, output silence never finishes a command (only the status frame does)', async () => {
+  const c = fakeClient();
+  const store = new ProposalStore();
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store, quietMs: 10 });
+  const { id } = a.ghostType('sleep 1', 'zsh path');
+  a.acceptProposal(id);
+  c.emit('data', ESC + ']133;C' + BEL);
+  await new Promise((r) => setTimeout(r, 40));
+  assert.equal(a.inFlight(), id);
+  c.emit('status', status({ running: false, last_exit_code: 0, last_command_ms: 1000 }));
+  assert.equal((await a.waitProposal(id, 100))?.ms, 1000);
+  a.destroy();
+});

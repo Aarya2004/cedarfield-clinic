@@ -6,7 +6,7 @@ import { Ledger, verifyExport } from './ledger.ts';
 test('rows chain and verify; tampering is detected', async () => {
   const l = new Ledger();
   await l.append('proposed', { proposal_id: 'p1', command: 'ls' });
-  await l.append('executed', { proposal_id: 'p1', exit_code: 0, ms: 12 });
+  await l.append('executed_step', { proposal_id: 'p1', exit_code: 0, ms: 12 });
   const forwarded: string[] = [];
   l.setForward((r) => forwarded.push(r.kind));
   await l.append('screen_read', { lines: 60, redactions: 1 });

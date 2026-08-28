@@ -214,6 +214,7 @@ export function fixedToolDefs(): ToolDef[] {
           shared,
           ...(p.edited ? { edited: true } : {}),
           ...(p.interrupted ? { interrupted: true } : {}),
+          ...(p.measured === false ? { measured: false } : {}),
           ...(p.invocation_id ? { invocation_id: p.invocation_id, next_proposal_id: next } : {}),
         };
       },

@@ -18,6 +18,8 @@ export interface ResolvedProposal extends Proposal {
   interrupted?: boolean;
   /** the human inserted the ghost text (Tab) and edited before running */
   edited?: boolean;
+  /** false when the shell has no integration: completion was inferred from output silence, exit_code/ms unknown */
+  measured?: boolean;
 }
 
 export interface TerminalAdapter {

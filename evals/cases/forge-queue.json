@@ -30,7 +30,7 @@
   { "eval": "window.__rokan.forge.active()", "equals": null },
   { "eval": "window.__rokan.proposals.all().find(p => p.id === window.__rokanIds[2]).reason", "equals": "dismissed_by_human" },
   { "eval": "window.__rokan.forge.list().tools[0].runs", "equals": 1 },
-  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'executed').length", "equals": 2 },
+  { "eval": "window.__rokan.ledger().rows.filter(r => r.kind === 'executed_step').length", "equals": 2 },
 
   { "invoke": "forged_deploy", "input": { "filter": "unit" } },
   { "eval": "window.__rokan.proposals.pending()?.command", "equals": "pnpm build" },

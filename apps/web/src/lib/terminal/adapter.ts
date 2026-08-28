@@ -6,6 +6,12 @@
  * marker arrives: `start` (OSC 133;C in `data`) then a `status` frame with `running:false`
  * carrying the measured `exit_code` / `ms`. Output between Enter and the end marker is kept as
  * a raw `tail` (ANSI-stripped) — `register.ts` redacts it before any agent sees it.
+ *
+ * Without shell integration (`hello.integration === false`: bash, sh, any non-zsh shell) the bridge
+ * emits neither OSC 133 markers nor `status` frames, so an accepted proposal would stay in flight
+ * forever and every later `acceptProposal` would be refused. Fallback: the proposal completes when
+ * output has been quiet for `FALLBACK_QUIET_MS`, with `exit_code: null`, `ms: null`,
+ * `measured: false` — the honest values; nothing is inferred.
  */
 import type { BridgeStatus } from '@/lib/ws/protocol';
 import type { HelloFrame } from '@/lib/ws/client';
@@ -57,19 +63,44 @@ interface InFlight {
 }
 
 export const TAIL_MAX_LINES = 200;
+/** No-integration fallback: a command counts as finished after this much output silence. */
+export const FALLBACK_QUIET_MS = 750;
 
-export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike; share: () => boolean; store?: ProposalStore }): LiveTerminalAdapter {
+export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike; share: () => boolean; store?: ProposalStore; quietMs?: number }): LiveTerminalAdapter {
   const store = deps.store ?? defaultStore;
   const detector = new PromptDetector();
+  const quietMs = deps.quietMs ?? FALLBACK_QUIET_MS;
   let inflight: InFlight | null = null;
+  let quietTimer: ReturnType<typeof setTimeout> | null = null;
   const results = new Map<string, ResolvedProposal>();
   const waiters = new Map<string, Set<(r: ResolvedProposal) => void>>();
 
+  const integrated = () => deps.client.hello?.integration === true;
+
   const finish = (r: ResolvedProposal) => {
+    if (quietTimer) clearTimeout(quietTimer);
+    quietTimer = null;
     results.set(r.id, r);
     inflight = null;
     waiters.get(r.id)?.forEach((fn) => fn(r));
     waiters.delete(r.id);
+  };
+
+  const tailOf = (f: InFlight) => {
+    const lines = f.partial ? [...f.tail, f.partial] : f.tail;
+    return lines.filter((l, i, a) => !(i === a.length - 1 && l.trim() === '')).slice(-TAIL_MAX_LINES);
+  };
+
+  /** (Re)arm the quiescence timer — only used when the shell has no integration. */
+  const armQuiet = () => {
+    if (quietTimer) clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => {
+      quietTimer = null;
+      if (!inflight) return;
+      const p = store.get(inflight.id);
+      if (!p) return;
+      finish({ ...p, status: 'accepted', exit_code: null, ms: null, measured: false, tail: tailOf(inflight), ...(inflight.edited ? { edited: true } : {}) });
+    }, quietMs);
   };
 
   const offData = deps.client.on('data', (chunk) => {
@@ -83,6 +114,7 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
         if (inflight.tail.length < TAIL_MAX_LINES) inflight.tail.push(line);
       }
       for (const ev of events) if (ev.kind === 'start' && inflight.phase === 'sent') inflight.phase = 'running';
+      if (!integrated()) armQuiet();
     }
   });
 
@@ -90,13 +122,12 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     if (!inflight || inflight.phase !== 'running' || st.running) return;
     const p = store.get(inflight.id);
     if (!p) return;
-    const lines = inflight.partial ? [...inflight.tail, inflight.partial] : inflight.tail;
     finish({
       ...p,
       status: 'accepted',
       exit_code: st.last_exit_code,
       ms: st.last_command_ms,
-      tail: lines.filter((l, i, a) => !(i === a.length - 1 && l.trim() === '')).slice(-TAIL_MAX_LINES),
+      tail: tailOf(inflight),
       ...(inflight.edited ? { edited: true } : {}),
     });
   });
@@ -175,11 +206,17 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
       }
       store.resolve(id, 'accepted', undefined, { edited: !!opts.edited });
       inflight = { id, command: p.command, edited: !!opts.edited, phase: 'sent', tail: [], partial: '', startedAt: performance.now() };
+      if (!integrated()) {
+        inflight.phase = 'running'; // no OSC 133;C will ever come
+        armQuiet();
+      }
       return true;
     },
     result: (id) => results.get(id),
     inFlight: () => inflight?.id ?? null,
     destroy: () => {
+      if (quietTimer) clearTimeout(quietTimer);
+      quietTimer = null;
       offData();
       offStatus();
       offState();

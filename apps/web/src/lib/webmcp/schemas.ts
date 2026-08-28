@@ -160,13 +160,16 @@ export type TerminalWaitResult =
       edited?: boolean;
       /** the bridge disconnected before the end marker; exit_code is null, tail is partial */
       interrupted?: boolean;
+      /** false when the shell has no integration: completion inferred from output silence; exit_code/ms are null, not measured */
+      measured?: boolean;
     };
 
 export const TERMINAL_WAIT_DESCRIPTION =
   'Block until the human presses Enter (executed) or Esc (dismissed) on the given proposal_id, or ' +
   `return status "still_waiting" after ${WAIT_DEFAULT_MS / 1000} s — call again with the same id to keep ` +
   'waiting. On executed, returns the exit code, duration, a redacted tail of the output (empty unless ' +
-  'Share screen is on) and, for forged tools, next_proposal_id for the following step. Never executes anything itself.';
+  'Share screen is on) and, for forged tools, next_proposal_id for the following step. measured:false means the ' +
+  'shell has no integration: exit_code/ms are null and completion was inferred from output silence. Never executes anything itself.';
 
 // ---------- forge_create / forge_list (engine: forge.ts; spec helpers: forge-spec.ts) ----------
 

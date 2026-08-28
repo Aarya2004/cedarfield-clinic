@@ -173,7 +173,7 @@ export function LedgerPane() {
           {[...rows].reverse().map((r) => (
             <li key={r.seq} className="flex gap-1 whitespace-nowrap" title={summarise(r)}>
               <span className="text-muted">{r.seq}</span>
-              <span className={r.kind === 'forged' ? 'text-accent' : r.kind === 'executed' ? 'text-ok' : r.kind === 'dismissed' ? 'text-muted' : ''}>{r.kind}</span>
+              <span className={r.kind === 'forged' ? 'text-accent' : r.kind === 'executed_step' ? 'text-ok' : r.kind === 'dismissed' ? 'text-muted' : ''}>{r.kind}</span>
               <span className="min-w-0 truncate text-muted">{summarise(r)}</span>
               {r.bridge_sig && <span title="countersigned by the bridge">✓</span>}
             </li>
@@ -193,7 +193,7 @@ function summarise(r: LedgerRow): string {
       return `${f.tool} ${f.hash} ${f.kind}`;
     case 'invoked':
       return `${f.tool} ×${f.steps} ${f.hash}`;
-    case 'executed':
+    case 'executed_step':
       return `${f.tool ?? ''} step ${f.step ?? ''} exit ${f.exit_code ?? '–'} · ${f.ms ?? '–'} ms`;
     case 'screen_read':
       return f.shared ? `${f.lines} lines, ${f.redactions} redacted` : 'refused (share off)';

@@ -50,7 +50,7 @@
   { "shot": "docs/evidence/demo/beat5-recovery.png" },
 
   { "invoke": "forge_list", "input": {}, "outputMatches": "forged_count_to.*forged_deploy" },
-  { "eval": "window.__rokan.ledger().rows.map(r => r.kind).filter(k => ['forged','invoked','executed','screen_read','dismissed'].includes(k)).length >= 8", "equals": true },
+  { "eval": "window.__rokan.ledger().rows.map(r => r.kind).filter(k => ['forged','invoked','executed_step','screen_read','dismissed'].includes(k)).length >= 8", "equals": true },
   { "eval": "window.__rokan.ledger().countersigned >= 5", "equals": true },
   { "shot": "docs/evidence/demo/beat6-ledger.png" }
 ]

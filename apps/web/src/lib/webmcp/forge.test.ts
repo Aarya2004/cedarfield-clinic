@@ -1,6 +1,7 @@
 // Run: node --experimental-strip-types --test src/lib/webmcp/forge.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { CLIENT_LEDGER_KINDS } from '../ws/protocol.ts';
 import { ForgeEngine } from './forge.ts';
 import { ProposalStore } from './proposals.ts';
 import { Ledger } from './ledger.ts';
@@ -225,7 +226,9 @@ test('invoke: substitution, one ghost-typed + queued steps, Enter/Enter/Esc, sta
   assert.equal(l.median_ms, null); // final step was dismissed → no final-step ms
   const kinds = ledger.snapshot().map((x) => x.kind);
   assert.ok(kinds.includes('invoked'));
-  assert.equal(kinds.filter((k) => k === 'executed').length, 2);
+  assert.equal(kinds.filter((k) => k === 'executed_step').length, 2);
+  // regression (Opus pass 2 P1): every client-produced kind must be one the bridge countersigns
+  for (const k of kinds) assert.ok(CLIENT_LEDGER_KINDS.has(k), `bridge would drop kind ${k}`);
   assert.ok(kinds.includes('dismissed'));
 });
 

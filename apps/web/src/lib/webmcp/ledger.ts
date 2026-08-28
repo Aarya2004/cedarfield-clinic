@@ -9,10 +9,11 @@
  *
  * Every `ms` / `calls` value stored here is measured by the caller that observed it.
  */
+/** Must stay a subset of `CLIENT_LEDGER_KINDS` (ws/protocol.ts): `executed` is bridge-only. */
 export type LedgerKind =
   | 'proposed'
   | 'dismissed'
-  | 'executed'
+  | 'executed_step'
   | 'screen_read'
   | 'registered'
   | 'unregistered'
