@@ -3,9 +3,17 @@
  *
  * Enter on a ghost-typed proposal → `acceptProposal(id)` sends exactly `command + "\r"` to the
  * bridge (the only path to the PTY), then the proposal is "in flight" until the shell's end
- * marker arrives: `start` (OSC 133;C in `data`) then a `status` frame with `running:false`
- * carrying the measured `exit_code` / `ms`. Output between Enter and the end marker is kept as
- * a raw `tail` (ANSI-stripped) — `register.ts` redacts it before any agent sees it.
+ * marker arrives: `start` (OSC 133;C in `data`), then `end` (OSC 133;D in `data`) **and** the
+ * `status` frame with `running:false` carrying the measured `exit_code` / `ms` — both, in either
+ * order, so the tail always contains the output that shares a frame with the end marker (Fable F1).
+ * Output between Enter and the end marker is kept as a raw `tail` (ANSI-stripped) — `register.ts`
+ * redacts it before any agent sees it.
+ *
+ * Honest refusals / non-executions (Fable F2/F3):
+ * - while the bridge reports `running:true` (a program owns stdin) `acceptProposal` returns false —
+ *   the caller must let the key through as an ordinary Enter;
+ * - a prompt marker (133;A) arriving before any 133;C means nothing ran (empty line, Tab-insert then
+ *   Ctrl-U, …): the proposal resolves with `exit_code:null, ms:null, measured:false`.
  *
  * Without shell integration (`hello.integration === false`: bash, sh, any non-zsh shell) the bridge
  * emits neither OSC 133 markers nor `status` frames, so an accepted proposal would stay in flight
@@ -56,7 +64,10 @@ interface InFlight {
   id: string;
   command: string;
   edited: boolean;
-  phase: 'sent' | 'running';
+  /** sent → running (133;C seen) → ended (133;D seen; waiting for / already holding the status) */
+  phase: 'sent' | 'running' | 'ended';
+  /** end status that arrived before the data frame carrying 133;D (older bridge order) */
+  pendingStatus: BridgeStatus | null;
   tail: string[];
   partial: string;
   startedAt: number;
@@ -91,45 +102,65 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     return lines.filter((l, i, a) => !(i === a.length - 1 && l.trim() === '')).slice(-TAIL_MAX_LINES);
   };
 
+  /** Nothing measurable will come: close the in-flight proposal honestly (exit/ms unknown). */
+  const finishUnmeasured = (f: InFlight) => {
+    const p = store.get(f.id);
+    if (!p) {
+      inflight = null;
+      return;
+    }
+    finish({ ...p, status: 'accepted', exit_code: null, ms: null, measured: false, tail: tailOf(f), ...(f.edited ? { edited: true } : {}) });
+  };
+
+  const finishMeasured = (f: InFlight, st: BridgeStatus) => {
+    const p = store.get(f.id);
+    if (!p) {
+      inflight = null;
+      return;
+    }
+    finish({ ...p, status: 'accepted', exit_code: st.last_exit_code, ms: st.last_command_ms, tail: tailOf(f), ...(f.edited ? { edited: true } : {}) });
+  };
+
   /** (Re)arm the quiescence timer — only used when the shell has no integration. */
   const armQuiet = () => {
     if (quietTimer) clearTimeout(quietTimer);
     quietTimer = setTimeout(() => {
       quietTimer = null;
-      if (!inflight) return;
-      const p = store.get(inflight.id);
-      if (!p) return;
-      finish({ ...p, status: 'accepted', exit_code: null, ms: null, measured: false, tail: tailOf(inflight), ...(inflight.edited ? { edited: true } : {}) });
+      if (inflight) finishUnmeasured(inflight);
     }, quietMs);
   };
 
   const offData = deps.client.on('data', (chunk) => {
     const events = detector.feed(chunk);
-    if (inflight) {
-      // capture output lines (ANSI stripped) for the tail
-      const text = stripAnsi(inflight.partial + chunk).replace(/\r/g, '');
-      const parts = text.split('\n');
-      inflight.partial = parts.pop() ?? '';
-      for (const line of parts) {
-        if (inflight.tail.length < TAIL_MAX_LINES) inflight.tail.push(line);
-      }
-      for (const ev of events) if (ev.kind === 'start' && inflight.phase === 'sent') inflight.phase = 'running';
-      if (!integrated()) armQuiet();
+    const f = inflight;
+    if (!f) return;
+    // capture output lines (ANSI stripped) for the tail — before the markers are interpreted, so
+    // output sharing a frame with 133;D is in the tail when the proposal finishes
+    const text = stripAnsi(f.partial + chunk).replace(/\r/g, '');
+    const parts = text.split('\n');
+    f.partial = parts.pop() ?? '';
+    for (const line of parts) {
+      if (f.tail.length < TAIL_MAX_LINES) f.tail.push(line);
     }
+    for (const ev of events) {
+      if (inflight !== f) break; // finished inside this loop
+      if (ev.kind === 'start' && f.phase === 'sent') {
+        f.phase = 'running';
+      } else if (ev.kind === 'end' && f.phase === 'running') {
+        f.phase = 'ended';
+        if (f.pendingStatus) finishMeasured(f, f.pendingStatus);
+      } else if (ev.kind === 'prompt' && f.phase === 'sent' && integrated()) {
+        finishUnmeasured(f); // the prompt came back without a 133;C: nothing ran
+      }
+    }
+    if (inflight === f && !integrated()) armQuiet();
   });
 
   const offStatus = deps.client.on('status', (st) => {
-    if (!inflight || inflight.phase !== 'running' || st.running) return;
-    const p = store.get(inflight.id);
-    if (!p) return;
-    finish({
-      ...p,
-      status: 'accepted',
-      exit_code: st.last_exit_code,
-      ms: st.last_command_ms,
-      tail: tailOf(inflight),
-      ...(inflight.edited ? { edited: true } : {}),
-    });
+    const f = inflight;
+    if (!f || st.running) return;
+    if (f.phase === 'ended') finishMeasured(f, st);
+    else if (f.phase === 'running') f.pendingStatus = st; // the data frame carrying 133;D is still to come
   });
 
   const offState = deps.client.on('state', (s) => {
@@ -200,12 +231,17 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     acceptProposal: (id, opts = {}) => {
       const p = store.get(id);
       if (!p || p.status !== 'awaiting_human') return false;
-      if (inflight) return false; // one command in flight at a time
+      // A program owns stdin (cat, vim, ssh, python…): typing the proposal would feed it, not the shell.
+      if (integrated() && deps.client.lastStatus?.running) return false;
+      if (inflight) {
+        if (integrated()) return false; // one command in flight at a time; it will end with a marker
+        finishUnmeasured(inflight); // no integration: nothing can observe the previous one ending — never wedge
+      }
       if (!opts.alreadySent) {
         if (!deps.client.sendInput(p.command + '\r')) return false;
       }
       store.resolve(id, 'accepted', undefined, { edited: !!opts.edited });
-      inflight = { id, command: p.command, edited: !!opts.edited, phase: 'sent', tail: [], partial: '', startedAt: performance.now() };
+      inflight = { id, command: p.command, edited: !!opts.edited, phase: 'sent', pendingStatus: null, tail: [], partial: '', startedAt: performance.now() };
       if (!integrated()) {
         inflight.phase = 'running'; // no OSC 133;C will ever come
         armQuiet();

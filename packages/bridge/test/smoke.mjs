@@ -79,6 +79,10 @@ const status = await until(frames, (f) => f.type === 'status' && f.last_command 
 check('status reports honest exit code (false → 1)', status?.last_exit_code === 1, JSON.stringify(status));
 check('status carries measured ms', Number.isInteger(status?.last_command_ms) && status.last_command_ms >= 0, `${status?.last_command_ms} ms`);
 check('status carries the command text', status?.last_command === 'echo hi_from_pty; false', JSON.stringify(status?.last_command));
+// Fable pass 2 F1: the data frame carrying the end marker (and whatever output shares it) must be
+// delivered BEFORE the end status, or the client's tail misses the last lines.
+const endData = frames.find((f) => f.type === 'data' && f.data.includes(']133;D;1'));
+check('end-marker data frame precedes its status frame (tail complete)', !!endData && !!status && frames.indexOf(endData) < frames.indexOf(status), `data#${frames.indexOf(endData)} status#${frames.indexOf(status)}`);
 
 await typeCommand('cd /tmp');
 const cwdStatus = await until(frames, (f) => f.type === 'status' && f.last_command === 'cd /tmp' && f.running === false, 8000);

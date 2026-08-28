@@ -71,10 +71,11 @@ test('Enter sends command+CR once; end marker → exit_code/ms/tail; waitProposa
   assert.equal(store.get(p.id)?.status, 'accepted');
   assert.equal(a.acceptProposal(p.id), false);
   assert.equal(a.inFlight(), p.id);
-  // shell echoes the line, marks start, prints output, then bridge sends status (before the D-marker data)
+  // shell echoes the line, marks start, prints output; the bridge sends the data frame carrying
+  // the end marker (and the last output line) BEFORE the status frame
   c.emit('data', `echo hi; false\r\n${ESC}]133;C${BEL}`);
   c.emit('data', `hi\r\n`);
-  c.emit('data', `${ESC}[31mred${ESC}[0m\r\n`);
+  c.emit('data', `${ESC}[31mred${ESC}[0m\r\n${ESC}]133;D;1${BEL}`);
   c.emit('status', status({ running: false, last_exit_code: 1, last_command_ms: 7, last_command: 'echo hi; false' }));
   const r = await w;
   assert.equal(r?.status, 'accepted');
@@ -95,7 +96,80 @@ test('a status with running:false BEFORE the start marker is ignored (previous c
   assert.equal(await a.waitProposal(p.id, 15), null); // still in flight
   c.emit('data', `${ESC}]133;C${BEL}`);
   c.emit('status', status({ running: false, last_exit_code: 0, last_command_ms: 1000, last_command: 'sleep 1' }));
+  assert.equal(await a.waitProposal(p.id, 15), null); // end status alone is not enough: the D-marker data is still to come
+  c.emit('data', `${ESC}]133;D;0${BEL}`);
   assert.equal((await a.waitProposal(p.id, 15))?.exit_code, 0);
+});
+
+test('regression (Fable pass 2 F1): output sharing a frame with the end marker is in the tail, whichever order status and data arrive', async () => {
+  for (const statusFirst of [false, true]) {
+    const store = new ProposalStore();
+    const c = fakeClient();
+    const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store });
+    const p = store.propose('echo 1; echo 2; echo 3');
+    const w = a.waitProposal(p.id, 1000);
+    a.acceptProposal(p.id);
+    c.emit('data', `echo 1; echo 2; echo 3\r\n${ESC}]133;C${BEL}1\r\n`);
+    const st = status({ running: false, last_exit_code: 0, last_command_ms: 3, last_command: 'echo 1; echo 2; echo 3' });
+    if (statusFirst) c.emit('status', st);
+    c.emit('data', `2\r\n3\r\n${ESC}]133;D;0${BEL}${ESC}]133;A${BEL}$ `);
+    if (!statusFirst) c.emit('status', st);
+    const r = await w;
+    assert.deepEqual(r?.tail, ['echo 1; echo 2; echo 3', '1', '2', '3', '$ '], `statusFirst=${statusFirst}`);
+    assert.equal(r?.exit_code, 0);
+    a.destroy();
+  }
+});
+
+test('regression (Fable pass 2 F2): while the bridge reports running:true, Enter on a ghost is refused and nothing is sent', async () => {
+  const store = new ProposalStore();
+  const c = fakeClient();
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store });
+  c.emit('status', status({ running: true, last_command: 'cat' }));
+  const p = store.propose('echo PROPOSAL_WENT_TO_CAT');
+  assert.equal(a.acceptProposal(p.id), false);
+  assert.deepEqual(c.sent, []);
+  assert.equal(store.get(p.id)?.status, 'awaiting_human');
+  c.emit('data', `${ESC}]133;D;0${BEL}${ESC}]133;A${BEL}`);
+  c.emit('status', status({ running: false, last_command: 'cat' }));
+  assert.equal(a.acceptProposal(p.id), true);
+  assert.deepEqual(c.sent, ['echo PROPOSAL_WENT_TO_CAT\r']);
+  a.destroy();
+});
+
+test('regression (Fable pass 2 F3): Tab-insert → Ctrl-U → Enter (prompt returns without 133;C) resolves unmeasured; adapter is not wedged', async () => {
+  const store = new ProposalStore();
+  const c = fakeClient();
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store });
+  const p = store.propose('ls');
+  const w = a.waitProposal(p.id, 1000);
+  a.acceptProposal(p.id, { edited: true, alreadySent: true });
+  c.emit('data', `\r\n${ESC}]133;A${BEL}$ `); // zsh: precmd only, nothing ran
+  const r = await w;
+  assert.equal(r?.status, 'accepted');
+  assert.equal(r?.exit_code, null);
+  assert.equal(r?.measured, false);
+  assert.equal(a.inFlight(), null);
+  const q = store.propose('pwd');
+  assert.equal(a.acceptProposal(q.id), true);
+  a.destroy();
+});
+
+test('regression (Fable pass 2 F3): without integration a second Enter closes the first proposal unmeasured instead of refusing', async () => {
+  const store = new ProposalStore();
+  const c = fakeClient();
+  Object.assign(c, { hello: { ...c.hello!, shell: 'bash', integration: false } });
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store, quietMs: 10_000 });
+  const p = store.propose('sleep 5');
+  const w = a.waitProposal(p.id, 1000);
+  assert.equal(a.acceptProposal(p.id), true);
+  const q = store.propose('ls');
+  assert.equal(a.acceptProposal(q.id), true);
+  const r = await w;
+  assert.equal(r?.measured, false);
+  assert.equal(a.inFlight(), q.id);
+  assert.deepEqual(c.sent, ['sleep 5\r', 'ls\r']);
+  a.destroy();
 });
 
 test('Esc resolves waitProposal with dismissed; abort → null; unknown → null', async () => {
@@ -138,6 +212,7 @@ test('tail is capped at TAIL_MAX_LINES', async () => {
   a.acceptProposal(p.id);
   c.emit('data', `${ESC}]133;C${BEL}`);
   for (let i = 0; i < 300; i++) c.emit('data', `line ${i}\r\n`);
+  c.emit('data', `${ESC}]133;D;0${BEL}`);
   c.emit('status', status({ last_command: 'yes' }));
   const r = await a.waitProposal(p.id, 10);
   assert.equal(r?.tail?.length, 200);
@@ -177,6 +252,7 @@ test('with integration, output silence never finishes a command (only the status
   c.emit('data', ESC + ']133;C' + BEL);
   await new Promise((r) => setTimeout(r, 40));
   assert.equal(a.inFlight(), id);
+  c.emit('data', `${ESC}]133;D;0${BEL}`);
   c.emit('status', status({ running: false, last_exit_code: 0, last_command_ms: 1000 }));
   assert.equal((await a.waitProposal(id, 100))?.ms, 1000);
   a.destroy();

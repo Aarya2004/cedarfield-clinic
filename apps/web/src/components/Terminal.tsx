@@ -50,8 +50,13 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
   const lineBuf = useRef(new LineBuffer());
   const [lineEmpty, setLineEmpty] = useState(true);
   const [pending, setPending] = useState<Proposal | undefined>(undefined);
+  // true while the bridge honestly reports a command running (shell integration only): a program
+  // owns stdin, so the ghost is hidden and Enter is an ordinary key (Fable F2).
+  const [running, setRunning] = useState(false);
+  const runningRef = useRef(false);
   armedRef.current = armed;
   insertedRef.current = insertedId;
+  runningRef.current = running;
 
   // proposal subscription
   useEffect(() => {
@@ -65,6 +70,14 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
   }, []);
 
   useEffect(() => lineBuf.current.subscribe(() => setLineEmpty(lineBuf.current.empty)), []);
+  useEffect(() => {
+    const update = () => {
+      const s = session.snapshot();
+      setRunning(!!(s.hello?.integration && s.lastStatus?.running));
+    };
+    update();
+    return session.subscribe(update);
+  }, []);
 
   // xterm lifecycle
   useEffect(() => {
@@ -115,6 +128,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
       cleanup.push(client.on('exit', () => lineBuf.current.reset()));
       const dataDisp = term.onData((d) => {
         client.sendInput(d);
+        lineBuf.current.feedData(d); // paste / IME / middle-click → line is dirty
       });
       cleanup.push(() => dataDisp.dispose());
       const selDisp = term.onSelectionChange(() => {
@@ -140,15 +154,15 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
             setArmed(null);
             return consume();
           }
-          if (lineBuf.current.empty && insertedRef.current !== p.id) {
+          if (!runningRef.current && lineBuf.current.empty && insertedRef.current !== p.id) {
             if (ev.key === 'Enter') {
               if (p.dangerous && armedRef.current !== p.id) {
                 setArmed(p.id);
                 return consume();
               }
               setArmed(null);
-              adapter.acceptProposal(p.id);
-              return consume();
+              if (adapter.acceptProposal(p.id)) return consume();
+              note('ghost.enter_refused'); // not accepted (program running / not paired): fall through as an ordinary Enter
             }
             if (ev.key === 'Tab') {
               client.sendInput(p.command);
@@ -198,7 +212,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
     const host = hostRef.current;
     const ghost = ghostRef.current;
     if (!term || !host || !ghost) return;
-    const show = !!pending && lineEmpty && insertedId !== pending.id;
+    const show = !!pending && lineEmpty && !running && insertedId !== pending.id;
     if (!show) {
       ghost.style.display = 'none';
       ghost.removeAttribute('data-ghost');
@@ -223,7 +237,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
     ghost.textContent = pending.command;
     ghost.className = `ghost ${pending.dangerous ? 'ghost-danger' : ''}`;
     ghost.setAttribute('data-ghost', pending.id);
-    ghost.setAttribute('dir', 'auto');
+    ghost.setAttribute('dir', 'ltr'); // never let a leading RTL letter reorder what will be typed
     place();
     const d1 = term.onWriteParsed(place);
     const d2 = term.onResize(place);
@@ -235,7 +249,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
       d3.dispose();
       d4.dispose();
     };
-  }, [pending, lineEmpty, insertedId]);
+  }, [pending, lineEmpty, insertedId, running]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -246,7 +260,9 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
         {pending ? (
           <span className={pending.dangerous ? 'text-danger' : ''} dir="auto">
             ← {pending.why ?? 'proposed by the agent'} ·{' '}
-            {lineEmpty && insertedId !== pending.id ? (
+            {running ? (
+              'a command is running · the proposal waits for the prompt · Esc dismiss'
+            ) : lineEmpty && insertedId !== pending.id ? (
               pending.dangerous ? (
                 armed === pending.id ? 'press Enter again to confirm' : 'hard-blocked pattern: Enter twice · Esc dismiss'
               ) : (

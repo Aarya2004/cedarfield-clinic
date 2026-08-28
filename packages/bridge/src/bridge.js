@@ -92,6 +92,7 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
     scrollback.push(data);
     scrollbackBytes += data.length;
     while (scrollbackBytes > SCROLLBACK_MAX && scrollback.length > 1) scrollbackBytes -= scrollback.shift().length;
+    let endStatus = false;
     for (const ev of osc.feed(data)) {
       if (ev.kind === 'start') {
         sawStart = true;
@@ -105,12 +106,13 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
         state.last_exit_code = ev.code;
         state.last_command_ms = startedAt === null ? null : Math.round(performance.now() - startedAt);
         ledger.append('executed', { command: state.last_command, exit_code: ev.code, ms: state.last_command_ms, cwd: state.cwd });
-        sendStatus();
+        endStatus = true; // sent AFTER this data frame so the client sees the end marker (and the last output) first
       } else if (ev.kind === 'cwd') {
         state.cwd = ev.cwd;
       }
     }
     send(client, { type: 'data', data });
+    if (endStatus) sendStatus();
   });
   t.onExit(({ exitCode }) => {
     if (t !== term) return;

@@ -54,3 +54,39 @@ test('LineBuffer: printable counts, backspace, enter/ctrl resets, modifiers igno
   assert.equal(b.empty, true);
   assert.ok(n >= 8);
 });
+
+test('regression (Fable pass 2 F5): history recall and paste make the line dirty until a reset', () => {
+  const ESC = String.fromCharCode(27);
+  const b = new LineBuffer();
+  for (const key of ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown']) {
+    b.feedKey({ key });
+    assert.equal(b.empty, false, key);
+    b.feedKey({ key: 'Enter' });
+    assert.equal(b.empty, true);
+  }
+  for (const key of ['r', 'p', 'n', 'y']) {
+    b.feedKey({ key, ctrlKey: true });
+    assert.equal(b.empty, false, `ctrl-${key}`);
+    b.feedKey({ key: 'u', ctrlKey: true });
+    assert.equal(b.empty, true);
+  }
+  b.feedKey({ key: '.', altKey: true });
+  assert.equal(b.empty, false);
+  b.reset();
+  assert.equal(b.empty, true);
+  // paste (⌘V arrives only via onData), bracketed paste, IME commit → dirty; single keys and arrow sequences → not
+  assert.equal(b.feedData('x'), false);
+  assert.equal(b.feedData(ESC + '[A'), false);
+  assert.equal(b.empty, true);
+  assert.equal(b.feedData('rm -rf ~/'), true);
+  assert.equal(b.empty, false);
+  b.feedKey({ key: 'c', ctrlKey: true });
+  assert.equal(b.empty, true);
+  assert.equal(b.feedData(ESC + '[200~ls' + ESC + '[201~'), true);
+  assert.equal(b.empty, false);
+  b.reset();
+  // backspace never clears dirtiness (we cannot know what was recalled)
+  b.feedKey({ key: 'ArrowUp' });
+  b.feedKey({ key: 'Backspace' });
+  assert.equal(b.empty, false);
+});
