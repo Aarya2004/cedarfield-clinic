@@ -45,6 +45,15 @@ Consequences already applied in code: `execute(input, options?)` with `options?.
 | 7 | `fontFamily: 'var(--font-mono)'` makes xterm measure glyphs with an unresolvable canvas font → tiny, letter-spaced text; resolve the CSS variable to concrete family names first | fixed | 1 |
 | 8 | Headed Chrome 152, real `document.modelContext.executeTool`: first call after load 1206 ms, warm 12 ms; `terminal_wait` resolving an already-finished command 3 ms | measured | 2 |
 
+## Cloudflare Sandbox image (measured 2026-08-28, local Docker on Apple Silicon)
+
+| # | Observation | Value | N |
+|---|---|---|---|
+| 1 | `docker.io/cloudflare/sandbox:0.12.9-python` is **linux/amd64 only** — builds and runs on this M-series Mac under emulation with a platform warning; production Containers are amd64 anyway | works, slow | 1 |
+| 2 | Node inside the image | v22.23.2 (docs say Node 20) | 1 |
+| 3 | The sandbox entrypoint spawns the user command and logs `User command failed exitCode:1` **without the command's stderr** — debug with `docker run --entrypoint sh … -c 'node …'` | lesson | 1 |
+| 4 | A `RUN a && b \|\| true` chain swallowed a failed `npm install` (no `ws`, no `node-pty`) — never `\|\| true` an install step | lesson | 1 |
+
 ## ChatGPT desktop (GPT-5.6 Sol/Terra) — not yet measured
 
 Blocked 2026-08-28 night: no ChatGPT desktop app on this Mac. To measure: open the deployed URL,

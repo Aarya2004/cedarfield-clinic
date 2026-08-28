@@ -4,6 +4,8 @@
  *   node evals/run-all.mjs            prompt-line cases (no shell): evals/cases/*.json except terminal-*
  *   node evals/run-all.mjs --bridge   also starts packages/bridge (--no-tunnel) and runs terminal-*.json
  *                                     against a REAL PTY through the pairing hash
+ *   node evals/run-all.mjs --judge=<worker url>   runs terminal-*.json against a deployed judge sandbox:
+ *                                     POST /api/session per case (rate limit permitting), pairing hash from the response
  * Restarts the built web app on :3311 for the run and stops everything afterwards.
  */
 import { spawn, spawnSync, execSync } from 'node:child_process';
@@ -12,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const withBridge = process.argv.includes('--bridge');
+const judgeUrl = process.argv.find((a) => a.startsWith('--judge='))?.slice(8) ?? null;
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
 const WEB_PORT = 3311;
 const BRIDGE_PORT = 7345;
@@ -44,6 +47,15 @@ if (!up) {
 
 let bridge = null;
 let pairingHash = '';
+async function judgeHash() {
+  const t0 = Date.now();
+  const r = await fetch(`${judgeUrl.replace(/\/$/, '')}/api/session`, { method: 'POST' });
+  const body = await r.json();
+  if (!r.ok) throw new Error(`judge session refused: ${r.status} ${JSON.stringify(body)}`);
+  console.log(`judge sandbox ready: cold_ms=${body.cold_ms} (worker) / ${Date.now() - t0} ms (client)`);
+  return `#ws=${encodeURIComponent(body.ws)}&t=${body.token}`;
+}
+if (judgeUrl) pairingHash = await judgeHash();
 if (withBridge) {
   bridge = spawn('node', [`${root}packages/bridge/bin/rokan-terminal.js`, '--no-tunnel', '--port', String(BRIDGE_PORT), '--app', `http://localhost:${WEB_PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
   let link = '';
@@ -70,12 +82,12 @@ if (withBridge) {
 
 const cases = readdirSync(`${root}evals/cases`)
   .filter((x) => x.endsWith('.json'))
-  .filter((x) => (withBridge ? x.startsWith('terminal-') : !x.startsWith('terminal-')))
+  .filter((x) => (withBridge || judgeUrl ? x.startsWith('terminal-') : !x.startsWith('terminal-')))
   .filter((x) => !only || x.includes(only))
   .sort();
 let failed = 0;
 for (const f of cases) {
-  const url = `http://localhost:${WEB_PORT}/?test=1${withBridge ? pairingHash : ''}`;
+  const url = `http://localhost:${WEB_PORT}/?test=1${withBridge || judgeUrl ? pairingHash : ''}`;
   const r = spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], { encoding: 'utf8' });
   const summary = r.stdout.trim().split('\n').pop();
   console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} ${f} ${summary}`);
@@ -89,6 +101,10 @@ for (const f of cases) {
         .join('\n'),
     );
     if (r.stderr) console.log(r.stderr.slice(0, 500));
+  }
+  if (judgeUrl && f !== cases[cases.length - 1]) {
+    // one tab per bridge: the previous page is gone, the same session can be re-paired (token unchanged)
+    await sleep(500);
   }
   if (withBridge) {
     // each case needs a fresh, unpaired bridge (one tab at a time): restart it
@@ -119,5 +135,5 @@ try {
 } catch {
   /* none */
 }
-console.log(`evals${withBridge ? ' (real PTY)' : ''}: ${failed} failed of ${cases.length}`);
+console.log(`evals${withBridge ? ' (real PTY)' : judgeUrl ? ' (judge sandbox)' : ''}: ${failed} failed of ${cases.length}`);
 process.exit(failed ? 1 : 0);

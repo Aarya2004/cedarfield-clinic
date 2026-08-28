@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-28 11:20 PT** by C (Arav's Claude). Branch `main`, all pushed.
+Last update: **2026-08-28 12:40 PT** by C (Arav's Claude). Branch `main`, all pushed.
 
 ## Gates
 
@@ -29,7 +29,7 @@ Last update: **2026-08-28 11:20 PT** by C (Arav's Claude). Branch `main`, all pu
 
 ## Now / Next / Done / In flight (C builds everything — Arav 03:10 PT; Aarya takes the next *unstarted* item here, never a stale one)
 
-**Now (C, in flight):** Terminal plan execution is complete headless (`docs/TERMINAL-PLAN.md`); next: headed Chrome screenshots (DevTools WebMCP panel), then the **Sandbox plan** (judge mode) — files about to be touched: `infra/sandbox/**`, `apps/web/src/lib/terminal/session.ts` (judge-mode WS target), `docs/SANDBOX-PLAN.md`.
+**Now (C, in flight):** `docs/SANDBOX-PLAN.md` executing — `infra/sandbox/**` (Worker + Gate + Dockerfile scaffolded, typecheck + gate tests green), judge image building/smoking locally in Docker (amd64 under emulation), web "Try it now" path wired. Deploy blocked on `! wrangler login` (Workers Paid). Then: `evals/run-all.mjs --judge`, FIELD-NOTES cold-start numbers, Gate D stranger test.
 
 **Done since 03:30 PT:** forge engine + contracts + 6 fixed tools + test hooks + placeholder card + 5 harness cases (`1fe5ca7`…`faf5038`); both reviewers' first passes fixed (Opus 16/16 ticked, Fable 7/7 P1 + 6 P2 ticked below). `pnpm gate`: web 76/76 · bridge smoke 24/24 · evals 150 steps 0 failed.
 
@@ -41,7 +41,8 @@ Last update: **2026-08-28 11:20 PT** by C (Arav's Claude). Branch `main`, all pu
 
 ## Blocked on Arav (do these first — Gate A deadline Fri 23:59 PT)
 
-1. **Install the ChatGPT desktop app on this Mac; confirm GPT-5.6 Sol or Terra is available** (Luna has site tools disabled; Enterprise/Edu excluded). Nothing else can measure the ChatGPT consumer.
+1. **ChatGPT desktop is installed; confirm GPT-5.6 Sol or Terra is available in the model picker** (Luna has site tools disabled; free tier may not have Sol/Terra). This is the only thing between us and the ChatGPT half of Gates A/B.
+1b. **`! wrangler login`** — Workers Paid account; needed to `pnpm --filter rokan-sandbox deploy` the judge sandbox (everything else is built and smoke-tested locally).
 2. **`vercel login`** in a terminal (device-code flow). The Vercel MCP account returned 403 "can't create a project". After login: `cd apps/web && vercel link --project rokan-terminal && vercel --prod`. Then open the URL in ChatGPT desktop → Site tools arrow → "propose ls" → screenshot into `docs/evidence/gate-a/`.
 3. Claude's Chrome extension wasn't connected, so no *headed* Chrome screenshot yet. Optional: open `http://localhost:3311` (`cd apps/web && pnpm start -p 3311`) in Chrome with `chrome://flags/#enable-webmcp-testing` on, DevTools → Application → WebMCP, screenshot.
 4. Kill-rule watch: if #1 can't happen by Fri 23:59 PT, PLAN §10 #1 applies — Chrome + Inspector becomes the primary demo browser and README says so. The Chrome half is already green, so the entry does not die on this.
