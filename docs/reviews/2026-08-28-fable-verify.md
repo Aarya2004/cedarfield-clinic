@@ -42,12 +42,21 @@ the findings that matter; both are in the client's connection handling, not in t
 | 7 | `rokan do …` in the sandbox | **not executed** — no paired session left and this IP's slots were used; the seed README's "not installed" sentence is verified in the repo (`container/seed/README`) | — |
 | 8 | 31-minute TTL | not executed (time) | — |
 
-## C. MCP parity (relay measured with a real `AgentLink` + an inline tab; page registry is covered by the gate's `mcp.test.mjs` 3/3 + `terminal-forge-live.json`)
+## C. MCP parity — executed with a real **Codex** session (Codex MCP, `mcp_servers.rokan = rokan-terminal mcp --ws --token`) against a paired page (`localhost:3398?test=1`, local bridge :7398, builder · zsh)
 
-- agent `hello` in **304 ms**; tool list relayed: **6** (the fixed set); `terminal_status` round-trip **1 ms**.
-- agent socket sending `input` → bridge answers **"agents may not send input"**, socket stays open.
-- bridge killed and restarted with the same token → **MCP link reconnected in 508 ms**, all 6 tools back at 508 ms.
-- `claude mcp add` itself was **not** run: it writes a persistent MCP entry into your Claude Code config (permission-class change); the relay path it exercises is measured above.
+| step | Codex reported (verbatim JSON, trimmed) |
+| --- | --- |
+| list tools | `["forge_create","forge_list","forged_count_to","terminal_propose","terminal_read_screen","terminal_status","terminal_wait"]` — **7 = six fixed + the tool forged in the page** |
+| `terminal_status {}` | `{"mode":"builder","paired":true,"cwd":null,"running":false,…,"measured":true,"last_rokan":null}` |
+| `forged_count_to {"n":"3"}` | `{"invocation_id":"inv_mtdjzftm_rwj6kw","proposal_ids":["p_mtdjzftm_nyl82i"],"active":…,"queued":0,"hash":"0bc6343e7931"}` → **ghost `seq 1 3` appeared at the prompt** (`C-codex-mcp-forged-count_to-ghost.jpg`); nothing ran |
+| `terminal_wait` (before Enter) | `{"status":"still_waiting","waited_ms":45756}` |
+| human presses Enter | ledger `executed_step forged_count_to step 0 exit 0 · 3 ms ✓`, countersigned 5/5 |
+| `terminal_wait` (after) | `{"status":"executed","waited_ms":0,"exit_code":0,"ms":3,"tail":[],"shared":false,"invocation_id":"inv_mtdjzftm_rwj6kw","next_proposal_id":null}` |
+| `forge_list {}` | `runs:1, median_ms:3, last_exit:0, hash 0bc6343e7931` |
+| bridge killed 23:00:34, restarted with the same token 23:00:36 | page: `bridge.reconnected pair_ms 5` at 23:00:37, `agent_tools.published count 7`; bridge log: `agent (MCP) connected`, `client paired`; Codex (≈16 s after the kill): **7 tools listed again**, `terminal_status` → `paired:true` (`last_exit_code null` — new PTY, honest) |
+
+Earlier, with an inline tab relay (no Codex): agent `hello` 304 ms; `terminal_status` round-trip 1 ms; agent socket sending `input` → **"agents may not send input"**; same-token restart → link reconnected in **508 ms**.
+`claude mcp add` was not run (it writes a persistent entry into Claude Code's config); the Codex session above covers the same client path end-to-end.
 
 ## D. Adversarial
 
