@@ -46,6 +46,8 @@ type Events = {
 };
 
 const OPEN = 1;
+/** Client-side close code for "auth sent, no hello in time" — retried with backoff. */
+export const NO_HELLO_CLOSE_CODE = 4499;
 
 export class BridgeClient {
   readonly ws: string;
@@ -69,6 +71,8 @@ export class BridgeClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private authTimer: ReturnType<typeof setTimeout> | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
+  /** set after the first hello; keystrokes queued during a *re*-pair are dropped, not replayed into a new shell */
+  private everPaired = false;
   private closedByUs = false;
   /** measured: ms from connect() to hello, last successful pairing */
   pairMs: number | null = null;
@@ -133,7 +137,9 @@ export class BridgeClient {
     sock.onopen = () => {
       this.sendRaw({ type: 'auth', token: this.token, cols: this.cols, rows: this.rows });
       this.authTimer = setTimeout(() => {
-        if (this._state === 'connecting') sock.close(CLOSE_CODES.UNAUTHORIZED, 'no hello');
+        // No hello in time is a slow/lost link (cold judge proxy), not a rejected token: close with a
+        // non-terminal code so onClosed schedules a retry instead of showing "link not valid".
+        if (this._state === 'connecting') sock.close(NO_HELLO_CLOSE_CODE, 'no hello');
       }, AUTH_TIMEOUT_MS);
     };
     sock.onmessage = (ev) => this.onFrame(String(ev.data), t0);
@@ -160,7 +166,10 @@ export class BridgeClient {
         this.firstDisconnectAt = null;
         this.reconnectAt = null;
         this.setState('paired');
-        for (const q of this.queue.splice(0)) this.socket?.send(q);
+        const queued = this.queue.splice(0);
+        if (!this.everPaired) for (const q of queued) this.socket?.send(q);
+        this.everPaired = true;
+        if (this.pingTimer) clearInterval(this.pingTimer);
         this.pingTimer = setInterval(() => this.sendRaw({ type: 'ping' }), this.pingMs);
         this.emit('hello', f);
         break;
@@ -201,6 +210,7 @@ export class BridgeClient {
     if (this.pingTimer) clearInterval(this.pingTimer);
     this.pingTimer = null;
     this.socket = null;
+    this.queue.length = 0; // whatever was typed at a dead link never reaches a different shell
     if (this.closedByUs) {
       this.setState('closed');
       return;

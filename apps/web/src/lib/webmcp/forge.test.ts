@@ -327,3 +327,21 @@ test('registered execute() routes to invoke and rejects after abort', async () =
   const dead = (await regs[0].tool.execute({ n: 1 }, { signal: new AbortController().signal })) as { error: string };
   assert.equal(dead.error, 'unregistered');
 });
+
+test('regression (Fable pass 1 P2): unforging the tool whose invocation is active cancels it — nothing stays busy', async () => {
+  const { engine, store } = make();
+  const spec: ForgeSpec = { ...hn, name: 'two', commands: ['echo a', 'echo b'], params: [], kind: 'read' };
+  await engine.approve(card(engine, spec).card_id);
+  const r = engine.invoke('two', {});
+  if ('error' in r || 'status' in r) throw new Error(JSON.stringify(r));
+  assert.equal(engine.active()?.invocation_id, r.invocation_id);
+  assert.deepEqual(engine.unforge('two'), { ok: true });
+  await tick();
+  assert.equal(engine.active(), null);
+  assert.equal(store.pending(), undefined);
+  assert.equal(store.get(r.proposal_ids[0])?.status, 'dismissed');
+  await engine.approve(card(engine, hn).card_id);
+  const again = engine.invoke('hn_top', { n: '1' });
+  assert.ok(!('status' in again && again.status === 'busy'), 'engine stayed busy after unforge');
+  engine.dispose(); // never leave an invocation (and its step timer) alive after the test
+});

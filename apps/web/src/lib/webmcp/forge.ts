@@ -366,6 +366,7 @@ export class ForgeEngine {
   unforge(name: string): { ok: true } | ForgeError {
     const t = this.toolMap.get(name);
     if (!t) return { error: 'unknown_tool' };
+    if (this.activeInv?.tool === t.tool) this.cancelActive('invocation_cancelled'); // never leave a dead invocation holding `busy`
     if (t.visible) this.unregister(t, 'unforged');
     this.toolMap.delete(name);
     this.emit();

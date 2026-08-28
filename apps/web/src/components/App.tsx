@@ -75,9 +75,18 @@ export function App() {
     setHooks(installTestHooks());
     if (tourRequested()) setTour('on');
     session.start();
-    let dispose = () => {};
-    registerTerminalTools(setReg).then((d) => (dispose = d));
-    return () => dispose();
+    // If the effect is torn down before registration resolves, dispose on arrival instead of
+    // leaking the AbortController (and six tools) — Fable pass-1 P2.
+    let disposed = false;
+    let dispose: (() => void) | null = null;
+    registerTerminalTools(setReg).then((d) => {
+      if (disposed) d();
+      else dispose = d;
+    });
+    return () => {
+      disposed = true;
+      dispose?.();
+    };
   }, []);
 
   if (mobile) return <MobileCard />;

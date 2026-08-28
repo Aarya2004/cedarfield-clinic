@@ -1,7 +1,7 @@
 // Run: node --experimental-strip-types --test src/lib/ws/client.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BridgeClient, type WebSocketLike } from './client.ts';
+import { BridgeClient, type WebSocketLike, NO_HELLO_CLOSE_CODE } from './client.ts';
 
 class FakeSocket implements WebSocketLike {
   static all: FakeSocket[] = [];
@@ -130,7 +130,29 @@ test('unexpected close → disconnected → reconnect with backoff 2,4,8,8; reco
   client.close();
 });
 
-test('reconnectNow from busy re-attempts; auth timeout closes as unauthorized', async () => {
+test('regression (Opus/Fable pass 2): input typed during a re-pair is dropped, the ping interval is not doubled, and a hello timeout retries instead of "unauthorized"', async () => {
+  const { client, sock } = make();
+  client.connect();
+  sock().open();
+  sock().hello();
+  const firstSock = sock();
+  firstSock.close(1006, 'lost');
+  assert.equal(client.state, 'disconnected');
+  await new Promise((r) => setTimeout(r, 20)); // first backoff (2 ms in the fake) → reconnecting
+  assert.equal(client.state, 'connecting');
+  client.sendInput('typed-into-the-void\r');
+  sock().open();
+  sock().hello();
+  sock().hello(); // a duplicate hello must not start a second ping loop
+  assert.equal(client.state, 'paired');
+  assert.deepEqual(sock().parsed().map((f) => f.type), ['auth'], 'queued keystrokes were replayed into the new shell');
+  await new Promise((r) => setTimeout(r, 13)); // pingMs 5 → ~2 pings; a doubled loop gives 4+
+  const pings = sock().parsed().filter((f) => f.type === 'ping').length;
+  assert.ok(pings >= 1 && pings <= 3, `ping rate doubled: ${pings}`);
+  client.close();
+});
+
+test('reconnectNow from busy re-attempts; a hello timeout is a retry (disconnected), never unauthorized', async () => {
   const { client, sock } = make();
   client.connect();
   sock().open();
@@ -139,6 +161,10 @@ test('reconnectNow from busy re-attempts; auth timeout closes as unauthorized', 
   client.reconnectNow();
   assert.equal(client.state, 'connecting');
   assert.equal(FakeSocket.all.length, 2);
+  sock().open();
+  sock().close(NO_HELLO_CLOSE_CODE, 'no hello'); // what the auth timer does
+  assert.equal(client.state, 'disconnected');
+  assert.ok(client.reconnectAt !== null, 'a retry must be scheduled');
   client.close();
 });
 
