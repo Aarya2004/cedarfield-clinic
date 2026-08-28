@@ -119,3 +119,14 @@ it answers, *then* print the pairing link. PLAN §10 risk #2 is closed: quick tu
 | V6 | `forge_create site_status({{site}})` → approve → `tools · 7`, `forged_site_status READ c5b4e8301a8e` → invoke → ghost → Enter → `212ms ⚡`, ledger `executed_step … exit 0 · 430 ms` | 0 calls, hero complete |
 | V7 | `rokan do "top 5 HN titles at news.ycombinator.com"` → 5 real titles, `2186ms` (planned, 1 model call, no bolt), chip `exit 0 · 2473 ms` | model path |
 | V8 | Ledger 10 rows, countersigned 9/10 (the last row's ack was in flight at the screenshot) | screenshots `docs/evidence/gate-b/rehearsal-*.jpg` |
+
+## Codex as the consumer (2026-08-29 ~00:40 PT; Codex CLI 0.150.1, ChatGPT-plan account, via `codex mcp-server` → our `rokan-terminal mcp` relay; live page + tunnel + Arav's shell)
+
+| # | Fact | Measured | N |
+| --- | --- | --- | --- |
+| C1 | Codex lists our six tools with our descriptions; `terminal_status` → `{paired:true, measured:true}`; `terminal_propose ls -la` → `p_… awaiting_human`; the ghost appears at the human's prompt (`codex-1`); human Enter → `exit 0 · 11 ms`; Codex `terminal_wait` → `executed, exit 0, ms 11, waited_ms 1` | works | 2 |
+| C2 | Codex `forge_create list_here` → card with `hash afc8ef9d0d38` returned to the agent and shown on the card before approval (`codex-3`); human Approve → `tools · 7`, `forged_list_here READ afc8ef9d0d38` (`codex-4`) | works | 2 |
+| C3 | **Codex CLI reads MCP tools once per session and ignores `notifications/tools/list_changed`**: in the same session `forge_list` shows the forged tool `visible:true` but calling it fails `tools.mcp__rokan__forged_list_here is not a function`. A **new** Codex session lists seven tools and calls `forged_list_here` → `inv_…`, ghost at the prompt (`codex-5`), human Enter → `executed_step exit 0 · 6 ms` (`codex-6`), `terminal_wait` → `executed`, `forge_list` → `runs 1, median_ms 6`. Chrome 152 refreshes live (FIELD-NOTES §Chrome); ChatGPT desktop unmeasured | new session needed | 3 |
+| C4 | The content hash of an identical spec is identical across sessions and pages (`afc8ef9d0d38` ×3) — tool identity is content, not registration order | stable | 3 |
+| C5 | One MCP agent process per bridge: the newest process with the valid token takes the slot (`replaced` to the old one), and a replaced relay stands down — before this fix the old session's reconnect loop took the slot back within ~1 s and the new session's call failed `not connected to the bridge` (measured, fixed, tested) | takeover | 2 |
+| C6 | Relay latency Codex → tab → shell: `agent_call` round-trip 8 ms for `forge_create`; proposal-to-ghost < 1 s on the live tunnel | ms | 2 |
