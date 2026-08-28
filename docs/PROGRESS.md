@@ -9,7 +9,7 @@ Last update: **2026-08-28 02:45 PT** by C (Arav's Claude). Branch `main`, all pu
 | Plan | AGREED both sides (`docs/ALIGNMENT.md`) | A + Ay | ALIGNMENT.md |
 | **A** — inert `terminal_propose` invoked by a consumer | 🟡 **Chrome half green; ChatGPT half blocked on human** | C → A | `docs/evidence/gate-a/`, `docs/FIELD-NOTES.md` |
 | B — terminal + ghost-typing E2E | ⬜ | Ay + C | — |
-| C — forge → tool appears → invoked | ⬜ | Ay | — |
+| C — forge → tool appears → invoked (**decoupled from B, PLAN §0.9**: prompt-line-only by Sat 22:00, live terminal by Sun 22:00) | ⬜ | Ay (+ C if D3 ACKed) | — |
 | D — judge mode live URL | ⬜ | C | — |
 
 ## What is green right now (all measured — see FIELD-NOTES)
