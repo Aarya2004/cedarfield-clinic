@@ -1,0 +1,1546 @@
+[
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://peps.python.org/pep-0008",
+   "steps": [
+    {
+     "args": {
+      "url": "https://peps.python.org/pep-0008"
+     },
+     "says": "opened PEP 8 style guide",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "maximum of 79 characters",
+       "lines to a maximum of 79"
+      ],
+      "contains": "Limit all lines to a maximum of"
+     },
+     "says": "found the maximum line length specification",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the maximum line length at peps.python.org/pep-0008"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.rfc-editor.org/rfc/rfc2606.txt",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.rfc-editor.org/rfc/rfc2606.txt"
+     },
+     "says": "opened the RFC 2606 text file",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "contains": "RFC 2606              Reserved Top Level DNS Names"
+     },
+     "says": "read the RFC title",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "read the title of the RFC at www.rfc-editor.org/rfc/rfc2606.txt"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.postgresql.org/support/versioning",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.postgresql.org/support/versioning"
+     },
+     "says": "opened the PostgreSQL versioning support page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "a major version is supported for",
+       "major version supported for"
+      ],
+      "contains": "The PostgreSQL Global Development Group supports a major version for"
+     },
+     "says": "read how long a major version is supported",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "how long is a major version supported at www.postgresql.org/support/versioning"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.iana.org/help/example-domains",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.iana.org/help/example-domains"
+     },
+     "says": "opened the example domains help page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "described in RFC 2606 and RFC 6761",
+       "RFC 2606 and RFC 6761, a number of domains"
+      ],
+      "contains": "As described in RFC 2606 and RFC 6761"
+     },
+     "says": "found the RFC numbers that reserve the example domains",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "which RFC reserves the example domains at www.iana.org/help/example-domains"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/404",
+   "steps": [
+    {
+     "args": {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/404"
+     },
+     "says": "opened the HTTP 404 status code reference page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "404 Not Found client error response status code",
+       "HTTP 404 Not Found",
+       "404 Not Found"
+      ],
+      "contains": "The HTTP 404 Not Found client error response status code"
+     },
+     "says": "read the status code name",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "read the status code name at developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/404"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://nginx.org/en/docs/http/ngx_http_core_module.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://nginx.org/en/docs/http/ngx_http_core_module.html"
+     },
+     "says": "Opened nginx ngx_http_core_module documentation page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "keepalive_timeout 75s",
+       "Syntax:\tkeepalive_timeout timeout",
+       "Default:\tkeepalive_timeout 75s"
+      ],
+      "contains": "Default:\n75s"
+     },
+     "says": "Read default value of keepalive_timeout directive",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the default keepalive_timeout at nginx.org/en/docs/http/ngx_http_core_module.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://curl.se/docs/manpage.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://curl.se/docs/manpage.html"
+     },
+     "says": "opened the curl manpage",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "the limit is set to",
+       "default limit is",
+       "maximum number of redirections"
+      ],
+      "contains": "By default the limit is set to"
+     },
+     "says": "found the default redirect limit",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "how many redirects does curl follow by default at curl.se/docs/manpage.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://httpwg.org/specs/rfc9110.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://httpwg.org/specs/rfc9110.html"
+     },
+     "says": "opened the RFC 9110 specification page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "418\t(Unused)",
+       "418 (Unused) (status code)"
+      ],
+      "contains": "418 (Unused)"
+     },
+     "says": "found the unused 4xx status code",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_code"
+  },
+  "said": "which 4xx status code is unused at httpwg.org/specs/rfc9110.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.sqlite.org/lang_select.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.sqlite.org/lang_select.html"
+     },
+     "says": "opened the SQLite SELECT statement documentation",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "keywords may follow the SELECT keyword",
+       "ALL or DISTINCT keywords may follow SELECT",
+       "may follow the SELECT keyword in a simple SELECT"
+      ],
+      "contains": "One of the ALL or DISTINCT keywords may follow the SELECT keyword"
+     },
+     "says": "found which keywords may follow SELECT",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "which keywords may follow SELECT at www.sqlite.org/lang_select.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.gov.uk/vat-rates",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.gov.uk/vat-rates"
+     },
+     "says": "Opened the VAT rates page on GOV.UK",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Standard rate",
+       "Standard VAT rate"
+      ],
+      "contains": "The standard VAT rate is"
+     },
+     "says": "Read the standard VAT rate value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the standard VAT rate at www.gov.uk/vat-rates"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://docs.python.org/3/library/sys.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://docs.python.org/3/library/sys.html"
+     },
+     "says": "opened the sys module documentation",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "The default is 1000",
+       "default is 1000. When set to 0"
+      ],
+      "contains": "When this variable is set to an integer value, it determines the maximum number of levels of traceback information printed when an unhandled exception occurs. The default is"
+     },
+     "says": "read the default traceback limit value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the default traceback limit at docs.python.org/3/library/sys.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.postgresql.org/docs/current/limits.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.postgresql.org/docs/current/limits.html"
+     },
+     "says": "opened the PostgreSQL limits documentation page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "relation size\t32 TB",
+       "maximum relation size"
+      ],
+      "contains": "relation size"
+     },
+     "says": "read the maximum relation size value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the maximum relation size at www.postgresql.org/docs/current/limits.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://ubuntu.com/about/release-cycle",
+   "steps": [
+    {
+     "args": {
+      "url": "https://ubuntu.com/about/release-cycle"
+     },
+     "says": "opened the Ubuntu release cycle page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "receive 5 years of standard security maintenance",
+       "LTS releases are the go-to choice for users who value stability and extended support. These versions are security maintained for 5 years"
+      ],
+      "contains": "LTS are released every two years and receive"
+     },
+     "says": "read the security maintenance duration for LTS releases",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "how long does an LTS release get security maintenance at ubuntu.com/about/release-cycle"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://redis.io/docs/latest/commands/setex",
+   "steps": [
+    {
+     "args": {
+      "url": "https://redis.io/docs/latest/commands/setex"
+     },
+     "says": "opened the SETEX command documentation page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Time Complexity",
+       "Complexity",
+       "O(1)"
+      ],
+      "contains": "Time complexity"
+     },
+     "says": "read the time complexity value for SETEX",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "what is the time complexity of SETEX at redis.io/docs/latest/commands/setex"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://prometheus.io/docs/prometheus/latest/configuration/configuration",
+   "steps": [
+    {
+     "args": {
+      "url": "https://prometheus.io/docs/prometheus/latest/configuration/configuration"
+     },
+     "says": "opened the Prometheus configuration documentation",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "contains": "scrape_interval: <duration> | default = 1m"
+     },
+     "says": "read the default scrape_interval value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the default scrape_interval at prometheus.io/docs/prometheus/latest/configuration/configuration"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.postgresql.org/docs/current/datatype-numeric.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.postgresql.org/docs/current/datatype-numeric.html"
+     },
+     "says": "opened the PostgreSQL numeric datatype documentation",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "numeric variable user-specified precision, exact up to",
+       "up to 131072 digits before the decimal point; up to 16383 digits after"
+      ],
+      "contains": "numeric\tvariable\tuser-specified precision, exact\tup to"
+     },
+     "says": "read the maximum digits before decimal point for numeric type",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "how many digits before the decimal point does numeric allow at www.postgresql.org/docs/current/datatype-numeric.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://en.wikipedia.org/wiki/Speed_of_light",
+   "steps": [
+    {
+     "args": {
+      "url": "https://en.wikipedia.org/wiki/Speed_of_light"
+     },
+     "says": "opened the speed of light Wikipedia page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "metres per second 299792458",
+       "metres per second\t299,792,458",
+       "m/s\t299792458"
+      ],
+      "contains": "metres per second\t299792458"
+     },
+     "says": "read the speed of light value in metres per second",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "what is the speed of light in metres per second at en.wikipedia.org/wiki/Speed_of_light"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation",
+   "steps": [
+    {
+     "args": {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
+     },
+     "says": "opened the maximum file path limitation page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "the maximum length for a path is MAX_PATH, which is defined as 260 characters",
+       "maximum length for a path is MAX_PATH",
+       "maximum path length is MAX_PATH"
+      ],
+      "contains": "the maximum length for a path is MAX_PATH, which is defined as"
+     },
+     "says": "read the maximum path length value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the maximum length for a path at learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://docs.oracle.com/javase/8/docs/api/java/util/HashMap.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://docs.oracle.com/javase/8/docs/api/java/util/HashMap.html"
+     },
+     "says": "opened the HashMap API documentation",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "default initial capacity (16) and the default load factor"
+      ],
+      "contains": "default initial capacity (16)"
+     },
+     "says": "found the default initial capacity value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the default initial capacity of HashMap at docs.oracle.com/javase/8/docs/api/java/util/HashMap.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github",
+   "steps": [
+    {
+     "args": {
+      "url": "https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github"
+     },
+     "says": "opened the GitHub documentation page about large files",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "contains": "GitHub blocks files larger than"
+     },
+     "says": "read the maximum file size GitHub blocks",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the maximum file size GitHub blocks at docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.unicode.org/faq/utf_bom.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.unicode.org/faq/utf_bom.html"
+     },
+     "says": "Opened the Unicode UTF/BOM FAQ page.",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "highest code point defined",
+       "U+10FFFF",
+       "10FFFF16",
+       "the maximum code point"
+      ],
+      "contains": "highest code point"
+     },
+     "says": "Read the line stating the highest Unicode code point.",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_code_point"
+  },
+  "said": "what is the highest Unicode code point at www.unicode.org/faq/utf_bom.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.debian.org/lts",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.debian.org/lts"
+     },
+     "says": "opened the Debian LTS page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "extend the lifetime of all Debian stable releases to",
+       "lifetime of all Debian stable releases to (at least)"
+      ],
+      "contains": "extend the lifetime of all Debian stable releases to (at least)"
+     },
+     "says": "read the supported duration for Debian stable releases",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "how long is a Debian stable release supported at www.debian.org/lts"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://developers.cloudflare.com/workers/platform/limits",
+   "steps": [
+    {
+     "args": {
+      "url": "https://developers.cloudflare.com/workers/platform/limits"
+     },
+     "says": "opened the Workers platform limits page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Subrequests per invocation\t50\t10,000",
+       "Subrequests per invocation 50 10,000"
+      ],
+      "contains": "Subrequests per invocation"
+     },
+     "says": "read the subrequests per invocation limit",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "how many subrequests can a Worker make per invocation at developers.cloudflare.com/workers/platform/limits"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://numpy.org/doc/stable/reference/generated/numpy.zeros.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://numpy.org/doc/stable/reference/generated/numpy.zeros.html"
+     },
+     "says": "opened the numpy.zeros documentation page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "contains": "Default is numpy.float64"
+     },
+     "says": "found the default dtype specification",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "what is the default dtype of numpy zeros at numpy.org/doc/stable/reference/generated/numpy.zeros.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-timeout.html",
+   "steps": [
+    {
+     "args": {
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-timeout.html"
+     },
+     "says": "opened the Lambda timeout configuration page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "default value for this setting is 3 seconds",
+       "default timeout is 3 seconds",
+       "default is 3 seconds"
+      ],
+      "contains": "The default value for this setting is 3 seconds"
+     },
+     "says": "read the default timeout value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_quantity"
+  },
+  "said": "what is the default timeout for a Lambda function at docs.aws.amazon.com/lambda/latest/dg/configuration-timeout.html"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://flask.palletsprojects.com/en/stable/quickstart",
+   "steps": [
+    {
+     "args": {
+      "url": "https://flask.palletsprojects.com/en/stable/quickstart/"
+     },
+     "says": "opened the Flask quickstart documentation",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "port 5000, you'll see OSError",
+       "already using port 5000"
+      ],
+      "contains": "If another program is already using port"
+     },
+     "says": "found the port number used by Flask development server",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "which port does the flask development server use at flask.palletsprojects.com/en/stable/quickstart/"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://en.wikipedia.org/wiki/Toronto",
+   "steps": [
+    {
+     "args": {
+      "url": "https://en.wikipedia.org/wiki/Toronto"
+     },
+     "says": "opened Toronto Wikipedia page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Toronto had a population of 2,794,356",
+       "population of 2,794,356 living in 1,160,892"
+      ],
+      "contains": "In the 2021 Census of Population conducted by Statistics Canada, Toronto had a population of"
+     },
+     "says": "read Toronto's 2021 census population",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "what is the population of Toronto at en.wikipedia.org/wiki/Toronto"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://githubstatus.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://githubstatus.com"
+     },
+     "says": "opened GitHub status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Status:",
+       "Current Status",
+       "System Status"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "read the current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at githubstatus.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.anthropic.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.anthropic.com"
+     },
+     "says": "Opened Anthropic status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Not Operational",
+       "Partial System Outage",
+       "Major System Outage",
+       "Minor Service Disruption"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read current overall system status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.anthropic.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.vercel-status.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.vercel-status.com"
+     },
+     "says": "Opened Vercel status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Systems Operational",
+       "Some Systems Operational",
+       "All Systems Degraded"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read the current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at www.vercel-status.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.render.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.render.com"
+     },
+     "says": "opened the Render status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Status:",
+       "Current Status",
+       "System Status"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "read the current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.render.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.digitalocean.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.digitalocean.com"
+     },
+     "says": "opened the DigitalOcean status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Degraded Performance",
+       "Partial Outage",
+       "Major Outage",
+       "Maintenance"
+      ],
+      "contains": "Operational"
+     },
+     "says": "read the current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.digitalocean.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.npmjs.org",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.npmjs.org"
+     },
+     "says": "Opened npmjs status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some systems affected",
+       "Partial System Outage",
+       "Major System Outage",
+       "Minor Service Outage"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Recorded current status of npm services",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.npmjs.org"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.python.org",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.python.org"
+     },
+     "says": "Opened Python Infrastructure status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Operational",
+       "Minor Service Outage",
+       "Major Service Outage",
+       "Partial System Outage"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.python.org"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.dropbox.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.dropbox.com"
+     },
+     "says": "Opened Dropbox status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Degraded",
+       "Major Service Outage",
+       "Partial System Outage",
+       "Minor Service Outage"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.dropbox.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.datadoghq.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.datadoghq.com"
+     },
+     "says": "Opened Datadog status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some systems are experiencing issues",
+       "Partial System Outage",
+       "Major System Outage",
+       "Minor Service Outage"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Recorded current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.datadoghq.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.figma.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.figma.com"
+     },
+     "says": "Opened Figma status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Degraded",
+       "Partial System Outage",
+       "Major System Outage",
+       "Minor Service Outage"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read the current overall system status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.figma.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://discordstatus.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://discordstatus.com"
+     },
+     "says": "opened Discord status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Status:",
+       "Current Status"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "read the current system status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at discordstatus.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.redditstatus.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.redditstatus.com"
+     },
+     "says": "opened Reddit status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Status:",
+       "Current Status",
+       "System Status"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "read the current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at www.redditstatus.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.shopifystatus.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.shopifystatus.com"
+     },
+     "says": "opened Shopify status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Status:",
+       "Current Status",
+       "System Status"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "read the current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at www.shopifystatus.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.squarespace.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.squarespace.com"
+     },
+     "says": "opened the Squarespace status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Status:",
+       "Current Status",
+       "System Status"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "read the current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.squarespace.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.hubspot.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.hubspot.com"
+     },
+     "says": "opened the HubSpot status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Status:",
+       "Current Status",
+       "System Status"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "read the current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.hubspot.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://neonstatus.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://neonstatus.com"
+     },
+     "says": "Opened neonstatus.com",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Experiencing Issues",
+       "Major Service Outage",
+       "Partial System Outage",
+       "Minor Service Disruption"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read current status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at neonstatus.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://www.netlifystatus.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://www.netlifystatus.com"
+     },
+     "says": "Opened Netlify status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Operational",
+       "Major System Outage",
+       "Partial System Outage"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read the current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at www.netlifystatus.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.1password.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.1password.com"
+     },
+     "says": "Opened 1Password status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Affected",
+       "Major System Outage",
+       "Partial System Outage",
+       "Degraded Performance"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read current system status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.1password.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.okta.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.okta.com"
+     },
+     "says": "Opened Okta status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "All Systems Operational",
+       "Service Disruption",
+       "Service Degradation",
+       "System Status - Overall"
+      ],
+      "contains": "System Operational"
+     },
+     "says": "Read current overall system status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.okta.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.auth0.com",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.auth0.com"
+     },
+     "says": "opened the Auth0 status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Current Status",
+       "Status:",
+       "Operational"
+      ],
+      "contains": "Current Status:"
+     },
+     "says": "read the current status value",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.auth0.com"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.openrouter.ai",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.openrouter.ai"
+     },
+     "says": "Opened OpenRouter status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Experiencing Issues",
+       "Partial System Outage",
+       "Major System Outage",
+       "Systems Under Maintenance"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read current overall status",
+     "verb": "read_value"
+    },
+    {
+     "args": {
+      "contains": "Operational"
+     },
+     "says": "Confirmed status text present",
+     "verb": "assert_contains"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.openrouter.ai"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.pinecone.io",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.pinecone.io"
+     },
+     "says": "Opened Pinecone status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some Systems Experiencing Issues",
+       "Major Service Outage",
+       "Partial System Outage"
+      ],
+      "contains": "All Systems Operational"
+     },
+     "says": "Read current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.pinecone.io"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.mistral.ai",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.mistral.ai"
+     },
+     "says": "Opened Mistral status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Some systems experiencing issues",
+       "Major outage",
+       "Partial outage",
+       "Degraded performance"
+      ],
+      "contains": "All systems operational"
+     },
+     "says": "Read current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.mistral.ai"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://status.perplexity.ai",
+   "steps": [
+    {
+     "args": {
+      "url": "https://status.perplexity.ai"
+     },
+     "says": "Opened Perplexity status page",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Website - Operational",
+       "API - Operational",
+       "Some systems experiencing issues"
+      ],
+      "contains": "All systems operational"
+     },
+     "says": "Read current overall status",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present_status_word"
+  },
+  "said": "what is the current status at status.perplexity.ai"
+ },
+ {
+  "plan": {
+   "postconditions": [],
+   "site": "https://pypi.org/project/pydantic",
+   "steps": [
+    {
+     "args": {
+      "url": "https://pypi.org/project/pydantic"
+     },
+     "says": "opened the pydantic project page on PyPI",
+     "verb": "navigate"
+    },
+    {
+     "args": {
+      "alternatives": [
+       "Latest version",
+       "Release version",
+       "Current version"
+      ],
+      "contains": "Latest V1.10.26 release under the pydantic.v1 namespace"
+     },
+     "says": "read the latest version of pydantic",
+     "verb": "read_value"
+    }
+   ],
+   "task_class": "read_value",
+   "verify": "value_present"
+  },
+  "said": "what is the latest version of pydantic at pypi.org/project/pydantic"
+ }
+]

@@ -1,0 +1,34 @@
+# Judge-mode container WITH the star command. Staged: becomes `Dockerfile` (wrangler.jsonc `image`)
+# only after `pnpm smoke:image` passes on it and one seeded replay has been measured under 1/4 vCPU.
+# Delta vs Dockerfile: uv + the three Rokan wheels (vendor/) + Playwright Chromium + seeds installed
+# for the judge user. No API key is ever injected: rokan-do can only replay seeds here.
+FROM docker.io/cloudflare/sandbox:0.12.9-python
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends zsh git curl jq ca-certificates build-essential python3 \
+  && rm -rf /var/lib/apt/lists/* \
+  && useradd -m -s /bin/zsh -u 1000 judge \
+  && echo 'export PS1="judge@rokan:%~ %# "' > /home/judge/.zshrc \
+  && echo 'autoload -Uz compinit && compinit -u' >> /home/judge/.zshrc \
+  && chown -R judge:judge /home/judge
+
+COPY container/bridge /opt/bridge
+WORKDIR /opt/bridge
+RUN npm install --omit=dev --no-audit --no-fund --loglevel=error \
+  && test -d node_modules/ws && test -d node_modules/node-pty \
+  && node -e "import('node-pty').then(() => console.log('node-pty ok'))"
+RUN chown -R judge:judge /opt/bridge
+
+# --- rokan-do: wheels + Playwright Chromium (system deps as root), installed for the judge user ---
+COPY container/vendor /opt/rokan-wheels
+RUN pip install --no-cache-dir --root-user-action=ignore uv \
+  && uv pip install --system --no-cache /opt/rokan-wheels/rokan_mcp-*.whl /opt/rokan-wheels/rokan_agent-*.whl /opt/rokan-wheels/rokan_do-*.whl \
+  && python3 -m playwright install --with-deps chromium \
+  && rokan-do --help >/dev/null && echo 'rokan-do ok'
+
+COPY --chown=judge:judge container/seed/ /home/judge/
+USER judge
+WORKDIR /home/judge
+ENV HOME=/home/judge SHELL=/bin/zsh TERM=xterm-256color ROKAN_MODE=judge PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Seeds: the package's own 54 plus the ones exported from the builder's store (rokan-seed-ops.json)
+RUN rokan-do seed install && rokan-do seed install /home/judge/rokan-seed-ops.json && rokan-do ops | tail -1
