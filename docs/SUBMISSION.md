@@ -1,0 +1,63 @@
+# SUBMISSION.md — Devpost text (draft 2026-08-28; final on Sep 2 with the live URL + video link)
+
+**Project name:** Rokan Terminal
+**Tagline:** Do it once. Now it's a tool.
+**Live URL:** https://rokan-terminal.vercel.app (test in ChatGPT desktop on GPT-5.6 Sol/Terra, or Chrome 149+ with `chrome://flags/#enable-webmcp-testing`)
+**Repo:** https://github.com/Aarya2004/webmcp-private (Apache-2.0) · **Video:** <YouTube URL, < 3:00>
+
+## Why WebMCP fits (and what we did with it)
+
+A terminal already has a human on one side. WebMCP is the first standard that puts the agent on
+the *same page*, in the *same session* — not in a sandbox on someone else's machine. So we built a
+terminal you and your agent share, where the page's tools are the trust boundary made explicit:
+
+- **Tools are born at runtime.** `forge_create` opens a card; when the human approves it, the page
+  calls `document.modelContext.registerTool()` for `forged_<name>` with its own `AbortSignal`, and
+  the agent's tool list changes while the page is open (`toolchange`). A judge can watch a tool
+  appear in ChatGPT's Site tools list — or in DevTools → Application → WebMCP — seconds after the
+  human did something once. Six fixed tools plus up to five forged (the ≤ 12 picker budget), each
+  with `readOnlyHint` / `untrustedContentHint` derived from a human-approved `kind`, writes prefixed
+  `CONSEQUENTIAL:`, `additionalProperties:false` schemas with examples, outputs ≤ 1.5 K chars.
+- **Nothing a tool does executes.** `terminal_propose` and every `forged_*` tool ghost-type; the
+  human's Enter runs the command. That threads the consumer's per-call safety review honestly: the
+  tools are inert by construction, not by description.
+- **Second protocol, same tools.** `npx rokan-terminal mcp` serves the identical tool list over MCP
+  stdio to Claude Code / Cursor / Codex CLI; the page stays the single source of truth and the MCP
+  process can never type. One library, two protocols.
+- **Measured, not claimed.** `docs/FIELD-NOTES.md` records what Chrome 152's WebMCP actually does
+  (no `{signal}` passed to `execute`, `executeTool` wants a JSON string, `toolsRemoved` on abort,
+  decorations need `allowProposedApi`) — measured by our headless harness that drives the CDP
+  `WebMCP` domain with no consumer in the loop. 12 cases, 250+ steps, run on every commit.
+
+## The better experience
+
+For the human: a co-pilot that *proposes* instead of acting, reads only what you share (with
+secrets redacted before anything leaves the tab), and turns the commands you repeat into buttons
+and tools. For the agent: typed tools instead of guessing at a screen, `terminal_wait` to block on
+the human instead of polling, and real exit codes measured by the shell.
+
+## What humans and agents accomplish together that was difficult or impossible before
+
+The agent gets hands on a real shell without ever getting execution. The human gets to *teach by
+doing*: anything done once can be forged into a tool the agent calls next time — including
+`rokan do`, our browsing engine, which acts behind the user's own logins and replays at zero model
+calls. Neither side could grow that library alone, and the library is portable: it is WebMCP.
+
+## Implementation
+
+Next.js 15 on Vercel; xterm.js 6 with ghost text drawn as an overlay (never through the PTY
+parser); a Node bridge (`node-pty` + WebSocket + Cloudflare quick tunnel + 128-bit pairing token in
+the URL fragment) with zsh shell integration (OSC 133/7) so `running`, exit codes and durations
+are measured, not inferred; judge mode = the same bridge inside a Cloudflare Sandbox container
+(non-root, egress allowlist, 1 session/IP/10 min, 30-min TTL); an append-only ledger HMAC-chained
+in the tab and countersigned by the bridge; a single redaction choke point; forged tools carry a
+content hash (a changed hash requires a new approval — the "bind tool identity" mitigation from
+arXiv 2606.06387). Two independent adversarial reviews (36 findings) are fixed with tests.
+
+WebMCP tool descriptions are hints to a cooperative agent, never a security boundary. **Our
+boundary is the keyboard.**
+
+## Facts to keep straight
+WebMCP is authored by Microsoft + Google in the W3C WebML CG; Alex Nahas (MCP-B) is credited for
+implementation experience; Shopify is an origin-trial participant. We do not claim "the strongest
+reading of criterion #1" — we show registrations happening and let the judge decide.
