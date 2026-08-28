@@ -195,7 +195,7 @@ function summarise(r: LedgerRow): string {
     case 'invoked':
       return `${f.tool} ×${f.steps} ${f.hash}`;
     case 'executed_step':
-      return `${f.tool ?? ''} step ${f.step ?? ''} exit ${f.exit_code ?? '–'} · ${f.ms ?? '–'} ms${f.rokan_calls === 0 ? ` · calls:0 ⚡ ${f.rokan_ms} ms` : typeof f.rokan_ms === 'number' ? ` · rokan ${f.rokan_ms} ms` : ''}`;
+      return `${f.tool ?? ''}${f.rokan_calls === 0 ? ` ⚡ calls:0 · ${f.rokan_ms} ms` : typeof f.rokan_ms === 'number' ? ` · rokan ${f.rokan_ms} ms` : ''} · step ${f.step ?? ''} · exit ${f.exit_code ?? '–'} · ${f.ms ?? '–'} ms`;
     case 'screen_read':
       return f.shared ? `${f.lines} lines, ${f.redactions} redacted` : 'refused (share off)';
     case 'paired':

@@ -106,3 +106,16 @@ it answers, *then* print the pairing link. PLAN §10 risk #2 is closed: quick tu
 | J11 | Live judge suite **8/8** after the VERIFY + Codex fix batch (`b45db33`): cold start 6524 ms Worker / 6902 ms client — slowest of the evening (range now 4.0–6.5 s; say "≈ 5 s, up to 7" on camera) | 8/8 | 1 |
 | R6 | **Generalization sweep** of the star command on the demo Mac: all 54 seeded questions, one at a time, no API key in the environment → **53/54 replayed at 0 model calls**, mean **1 232 ms wall** per `rokan-do run` (includes ~300 ms Python start; fastest 302 ms iana.org, slowest 6 659 ms pypi.org). The one miss (`www.dockerstatus.com`): the seed had rotted, retired itself, fell to planning, and abstained honestly (`abstained_planner_unavailable`, no key) — exactly the product's stated behaviour. Sites: 24 status pages, docs (aws, github, stripe, oracle, microsoft, mozilla, python, postgres, redis, nginx, curl, sqlite, unicode, rfc-editor, httpwg, iana, gov.uk), pypi, wikipedia ×2, debian, ubuntu, numpy, prometheus, flask, cloudflare | 53/54 · 1.23 s | 54 |
 | R7 | HN on the demo Mac: `rokan do "top 5 HN titles at news.ycombinator.com"` with the live key (Keychain service `rokan-anthropic-key`, account `rokan` — the `ANTHROPIC_API_KEY` entry is dead, HTTP 401) → real titles via **1 model call**, twice; Rokan marks the site *known* but does not persist a replayable op (keyless run plans again; `seed export` has no HN entry). Engine behaviour, not ours. Demo: HN beat = `calls:1 · ~4 s` (PLAN §8 1:10 as scripted); the `calls:0 ⚡` beat uses a seeded site (R3/R6) | 1 call, not seeded | 3 |
+
+## Builder-mode rehearsal on the real video path (2026-08-28 night; live page + quick tunnel + Arav's Mac shell, driven from a real Chrome tab)
+
+| # | Beat | Measured |
+| --- | --- | --- |
+| V1 | `node packages/bridge/bin/rokan-terminal.js` (key in env) → tunnel up 9 489 ms, DNS live 9 569 ms, link printed | 19 s to link |
+| V2 | Live URL + `#ws=…&t=…` in Chrome → `paired · zsh`, hash stripped, ledger `paired ✓` | pair 855 ms |
+| V3 | `terminal_propose ls -la` → ghost at the prompt → Enter → `exit 0 · 3 ms` | measured |
+| V4 | Share on → `export AWS_SECRET_ACCESS_KEY=…` → `screen_read 17 lines, 1 redacted`; value never in the agent's view | 1 redaction |
+| V5 | `rokan do "…githubstatus.com"` (seeded) → `All Systems Operational   347ms ⚡` | 0 calls |
+| V6 | `forge_create site_status({{site}})` → approve → `tools · 7`, `forged_site_status READ c5b4e8301a8e` → invoke → ghost → Enter → `212ms ⚡`, ledger `executed_step … exit 0 · 430 ms` | 0 calls, hero complete |
+| V7 | `rokan do "top 5 HN titles at news.ycombinator.com"` → 5 real titles, `2186ms` (planned, 1 model call, no bolt), chip `exit 0 · 2473 ms` | model path |
+| V8 | Ledger 10 rows, countersigned 9/10 (the last row's ack was in flight at the screenshot) | screenshots `docs/evidence/gate-b/rehearsal-*.jpg` |
