@@ -31,7 +31,7 @@ gate per change, honest numbers.
 | thing | state | how |
 | --- | --- | --- |
 | Web app | **LIVE** `https://rokan-terminal.vercel.app` — 200, nonce CSP, HSTS, `X-Frame-Options: DENY`; first screen shows the birth hero | `cd apps/web && vercel --prod --yes` |
-| Judge sandbox | **LIVE** `https://rokan-sandbox.rokan-sandbox.workers.dev` — `/api/health` 200; image = `Dockerfile.rokan` (rokan-do + Chromium + 54 seeds + pytest demo project, 1.31 GB) | `cd infra/sandbox && pnpm deploy` |
+| Judge sandbox | **LIVE** `https://rokan-sandbox.rokan-sandbox.workers.dev` — `/api/health` 200; image = `Dockerfile.rokan` (rokan-do + 54 seeds + pytest demo project, **no browser**, 1 532 MB unpacked — multi-stage; see §3) | `cd infra/sandbox && pnpm deploy` |
 | Env wiring | `NEXT_PUBLIC_SANDBOX_URL` + `NEXT_PUBLIC_BRIDGE_HOSTS` set in Vercel production (build-time; redeploy web after changing) | `vercel env ls production` |
 | Vercel | logged in `medportgeneral-7293`, project `rokan-terminal` linked from `apps/web` | — |
 | Cloudflare | Workers **Paid** (upgraded 2026-08-28), wrangler logged in, `SID_SECRET` secret set | — |
@@ -62,66 +62,42 @@ unset locally).
 
 ---
 
-## 3. THE ONE OPEN BUG — `rokan do` exits 127 inside the deployed judge container
+## 3. CLOSED — `rokan do` exited 127 in the deployed judge container (root cause + fix, 2026-08-28 18:00–18:15 PT)
 
-**Symptom (measured twice, after the fix + redeploy):** `evals/cases/terminal-rokan-real.json`
-against the live sandbox returns `["executed", 127, "no-rokan", null]` — the proposal runs, the
-shell answers **exit 127** (command not found), so there is no `⚡` trailer and no `rokan` field.
-Everything else in that suite passes (9/10).
+**Symptom:** `evals/cases/terminal-rokan-real.json` against the live sandbox returned
+`["executed", 127, "no-rokan", null]` twice after the shim/PATH fix (`fbb824a`) and a redeploy.
 
-**What is already proven true:**
-- The image contains it: local `pnpm smoke:image:rokan` → `/usr/local/python/bin/rokan-do`,
-  `54 learned`, seeded replay **`All Systems Operational   454ms ⚡`** (wall 975 ms, emulated amd64),
-  `/opt/bridge/shims/rokan` exists, no `ANTHROPIC_API_KEY` in the container (FIELD-NOTES J12).
-- With an explicit `PATH=/opt/bridge/shims:$PATH`, `rokan` resolves and prints usage.
-- Fix already committed (`fbb824a`): the shim resolves `rokan-do` from `/usr/local/python/bin`,
-  `$HOME/.local/bin`, `/usr/local/bin`; `prepareShellEnv` prepends the shims dir **and** those
-  install dirs when they exist. Image rebuilt and Worker redeployed **after** that commit — the
-  live case still 127s.
+**Root cause (measured, not guessed):** the live fleet was **never running `Dockerfile.rokan`**.
+A diagnostic eval case (`terminal_propose` of `echo $PATH; command -v rokan-do; head -1
+/usr/local/python/bin/rokan-do` → Enter → screen read) showed the live PTY had the shim on PATH but
+**`/usr/local/python/bin` did not exist**. The Cloudflare container API then showed why: the
+application's applied image was still digest `f00568…` = tag `9a12cea1`, the 654 MB pre-rokan image
+from 22:39Z; both rokan deploys (`e30d1d79`, `10b2957a`) created Worker versions but their
+**rollouts stuck at step 1** — `health.instances: failed 1, healthy 0`, "Count of healthy target
+instances observed = 0" — while every smaller image finished step 1 in ~90 s. `wrangler deploy`
+succeeds when the rollout *starts*, not when it applies (docs: rollouts are not transactional), so
+the deploy looked green. The rokan image unpacked to **2 221 MB** (docker history: a 1.46 GB layer
+of `playwright install --with-deps` apt deps + build-essential + 266 MB of apt cache) against the
+4 GB disk of a `basic` instance, which Cloudflare counts the image against; the 1 602 MB image
+before it booted every time. Chromium itself was **never in the image** (no `/ms-playwright`, no
+binary > 40 MB) — the 454 ms replay of J12 was already browserless.
 
-**Untested hypotheses, in the order to test them:**
-1. **The PTY's PATH inside the deployed container genuinely lacks both dirs.** The Worker starts the
-   bridge via `startProcess`, whose env may be minimal; `baseEnv.PATH` may be undefined so the
-   fallback string is used, and `existsSync('/usr/local/python/bin')` should then add it — verify
-   that code actually shipped in the image.
-2. **The built image did not include the new `shell-integration.js`.** `pnpm deploy` runs
-   `scripts/sync-bridge.sh` first; confirm `infra/sandbox/container/bridge/src/shell-integration.js`
-   contains the `existsSync` extras block **before** the build, and that the build did not reuse a
-   cached layer.
-3. **A warm container from the previous image served the session** (cold_ms 6817 suggests a fresh
-   one, so this is least likely).
+**Fix (`7bef1d3`):** multi-stage `Dockerfile.rokan` — node-pty compiles in a throwaway stage
+(`bridge-build`), the runtime stage has no compiler, no browser install, apt lists and pip cache
+purged: **1 532 MB unpacked**. Proof before deploy: `pnpm smoke:image:rokan` now fails the build
+above `MAX_MB=1800`, computes the PTY PATH through the bridge's own `prepareShellEnv`, runs
+`rokan do` via the shim in a **login zsh** (exit 0), and measures the seeded replay (373 ms ⚡,
+emulated); `infra/sandbox/test/dockerfile-rokan.test.mjs` (3) guards the runtime stage statically.
+Deployed as version `3a1d0ee7`, image digest `b159699a…`; the rollout replaced the fleet (FIELD-NOTES
+J13 has the live numbers).
 
-**How to test safely (this matters — see §7):** use the existing smoke script and plain
-`docker exec`. Do **not** write ad-hoc WebSocket probe scripts that drive a container; that phrasing
-tripped a `[cyber]` safeguard and force-switched the model mid-sprint.
+**Rule learned:** after any sandbox deploy, confirm the rollout *applied* —
+`npx wrangler containers info <app-id>` → `configuration.image` must be the new digest and
+`health.instances.failed` 0. A green `wrangler deploy` is not a deployed image.
 
-```
-cd infra/sandbox && sh scripts/sync-bridge.sh
-grep -n existsSync container/bridge/src/shell-integration.js        # hypothesis 2
-docker build --platform linux/amd64 -f Dockerfile.rokan -t rokan-sandbox:rokan .
-docker run -d --name rk --platform linux/amd64 rokan-sandbox:rokan node /opt/bridge/bin/rokan-terminal.js --no-tunnel --mode judge --host 0.0.0.0 --port 7331 --token deadbeef --ttl-ms 60000 --app http://localhost:3311
-docker exec rk sh -lc 'cat /proc/1/environ | tr "\0" "\n" | grep ^PATH'   # what the bridge process has
-docker exec -u judge rk zsh -lc 'echo $PATH; command -v rokan; command -v rokan-do'
-docker rm -f rk
-```
-A ready-made **safe** PTY probe for exactly this lives at `evals/diagnostics/judge-path.json` (it
-asks the shell itself for `$PATH`, `command -v rokan`, `command -v rokan-do`, the shim dir and the
-exit code). It is kept out of `evals/cases/` so it never changes sweep counts — run it with:
-
-```
-cp evals/diagnostics/judge-path.json evals/cases/terminal-judge-path.json
-node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --only=judge-path
-rm evals/cases/terminal-judge-path.json
-```
-
-Then the honest end-to-end check is `pnpm smoke:image:rokan` (extend it with a `rokan do` case run
-**through the PTY**, not through `docker exec`), rebuild, `pnpm deploy`, and
-`node evals/run-all.mjs --judge=<worker> --only=terminal-rokan-real`.
-
-**If it cannot be fixed by the freeze:** the judge sandbox is still fully green without it (9/10);
-delete `terminal-rokan-real.json` from the judge run, say plainly in the seed README and the
-submission that `rokan do` runs in **builder mode** (measured: V5 347 ms ⚡, V7 HN 2186 ms), and keep
-the container's `rokan-do` install as a bonus. **Never** claim the container replays if it does not.
+**Honesty for the docs/submission:** the container has **no browser**; `rokan do` there replays
+seeds only (0 model calls). Planning/unseeded tasks run in builder mode on the builder's machine
+(V5 347 ms ⚡ replay, V7 HN 2186 ms). Never claim the container browses.
 
 ---
 
