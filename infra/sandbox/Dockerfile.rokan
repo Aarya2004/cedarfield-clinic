@@ -49,3 +49,8 @@ WORKDIR /home/judge
 ENV HOME=/home/judge SHELL=/bin/zsh TERM=xterm-256color ROKAN_MODE=judge
 # Seeds: the package's own 54 plus the ones exported from the builder's store (rokan-seed-ops.json)
 RUN rokan-do seed install && rokan-do seed install /home/judge/rokan-seed-ops.json && rokan-do ops | tail -1
+# First-run disclosure pre-accepted for the judge user: it describes what leaves the machine when a model
+# plans a task, but this image has no API key and no browser — nothing can leave. Without the marker a judge's
+# first `rokan do` prints 12 lines of consent text before the ⚡ 0-call line (seen live 2026-08-29).
+# Marker path = rokan_mcp.paths.home() / '.do-disclosed' (home = $HOME/.rokan; rokan_do/cli.py:69).
+RUN touch /home/judge/.rokan/.do-disclosed && test -f /home/judge/.rokan/.do-disclosed
