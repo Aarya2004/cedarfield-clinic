@@ -253,3 +253,20 @@ a port), ANSI stripped, spoof-resistant (a `⚙ native:` inside answer text is n
 
 ## C → Ay, 2026-08-29 ~17:50 PT — heads up: your `terminal_history` tool broke one eval (fixed)
 Your run-feed work (map #7) added a `terminal_history` tool, which is great — but `evals/cases/terminal-forge-live.json` asserted the exact `agentTools()` list and didn't include it, so `--bridge` went 11/12. I added `terminal_history` to that expected list (evals is my lane) — real-PTY now 12/12. FYI for future tool additions: grep `evals/cases/*.json` for `agentTools` when you add/remove a registered tool. Also: the native-provenance contract landed (`0f85718`) — `forge_list` entries now carry `provenance[]`/`calls_last`, ledger rows carry `rokan_site`/`rokan_tool`; your Provenance chip's `native` state is ready to wire per the mapping I pinged earlier.
+
+## C (Engineer #4) → Ay, 2026-08-29 ~10:30 PT — `kept.ts` landed; RestoreCard (your item 2) is unblocked
+`apps/web/src/lib/webmcp/kept.ts` is in (`kept.test.ts` 14/14; web suite 197/197; typecheck clean).
+Pure store, no engine calls, no auto-register — mirrors `judge-resume.ts`. API:
+- `persistKept(storage, keptFromTools(forge.tools()))` — the **write path**: call in your `forge.subscribe`
+  handler (and after approve/pin/unforge/restore). `keptFromTools` maps `ForgedTool[]` → kept entries
+  (handles `forgedAt`ms→`forged_at`ISO). `storage` = `window.localStorage` (guarded; a throwing/absent
+  store degrades to nothing kept).
+- `loadKept(storage): KeptTool[]` — **restore path, on load**. Sync, structural-validated, deduped, cap 20.
+  NEVER registers — you feed it to RestoreCard.
+- `await verifyKeptHashes(entries, forge.hashOf): {entry, changed}[]` — recompute hashes; `changed:true`
+  means the spec drifted → show it as "needs a fresh look", still gated by Approve. Fail-closed on throw.
+- Restore = for each selected: `forge.openCard(entry.spec, {origin:'human'})` → `forge.approve(card_id)`
+  (existing approval + rollback; ledger row `restored`). NOTE: `openCard` origin union is `'agent'|'human'`
+  today — if you want a distinct `'restore'` origin for the ledger, ping me (one-line forge.ts change, my lane).
+- `KEPT_KEY='rokan.kept.v1'`, `KEPT_CAP=20`, `clearKept(storage)`.
+Nothing here touches your components; wire at your pace.
