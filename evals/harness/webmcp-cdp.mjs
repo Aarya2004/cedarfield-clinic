@@ -133,9 +133,13 @@ for (const step of steps) {
       if (!ok) await fail();
       out({ step: 'waitFor', expr: step.waitFor, ok, value: v, ms: Math.round(performance.now() - t0) });
     } else if (step.key) {
-      await send('Input.dispatchKeyEvent', { type: 'keyDown', key: step.key, code: step.key, windowsVirtualKeyCode: step.key === 'Enter' ? 13 : step.key === 'Escape' ? 27 : 0 });
-      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: step.key, code: step.key });
-      out({ step: 'key', key: step.key, ms: Math.round(performance.now() - t0) });
+      // `ctrl:true` sends a control chord (e.g. Ctrl-C). modifiers bit 2 = Ctrl in CDP; text is the
+      // control byte so xterm forwards it to the PTY (Ctrl-C → \x03).
+      const mod = step.ctrl ? 2 : 0;
+      const ctrlText = step.ctrl && /^[a-z]$/i.test(step.key) ? String.fromCharCode(step.key.toUpperCase().charCodeAt(0) - 64) : undefined;
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', key: step.key, code: step.ctrl ? `Key${step.key.toUpperCase()}` : step.key, modifiers: mod, windowsVirtualKeyCode: step.key === 'Enter' ? 13 : step.key === 'Escape' ? 27 : step.ctrl ? step.key.toUpperCase().charCodeAt(0) : 0, ...(ctrlText ? { text: ctrlText, unmodifiedText: step.key } : {}) });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: step.key, code: step.ctrl ? `Key${step.key.toUpperCase()}` : step.key, modifiers: mod });
+      out({ step: 'key', key: step.key, ctrl: !!step.ctrl, ms: Math.round(performance.now() - t0) });
     } else if (step.eval) {
       const value = await evalJs(step.eval);
       // A bare eval (no equals/matches) is a recorded measurement: it must at least produce a value.

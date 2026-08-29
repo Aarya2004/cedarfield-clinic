@@ -70,7 +70,18 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
     return proposals.subscribe(update);
   }, []);
 
-  useEffect(() => lineBuf.current.subscribe(() => setLineEmpty(lineBuf.current.empty)), []);
+  useEffect(
+    () =>
+      lineBuf.current.subscribe(() => {
+        setLineEmpty(lineBuf.current.empty);
+        // The inserted text is valid only while it sits on a non-empty line. When the line goes empty
+        // (Ctrl-C's new prompt, Ctrl-U/Ctrl-D, backspaced away, a shell exit), the Tab-inserted id is
+        // stale — clearing it stops a later unrelated Enter from marking the agent's proposal executed
+        // with that command's result (Fable P2).
+        if (lineBuf.current.empty) setInsertedId(null);
+      }),
+    [],
+  );
   useEffect(() => {
     const update = () => {
       const s = session.snapshot();

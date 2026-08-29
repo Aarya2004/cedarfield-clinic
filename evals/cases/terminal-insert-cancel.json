@@ -1,0 +1,55 @@
+[
+  {
+    "waitFor": "window.__rokan?.session().state === 'paired'",
+    "timeout": 10000
+  },
+  {
+    "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0",
+    "timeout": 8000
+  },
+  {
+    "invoke": "terminal_propose",
+    "input": {
+      "command": "echo insert_me",
+      "why": "tab-insert then cancel"
+    }
+  },
+  {
+    "waitFor": "document.querySelector('[data-ghost]') !== null",
+    "timeout": 3000
+  },
+  {
+    "eval": "(() => { window.__rokanPid = window.__rokan.proposals.pending().id; return true; })()",
+    "equals": true
+  },
+  {
+    "key": "Tab"
+  },
+  {
+    "waitFor": "document.body.innerText.includes('inserted \u2014 edit, then Enter')",
+    "timeout": 2000
+  },
+  {
+    "key": "c",
+    "ctrl": true
+  },
+  {
+    "waitFor": "document.querySelector('[data-ghost]') !== null",
+    "timeout": 4000
+  },
+  {
+    "eval": "window.__rokan.proposals.pending()?.id === window.__rokanPid",
+    "equals": true
+  },
+  {
+    "type": "echo different_cmd\r"
+  },
+  {
+    "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l === 'different_cmd')",
+    "timeout": 6000
+  },
+  {
+    "eval": "window.__rokan.proposals.pending()?.id === window.__rokanPid",
+    "equals": true
+  }
+]
