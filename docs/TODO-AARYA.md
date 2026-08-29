@@ -1,5 +1,7 @@
 # TODO — Aarya's lane (kept current by Aarya's Claude; claim overlaps in PROGRESS before starting)
 
+> **Tracked as a wayfinder map on GitHub Issues: [Map: Frontend redesign + full-surface WebMCP #1](https://github.com/Aarya2004/webmcp-private/issues/1)** — tickets #2–#9, native blocked-by edges render the frontier in the issues UI. This file stays as the low-res mirror.
+
 Decisions behind this list: Aarya 2026-08-29/30 chat (grill round 1) — full redesign scope now
 ("don't worry about the freeze"), push to main continuously, terminal-first dark workspace,
 light/dark user toggle (terminal canvas always dark), history as browser-native blocks (explicitly
