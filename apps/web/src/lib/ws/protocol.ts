@@ -61,6 +61,8 @@ export type BridgeMode = 'builder' | 'judge';
 export interface RokanTrailer {
   ms: number;
   replayed: boolean;
+  /** present only when rokan-do used a site's OWN WebMCP tool (Tier 0). Display provenance. */
+  native?: { site: string; tool: string };
 }
 
 export interface BridgeStatus {

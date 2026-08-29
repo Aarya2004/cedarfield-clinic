@@ -42,12 +42,18 @@ export interface ForgeCard {
   createdAt: number;
 }
 
+export type StepKind = 'machine' | 'native' | 'compiled' | 'planned';
+
 export interface RunStat {
   t: string;
   invocation_id: string;
   step: number;
   exit_code: number | null;
   ms: number | null;
+  /** where this step's answer came from (COMPOSE §2.2a); 'machine' when it was a plain shell command. */
+  kind: StepKind;
+  /** model calls this step spent: 0 for a replay/native-replay, null when unknown (first-run/planned). */
+  calls: 0 | null;
 }
 
 export interface ForgedTool {
@@ -88,6 +94,10 @@ export interface ForgeListEntry {
   median_ms: number | null;
   last_exit: number | null;
   forged_at: string;
+  /** the provenance kinds of the LAST invocation's steps, in order (COMPOSE §2.2a). */
+  provenance: StepKind[];
+  /** total model calls the last invocation spent — 0 when every step replayed, else null (unknown). */
+  calls_last: number | null;
 }
 
 export interface InvokeResult {
@@ -180,6 +190,10 @@ export class ForgeEngine {
       .map((t) => {
         const last = t.stats.length ? t.stats[t.stats.length - 1] : null;
         const finals = t.stats.filter((s) => s.step === t.spec.commands.length - 1 && typeof s.ms === 'number').map((s) => s.ms as number);
+        // The last invocation's step kinds, in step order, for the provenance chips.
+        const lastInv = last ? t.stats.filter((s) => s.invocation_id === last.invocation_id).sort((a, b) => a.step - b.step) : [];
+        const provenance = lastInv.map((s) => s.kind);
+        const calls_last = lastInv.length && lastInv.every((s) => s.calls === 0) ? 0 : null;
         return {
           name: t.name,
           tool: t.tool,
@@ -192,6 +206,8 @@ export class ForgeEngine {
           median_ms: finals.length ? median(finals) : null,
           last_exit: last ? last.exit_code : null,
           forged_at: t.forgedAtIso,
+          provenance,
+          calls_last,
         };
       });
     return { visible: this.visibleCount(), budget: MAX_FORGED_VISIBLE, tools };
@@ -474,7 +490,9 @@ export class ForgeEngine {
           this.dismissFrom(inv, i + 1, 'dismissed_by_human');
           return;
         }
-        const stat: RunStat = { t: new Date().toISOString(), invocation_id: inv.invocation_id, step: i, exit_code: p!.exit_code ?? null, ms: p!.ms ?? null };
+        const rk = p!.rokan;
+        const kind: StepKind = rk?.native ? 'native' : rk ? (rk.replayed ? 'compiled' : 'planned') : 'machine';
+        const stat: RunStat = { t: new Date().toISOString(), invocation_id: inv.invocation_id, step: i, exit_code: p!.exit_code ?? null, ms: p!.ms ?? null, kind, calls: rk?.replayed ? 0 : null };
         t.stats = [...t.stats, stat].slice(-STATS_WINDOW);
         if (i === 0) t.runs += 1; // a run counts once, when the first step actually executes (a human Enter) — not on invoke (Opus/Fable P2)
         // `executed_step`, not `executed`: the bridge owns `executed` (from OSC markers) and rejects it from clients.
@@ -484,7 +502,11 @@ export class ForgeEngine {
           step: i,
           exit_code: stat.exit_code,
           ms: stat.ms,
-          ...(p!.rokan ? { rokan_ms: p!.rokan.ms, rokan_calls: p!.rokan.replayed ? 0 : null } : {}),
+          ...(p!.rokan ? {
+            rokan_ms: p!.rokan.ms,
+            rokan_calls: p!.rokan.replayed ? 0 : null,
+            ...(p!.rokan.native ? { rokan_site: p!.rokan.native.site, rokan_tool: p!.rokan.native.tool } : {}),
+          } : {}),
         });
         if (typeof stat.exit_code === 'number' && stat.exit_code !== 0) {
           this.dismissFrom(inv, i + 1, 'prior_step_failed');

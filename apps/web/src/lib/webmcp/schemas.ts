@@ -131,7 +131,7 @@ export interface TerminalStatusResult {
   /** true when exit codes / ms come from shell integration markers, not guesses */
   measured: boolean;
   /** rokan-do result line of the last command, only when that command line was rokan / rokan-do */
-  last_rokan?: { ms: number; replayed: boolean; calls: 0 | null } | null;
+  last_rokan?: { ms: number; replayed: boolean; calls: 0 | null; native?: { site: string; tool: string } } | null;
 }
 
 export const TERMINAL_STATUS_DESCRIPTION =
@@ -174,7 +174,7 @@ export type TerminalWaitResult =
       /** false when the shell has no integration: completion inferred from output silence; exit_code/ms are null, not measured */
       measured?: boolean;
       /** the bridge parsed rokan-do's result line (`  <answer>   <ms>ms[  ⚡]`) from the output of a command line that IS rokan / rokan-do (an echo of the line is never attributed): ms as printed; calls is 0 for a replay (⚡), else unknown */
-      rokan?: { ms: number; replayed: boolean; calls: 0 | null };
+      rokan?: { ms: number; replayed: boolean; calls: 0 | null; native?: { site: string; tool: string } };
     };
 
 export const TERMINAL_WAIT_DESCRIPTION =

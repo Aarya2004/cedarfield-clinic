@@ -27,7 +27,7 @@ function fakeMc() {
 }
 
 function fakeAdapter(store: ProposalStore) {
-  const exits = new Map<string, { exit_code: number | null; ms: number | null }>();
+  const exits = new Map<string, { exit_code: number | null; ms: number | null; rokan?: { ms: number; replayed: boolean; native?: { site: string; tool: string } } }>();
   const adapter: TerminalAdapter = {
     mode: 'builder',
     shareScreen: () => false,
@@ -518,4 +518,31 @@ test('restore rolls back and returns an error when registerTool rejects — no p
   const res = await engine.restore('e0');
   assert.ok('error' in res, 'restore returns an error when registration fails');
   assert.equal(findRun(engine, 'e0')?.visible ?? false, false, 'e0 is not left phantom-visible');
+});
+
+test('forge_list provenance: a composed tool records machine + native + compiled step kinds', async () => {
+  const { engine, store, adapter, exits } = make();
+  const spec: ForgeSpec = { ...hn, name: 'deal_hunt', commands: ['pytest -q', 'rokan do "x at a.com"', 'rokan do "status of b.com"'], params: [], kind: 'read' };
+  const c = card(engine, spec);
+  await engine.approve(c.card_id, undefined, {});
+  const r = engine.invoke('deal_hunt', {});
+  if ('error' in r || 'status' in r) throw new Error(JSON.stringify(r));
+  // step 0: plain shell (machine, no rokan)
+  exits.set(r.proposal_ids[0], { exit_code: 0, ms: 30 });
+  store.resolve(r.proposal_ids[0], 'accepted');
+  await tick();
+  // step 1: native first-run (site's own tool, not a replay → 1 call)
+  const p1 = engine.active()!.proposal_ids[1];
+  exits.set(p1, { exit_code: 0, ms: 1500, rokan: { ms: 1500, replayed: false, native: { site: 'a.com', tool: 'search_catalog' } } });
+  store.resolve(p1, 'accepted');
+  await tick();
+  // step 2: Rokan compiled shadow-API replay (⚡ → 0 calls, NO native tool) → kind 'compiled'
+  const p2 = engine.active()!.proposal_ids[2];
+  exits.set(p2, { exit_code: 0, ms: 24, rokan: { ms: 24, replayed: true } });
+  store.resolve(p2, 'accepted');
+  await tick();
+  const entry = engine.list().tools.find((t) => t.name === 'deal_hunt')!;
+  // native = the site's own tool (both first-run and its replay); compiled = Rokan's shadow-API replay
+  assert.deepEqual(entry.provenance, ['machine', 'native', 'compiled']);
+  assert.equal(entry.calls_last, null); // step 1 was a first-run (calls unknown), not every step 0-call
 });
