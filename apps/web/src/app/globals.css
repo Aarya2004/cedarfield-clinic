@@ -106,8 +106,21 @@ html, body {
 .xterm textarea:focus-visible { outline: none; }
 [data-terminal]:focus-within { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.35); }
 
-/* The forge floor never goes light: the canvas is pinned dark in both themes (see Terminal.tsx). */
-.terminal-canvas { background: #12100e; }
+/* The forge floor never goes light: the canvas is pinned dark in both themes (see Terminal.tsx).
+   Text tokens are re-pointed *inside* the canvas so `text-muted` / `text-accent-ink` / `text-danger`
+   keep meaning something on #12100e rather than on --bg — otherwise the light theme paints #62626b
+   (2.6:1) on the forge floor. --line is deliberately NOT overridden: the host's own border stays a
+   theme colour so the dark box reads as a box on paper. Ratios are on #12100e.
+   Used by the xterm host and by the no-shell prompt line, which must read as the same canvas. */
+.terminal-canvas {
+  background: #12100e;
+  color: #ede8df;
+  --ink: #ede8df; /* 15.56:1 */
+  --muted: #8a8172; /* 4.94:1 */
+  --accent-ink: #f0a648; /* 8.86:1 */
+  --ok: #4cc38a; /* 8.20:1 */
+  --danger: #f16a5f; /* 6.30:1 */
+}
 
 /* ghost text drawn as an overlay at the cursor cell — never written to the PTY.
    Both colours are measured against the pinned #12100e canvas, not against --bg. */

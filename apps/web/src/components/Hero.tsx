@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * The first screen tells the birth — and offers to perform it. Three typographic frames
  * (a line you ran → the Forge card you approve → the tool in your agent's list), plus one
@@ -7,8 +9,49 @@
  * live in the status bar, the Tools pane and the Ledger.
  */
 
+import { useState } from 'react';
+
 /** ready → no card/tool named hn_top yet · pending → card awaits approval · born → tool registered */
 export type HeroExampleState = 'ready' | 'pending' | 'born';
+
+/**
+ * Once a shell is attached the terminal owns the page, so the thesis shrinks to one line and the
+ * full hero moves behind an About toggle. The line still carries the example's state, because that
+ * state is the thing a first-time reader is waiting on.
+ */
+export function HeroStrip({ example, onForgeExample }: { example: HeroExampleState; onForgeExample: () => void }) {
+  const [open, setOpen] = useState(false);
+  const state =
+    example === 'born' ? (
+      <>
+        <code className="mono text-ink">forged_hn_top</code> is live — see <span className="font-medium text-ink">Site tools</span>.
+      </>
+    ) : example === 'pending' ? (
+      <>
+        A Forge card is waiting on the right — the <span className="font-medium text-ink">Approve</span> click is yours.
+      </>
+    ) : null;
+  return (
+    // Expanding About must never push the terminal past its 160 px floor, so the strip is capped at
+    // half the column (a % of the grid row, which has a definite height) and the story scrolls
+    // inside that. Measured 2026-08-29 in the CDP harness (493 px viewport): a vh cap overflowed.
+    <div className="flex max-h-[50%] min-h-0 flex-col" data-hero-collapsed>
+      <div className="flex shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line px-1 pb-2">
+        {/* the full hero repeats this headline, so the strip yields it while expanded */}
+        {!open && <h2 className="serif text-lg leading-none text-ink">Do it once. Now it&apos;s a tool.</h2>}
+        {state && <span className="text-xs text-muted">{state}</span>}
+        <button onClick={() => setOpen((v) => !v)} className="ml-auto rounded-sm text-[11px] text-muted underline decoration-line underline-offset-2 hover:decoration-ink" aria-expanded={open} data-hero-about>
+          {open ? 'Hide' : 'About'}
+        </button>
+      </div>
+      {open && (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <Hero example={example} onForgeExample={onForgeExample} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Hero({ example, onForgeExample }: { example: HeroExampleState; onForgeExample: () => void }) {
   return (

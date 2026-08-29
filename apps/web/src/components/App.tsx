@@ -1,7 +1,11 @@
 'use client';
 
 /**
- * App shell: status bar · terminal (or hero + pairing card + prompt line) · Tools / Forge / Ledger.
+ * App shell: status bar over a two-track grid — main column (the work: collapsed hero, run feed,
+ * live terminal; or hero + pairing + prompt line when no shell is attached) and a right rail
+ * (the state: Tools · Forge · Ledger, one bordered box divided by hairlines).
+ * Height is owned by the shell: every ancestor of the terminal is `min-h-0` so the xterm host is
+ * the only thing that grows, and its ResizeObserver sees a stable box.
  * Registers the six fixed tools once; installs test hooks when enabled.
  */
 import { Component, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
@@ -15,7 +19,7 @@ import { initTheme } from '@/lib/theme';
 import { Terminal } from './Terminal';
 import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
-import { Hero, type HeroExampleState } from './Hero';
+import { Hero, HeroStrip, type HeroExampleState } from './Hero';
 import { LedgerPane, MobileCard, PairingCard, StatusBar, ToolsPane, useForged, useSession } from './Panes';
 import { Tour, tourRequested } from './Tour';
 
@@ -125,45 +129,55 @@ export function App() {
   };
 
   return (
-    <main className="mx-auto flex h-screen max-w-[1400px] flex-col gap-3 px-4 py-3">
+    <main className="mx-auto flex h-screen max-w-[1600px] flex-col gap-3 px-4 py-3">
       <StatusBar reg={reg} />
       {showTour && <Tour judge={s.hello?.mode === 'judge'} onClose={() => setTour('off')} />}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)]">
-        <div className="flex min-h-0 flex-col gap-3">
-          {liveTerminal ? (
-            <Boundary name="terminal">
-              <Terminal onForgeThis={forgeThis} />
-            </Boundary>
-          ) : (
-            <>
-              {showHero && <Hero example={heroExample} onForgeExample={forgeExample} />}
-              <PairingCard />
-              <PromptLine />
-              <section className="px-1 text-sm" data-how aria-labelledby="how-title">
-                <h2 id="how-title" className="text-xs font-medium text-muted">
-                  How it works
-                </h2>
-                <ol className="mt-2 grid gap-3 text-xs text-muted md:grid-cols-3">
-                  <li>
-                    <span className="font-medium text-ink">Do it once, forge it.</span> Select lines you ran → Forge this → Approve. <code className="mono">forged_&lt;name&gt;</code> is registered as a live WebMCP tool — born at runtime, hash on the card.
-                  </li>
-                  <li>
-                    <span className="font-medium text-ink">The agent calls it.</span> The tool only ghost-types; your Enter runs each step. Exit code and duration are measured by the shell and shown in the Ledger.
-                  </li>
-                  <li>
-                    <span className="font-medium text-ink">Or the agent proposes.</span> <code className="mono">terminal_propose</code> ghost-types any command; Share screen lets it read a redacted screen. Nothing runs without your key.
-                  </li>
-                </ol>
-              </section>
-            </>
-          )}
-        </div>
-        <div className="flex min-h-0 flex-col gap-3 overflow-auto">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
+        {liveTerminal ? (
+          <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
+            <HeroStrip example={heroExample} onForgeExample={forgeExample} />
+            {/* Ticket #4 fills this with the run history; until then it stays one quiet line of
+                invitation rather than a card, so the terminal keeps the height. */}
+            <section className="max-h-[38%] min-h-0 shrink-0 overflow-y-auto px-1 text-xs text-muted" data-run-feed aria-label="run feed">
+              Runs will appear here as you and your agent work — each command with its output, exit and timing.
+            </section>
+            {/* The floor the xterm host (min-h-[160px]) plus its ghost bar need. Stated here so
+                flex shrinks the expanded hero instead of clipping the terminal on a short screen. */}
+            <div className="min-h-[200px] flex-1">
+              <Boundary name="terminal">
+                <Terminal onForgeThis={forgeThis} />
+              </Boundary>
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+            {showHero && <Hero example={heroExample} onForgeExample={forgeExample} />}
+            <PairingCard />
+            <PromptLine />
+            <section className="px-1 pb-1 text-sm" data-how aria-labelledby="how-title">
+              <h2 id="how-title" className="text-xs font-medium text-muted">
+                How it works
+              </h2>
+              <ol className="mt-2 grid gap-3 text-xs text-muted md:grid-cols-3">
+                <li>
+                  <span className="font-medium text-ink">Do it once, forge it.</span> Select lines you ran → Forge this → Approve. <code className="mono">forged_&lt;name&gt;</code> is registered as a live WebMCP tool — born at runtime, hash on the card.
+                </li>
+                <li>
+                  <span className="font-medium text-ink">The agent calls it.</span> The tool only ghost-types; your Enter runs each step. Exit code and duration are measured by the shell and shown in the Ledger.
+                </li>
+                <li>
+                  <span className="font-medium text-ink">Or the agent proposes.</span> <code className="mono">terminal_propose</code> ghost-types any command; Share screen lets it read a redacted screen. Nothing runs without your key.
+                </li>
+              </ol>
+            </section>
+          </div>
+        )}
+        <aside className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface" data-rail aria-label="session state">
           <Boundary name="tools">
             <ToolsPane reg={reg} />
           </Boundary>
-          <section className="rounded-md border border-line bg-surface p-3 text-sm" data-forge-pane aria-labelledby="forge-title">
-            <h2 id="forge-title" className="font-medium">
+          <section className="max-h-[45%] shrink-0 overflow-y-auto border-b border-line p-2.5 text-sm" data-forge-pane aria-labelledby="forge-title">
+            <h2 id="forge-title" className="text-xs font-medium">
               Forge{cards.length > 0 ? ` · ${cards.length} awaiting you` : ''}
             </h2>
             <Boundary name="forge card">
@@ -181,7 +195,7 @@ export function App() {
           <Boundary name="ledger">
             <LedgerPane />
           </Boundary>
-          <section className="px-1 text-[11px] text-muted">
+          <section className="shrink-0 border-t border-line px-2.5 py-1.5 text-[11px] text-muted">
             <button onClick={() => setShowNotes((v) => !v)} className={LINK} aria-expanded={showNotes}>
               {showNotes ? 'hide' : 'show'} field notes ({notes.length}, measured on this device)
             </button>
@@ -201,7 +215,7 @@ export function App() {
               </>
             )}
           </section>
-        </div>
+        </aside>
       </div>
       <footer className="text-[11px] text-muted">
         Test in ChatGPT desktop (GPT-5.6 Sol/Terra → Site tools) or Chrome 149+ with <code className="mono">chrome://flags/#enable-webmcp-testing</code>. Every number on this page is measured by the code that shows it.

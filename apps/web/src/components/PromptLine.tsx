@@ -4,6 +4,9 @@
  * The no-shell prompt line (unpaired mode). Same trust semantics as the live terminal: a
  * proposal is shown as ghost text; Enter accepts, Esc dismisses, dangerous needs Enter twice.
  * Keeps `[data-prompt]` and the `~ $ <command>` text so the headless cases run against it.
+ * The box wears `.terminal-canvas` — pinned #12100e in both themes — because a prompt that is
+ * about to become a shell must not read as a form. That class also re-points --ink/--muted/
+ * --accent-ink/--danger to canvas-legible values, so the classes below stay ≥ 4.9:1.
  */
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { proposals, type Proposal } from '@/lib/webmcp/proposals';
@@ -62,7 +65,7 @@ export function PromptLine() {
       onKeyDown={(e) => {
         if (decide(e.key)) e.preventDefault();
       }}
-      className="mono rounded-md border border-line bg-surface p-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+      className="terminal-canvas mono rounded-md border border-line p-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
       aria-label="terminal prompt (no shell attached)"
       aria-live="polite"
     >

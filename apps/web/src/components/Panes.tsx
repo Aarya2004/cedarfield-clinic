@@ -136,9 +136,10 @@ export function ToolsPane({ reg }: { reg: RegistrationState | { kind: 'pending' 
   const [tryOut, setTryOut] = useState<string | null>(null);
   const visible = forged.filter((t) => t.visible).length;
   const registeredThisSession = rows.filter((r) => r.kind === 'registered' || r.kind === 'forged' || r.kind === 'restored').length;
+  // A rail section, not a card: the rail draws the one border, sections divide with a hairline.
   return (
-    <section className="rounded-md border border-line bg-surface p-3 text-sm" data-tools-pane>
-      <h2 className="font-medium">Site tools · {reg.kind === 'registered' ? FIXED_TOOL_NAMES.length + visible : 0}</h2>
+    <section className="max-h-[40%] shrink-0 overflow-y-auto border-b border-line p-2.5 text-sm" data-tools-pane>
+      <h2 className="text-xs font-medium">Site tools · {reg.kind === 'registered' ? FIXED_TOOL_NAMES.length + visible : 0}</h2>
       <p className="text-xs text-muted">
         {reg.kind === 'registered' ? `Registered this session: ${registeredThisSession} · forged visible ${visible}/5` : reg.kind === 'unsupported' ? UNSUPPORTED_LINE : reg.kind === 'error' ? `registerTool failed: ${reg.message}` : 'Detecting document.modelContext…'}
       </p>
@@ -234,10 +235,11 @@ export function LedgerPane() {
     a.click();
     URL.revokeObjectURL(a.href);
   };
+  // The rail's one growing section: the ledger scrolls, the rail itself does not.
   return (
-    <section className="flex min-h-0 flex-col rounded-md border border-line bg-surface p-3 text-sm" data-ledger-pane>
+    <section className="flex min-h-0 flex-1 flex-col p-2.5 text-sm" data-ledger-pane>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <h2 className="font-medium">Ledger · {rows.length}</h2>
+        <h2 className="text-xs font-medium">Ledger · {rows.length}</h2>
         <span className="text-[11px] text-muted">
           <span title="Rows the bridge signed with a key that stays on your disk — the page cannot forge them">countersigned by bridge {countersigned}/{rows.length}</span> ·{' '}
           <button onClick={download} className={LINK} title="Download the signed ledger as JSON">
