@@ -103,7 +103,8 @@ rokan-do's Chromium) before it ever plans against the DOM. The boundary is read-
 - **Read-only gate (`rokan_do/native.py`).** A native tool is auto-invokable only when it is a
   read — either annotated `readOnly`, or its name is a known safe verb (get/list/search/read/…).
   `_is_write_name` rejects anything whose name segments include a write verb *or* the substrings
-  `checkout`/`purchase`, so `check_out`, `get_and_delete_cart`, `submit_order` never auto-fire.
+  `checkout`/`purchase`/`payment`, so `check_out`, `get_and_delete_cart`, `submit_order` never auto-fire;
+  a tool annotated `consequential` is never auto-invokable either.
   Anything not proven read-only is skipped unless `allow_write=True` — which the terminal never sets.
 - **Nothing executes.** A native call reads; it does not spend or submit. A consequential step still
   goes through ghost-type + the human's Enter, exactly like every other step.
@@ -139,4 +140,6 @@ with `wrangler containers info` showing the image digest unchanged. Tests: `infr
 *Planned (not yet in the build): kept tools.* When a viewer keeps a forged tool it will be stored
 per-viewer in `localStorage` and, on restore, re-validated with its content hash recomputed — a
 mismatch re-opens the approval card and never auto-registers. That path is a design commitment, not a
-shipped mechanism; this document will describe it as shipped only once `kept.ts` and its tests land.
+shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the part not yet wired is the
+  App-level write-path (persist on approve/pin) and the RestoreCard UI — this document will describe kept
+  tools as shipped only once that wiring lands.

@@ -1,0 +1,81 @@
+{
+  "arm": "C (Rokan)",
+  "warm": 5,
+  "tasks": [
+    {
+      "label": "native (allbirds)",
+      "q": "how much are wool runners at allbirds.com",
+      "cold": {
+        "speed": "native",
+        "model_calls": 1,
+        "ms": 1611,
+        "wall": 6485,
+        "status": "ok"
+      },
+      "warm": {
+        "speeds": [
+          "native"
+        ],
+        "model_calls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "all_zero_calls": true,
+        "ms": {
+          "mean": 1451,
+          "min": 1363,
+          "max": 1511,
+          "n": 5
+        },
+        "wall": {
+          "mean": 2983,
+          "min": 2909,
+          "max": 3036,
+          "n": 5
+        },
+        "answers_ok": true
+      }
+    },
+    {
+      "label": "compiled (status)",
+      "q": "is status.python.org all systems operational",
+      "cold": {
+        "speed": "planned",
+        "model_calls": 1,
+        "ms": 2938,
+        "wall": 7929,
+        "status": "ok"
+      },
+      "warm": {
+        "speeds": [
+          "replayed",
+          "compiled"
+        ],
+        "model_calls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "all_zero_calls": true,
+        "ms": {
+          "mean": 79,
+          "min": 6,
+          "max": 220,
+          "n": 5
+        },
+        "wall": {
+          "mean": 546,
+          "min": 238,
+          "max": 1596,
+          "n": 5
+        },
+        "answers_ok": true
+      }
+    }
+  ]
+}

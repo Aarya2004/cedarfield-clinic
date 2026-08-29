@@ -28,8 +28,8 @@ A tool you forged replays with **the model out of the loop**. On a live status r
 `rokan do` answers in **~79 ms at 0 model calls** where Codex CLI takes ~23 s and Claude Code ~16 s —
 and the agents pay that cost *every run*, because they re-plan each time (three-arm harness in
 `evals/ab/`, numbers in `docs/measurements/2026-08-30-ab.md`; N=5 warm / N=3 agents, variance stated).
-And when a page drifts, a cached scrape returns a confident wrong number; Rokan **refuses** (verified,
-or refused). Consuming a site's *own* WebMCP tools is measured too, in builder mode — the judge sandbox
+And when a page drifts, a cached scrape returns a confident wrong number (shown live in `evals/ab/drift`);
+Rokan re-checks and **refuses** the operation that no longer verifies (its `recheck` — verified, or refused). Consuming a site's *own* WebMCP tools is measured too, in builder mode — the judge sandbox
 has no model or browser, so there it replays compiled operations and runs forged tools.
 
 ## What is on the page (six fixed tools + up to five forged)
@@ -70,7 +70,7 @@ bridge. Full model with tests: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ```
 pnpm install
-pnpm gate                  # typecheck · lint · 120 unit tests · real-PTY bridge smoke · headless WebMCP cases
+pnpm gate                  # typecheck · lint · 200+ unit tests · real-PTY bridge smoke · headless WebMCP cases
 cd apps/web && pnpm dev    # http://localhost:3000
 node packages/bridge/bin/rokan-terminal.js --no-tunnel --app http://localhost:3000   # prints the pairing link
 ```
@@ -85,6 +85,6 @@ Headless WebMCP evals (Chrome 152 via the CDP `WebMCP` domain, no consumer neede
 - `apps/web` — Next.js 15 client: tools, xterm pane with ghost text, forge card, ledger.
 - `packages/bridge` — `npx rokan-terminal`: node-pty + WebSocket + Cloudflare quick tunnel + pairing token; `mcp` subcommand.
 - `infra/sandbox` — judge mode: Cloudflare Worker + Sandbox container running the same bridge.
-- `evals/` — headless harness + 16 cases (7 on the prompt line, 9 on a real PTY, the 9 also run against the live judge sandbox); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
+- `evals/` — headless harness + 21 cases (9 on the prompt line, 12 on a real PTY, the terminal cases also run against the live judge sandbox); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
 
 Every millisecond and call count shown on screen is measured by the code that shows it.

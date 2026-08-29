@@ -27,7 +27,7 @@ terminal you and your agent share, where the page's tools are the trust boundary
 - **Measured, not claimed.** `docs/FIELD-NOTES.md` records what Chrome 152's WebMCP actually does
   (no `{signal}` passed to `execute`, `executeTool` wants a JSON string, `toolsRemoved` on abort,
   decorations need `allowProposedApi`) — measured by our headless harness that drives the CDP
-  `WebMCP` domain with no consumer in the loop. 15 cases, 300+ steps (7 on the prompt line, 8 on a real PTY), run on every commit.
+  `WebMCP` domain with no consumer in the loop. 21 cases (9 on the prompt line, 12 on a real PTY — all green, verified 2026-08-29), run on every commit.
 
 ## The better experience
 
@@ -42,7 +42,7 @@ The agent gets hands on a real shell without ever getting execution. The human g
 doing*: anything done once can be forged into a tool the agent calls next time — including
 `rokan do`, our browsing engine, which acts behind the user's own logins and replays its seeded
 operations at zero model calls — the ledger row shows `calls:0 ⚡` parsed from rokan-do's own result
-line (measured 312 ms on the demo machine). Neither side could grow that library alone, and the
+line at 0 model calls (a compiled read measured 79 ms — `docs/measurements/2026-08-30-ab.md`). Neither side could grow that library alone, and the
 library is portable: it is WebMCP.
 
 ## Potential impact — the number, measured (not claimed)
@@ -70,8 +70,9 @@ The other half is trust. When a page changes, a cached scrape a coding agent wro
 **returns a confident wrong number** — we reproduce this live: after a storefront "redesign" the
 stale selector reads `$75` (a shipping line) as the price when the truth is `$140`. Rokan's
 `recheck` replays every learned operation with planning forbidden and **retires the one that no
-longer verifies** — verified, or refused. A tool that lies quietly is worse than no tool; ours
-refuses out loud.
+longer verifies** — verified, or refused. (The naive miss is reproduced live in `evals/ab/drift`; the
+Rokan refusal is that `recheck` path, exercised with a model provider present.) A tool that lies quietly
+is worse than no tool; ours refuses out loud.
 
 ## Implementation
 
@@ -79,7 +80,7 @@ Next.js 15 on Vercel; xterm.js 6 with ghost text drawn as an overlay (never thro
 parser); a Node bridge (`node-pty` + WebSocket + Cloudflare quick tunnel + 128-bit pairing token in
 the URL fragment) with zsh shell integration (OSC 133/7) so `running`, exit codes and durations
 are measured, not inferred (bash/sh without integration resolve honestly as `measured:false`); judge mode = the same bridge inside a Cloudflare Sandbox container
-(non-root, HMAC-signed session ids, no API key or secret in the container, ephemeral disk, 3 sessions/IP/10 min, 30-min TTL) — deployed and driven end to end by the headless harness (8/8 real-PTY cases against the live container, cold start ≈ 5 s); an append-only ledger HMAC-chained
+(non-root, HMAC-signed session ids, no API key or secret in the container, ephemeral disk, per-IP rate-limited and 30-min TTL-capped — caps table in SECURITY §9) — deployed and driven end to end by the headless harness (the real-PTY terminal cases green against the live container, cold start ≈ 5 s); an append-only ledger HMAC-chained
 in the tab and countersigned by the bridge; a single redaction choke point; forged tools carry a
 content hash (a changed hash requires a new approval — the "bind tool identity" mitigation from
 arXiv 2606.06387). Four adversarial review passes by two independent reviewers (54 findings) — every one fixed with a regression test in the same commit.

@@ -1,0 +1,102 @@
+{
+  "arms": {},
+  "n": 3,
+  "tasks": [
+    {
+      "label": "native (allbirds)",
+      "q": "How much are Wool Runners at allbirds.com right now? Reply one short line with the price.",
+      "codex": {
+        "wall": {
+          "mean": 10059,
+          "min": 8074,
+          "max": 11866,
+          "n": 3
+        },
+        "turns": {
+          "mean": 1,
+          "min": 1,
+          "max": 1,
+          "n": 3
+        },
+        "web_searches": {
+          "mean": 2,
+          "min": 1,
+          "max": 2,
+          "n": 3
+        },
+        "all_ok": true,
+        "sample": "Wool Runners are $110 USD at Allbirds. [Source](https://www.allbirds.com/products/mens-woo"
+      },
+      "claude": {
+        "wall": {
+          "mean": 77421,
+          "min": 62110,
+          "max": 95539,
+          "n": 3
+        },
+        "turns": {
+          "mean": 22,
+          "min": 16,
+          "max": 28,
+          "n": 3
+        },
+        "cost_usd": {
+          "mean": 1,
+          "min": 0.823848,
+          "max": 1.1822169999999999,
+          "n": 3
+        },
+        "all_ok": true,
+        "sample": "Wool Runners (men's and women's, classic + NZ) are **$110** at allbirds.com right now, no "
+      }
+    },
+    {
+      "label": "compiled (status)",
+      "q": "Is status.python.org showing all systems operational right now? Reply one short line.",
+      "codex": {
+        "wall": {
+          "mean": 23164,
+          "min": 6626,
+          "max": 55704,
+          "n": 3
+        },
+        "turns": {
+          "mean": 1,
+          "min": 1,
+          "max": 1,
+          "n": 3
+        },
+        "web_searches": {
+          "mean": 1,
+          "min": 1,
+          "max": 1,
+          "n": 3
+        },
+        "all_ok": true,
+        "sample": "Yes—status.python.org currently reports **All Systems Operational**. [Source](https://stat"
+      },
+      "claude": {
+        "wall": {
+          "mean": 15780,
+          "min": 12915,
+          "max": 20162,
+          "n": 3
+        },
+        "turns": {
+          "mean": 3,
+          "min": 2,
+          "max": 4,
+          "n": 3
+        },
+        "cost_usd": {
+          "mean": 0,
+          "min": 0.101186,
+          "max": 0.630866,
+          "n": 3
+        },
+        "all_ok": true,
+        "sample": "Yes — status.python.org reports \"All Systems Operational\" (indicator: none, updated 2026-0"
+      }
+    }
+  ]
+}
