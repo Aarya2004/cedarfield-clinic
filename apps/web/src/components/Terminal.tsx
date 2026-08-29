@@ -14,28 +14,34 @@ import { PromptDetector } from '@/lib/terminal/osc';
 import { proposals, type Proposal } from '@/lib/webmcp/proposals';
 import { note } from '@/lib/webmcp/fieldnotes';
 
+/**
+ * The canvas never goes light. Both site themes paint the terminal on #12100e (DESIGN-BRIEF:
+ * "the forge floor"), so this object is a constant, not a function of `data-theme`, and the
+ * `.terminal-canvas` class in globals.css pins the host behind it to the same colour.
+ * Ratios on #12100e: fg 15.6:1 · brightBlack (the dimmest) 4.9:1 · every other ramp entry ≥ 5.3:1.
+ */
 const THEME = {
-  background: '#fafaf6',
-  foreground: '#18181b',
+  background: '#12100e',
+  foreground: '#ede8df',
   cursor: '#d97706',
-  cursorAccent: '#fafaf6',
-  selectionBackground: 'rgba(217,119,6,0.25)',
-  black: '#18181b',
-  red: '#b91c1c',
-  green: '#047857',
-  yellow: '#b45309',
-  blue: '#1d4ed8',
-  magenta: '#7e22ce',
-  cyan: '#0e7490',
-  white: '#e4e4e0',
-  brightBlack: '#71717a',
-  brightRed: '#dc2626',
-  brightGreen: '#059669',
-  brightYellow: '#d97706',
-  brightBlue: '#2563eb',
-  brightMagenta: '#9333ea',
-  brightCyan: '#0891b2',
-  brightWhite: '#fafaf6',
+  cursorAccent: '#12100e',
+  selectionBackground: 'rgba(217,119,6,0.28)',
+  black: '#12100e',
+  red: '#d9645a',
+  green: '#62b47f',
+  yellow: '#d99a3f',
+  blue: '#6f8fd0',
+  magenta: '#b481d9',
+  cyan: '#56a8ad',
+  white: '#d6cfc2',
+  brightBlack: '#8a8172',
+  brightRed: '#f16a5f',
+  brightGreen: '#4cc38a',
+  brightYellow: '#f0a648',
+  brightBlue: '#8fa8e0',
+  brightMagenta: '#cb9ae8',
+  brightCyan: '#6fc4c9',
+  brightWhite: '#ede8df',
 };
 
 export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => void }) {
@@ -275,7 +281,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={hostRef} data-terminal aria-label="terminal" className="relative min-h-[160px] flex-1 overflow-hidden rounded-md border border-line bg-bg p-2">
+      <div ref={hostRef} data-terminal aria-label="terminal" className="terminal-canvas relative min-h-[160px] flex-1 overflow-hidden rounded-md border border-line p-2">
         <div ref={ghostRef} className="ghost" style={{ position: 'absolute', display: 'none', zIndex: 5, overflow: 'hidden', textOverflow: 'ellipsis' }} />
       </div>
       <div className="mt-2 flex min-h-6 flex-wrap items-center gap-3 text-xs text-muted" data-ghost-bar aria-live="polite" aria-atomic="true">

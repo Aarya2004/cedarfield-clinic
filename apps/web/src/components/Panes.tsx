@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { session, type SessionSnapshot } from '@/lib/terminal/session';
+import { getTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
 import { forge, type ForgedTool } from '@/lib/webmcp/forge';
 import { ledger, type LedgerRow } from '@/lib/webmcp/ledger';
 import { FIXED_TOOL_NAMES } from '@/lib/webmcp/schemas';
@@ -81,13 +82,27 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
           <input type="checkbox" checked={s.share} onChange={(e) => session.setShare(e.target.checked)} data-share className="accent-amber-600" />
           Share screen
         </label>
+        <ThemeToggle />
         {(s.state === 'disconnected' || s.state === 'busy' || s.state === 'unauthorized') && (
-          <button onClick={() => session.reconnectNow()} className="rounded border border-line bg-white px-2 py-0.5 hover:border-ink" data-reconnect>
+          <button onClick={() => session.reconnectNow()} className="rounded border border-line bg-surface px-2 py-0.5 hover:border-ink" data-reconnect>
             Reconnect
           </button>
         )}
       </span>
     </header>
+  );
+}
+
+const DARK_SNAPSHOT = 'dark' as Theme;
+
+/** Labelled with the theme it switches to. Dark is the default; the terminal canvas ignores both. */
+function ThemeToggle() {
+  const theme = useSyncExternalStore(subscribeTheme, getTheme, () => DARK_SNAPSHOT);
+  const next: Theme = theme === 'dark' ? 'light' : 'dark';
+  return (
+    <button onClick={() => setTheme(next)} className="rounded border border-line bg-surface px-2 py-0.5 hover:border-ink" data-theme-toggle title="Switch this page between the light and dark theme; the terminal stays dark either way">
+      {next === 'light' ? 'Light' : 'Dark'}
+    </button>
   );
 }
 
@@ -122,7 +137,7 @@ export function ToolsPane({ reg }: { reg: RegistrationState | { kind: 'pending' 
   const visible = forged.filter((t) => t.visible).length;
   const registeredThisSession = rows.filter((r) => r.kind === 'registered' || r.kind === 'forged' || r.kind === 'restored').length;
   return (
-    <section className="rounded-md border border-line bg-white p-3 text-sm" data-tools-pane>
+    <section className="rounded-md border border-line bg-surface p-3 text-sm" data-tools-pane>
       <h2 className="font-medium">Site tools · {reg.kind === 'registered' ? FIXED_TOOL_NAMES.length + visible : 0}</h2>
       <p className="text-xs text-muted">
         {reg.kind === 'registered' ? `Registered this session: ${registeredThisSession} · forged visible ${visible}/5` : reg.kind === 'unsupported' ? UNSUPPORTED_LINE : reg.kind === 'error' ? `registerTool failed: ${reg.message}` : 'Detecting document.modelContext…'}
@@ -220,7 +235,7 @@ export function LedgerPane() {
     URL.revokeObjectURL(a.href);
   };
   return (
-    <section className="flex min-h-0 flex-col rounded-md border border-line bg-white p-3 text-sm" data-ledger-pane>
+    <section className="flex min-h-0 flex-col rounded-md border border-line bg-surface p-3 text-sm" data-ledger-pane>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <h2 className="font-medium">Ledger · {rows.length}</h2>
         <span className="text-[11px] text-muted">
@@ -318,19 +333,19 @@ export function PairingCard() {
   const title =
     s.state === 'busy' ? 'Another tab is already paired with this bridge' : s.state === 'unauthorized' ? 'This pairing link is not valid' : s.state === 'ended' ? 'Session ended — start a new one' : 'Pair your terminal';
   return (
-    <section className={`rounded-md border bg-white p-4 text-sm ${s.state === 'busy' || s.state === 'unauthorized' ? 'border-danger/60' : 'border-line'}`} data-pairing>
+    <section className={`rounded-md border bg-surface p-4 text-sm ${s.state === 'busy' || s.state === 'unauthorized' ? 'border-danger/60' : 'border-line'}`} data-pairing>
       <h2 className="font-medium">{title}</h2>
       {s.state === 'busy' && <p className="mt-1 text-xs text-muted">Close the other tab, or start a new bridge and use its link.</p>}
       {s.state === 'unauthorized' && <p className="mt-1 text-xs text-muted">Run the bridge again and open the new link it prints. Links carry a one-time token.</p>}
       {s.state === 'ended' && <p className="mt-1 text-xs text-muted">The bridge closed this session (a sandbox lives 30 minutes). Your forged tools and ledger stay in this tab.</p>}
       {s.pairError && s.state === 'unpaired' && (
-        <p className="mt-1 rounded border border-danger/40 bg-red-50 px-2 py-1 text-xs text-danger" data-pair-error>
+        <p className="wash-danger mt-1 rounded border border-danger/40 px-2 py-1 text-xs text-danger" data-pair-error>
           Pairing refused: {s.pairError}
         </p>
       )}
       {SANDBOX_URL && (s.state === 'unpaired' || s.state === 'ended') && (
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded border border-accent/40 bg-amber-50 p-2 text-xs">
-          <button data-judge onClick={tryJudge} disabled={s.judge === 'starting'} aria-busy={s.judge === 'starting'} className="rounded bg-ink px-3 py-1 text-white hover:bg-zinc-800 disabled:opacity-40">
+        <div className="wash-accent mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded border border-accent/40 p-2 text-xs">
+          <button data-judge onClick={tryJudge} disabled={s.judge === 'starting'} aria-busy={s.judge === 'starting'} className="btn-ink rounded px-3 py-1 disabled:opacity-40">
             {s.judge === 'starting' ? `starting a sandbox… ${tick} s` : 'Try it now — judge sandbox, nothing to install'}
           </button>
           <span className="text-muted">A throttled 30-minute Linux container on Cloudflare; 3 per IP per 10 min.</span>
@@ -364,7 +379,7 @@ export function MobileCard() {
         Do it once. Now it&apos;s a tool. <span className="text-accent-ink">Now every agent can call it.</span>
       </p>
       <p className="mt-4 text-muted">A terminal where anything you approve becomes a live WebMCP tool your agent can call — born at runtime, run only by your Enter.</p>
-      <p className="mt-4 rounded-md border border-line bg-white p-3 text-ink">Open this on a desktop browser — ChatGPT desktop (GPT-5.6 Sol/Terra) or Chrome 149+ with WebMCP — to pair a terminal. This screen is too narrow for a shell and a tools pane side by side.</p>
+      <p className="mt-4 rounded-md border border-line bg-surface p-3 text-ink">Open this on a desktop browser — ChatGPT desktop (GPT-5.6 Sol/Terra) or Chrome 149+ with WebMCP — to pair a terminal. This screen is too narrow for a shell and a tools pane side by side.</p>
     </main>
   );
 }

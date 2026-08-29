@@ -44,7 +44,7 @@ export function Tour({ judge, onClose }: { judge: boolean; onClose: () => void }
     { n: 3, done: forged, title: 'Forge it into a tool', body: 'Select the line → “Forge this” → Approve. `forged_<name>` is registered live; ask the agent to call it.' },
   ];
   return (
-    <aside data-tour className="rounded-md border border-accent bg-amber-50 p-3 text-xs">
+    <aside data-tour className="wash-accent rounded-md border border-accent p-3 text-xs">
       <div className="flex items-baseline justify-between">
         <strong className="text-sm">{step === 4 ? 'You just gave your agent a tool. That is the whole product.' : 'First 60 seconds'}</strong>
         <button onClick={onClose} className="underline text-muted" data-tour-close>

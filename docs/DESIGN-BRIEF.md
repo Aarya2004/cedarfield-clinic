@@ -21,9 +21,10 @@ Terminal canvas (BOTH themes, pinned): **#12100e** bg, #ede8df fg, amber cursor,
 The terminal is the forge floor — it never goes light.
 
 Mechanism: CSS vars on `:root` (dark = default), `[data-theme="light"]` overrides; toggle in the
-status bar; persisted `localStorage['rokan-theme']`; system preference only as first-visit hint;
-default dark. No inline theme script (nonce CSP) — CSS default IS dark, so default paint never
-flashes; choosing light applies post-hydration.
+status bar; persisted `localStorage['rokan-theme']`; **system preference is not consulted** —
+first paint is dark for every visitor (the judge/demo frame), and honouring a light system pref
+would repaint after hydration, the exact flash the dark CSS default prevents. No inline theme
+script (nonce CSP); choosing light applies post-hydration and persists.
 
 ## Type (locked by stack)
 Instrument Serif = display (headline, pane titles as small caps? no — titles stay Geist; serif is

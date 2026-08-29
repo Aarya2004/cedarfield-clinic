@@ -11,6 +11,7 @@ import { installTestHooks } from '@/lib/webmcp/testhooks';
 import { forgeFromLines } from '@/lib/webmcp/forge-this';
 import { session } from '@/lib/terminal/session';
 import { clearFieldNotes, fieldNotes, note, subscribeFieldNotes } from '@/lib/webmcp/fieldnotes';
+import { initTheme } from '@/lib/theme';
 import { Terminal } from './Terminal';
 import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
@@ -33,7 +34,7 @@ class Boundary extends Component<{ name: string; children: ReactNode }, { error:
   render() {
     if (this.state.error) {
       return (
-        <section className="rounded-md border border-danger bg-white p-3 text-xs text-danger" data-pane-error={this.props.name} role="alert">
+        <section className="rounded-md border border-danger bg-surface p-3 text-xs text-danger" data-pane-error={this.props.name} role="alert">
           The {this.props.name} pane failed to render: {this.state.error}. The tools are still registered.{' '}
           <button className={LINK} onClick={() => this.setState({ error: null })}>
             retry
@@ -76,6 +77,7 @@ export function App() {
   const mobile = useIsMobile();
 
   useEffect(() => {
+    initTheme();
     setHooks(installTestHooks());
     if (tourRequested()) setTour('on');
     session.start();
@@ -160,7 +162,7 @@ export function App() {
           <Boundary name="tools">
             <ToolsPane reg={reg} />
           </Boundary>
-          <section className="rounded-md border border-line bg-white p-3 text-sm" data-forge-pane aria-labelledby="forge-title">
+          <section className="rounded-md border border-line bg-surface p-3 text-sm" data-forge-pane aria-labelledby="forge-title">
             <h2 id="forge-title" className="font-medium">
               Forge{cards.length > 0 ? ` · ${cards.length} awaiting you` : ''}
             </h2>

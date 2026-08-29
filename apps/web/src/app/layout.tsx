@@ -13,8 +13,10 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // dark is the CSS default too (globals.css `:root`), so SSR and the first paint agree and a
+  // stored 'light' choice is applied post-hydration by initTheme() — no inline script (nonce CSP).
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <body className={`${sans.variable} ${mono.variable} ${serif.variable} antialiased`}>{children}</body>
     </html>
   );

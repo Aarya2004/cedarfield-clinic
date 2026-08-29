@@ -1,21 +1,65 @@
 @import "tailwindcss";
 @import "@xterm/xterm/css/xterm.css";
 
+/*
+ * Theme tokens. Dark (the forge) is the default *in CSS*, so a first paint is already correct
+ * without an inline script — the nonce CSP forbids one. Choosing light applies post-hydration
+ * via [data-theme="light"] on <html> (see lib/theme.ts).
+ * Every ratio below is WCAG 2.1 contrast computed from these exact hex values.
+ */
 :root {
-  --bg: #fafaf6;
-  --ink: #18181b;
+  color-scheme: dark;
+  --bg: #191714; /* warm iron near-black, never slate */
+  --surface: #201d19;
+  --ink: #ede8df; /* 14.66:1 on --bg · 13.75:1 on --surface */
+  --muted: #a39c8f; /* 6.57:1 on --bg · 6.16:1 on --surface · 4.95:1 on --line */
+  --line: #322e28;
+  /* the brand amber stays a fill/border colour in both themes — never small text on --bg (5.6:1 as a fill edge only) */
   --accent: #d97706;
-  /* accent for small text: 5.0:1 on white (the brand amber is 3.2:1 — borders, buttons, ghost only) */
-  --accent-ink: #b45309;
-  /* 5.8:1 on --bg, 4.7:1 on --line (WCAG AA for body text on every surface we paint) */
-  --muted: #62626b;
+  --accent-ink: #f0a648; /* amber for text on dark: 8.73:1 on --bg · 8.19:1 on --surface */
+  --ok: #4cc38a; /* 8.08:1 on --bg · 7.58:1 on --surface */
+  --danger: #f16a5f; /* 5.93:1 on --bg · 5.57:1 on --surface */
+  /* chip pairs: each --*-fg is measured on its own --*-bg */
+  --ok-bg: #17301f;
+  --ok-fg: #7fe0ac; /* 8.90:1 on --ok-bg */
+  --danger-bg: #3a1c19;
+  --danger-fg: #ffb3a8; /* 9.02:1 on --danger-bg */
+  --accent-bg: #3a2a12;
+  --accent-fg: #f5bf70; /* 8.27:1 on --accent-bg */
+  /* panel washes: the text painted on them is --ink / --muted / --danger */
+  --accent-wash: #241d12; /* --ink 13.66:1 · --muted 6.12:1 · --accent-ink 8.14:1 */
+  --danger-wash: #2a1815; /* --danger 5.62:1 · --muted 6.22:1 · --ink 13.88:1 */
+  /* text laid on a solid --ink or --danger fill (buttons) */
+  --on-fill: #191714; /* 14.66:1 on --ink · 5.93:1 on --danger */
+}
+
+/* The locked light brand — unchanged values, restated as an override. */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #fafaf6;
+  --surface: #ffffff;
+  --ink: #18181b; /* 16.93:1 on --bg · 17.72:1 on --surface */
+  --muted: #62626b; /* 5.77:1 on --bg · 6.04:1 on --surface · 4.74:1 on --line */
   --line: #e4e4e0;
-  --ok: #047857;
-  --danger: #b91c1c;
+  /* the brand amber is 3.0:1 on --bg — borders, buttons and the cursor only, never small text */
+  --accent: #d97706;
+  --accent-ink: #b45309; /* amber for text on paper: 4.80:1 on --bg · 5.02:1 on --surface */
+  --ok: #047857; /* 5.24:1 on --bg · 5.48:1 on --surface */
+  --danger: #b91c1c; /* 6.18:1 on --bg · 6.47:1 on --surface */
+  --ok-bg: #d1fae5;
+  --ok-fg: #065f46; /* 6.78:1 on --ok-bg */
+  --danger-bg: #fee2e2;
+  --danger-fg: #991b1b; /* 6.80:1 on --danger-bg */
+  --accent-bg: #fef3c7;
+  --accent-fg: #78350f; /* 8.15:1 on --accent-bg */
+  --accent-wash: #fffbeb; /* --ink 17.08:1 · --muted 5.82:1 */
+  --danger-wash: #fef2f2; /* --danger 5.91:1 · --muted 5.52:1 · --ink 16.20:1 */
+  --on-fill: #ffffff; /* 17.72:1 on --ink · 6.47:1 on --danger */
 }
 
 @theme inline {
   --color-bg: var(--bg);
+  --color-surface: var(--surface);
   --color-ink: var(--ink);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
@@ -23,6 +67,9 @@
   --color-line: var(--line);
   --color-ok: var(--ok);
   --color-danger: var(--danger);
+  --color-on-fill: var(--on-fill);
+  /* the chip background on its own, for the one highlight that keeps --ink as its text */
+  --color-accent-bg: var(--accent-bg);
 }
 
 html, body {
@@ -34,6 +81,21 @@ html, body {
 .mono { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
 .serif { font-family: var(--font-serif), ui-serif, Georgia, serif; }
 
+/* Semantic surfaces. One class carries the pair so a chip can never be legible in one theme only. */
+.tone-ok { background: var(--ok-bg); color: var(--ok-fg); }
+.tone-danger { background: var(--danger-bg); color: var(--danger-fg); }
+.tone-accent { background: var(--accent-bg); color: var(--accent-fg); }
+.tone-muted { background: var(--line); color: var(--muted); }
+/* Washes keep whatever text colour the caller sets (--ink / --muted / --danger, all ≥ 5.8:1). */
+.wash-accent { background: var(--accent-wash); }
+.wash-danger { background: var(--danger-wash); }
+
+/* Solid buttons: hover moves the fill toward the opposite end of the theme, in either theme. */
+.btn-ink { background: var(--ink); color: var(--on-fill); }
+.btn-ink:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 88%, var(--bg)); }
+.btn-danger { background: var(--danger); color: var(--on-fill); }
+.btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 85%, var(--ink)); }
+
 /* One focus language for every control: amber ring, never removed, only on keyboard focus. */
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -44,9 +106,13 @@ html, body {
 .xterm textarea:focus-visible { outline: none; }
 [data-terminal]:focus-within { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.35); }
 
-/* ghost text drawn as an overlay at the cursor cell — never written to the PTY */
+/* The forge floor never goes light: the canvas is pinned dark in both themes (see Terminal.tsx). */
+.terminal-canvas { background: #12100e; }
+
+/* ghost text drawn as an overlay at the cursor cell — never written to the PTY.
+   Both colours are measured against the pinned #12100e canvas, not against --bg. */
 .ghost {
-  color: rgba(217, 119, 6, 0.75);
+  color: rgba(240, 166, 72, 0.75); /* composites to #b9813a — 5.66:1 on the canvas */
   font-family: var(--font-mono), ui-monospace, Menlo, monospace;
   font-size: 13px;
   line-height: 1.2;
@@ -55,7 +121,7 @@ html, body {
   unicode-bidi: isolate;
 }
 .ghost-danger {
-  color: rgba(185, 28, 28, 0.85);
+  color: rgba(241, 106, 95, 0.85); /* composites to #d05d53 — 4.86:1 on the canvas */
 }
 .xterm .xterm-viewport {
   background: transparent !important;

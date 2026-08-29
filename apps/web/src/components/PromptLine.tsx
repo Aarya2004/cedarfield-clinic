@@ -62,7 +62,7 @@ export function PromptLine() {
       onKeyDown={(e) => {
         if (decide(e.key)) e.preventDefault();
       }}
-      className="mono rounded-md border border-line bg-white p-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+      className="mono rounded-md border border-line bg-surface p-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
       aria-label="terminal prompt (no shell attached)"
       aria-live="polite"
     >

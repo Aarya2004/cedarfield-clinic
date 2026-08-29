@@ -15,8 +15,8 @@ import { note } from '@/lib/webmcp/fieldnotes';
 import { KindBadge } from './Chip';
 import { explainForgeError, hasPlaceholders, splitPlaceholders } from './forge/forge-preview';
 
-const FIELD = 'mt-0.5 w-full rounded border border-line bg-white px-2 py-1 text-sm text-ink placeholder:text-muted/70 focus:border-accent';
-const SMALL_FIELD = 'min-w-0 rounded border border-line bg-white px-1.5 py-1 text-xs text-ink placeholder:text-muted/70 focus:border-accent';
+const FIELD = 'mt-0.5 w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink placeholder:text-muted/70 focus:border-accent';
+const SMALL_FIELD = 'min-w-0 rounded border border-line bg-surface px-1.5 py-1 text-xs text-ink placeholder:text-muted/70 focus:border-accent';
 const ICON_BTN = 'rounded px-1 text-xs text-muted hover:text-danger';
 const LINK_BTN = 'mt-1 rounded-sm text-xs text-muted underline decoration-line underline-offset-2 hover:decoration-ink';
 
@@ -79,7 +79,7 @@ export function ForgeCardView({ card }: { card: Card }) {
 
   const cardId = `card-${card.card_id}`;
   return (
-    <section data-card={card.card_id} aria-labelledby={`${cardId}-title`} aria-busy={busy} className={`rounded-md border-2 bg-white p-4 text-sm ${dangerous ? 'border-danger' : 'border-accent'}`}>
+    <section data-card={card.card_id} aria-labelledby={`${cardId}-title`} aria-busy={busy} className={`rounded-md border-2 bg-surface p-4 text-sm ${dangerous ? 'border-danger' : 'border-accent'}`}>
       {/* identity: what will be born */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <h3 id={`${cardId}-title`} className="flex min-w-0 flex-wrap items-center gap-2 font-medium">
@@ -103,7 +103,7 @@ export function ForgeCardView({ card }: { card: Card }) {
       </div>
 
       {dangerous && (
-        <p className="mt-2 rounded border border-danger/50 bg-red-50 px-2 py-1.5 text-xs text-danger" role="alert">
+        <p className="wash-danger mt-2 rounded border border-danger/50 px-2 py-1.5 text-xs text-danger" role="alert">
           <strong>⚠ Hard-blocked pattern in command {dangerousAt.join(', ')}.</strong> A command matches a hard-blocked pattern. Approve twice to confirm.{confirm ? ' Press “Approve anyway” to confirm.' : ''}
         </p>
       )}
@@ -138,7 +138,7 @@ export function ForgeCardView({ card }: { card: Card }) {
                 seg.kind === 'text' ? (
                   <span key={k}>{seg.text}</span>
                 ) : (
-                  <span key={k} className={`rounded-sm px-0.5 ${seg.kind === 'param' ? 'bg-amber-100 text-amber-900' : 'bg-red-100 text-red-800'}`} title={seg.kind === 'param' ? `param ${seg.name}` : `${seg.name} is not a declared param`}>
+                  <span key={k} className={`rounded-sm px-0.5 ${seg.kind === 'param' ? 'tone-accent' : 'tone-danger'}`} title={seg.kind === 'param' ? `param ${seg.name}` : `${seg.name} is not a declared param`}>
                     {seg.text}
                   </span>
                 ),
@@ -211,11 +211,11 @@ export function ForgeCardView({ card }: { card: Card }) {
           disabled={!!validation || busy}
           aria-busy={busy}
           title={validation ? 'Fix the error above to approve' : confirm ? 'Registers the tool despite the hard-blocked pattern; nothing runs' : 'Registers forged_' + spec.name + ' with the browser; nothing runs'}
-          className={`rounded px-3 py-1 text-xs text-white disabled:opacity-40 ${confirm ? 'bg-danger hover:bg-red-800' : 'bg-ink hover:bg-zinc-800'}`}
+          className={`rounded px-3 py-1 text-xs disabled:opacity-40 ${confirm ? 'btn-danger' : 'btn-ink'}`}
         >
           {busy ? 'Approving…' : confirm ? 'Approve anyway' : 'Approve'}
         </button>
-        <button data-reject onClick={() => forge.reject(card.card_id)} disabled={busy} className="rounded border border-line bg-white px-3 py-1 text-xs hover:border-ink disabled:opacity-40" title="Discard this card; nothing was registered">
+        <button data-reject onClick={() => forge.reject(card.card_id)} disabled={busy} className="rounded border border-line bg-surface px-3 py-1 text-xs hover:border-ink disabled:opacity-40" title="Discard this card; nothing was registered">
           Reject
         </button>
         {validation && <span className="text-[11px] text-muted">Approve unlocks when the card validates.</span>}

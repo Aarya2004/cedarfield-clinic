@@ -23,7 +23,7 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
       <ol className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch" aria-label="how a tool is born">
         <Frame n="1" eyebrow="You ran it">
           <div className="mono text-[12px] leading-5">
-            <span className="text-accent-ink">~ $</span> <mark className="rounded-sm bg-amber-100 px-0.5 text-ink">rokan do &quot;top 5 HN titles&quot;</mark>
+            <span className="text-accent-ink">~ $</span> <mark className="rounded-sm bg-accent-bg px-0.5 text-ink">rokan do &quot;top 5 HN titles&quot;</mark>
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">
             <span className="rounded bg-accent px-1.5 py-px text-[10px] text-white">Forge this (1 line)</span>
@@ -34,13 +34,13 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
         <Frame n="2" eyebrow="You approve the card">
           <div className="flex flex-wrap items-center gap-1.5">
             <code className="mono text-[12px] text-ink">forged_hn_top</code>
-            <span className="rounded bg-emerald-100 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-emerald-800">read</span>
+            <span className="tone-ok rounded px-1.5 py-px text-[10px] font-medium uppercase tracking-wide">read</span>
           </div>
           <div className="mono mt-1 text-[11px] leading-5 text-muted">
-            rokan do &quot;top <span className="rounded-sm bg-amber-100 px-0.5 text-amber-900">{'{{n}}'}</span> HN titles&quot;
+            rokan do &quot;top <span className="tone-accent rounded-sm px-0.5">{'{{n}}'}</span> HN titles&quot;
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">
-            <span className="rounded bg-ink px-1.5 py-px text-[10px] text-white">Approve</span>
+            <span className="rounded bg-ink px-1.5 py-px text-[10px] text-on-fill">Approve</span>
             name it, type the params, hash on the card
           </div>
         </Frame>
@@ -83,7 +83,7 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
 
 function Frame({ n, eyebrow, children }: { n: string; eyebrow: string; children: React.ReactNode }) {
   return (
-    <li className="min-w-0 rounded-md border border-line bg-white px-3 py-2 shadow-[0_1px_2px_rgba(24,24,27,0.04)]">
+    <li className="min-w-0 rounded-md border border-line bg-surface px-3 py-2 shadow-[0_1px_2px_rgba(24,24,27,0.04)]">
       <div className="flex items-baseline gap-1.5 text-[11px]">
         <span className="serif text-sm leading-none text-accent-ink">{n}</span>
         <span className="font-medium text-ink">{eyebrow}</span>
