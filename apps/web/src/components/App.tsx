@@ -14,8 +14,8 @@ import { clearFieldNotes, fieldNotes, note, subscribeFieldNotes } from '@/lib/we
 import { Terminal } from './Terminal';
 import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
-import { Hero } from './Hero';
-import { LedgerPane, MobileCard, PairingCard, StatusBar, ToolsPane, useSession } from './Panes';
+import { Hero, type HeroExampleState } from './Hero';
+import { LedgerPane, MobileCard, PairingCard, StatusBar, ToolsPane, useForged, useSession } from './Panes';
 import { Tour, tourRequested } from './Tour';
 
 const EMPTY: never[] = [];
@@ -71,6 +71,7 @@ export function App() {
   const [tour, setTour] = useState<'unset' | 'on' | 'off'>('unset');
   const s = useSession();
   const cards = useCards();
+  const forged = useForged();
   const notes = useFieldNotes();
   const mobile = useIsMobile();
 
@@ -103,6 +104,24 @@ export function App() {
     if ('error' in r) note('forge_this.rejected', { error: r.error, detail: r.detail });
   };
 
+  // The hero's one button: open the real frame-2 card through the same engine the agent uses.
+  // Approval (the birth) stays a human click on the card — the button alone registers nothing.
+  const heroExample: HeroExampleState = forged.some((t) => t.name === 'hn_top') ? 'born' : cards.some((c) => c.spec.name === 'hn_top') ? 'pending' : 'ready';
+  const forgeExample = () => {
+    const r = forge.openCard(
+      {
+        name: 'hn_top',
+        description: 'Top N Hacker News titles via rokan do in your shell — every step still gated by your Enter.',
+        commands: ['rokan do "top {{n}} HN titles"'],
+        params: [{ name: 'n', description: 'How many titles to fetch', example: '5' }],
+        kind: 'read',
+      },
+      { origin: 'human' },
+    );
+    if ('error' in r) note('hero.example_rejected', { error: r.error, detail: r.detail });
+    else note('hero.example_card_opened', { card: r.card_id });
+  };
+
   return (
     <main className="mx-auto flex h-screen max-w-[1400px] flex-col gap-3 px-4 py-3">
       <StatusBar reg={reg} />
@@ -115,11 +134,11 @@ export function App() {
             </Boundary>
           ) : (
             <>
-              {showHero && <Hero />}
+              {showHero && <Hero example={heroExample} onForgeExample={forgeExample} />}
               <PairingCard />
               <PromptLine />
-              <section className="rounded-md border border-line bg-white p-4 text-sm" data-how aria-labelledby="how-title">
-                <h2 id="how-title" className="font-medium">
+              <section className="px-1 text-sm" data-how aria-labelledby="how-title">
+                <h2 id="how-title" className="text-xs font-medium text-muted">
                   How it works
                 </h2>
                 <ol className="mt-2 grid gap-3 text-xs text-muted md:grid-cols-3">
@@ -147,7 +166,7 @@ export function App() {
             </h2>
             <Boundary name="forge card">
               {cards.length === 0 ? (
-                <p className="text-xs text-muted">No card yet. Select 1–5 lines in the terminal and press “Forge this”, or let the agent call forge_create. A card appears here for your approval — nothing registers until you approve it.</p>
+                <p className="text-xs text-muted">Select 1–5 lines in the terminal and press “Forge this”, ask your agent to call <code className="mono">forge_create</code> — or use the hero’s example button. Nothing registers until you approve the card here.</p>
               ) : (
                 <div className="mt-2 space-y-2">
                   {cards.map((c) => (
@@ -160,7 +179,7 @@ export function App() {
           <Boundary name="ledger">
             <LedgerPane />
           </Boundary>
-          <section className="rounded-md border border-line bg-white p-3 text-xs text-muted">
+          <section className="px-1 text-[11px] text-muted">
             <button onClick={() => setShowNotes((v) => !v)} className={LINK} aria-expanded={showNotes}>
               {showNotes ? 'hide' : 'show'} field notes ({notes.length}, measured on this device)
             </button>

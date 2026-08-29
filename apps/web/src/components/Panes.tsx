@@ -135,7 +135,7 @@ export function ToolsPane({ reg }: { reg: RegistrationState | { kind: 'pending' 
       </ul>
       <h3 className="mt-3 text-xs font-medium">Forged tools</h3>
       {forged.length === 0 ? (
-        <p className="text-xs text-muted">None yet. Select lines in the terminal and press “Forge this”, or ask your agent to forge one. The first takes about fifteen seconds.</p>
+        <p className="text-xs text-muted">None yet — the first takes about fifteen seconds. Forge one from lines you ran, from your agent, or from the hero’s example card.</p>
       ) : (
         <ul className="mt-1 space-y-1.5 text-xs">
           {forged.map((t) => {

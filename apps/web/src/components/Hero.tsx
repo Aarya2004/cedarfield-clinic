@@ -1,20 +1,24 @@
 /**
- * The first screen tells the birth. Three typographic frames, static, no numbers: a line you
- * ran → the Forge card you approve → the tool in your agent's list, called, run by your Enter.
- * Every value shown is an illustration of the flow (the demo's `hn_top`), never a measurement —
- * measured numbers live in the status bar, the Tools pane and the Ledger.
+ * The first screen tells the birth — and offers to perform it. Three typographic frames
+ * (a line you ran → the Forge card you approve → the tool in your agent's list), plus one
+ * button that opens the *real* card from frame 2 via the real forge engine. Approval stays
+ * with the human; nothing registers from the button alone. Every value in the frames is an
+ * illustration of the flow (the demo's `hn_top`), never a measurement — measured numbers
+ * live in the status bar, the Tools pane and the Ledger.
  */
-export function Hero() {
-  return (
-    <section className="rounded-md border border-line bg-white px-5 pb-4 pt-4" data-hero aria-labelledby="hero-title">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h2 id="hero-title" className="serif text-[28px] leading-none tracking-tight text-ink">
-          Do it once. <span className="text-accent-ink">Now it&apos;s a tool.</span>
-        </h2>
-        <p className="max-w-[46rem] text-xs text-muted">A command you approve becomes a live WebMCP tool your agent can call — born at runtime, without a reload, run only by your Enter.</p>
-      </div>
 
-      <ol className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch" aria-label="how a tool is born">
+/** ready → no card/tool named hn_top yet · pending → card awaits approval · born → tool registered */
+export type HeroExampleState = 'ready' | 'pending' | 'born';
+
+export function Hero({ example, onForgeExample }: { example: HeroExampleState; onForgeExample: () => void }) {
+  return (
+    <section className="px-1 pb-1 pt-2" data-hero aria-labelledby="hero-title">
+      <h2 id="hero-title" className="serif text-[38px] leading-none tracking-tight text-ink">
+        Do it once. <span className="text-accent-ink">Now it&apos;s a tool.</span>
+      </h2>
+      <p className="mt-2 max-w-[46rem] text-sm text-muted">A command you approve becomes a live WebMCP tool your agent can call — born at runtime, without a reload, run only by your Enter.</p>
+
+      <ol className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch" aria-label="how a tool is born">
         <Frame n="1" eyebrow="You ran it">
           <div className="mono text-[12px] leading-5">
             <span className="text-accent-ink">~ $</span> <mark className="rounded-sm bg-amber-100 px-0.5 text-ink">rokan do &quot;top 5 HN titles&quot;</mark>
@@ -52,13 +56,32 @@ export function Hero() {
           </div>
         </Frame>
       </ol>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" data-hero-cta>
+        {example === 'ready' ? (
+          <>
+            <button onClick={onForgeExample} className="rounded bg-accent px-3 py-1.5 text-white hover:bg-amber-700" data-forge-example>
+              Forge this card — for real
+            </button>
+            <span className="text-muted">Opens the frame-2 card in the Forge pane, via the same engine the agent uses. Nothing registers until you approve it.</span>
+          </>
+        ) : example === 'pending' ? (
+          <span className="text-muted">
+            The card is waiting in the <span className="font-medium text-ink">Forge pane on the right</span> — the Approve click is yours. That click is the birth.
+          </span>
+        ) : (
+          <span className="text-muted">
+            <code className="mono text-ink">forged_hn_top</code> is live — see <span className="font-medium text-ink">Site tools</span> on the right. Born at runtime, no reload.
+          </span>
+        )}
+      </div>
     </section>
   );
 }
 
 function Frame({ n, eyebrow, children }: { n: string; eyebrow: string; children: React.ReactNode }) {
   return (
-    <li className="min-w-0 rounded border border-line bg-bg px-3 py-2">
+    <li className="min-w-0 rounded-md border border-line bg-white px-3 py-2 shadow-[0_1px_2px_rgba(24,24,27,0.04)]">
       <div className="flex items-baseline gap-1.5 text-[11px]">
         <span className="serif text-sm leading-none text-accent-ink">{n}</span>
         <span className="font-medium text-ink">{eyebrow}</span>
