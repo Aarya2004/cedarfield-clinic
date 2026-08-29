@@ -177,6 +177,8 @@ Binding definition of "production" for this entry — each line is a test in §7
   (`filter_coffees_by_roast`) — measured 4 tools.
 
 ### 2.5 Limits (numbers; enforced in code)
+> **Superseded detail (2026-08-29, approved execution plan `docs/EXECUTION-PLAN.md` §1):** daemon verbs live in `packages/rokan-mcp/src/rokan_mcp/_daemon.py` + its byte-identical script copy (not a rokan-do Playwright module); the rung is wired in `service.perform()` (not `fastpath.py`); the result-line grammar is `rokan-agent/adapters/cli/render.py` with the marker *after* the ms tail; module name `native.py`; judge mode prints Rokan's real `abstained_planner_unavailable`, never a string no code path emits.
+
 - Tier 0 invokes only tools whose annotations say `readOnly` unless the forged tool is
   `kind:'write'` **and** the step is CONSEQUENTIAL-confirmed by Enter (never in the demo).
 - Tier 0 per-call timeout 15 s; page load 30 s; one browser job at a time (Rokan H12).
@@ -221,7 +223,9 @@ Written on approve/unforge/pin; read on load → restore card. Never registers w
 
 ## 4. Engine technical specification
 
-### 4.1 Rokan side — `packages/rokan-do/src/rokan_do/webmcp_native.py` (new)
+### 4.1 Rokan side
+> **Superseded detail (2026-08-29, approved execution plan `docs/EXECUTION-PLAN.md` §1):** daemon verbs live in `packages/rokan-mcp/src/rokan_mcp/_daemon.py` + its byte-identical script copy (not a rokan-do Playwright module); the rung is wired in `service.perform()` (not `fastpath.py`); the result-line grammar is `rokan-agent/adapters/cli/render.py` with the marker *after* the ms tail; module name `native.py`; judge mode prints Rokan's real `abstained_planner_unavailable`, never a string no code path emits.
+ — `packages/rokan-do/src/rokan_do/webmcp_native.py` (new)
 - `async def list_native_tools(url, *, channel='chrome'|None) -> list[Tool]`: Playwright launch
   with `--enable-features=WebMCP` (bundled Chromium 151 works; prefer system Chrome 152 when
   present), `new_cdp_session(page)`, `WebMCP.enable`, collect `toolsAdded` until 3 s of quiet or
@@ -359,6 +363,8 @@ name, an eval case, or a FIELD-NOTES/measurements row.
 ---
 
 ## 8. Files touched — summary
+> **Superseded detail (2026-08-29, approved execution plan `docs/EXECUTION-PLAN.md` §1):** daemon verbs live in `packages/rokan-mcp/src/rokan_mcp/_daemon.py` + its byte-identical script copy (not a rokan-do Playwright module); the rung is wired in `service.perform()` (not `fastpath.py`); the result-line grammar is `rokan-agent/adapters/cli/render.py` with the marker *after* the ms tail; module name `native.py`; judge mode prints Rokan's real `abstained_planner_unavailable`, never a string no code path emits.
+
 - Rokan: `packages/rokan-do/src/rokan_do/{webmcp_native.py (new), fastpath.py, render_do.py,
   cli.py (--json), mcp.py (speed field)}`, `tests/test_webmcp_native.py`, `docs/measurements/2026-08-29-tier0.md`,
   wheels → `webmcp-private/vendor/`.
