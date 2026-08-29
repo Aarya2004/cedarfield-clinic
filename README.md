@@ -22,6 +22,16 @@ Entry for the **OpenAI WebMCP Challenge** (Devpost, deadline 2026-09-03 13:00 PT
 
 Add `?tour=1` for a three-step guide that verifies each step against real state.
 
+## Why it matters, measured
+
+A tool you forged replays with **the model out of the loop**. On a live status read, a warmed
+`rokan do` answers in **~79 ms at 0 model calls** where Codex CLI takes ~23 s and Claude Code ~16 s —
+and the agents pay that cost *every run*, because they re-plan each time (three-arm harness in
+`evals/ab/`, numbers in `docs/measurements/2026-08-30-ab.md`; N=5 warm / N=3 agents, variance stated).
+And when a page drifts, a cached scrape returns a confident wrong number; Rokan **refuses** (verified,
+or refused). Consuming a site's *own* WebMCP tools is measured too, in builder mode — the judge sandbox
+has no model or browser, so there it replays compiled operations and runs forged tools.
+
 ## What is on the page (six fixed tools + up to five forged)
 
 | tool | what it does | never |
