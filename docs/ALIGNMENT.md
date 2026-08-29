@@ -112,3 +112,30 @@ Read PLAN §0.9 and PROGRESS "Decisions" D1/D3. §0.9 is decided unless a founde
 - `apps/web/src/components/Panes.tsx` — one-token rename: ledger kind `executed` → `executed_step` (the bridge-accepted kind). (`60999c8`)
 - `apps/web/src/components/App.tsx` — dispose a registration that resolves after unmount. (`84759c8`)
 - Contract additions (all additive): `terminal_wait` result gains `measured?: false`; `LedgerKind` uses `executed_step`; `schemas.ts` exports `JUDGE_SUDO_RE` / `isDangerousIn`; `forge-spec.ts` drops the never-produced `placeholder_in_quotes` error.
+
+
+## C (Engineer #4, Fable 5) → Ay, 2026-08-29 ~03:00 PT — the final layer is decided; read `docs/COMPOSE-PLAN.md`
+
+**What changed and why (one paragraph).** Seven research lanes today (judges' public positions, sponsor
+visions, WebMCP origins, developer demands, terminals-as-agent-surfaces, the live field of 507 repos, an
+adversarial "solution without a problem" pass) found three stale premises — ChatGPT desktop *has* a
+terminal + "actions"; the Enter gate is the control the labs measured (93% blind approval) and moved past;
+typed shell output is against the current — and one empty lane nobody has: **user-side composition of the
+web's tools, kept as a new WebMCP tool**. Rokan `IDEA-LEDGER §S`'s two finals (Forge-on-the-page vs
+terminal) are merged: terminal = vehicle; `rokan do` = consume-else-compile (Tier 0 measured feasible:
+allbirds.com exposes 10 native tools to the CDP WebMCP domain); forge composes machine + native + compiled
+steps; tools are **kept**. Understudy owns our old sentence; nobody has the substrate or the numbers.
+
+**Your lane items (claim in PROGRESS before starting; all UI, all additive):**
+1. `Provenance.tsx` chip (one component) used in the terminal result line, Tools rows, Ledger rows —
+   states: `machine` · `native · <site>` · `compiled · <site> · ⚡` · `planned` · `refused`.
+2. `RestoreCard.tsx` — on load, "N kept tools — restore?" listing name + 12-hex hash; Approve → existing
+   `forge.approve` path per tool; Dismiss keeps the store. Never auto-registers.
+3. Hero retitle to the thesis sentence (COMPOSE-PLAN §0/§11); one real kept tool above the fold if present.
+4. Tools rows: `forged by <identity>`, `calls_last`, `kept` pin.
+Engine side (`kept.ts`, `forge.ts` provenance, bridge trailer, Rokan Tier 0, evals, A/B) is mine.
+
+**Contract pings (additive, `contract:` commits, same set both sides):** `terminal_wait.rokan` +
+`terminal_status.last_rokan` gain `speed/site/tools_used`; `forge_list` entries gain
+`provenance[]/calls_last/kept/forged_by`; new client ledger kind `restored` in `CLIENT_LEDGER_KINDS` on
+both sides. Schedule, kill rules and the production bar: COMPOSE-PLAN §9 and §1.1.

@@ -1,7 +1,12 @@
 # HANDOFF — Rokan Terminal (rewritten 2026-08-29 by Fable 5, "Engineer #3")
 
+> **2026-08-29 ~03:00 PT (Engineer #4): §1 below is superseded by `docs/COMPOSE-PLAN.md`** — the
+> final layer (compose the web, keep it as a tool; Tier 0 consume-else-compile; kept tools; D1/D2
+> structural demos; production bar §1.1; schedule + kill rules §9). PLAN §0.10 records the decision.
+> Everything else in this file (live state, fixes, hard rules, environment) still holds.
+
 **This supersedes the prior runway.** Read this first, then `docs/PROGRESS.md`, then
-`docs/SELF-EVAL-2026-08-29.md` (the strategy call). Everything below was verified by the session that
+`docs/COMPOSE-PLAN.md` (the strategy call), then `docs/SELF-EVAL-2026-08-29.md` (its predecessor). Everything below was verified by the session that
 wrote it. The mission: **submit by Mon 09-01 EOD; freeze Sun 08-31 evening; Devpost hard close Wed
 09-03 13:00 PT — do not use it as the plan.** Quality bar: production-usable, measured, honest.
 

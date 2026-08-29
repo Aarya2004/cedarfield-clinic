@@ -1,6 +1,23 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-29 04:00 PT** · **Target: submit Mon 09-01 end of day (Arav); freeze Sun 08-31 evening.** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
+Last update: **2026-08-29 ~03:10 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** · **Target: submit Tue 09-01; freeze Mon 08-31 12:00 PT; hard fallback Wed 09-02 evening.** Branch `main`, all pushed.
+
+## D4 — DECIDED 2026-08-29 ~03:00 PT: the final layer = `docs/COMPOSE-PLAN.md` (PLAN §0.10)
+Compose the web, keep it as a tool: terminal = vehicle; `rokan do` = consume-else-compile (Tier 0 measured
+feasible — FIELD-NOTES T5: allbirds.com exposes 10 native tools to the CDP WebMCP domain); forged tools
+compose `machine` + `web:native` + `web:compiled` steps and are **kept** across reloads (re-approval card);
+two structural demos D1 (same hash called from ChatGPT, Codex, Claude Code) and D2 (second run at 0 calls +
+drift refusal, A/B N=5 with CIs). Headline demoted: the Enter gate is a mechanism, not the pitch (93%
+blind-approval data). Corrected: ChatGPT desktop **has** an integrated terminal + actions — never say "no
+shell". Production bar (COMPOSE-PLAN §1.1): judging-window caps raised (Worker vars, no container roll),
+`npx` published, nothing simulated. Schedule + kill rules: COMPOSE-PLAN §9. Cold gate at `3a8119e` before
+this decision: web 133 · bridge 8 + smoke 38/38 + MCP 4/4 · sandbox 15 · evals 7/7 + real-PTY 12/12.
+
+**Now (Engineer #4):** Tier 0 in `~/dev/Rokan` (`webmcp_native.py`; gate 8/8 before/after) → bridge
+trailer + web provenance → `kept.ts` + restore card → A/B harness → docs reframe. **Blocked on Arav:** the
+macOS screen-capture dialog + ChatGPT model switch to Sol/Terra (Luna confirmed no Site tools 08-28 night;
+the app is open with our page loaded); `npm publish`; PLAN §0.3 decision on auto-run (unchanged for now).
+**Aarya:** UI items listed in ALIGNMENT (Provenance chip, RestoreCard, hero retitle, tools-row fields).
 
 ## Review findings — 2026-08-29 pass (Opus + Fable), Engineer #3 triage
 Fixed (in my lane, each with a regression test + commit):

@@ -134,3 +134,25 @@ it answers, *then* print the pairing link. PLAN §10 risk #2 is closed: quick tu
 | J12 | **Judge image with the star command** (`Dockerfile.rokan`, 1.31 GB): local smoke under amd64 emulation — bridge hello **1 605 ms**, `rokan-do` at `/usr/local/python/bin`, **54 seeds** learned at build, `rokan` shim on the PTY PATH, seeded replay **`All Systems Operational   454ms ⚡`** (wall 975 ms incl. Python start), TTL ends the session at 21 s (20 s configured), no `ANTHROPIC_API_KEY` in the container. Under `--cpus 0.25` the emulated bridge takes > 30 s to open a socket (emulation artefact) — the ¼-vCPU number is measured on Cloudflare after deploy (J13) | 454 ms ⚡ in-container | 1 |
 | J13 | **The rollout that never applied → `rokan do` 127 live, root-caused.** The rokan image unpacked to **2 221 MB** (a 1.46 GB `playwright install --with-deps` apt layer + build-essential + 266 MB apt cache) > the 4 GB `basic` disk Cloudflare counts the image against; its rollout **stuck at step 1** (container API: `failed 1, healthy 0`) and the fleet silently kept the 654 MB pre-rokan image, so the PTY had no `/usr/local/python/bin` and `rokan do` exited 127. A diagnostic eval case (propose `echo $PATH; command -v rokan-do` → Enter → screen read) + `wrangler containers info` (applied digest = old) proved it. Fix `7bef1d3`: **multi-stage** Dockerfile (node-pty compiles in a throwaway stage), no browser, caches purged → **1 532 MB** unpacked; `smoke:image:rokan` fails > 1800 MB and runs `rokan do` via the shim in a login zsh (exit 0); replay **373 ms ⚡**. Deployed `3a1d0ee7` / digest `b159699a`, rollout **applied** (`containers info`: new digest, failed 0). Chromium was never in the image; replays are browserless. Rule: after a sandbox deploy, confirm the rollout *applied* — a green `wrangler deploy` only means it *started*. | applied; 1532 MB; replay 373 ms ⚡ | 1 |
 | J14 | **`rokan do` works live — the 127 was egress, not the shim.** After the image + PATH fixes it still abstained: `rokan do` runs (exit 0) but rokan-do's seeded replay does a stdlib-urllib **HTTPS fetch** of the status page, and the judge container had **no working egress**. Live curl probe: the SDK HTTPS interception never activates here (CA never created), and `allowedHosts` is enforced only *through* that proxy, so with `enableInternet=false` egress to an allowlisted host **timed out** (curl 28) — the "egress allowlist" was aspirational (Opus P0). Fix `3178a34`: **`enableInternet=true`**. Measured live after deploy `9fba0038`: ALLOWED(githubstatus)=301, BLOCKED(icanhazip)=200 → egress **open**, documented honestly; isolation = no key + no vault + ephemeral + no agent→PTY + rate-limit/TTL (`terminal-judge-isolation.json`). **Live judge 11/11.** Also fixed en route: eval runner bakes `NEXT_PUBLIC_BRIDGE_HOSTS` from `--judge` (empty allowlist silently refused pairing → 0/10). | 11/11 live; egress open (honest) | 1 |
+
+
+## Tier 0 — native WebMCP consumption via the CDP `WebMCP` domain (measured 2026-08-29 ~02:20 PT, Engineer #4)
+
+Probe: `evals/diagnostics/tier0-probe.py` (Playwright, `--enable-features=WebMCP`, `new_cdp_session` →
+`WebMCP.enable`, collect `toolsAdded` for 3 s after `domcontentloaded`). Pre-registered question: *does a
+Shopify Liquid storefront expose its native tools to a third-party CDP consumer, and from which Chromium?*
+
+| T | site | channel / Chromium | `WebMCP.enable` | tools seen via CDP | ms |
+| --- | --- | --- | --- | --- | --- |
+| T1 | https://template.vercel.shop/ (home) | bundled 151.0.7922.34 | ok | 0 (registers elsewhere/lazily) | 4012 |
+| T2 | https://template.vercel.shop/ (home) | chrome 152.0.7977.65 | ok | 0 | 3514 |
+| T3 | https://rokan-terminal.vercel.app/ | chrome 152 | ok | 6 (our six fixed tools — probe validated) | 4360 |
+| T4 | https://webmcp-coffee.jilles.fyi/ | chrome 152 | ok | 4: filter_coffees_by_roast, add_to_cart, remove_from_cart, update_cart_quantity | 3437 |
+| T5 | **https://www.allbirds.com/** (Shopify Liquid) | chrome 152 | ok | **10**: search_catalog, browse_store, get_product, show_variant, get_cart, update_cart, cancel_cart, proceed_to_checkout, manage_orders, search_shop_policies_and_faqs | 4107 |
+| T6 | https://www.gymshark.com/ | chrome 152 | ok | 0 | 4641 |
+
+Facts: `document.modelContext` present on every page under the flag; `navigator.modelContext` alias only
+on bundled 151; `navigator.modelContextTesting` absent (Cloudflare Browser Run's path) on both. No headless
+Chromium left running after each probe (checked). **Conclusion:** Tier 0 is mechanically feasible from
+rokan-do's own Playwright; Allbirds is the demo storefront; invoke/latency numbers pending
+`docs/measurements/2026-08-29-tier0.md` in the Rokan repo.

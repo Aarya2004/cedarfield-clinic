@@ -51,6 +51,18 @@
    (`toolchange`) without a page reload — measure the hour the app is installed; if it does
    not, the hero shot uses DevTools → WebMCP for the birth and ChatGPT after a reload, stated
    honestly. Chrome 152 does (measured: one `toolsAdded` per runtime `registerTool`).
+10. **Compose the web, keep it as a tool — `docs/COMPOSE-PLAN.md` is the final layer.** (Decided
+    2026-08-29 ~03:00 PT by Arav with Engineer #4 after seven research lanes; Aarya veto by editing
+    this line.) The two §S finals merge: the terminal stays the vehicle; `rokan do` becomes
+    *consume-else-compile* (Tier 0: a site's own WebMCP tools first — measured feasible on
+    allbirds.com, 10 tools; compiled operation where none exist; retired when native arrives); a
+    forged tool composes `machine`, `web:native`, `web:compiled` steps and is **kept** across
+    reloads with re-approval. Headline demoted: "your Enter is the trust boundary" is a mechanism,
+    never the pitch (93% blind-approval data; labs moved to shape rules + classifiers). Corrected
+    fact: ChatGPT desktop *has* an integrated terminal + user-defined actions — never claim "no
+    shell". The two structural demos are D1 (same hashed tool called from ChatGPT, Codex, Claude
+    Code) and D2 (second run at 0 calls with a drift refusal, A/B with N and CIs). Production bar
+    §1.1 of COMPOSE-PLAN binds (judging-window caps raised; `npx` published; no simulated flows).
 
 ---
 
