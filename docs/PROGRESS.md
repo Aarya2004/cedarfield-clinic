@@ -2,6 +2,16 @@
 
 Last update: **2026-08-29 04:00 PT** · **Target: submit Mon 09-01 end of day (Arav); freeze Sun 08-31 evening.** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
 
+## Review findings — 2026-08-29 pass (Opus + Fable), Engineer #3 triage
+Fixed (in my lane, each with a regression test + commit):
+- **Opus P0** judge egress: `interceptHttps=false` never gated HTTPS (the SDK interception doesn't activate here) → `enableInternet=true` so rokan-do's replay fetch works; docs now state the real isolation model (no key/no vault/ephemeral/no agent→PTY/rate-limit+TTL), `terminal-judge-isolation.json` proves no key/vault live. `3178a34`, `852fa76`.
+- **Fable P1.2** `redact.ts` single-line PEM leaked the key → redact only the body between markers; drop stray key bytes on BEGIN/END lines. `+2 tests`.
+- **Fable P1.1** pairing: `*.trycloudflare.com` wildcard means a *pasted* malicious link pairs the tab — unfixable in-band (everything needed is in the link); SECURITY §4/§7 corrected to the honest bearer-link model (judge mode unaffected).
+- **Fable P2.5** rokan ⚡ spoof via chained `; echo` → `isRokanCommand` rejects shell separators. `+5 cases`.
+- **Fable P2.8** bridge respawn loop → rapid-exit backoff (3× within 2s → stop).
+
+Routed to Aarya (forge.ts / terminal UI lane): Fable P2.3 restore() no rollback after a rejected registerTool; P2.4 cancelActive writes two `dismissed` rows; P2.6/Opus-P2 `runs` counts invocations before Enter (and carries across a re-forge that changes the hash); P2.7 insertedId survives Ctrl-C so a later Enter marks the agent's proposal executed.
+
 ## ⚠️ REVERT BEFORE FREEZE
 - `infra/sandbox/wrangler.jsonc`: `SESSIONS_PER_IP_PER_10MIN` and `MAX_CONCURRENT_PER_IP` are temporarily **50 / 20** (raised 2026-08-29 to run many `--judge` checks from one IP while fixing `rokan do`). **Set both back to `3` before the Sun 08-31 freeze** — 3/3 is the stranger-abuse control in `docs/SECURITY.md`. TTL is unchanged (30 min), so the demo is unaffected either way.
 
