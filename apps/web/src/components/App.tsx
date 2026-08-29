@@ -17,8 +17,10 @@ import { session } from '@/lib/terminal/session';
 import { runFeed } from '@/lib/terminal/runfeed';
 import { clearFieldNotes, fieldNotes, note, subscribeFieldNotes } from '@/lib/webmcp/fieldnotes';
 import { initTheme } from '@/lib/theme';
+import type { OpenArtifact } from '@/lib/terminal/artifacts';
 import { Terminal } from './Terminal';
 import { RunFeed } from './RunFeed';
+import { ArtifactPanel } from './ArtifactPanel';
 import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
 import { Hero, HeroStrip, type HeroExampleState } from './Hero';
@@ -76,6 +78,8 @@ export function App() {
   const [hooks, setHooks] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [tour, setTour] = useState<'unset' | 'on' | 'off'>('unset');
+  // One artifact at a time: opening another replaces it, Close returns the column to full width.
+  const [artifact, setArtifact] = useState<OpenArtifact | null>(null);
   const s = useSession();
   const cards = useCards();
   const forged = useForged();
@@ -143,20 +147,30 @@ export function App() {
       {showTour && <Tour judge={s.hello?.mode === 'judge'} onClose={() => setTour('off')} />}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
         {liveTerminal ? (
-          <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
-            <HeroStrip example={heroExample} onForgeExample={forgeExample} />
-            {/* The history: grows with its content to at most 45 % of the column, so the live
-                terminal below always keeps the larger half. Empty, it is one line of invitation. */}
-            <Boundary name="run feed">
-              <RunFeed onForgeThis={forgeThis} />
-            </Boundary>
-            {/* The floor the xterm host (min-h-[160px]) plus its ghost bar need. Stated here so
-                flex shrinks the expanded hero instead of clipping the terminal on a short screen. */}
-            <div className="min-h-[200px] flex-1">
-              <Boundary name="terminal">
-                <Terminal onForgeThis={forgeThis} />
+          // The work, and (when one is open) the artifact beside it: on a wide screen the panel
+          // takes ~40 % and the feed + terminal keep the rest; under 1100 px it overlays this
+          // column instead of squeezing the terminal (the panel is `absolute inset-0` there).
+          <div className="relative flex min-h-0 gap-3">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden">
+              <HeroStrip example={heroExample} onForgeExample={forgeExample} />
+              {/* The history: grows with its content to at most 45 % of the column, so the live
+                  terminal below always keeps the larger half. Empty, it is one line of invitation. */}
+              <Boundary name="run feed">
+                <RunFeed onForgeThis={forgeThis} onOpenArtifact={(run, detection) => setArtifact({ runId: run.id, command: run.command, detection })} />
               </Boundary>
+              {/* The floor the xterm host (min-h-[160px]) plus its ghost bar need. Stated here so
+                  flex shrinks the expanded hero instead of clipping the terminal on a short screen. */}
+              <div className="min-h-[200px] flex-1">
+                <Boundary name="terminal">
+                  <Terminal onForgeThis={forgeThis} />
+                </Boundary>
+              </div>
             </div>
+            {artifact && (
+              <Boundary name="artifact">
+                <ArtifactPanel key={`${artifact.runId}:${artifact.detection.artifact.kind}`} open={artifact} onClose={() => setArtifact(null)} />
+              </Boundary>
+            )}
           </div>
         ) : (
           <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">

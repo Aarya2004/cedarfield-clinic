@@ -15,6 +15,7 @@
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { matchesFilter, runFeed, type Run, type RunFilter } from '@/lib/terminal/runfeed';
+import { detectionFor, rokanArtifact, type Detection } from '@/lib/terminal/artifacts';
 import { Chip } from './Chip';
 import { ProvenanceChip } from './Provenance';
 
@@ -37,7 +38,7 @@ function useRuns(): Run[] {
   return useSyncExternalStore((fn) => runFeed.subscribe(fn), () => runFeed.snapshot(), () => EMPTY);
 }
 
-export function RunFeed({ onForgeThis }: { onForgeThis: (lines: string[]) => void }) {
+export function RunFeed({ onForgeThis, onOpenArtifact }: { onForgeThis: (lines: string[]) => void; onOpenArtifact: (run: Run, d: Detection) => void }) {
   const runs = useRuns();
   const [filter, setFilter] = useState<RunFilter>('all');
   const [open, setOpen] = useState<Set<string>>(() => new Set());
@@ -104,7 +105,7 @@ export function RunFeed({ onForgeThis }: { onForgeThis: (lines: string[]) => voi
           ) : (
             <ol className="space-y-0.5">
               {shown.map((r) => (
-                <RunRow key={r.id} run={r} open={open.has(r.id)} onToggle={() => toggle(r.id)} onForgeThis={onForgeThis} />
+                <RunRow key={r.id} run={r} open={open.has(r.id)} onToggle={() => toggle(r.id)} onForgeThis={onForgeThis} onOpenArtifact={onOpenArtifact} />
               ))}
             </ol>
           )}
@@ -119,7 +120,19 @@ export function RunFeed({ onForgeThis }: { onForgeThis: (lines: string[]) => voi
   );
 }
 
-function RunRow({ run, open, onToggle, onForgeThis }: { run: Run; open: boolean; onToggle: () => void; onForgeThis: (lines: string[]) => void }) {
+function RunRow({
+  run,
+  open,
+  onToggle,
+  onForgeThis,
+  onOpenArtifact,
+}: {
+  run: Run;
+  open: boolean;
+  onToggle: () => void;
+  onForgeThis: (lines: string[]) => void;
+  onOpenArtifact: (run: Run, d: Detection) => void;
+}) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -127,6 +140,9 @@ function RunRow({ run, open, onToggle, onForgeThis }: { run: Run; open: boolean;
     return () => clearTimeout(t);
   }, [copied]);
   const origin = ORIGIN[run.origin];
+  // Memoised on the Run object, so asking on every render costs one WeakMap lookup.
+  const detected = detectionFor(run);
+  const rokanCard = rokanArtifact(run);
   const command = run.command; // a const so the null check still holds inside the action handlers
   const copy = () => {
     const c = navigator.clipboard;
@@ -146,6 +162,17 @@ function RunRow({ run, open, onToggle, onForgeThis }: { run: Run; open: boolean;
         <code className="mono min-w-0 flex-1 truncate text-ink" dir="ltr" title={command ?? undefined}>
           {command ?? <span className="text-muted">command not recorded by the shell</span>}
         </code>
+        {/* Only an unambiguous detection speaks before the run is opened: a dot and a word, no motion. */}
+        {detected?.confident && (
+          <span
+            data-artifact-hint={detected.artifact.kind}
+            title={`This output reads as ${detected.type}. Open the run to view it beside the terminal.`}
+            className="hidden shrink-0 items-center gap-1 text-[10px] text-muted lg:inline-flex"
+          >
+            <span aria-hidden className="h-1 w-1 rounded-full bg-accent" />
+            {detected.type}
+          </span>
+        )}
         {run.exit_code === null ? (
           <Chip tone="muted" title={run.interrupted ? 'The bridge disconnected before this command ended.' : 'No shell integration: this exit code was never measured.'}>
             {run.interrupted ? 'cut short' : 'exit unknown'}
@@ -180,6 +207,29 @@ function RunRow({ run, open, onToggle, onForgeThis }: { run: Run; open: boolean;
                   {copied ? 'copied' : 'Copy'}
                 </button>
               </>
+            )}
+            {/* The browser's own move: render what the terminal could only print. */}
+            {detected && (
+              <button
+                type="button"
+                data-artifact-open={detected.artifact.kind}
+                onClick={() => onOpenArtifact(run, detected)}
+                title="Render this output in a panel beside the terminal"
+                className="rounded-sm underline decoration-line underline-offset-2 hover:decoration-ink"
+              >
+                {detected.action}
+              </button>
+            )}
+            {rokanCard && (
+              <button
+                type="button"
+                data-artifact-open="rokan"
+                onClick={() => onOpenArtifact(run, rokanCard)}
+                title="Show what rokan answered, how fast, and how many model calls it spent"
+                className="rounded-sm underline decoration-line underline-offset-2 hover:decoration-ink"
+              >
+                {rokanCard.action}
+              </button>
             )}
             <span className="mono">{new Date(run.t).toLocaleTimeString()}</span>
             {run.edited && <span title="You inserted the proposal with Tab and edited it before running">edited</span>}
