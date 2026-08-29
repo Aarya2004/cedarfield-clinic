@@ -1,6 +1,26 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-29 ~03:10 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** · **Target: submit Tue 09-01; freeze Mon 08-31 12:00 PT; hard fallback Wed 09-02 evening.** Branch `main`, all pushed.
+Last update: **2026-08-29 ~10:00 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
+
+## Build log — Engineer #4 (2026-08-29)
+**P0.4 A/B Impact harness measured + drift test + SUBMISSION Impact + CI hardening (entry `a04ae96`, pushed).**
+The Impact number is measured, live, three arms (`evals/ab/`, `docs/measurements/2026-08-30-ab.md`):
+- **compiled** ("status.python.org operational?"): Rokan warm **0 calls / 79 ms** vs Codex ~23 s / Claude ~16 s → ~200–290× at 0 model calls, and the agents pay it *every* run.
+- **native** ("wool runners price", builder mode): Rokan warm **0 calls / ~1.45 s** vs Codex ~10 s / Claude ~77 s.
+- N=5 warm / N=3 agents; variance flagged; native-warm re-drives a live browser (honest, stated).
+**Drift test** (`evals/ab/drift/`): a static page swaps v1→v2; a naive cached script returns **$75** (a shipping
+line) when the true price is **$140** — reproduced live, silently wrong. Rokan arm rests on the built-in
+`recheck` (planning forbidden → retire the op that no longer verifies); gated behind `ANTHROPIC_API_KEY` like
+the agents arm, prints `{skip,reason}` without it — never a fabricated verdict.
+**SUBMISSION.md** gains a measured Potential-impact section (the table above, honesty distinctions explicit).
+**CI**: trailer parser (native ⚙ marker) + MCP relay + eval runner-cleanup now run on push (reviewer P2).
+**Verification this session:** web typecheck clean + 184/184 tests; bridge check clean + 11/11; Tier 0 native
+37/37 (via PYTHONPATH — the `.venv` doesn't editable-install rokan_do/rokan_agent, uv/UF_HIDDEN bug); live
+health: web 200, worker `{ok:true,mode:judge}`. Graph nodes touched: `rokan-trailer.parseRokanTrailer`,
+`recheck` (Rokan). **Blocked (need Arav/key):** ChatGPT Sol/Terra run (off screen-share + switch to Sol/Terra);
+`npm login` to publish; live cold-compile Rokan drift/A/B rows (API key not in Bash env). **Next (unblocked):**
+`npm pack` dry-run; README headline + DEMO v3 measured ms; SECURITY §9 (Tier 0 gate, kept-hash, caps rationale);
+Chrome evals-cli format.
 
 ## Build log — Engineer #4 (2026-08-29)
 **P0.7 Tier 0 LIVE end-to-end + entry bridge trailer + review round 3 closed (Rokan `feat/tier0-native`
