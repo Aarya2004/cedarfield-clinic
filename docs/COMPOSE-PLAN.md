@@ -147,16 +147,59 @@ Binding definition of "production" for this entry — each line is a test in §7
    them (same path as forge approve); Dismiss forgets nothing.
 6. Ledger: `executed_step` rows carry `rokan{speed, site, tools_used, ms, calls}`.
 
+### 2.2a Vocabulary the whole team uses the same way (say these words, not others)
+- **Native WebMCP tool** — a tool a *site* declared (`document.modelContext`), consumed over the CDP
+  WebMCP domain. Tier 0. E.g. Allbirds' own `search_catalog`. (Built + live-proven, FIELD-NOTES T5.)
+- **Synthetic WebMCP tool** — a **compiled operation Rokan mints for a site that ships NO native
+  tools**: a verified shadow-API replay (`rokan do`'s compiled/replayed path) surfaced *through the
+  forge* as a WebMCP tool. This is what "gives the agent every site" means — the long tail the spec
+  admits never ships tools (RESEARCH §7 #8). Verified-or-refused; 0 model calls on replay.
+- **Composed tool** — a forged `forged_<name>` whose `commands[]` chain **native + synthetic +
+  machine** steps across *different sites and your machine* into one tool call. E.g.
+  `deal_hunt({{product}})` = `rokan do "search allbirds.com for {{product}}"` (native) → `rokan do
+  "price at <a site with no tools>"` (synthetic) → `jq` compare (machine).
+
+### 2.2b The Impact thesis, stated so the number on screen is honest (read before writing any speed copy)
+Claim: **a composed cross-site tool runs significantly faster than a single agent driving each
+site's tools individually — because the orchestration is compiled once and replays with the model
+out of the loop.** The honest mechanism, and the three traps:
+- **Where the speedup is NOT.** Not "our native call beats their native call" — the same site tool
+  is the same speed for anyone. Never imply Rokan makes a site's tool faster.
+- **Where the speedup IS.** A vanilla agent (ChatGPT/Codex) orchestrating N sites pays, **every
+  run**, a model round-trip *per step* — decide which tool, read the result, decide the next,
+  compare — so N sites ≈ N–2N model calls and N inference latencies (seconds each). Rokan forges
+  that orchestration into a tool **once** (first run ≈ 1 model call per new site to select the tool
+  + fill its schema, same order as the agent's first run); on **every subsequent run the composed
+  tool replays at 0 model calls** — each step a native invoke (~1 s) or a synthetic replay (~0.3 s),
+  the model never re-entered. The win is *amortized on repeat* and is dominated by **eliminated
+  model round-trips**, not by the tool calls. This is head-to-head-ten (0 vs 39 warm model calls,
+  13.9× median — Rokan `docs/measurements/2026-08-27-head-to-head-ten.md`) extended to native
+  cross-site tools.
+- **Why an agent can't just cache it.** It could script one, but not as a **portable WebMCP tool
+  callable by any agent** with a content hash and a countersigned ledger — and by default it
+  re-plans the whole workflow every session (the config-drift + re-discovery complaints, demand
+  research #5/#6). That portability + provenance is the differentiator, not raw speed alone.
+- **The rule:** the number on screen is measured wall-clock with N and a CI (§4 A/B), the model-call
+  counts are the code's own (0 on replay), and the first-run cost is stated, never hidden.
+
 ### 2.3 The two structural demos (things Codex / Claude Code / Gemini CLI cannot do)
 - **D1 — Called from ChatGPT, then Codex, then Claude Code.** Forge `release_check` in ChatGPT's
   Site tools; a new Codex session calls `forged_release_check` (MCP relay) → same hash → ghost →
   Enter; Claude Code calls it too. One ledger. *No harness can be a tool for another vendor's
   agent.*
-- **D2 — The second run.** Same 3-site task: Arm A Codex + Playwright MCP cold, Arm B Claude Code
-  + DevTools MCP cold, Arm C Rokan first run (compile) then replay ×5. Wall ms, model calls,
-  tokens, success, N=5 each, Wilson CIs. Plus the **drift test**: the page changes → their script
-  answers wrong silently, ours **refuses**. *They re-think every time; ours replays at 0 calls and
-  refuses on drift.*
+- **D2 — The cross-site second run (the Impact number; §2.2b is the honesty spine).** A **multi-site**
+  task — "get the price of `{{product}}` at allbirds.com **and** at `webmcp-coffee.jilles.fyi`, and
+  say which is cheaper" (2 native sites; a 3rd, tool-less site makes it native+synthetic if time).
+  - **Arm A (vanilla agent, native tools):** ChatGPT/Codex in a WebMCP browser, cold each run — it
+    round-trips the model to pick+call site A's tool, read, pick+call site B's tool, read, compare.
+    Measure wall ms, **model calls**, tokens, success.
+  - **Arm C (Rokan composed tool):** forge `deal_hunt({{product}})` once (first run ≈ 1 call/site to
+    select+fill), then **replay ×5** — the composed tool runs both `rokan do` steps at **0 model
+    calls** and the machine compare step. Measure the same.
+  - N=5 per arm, Wilson CIs, in `docs/measurements/2026-08-30-ab.md`. The headline is **0 vs N model
+    calls on repeat and the measured × on wall-clock**, with the first-run parity stated. Plus the
+    **drift test**: change a page → Arm A answers wrong silently, Rokan **refuses** (verified-or-
+    refused). *They re-plan the whole cross-site workflow every run; ours replays it at 0 calls.*
 - **D3 (if Tier 0 lands) — native, not DOM.** `rokan do "search allbirds.com for wool runners"`
   resolves to `search_catalog` via the site's own tools; Arm A clicks the DOM. Measured ms/calls.
   *No harness speaks WebMCP.*
