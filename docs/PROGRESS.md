@@ -2,6 +2,20 @@
 
 Last update: **2026-08-29 ~18:40 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
+## Build log — Engineer #4 (2026-08-29 ~19:15 local, prod redeployed → regime re-run on the LIVE build)
+Arav ran `vercel --prod` (deployment `EJcniHTebPRLmDXstNotBjVRJd7t`, 44 s, aliased to rokan-terminal.vercel.app).
+Verified the alias serves HEAD by observable diff (Site tools · 7 with `terminal_history`, Runs panel, new hero).
+**§16 manual regime, real Chrome, clean tab, on the deployed build — evidence `docs/evidence/stranger/`:**
+1 web 200 / worker `{ok,mode:judge}` ✓ · 2 cold load, no console errors ✓ · 3 Try it now → **paired 239 ms** →
+`ls` → `Runs · 1 · exit 0 · 8 ms` ✓ · 6 `rokan do "what is the current status at www.vercel-status.com"` →
+`All Systems Operational 1184ms ⚡` → run row chip **`⚡ compiled · 1184 ms · 0 calls`** ✓ · 5 expand the run →
+**Forge this** → card `forged_rokan_70` (hash `4bfdbeaff4d5`, from human) → **Approve** → **Site tools 7 → 8**, Ledger · 4
+`forged … read ✓`, First-60 step 3 struck through ✓. Finding B from the previous run (no Runs row) is closed — it was
+only the stale deploy. Not exercised here (needs a WebMCP consumer or Aarya's screens): 4 read_screen, 7 restore,
+8 Codex relay, 9 failure states — the judge evals cover 4 (12/12 ×2 today).
+**Rule that now binds (memory + PROGRESS):** after any `apps/web` merge, prod is stale until `cd apps/web && vercel --prod --yes`
+runs — Vercel has no git auto-deploy here. Add it to the merge checklist; it's a one-line judge-visible failure otherwise.
+
 ## Build log — Engineer #4 (2026-08-29 ~19:00 local, manual regime after merge — live stranger run)
 Ran the §16 regime on the LIVE URL in a real Chrome tab (clean, no flags). Green: web 200 (1.6 s) · worker `{ok,mode:judge}`
 · cold load: hero, Site tools · 6, terminal, Ledger · 1, no console errors · Try it now → paired **824 ms** · `ls` → `exit 0 · 5 ms`

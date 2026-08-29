@@ -292,3 +292,7 @@ Nothing here touches your components; wire at your pace.
 3. Keep the phrasing byte-exact — rokan-do keys the 0-call replay on the normalised question + host; a paraphrase re-plans
    (and in the sandbox, abstains). DEMO.md lines 16/43/58 (`top 5 HN titles`) need the same swap (Engineer #4 will do DEMO.md).
 Why this is better than HN anyway: every judge can type *their own company's* status page and get ⚡ 0 calls.
+
+**UI nit seen on prod (RunFeed, your lane, low):** the expanded run output for `rokan do …` shows two trailing capture
+lines — `%` and a right-aligned `judge@rokan:~` — i.e. the next prompt's fragments are being captured as output. Trim
+prompt-line fragments (OSC 133 boundary) from the run's recorded output. Screenshot: `docs/evidence/stranger/2026-08-29-prod-forged-tools8.jpg`.
