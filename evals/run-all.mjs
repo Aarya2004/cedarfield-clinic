@@ -6,17 +6,23 @@
  *                                     against a REAL PTY through the pairing hash
  *   node evals/run-all.mjs --judge=<worker url>   runs terminal-*.json against a deployed judge sandbox:
  *                                     POST /api/session per case (rate limit permitting), pairing hash from the response
+ *   --only=<case-substring>   run a subset · --trace=<dir>  keep every case's per-step harness output (with `ms`)
+ *   --judge mode retries a failed case once (labelled RETRY / attempt 2) and reports `N retried` on the last line.
  * Restarts the built web app on :3311 for the run and stops everything afterwards.
  */
 import { spawn, spawnSync, execSync } from 'node:child_process';
 import { createServer } from 'node:net';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const withBridge = process.argv.includes('--bridge');
 const judgeUrl = process.argv.find((a) => a.startsWith('--judge='))?.slice(8) ?? null;
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
+// --trace=<dir>: keep every case's full harness output (one JSON line per step, with `ms`) — the
+// per-step timings are the only way to size a wait budget against a remote (judge) PTY instead of guessing.
+const traceDir = process.argv.find((a) => a.startsWith('--trace='))?.slice(8) ?? null;
+if (traceDir) mkdirSync(traceDir, { recursive: true });
 // --bridge --mode=judge: run the local bridge exactly as the container does (judge mode, TTL) to reproduce judge-only failures without a sandbox session
 const bridgeMode = process.argv.find((a) => a.startsWith('--mode='))?.slice(7) ?? 'builder';
 const bridgeModeArgs = bridgeMode === 'judge' ? ['--mode', 'judge', '--ttl-ms', '1800000'] : [];
@@ -184,15 +190,32 @@ const cases = readdirSync(`${root}evals/cases`)
   .filter((x) => !only || x.includes(only))
   .sort();
 let failed = 0;
+let retried = 0;
 for (const f of cases) {
   // A case may start with {"query": "tour=1"} to add page query params for that run.
   const first = JSON.parse(readFileSync(`${root}evals/cases/${f}`, 'utf8'))[0] ?? {};
   if (first.judgeOnly && !judgeUrl) { console.log(`SKIP ${f} (judge-only; builder shell legitimately has a key)`); continue; }
   const extraQuery = typeof first.query === 'string' ? `&${first.query}` : '';
   const url = `http://localhost:${WEB_PORT}/?test=1${extraQuery}${withBridge || judgeUrl ? pairingHash : ''}`;
-  const r = spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], { encoding: 'utf8' });
+  const runCase = () => spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], { encoding: 'utf8' });
+  let r = runCase();
+  let attempt = 1;
+  if (traceDir) writeFileSync(`${traceDir}/${f.replace(/\.json$/, '')}.jsonl`, r.stdout + (r.stderr ? `\n# stderr\n${r.stderr}` : ''));
+  if (r.status !== 0 && judgeUrl) {
+    // Judge mode: the PTY is a `basic` (¼ vCPU) container across a WAN hop. Measured 2026-08-29
+    // (--trace, 12 cases): every wait finishes within 6 % of its budget (worst 259 ms / 4000), so a
+    // budget miss there is a multi-second container/WS stall, not a tight budget. One labelled retry
+    // separates that transient from a real regression; the final line counts retries so it can't hide.
+    if (traceDir) writeFileSync(`${traceDir}/${f.replace(/\.json$/, '')}.attempt1.jsonl`, r.stdout + (r.stderr ? `\n# stderr\n${r.stderr}` : ''));
+    console.log(`RETRY ${f} (judge-mode transient?) ${r.stdout.trim().split('\n').pop()}`);
+    await sleep(1500);
+    r = runCase();
+    attempt = 2;
+    retried++;
+    if (traceDir) writeFileSync(`${traceDir}/${f.replace(/\.json$/, '')}.jsonl`, r.stdout + (r.stderr ? `\n# stderr\n${r.stderr}` : ''));
+  }
   const summary = r.stdout.trim().split('\n').pop();
-  console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} ${f} ${summary}`);
+  console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} ${f}${attempt > 1 ? ` (attempt ${attempt})` : ''} ${summary}`);
   if (r.status !== 0) {
     failed++;
     console.log(
@@ -225,5 +248,5 @@ for (const f of cases) {
   }
 }
 cleanup();
-console.log(`evals${withBridge ? ' (real PTY)' : judgeUrl ? ' (judge sandbox)' : ''}: ${failed} failed of ${cases.length}`);
+console.log(`evals${withBridge ? ' (real PTY)' : judgeUrl ? ' (judge sandbox)' : ''}: ${failed} failed of ${cases.length}${retried ? `, ${retried} retried` : ''}`);
 process.exit(failed ? 1 : 0);
