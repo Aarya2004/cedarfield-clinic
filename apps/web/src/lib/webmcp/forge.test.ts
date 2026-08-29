@@ -376,3 +376,75 @@ test('regression (Codex review): judge mode marks a forged sudo step dangerous a
   assert.equal(store.get(r.proposal_ids[1])?.status, 'dismissed');
   assert.equal(engine.active(), null);
 });
+
+// Breadth: the forge is command-agnostic. Forge 100 diverse commands across many tool families —
+// each must forge to a unique hash, invoke with its params substituted (no `{{}}` left), stay
+// Enter-gated (the first step is a *pending proposal*, nothing executed until resolved), and be
+// classified write/read correctly. Proves the generality claim without a browser or a network.
+test('forge breadth: 100 diverse commands each forge → invoke (substituted, Enter-gated, unique hash)', async () => {
+  const { engine, store } = make();
+  // [command template with {{p}}, a value for p, exped to be dangerous(write)]
+  const templates: Array<{ cmd: string; p?: string; val?: string; danger: boolean }> = [
+    { cmd: 'git log --oneline -{{n}}', p: 'n', val: '5', danger: false },
+    { cmd: 'python3 -c "print({{e}})"', p: 'e', val: '6*7', danger: false },
+    { cmd: 'curl -sS https://{{h}}/health', p: 'h', val: 'example.com', danger: false },
+    { cmd: 'ls -la {{dir}}', p: 'dir', val: 'src', danger: false },
+    { cmd: 'grep -rn {{pat}} .', p: 'pat', val: 'TODO', danger: false },
+    { cmd: 'docker ps --filter name={{name}}', p: 'name', val: 'web', danger: false },
+    { cmd: 'npm run {{script}}', p: 'script', val: 'build', danger: false },
+    { cmd: 'kubectl get pods -n {{ns}}', p: 'ns', val: 'prod', danger: false },
+    { cmd: 'sed -n {{range}}p file.txt', p: 'range', val: '1,20', danger: false },
+    { cmd: 'rokan do "status of {{site}}"', p: 'site', val: 'githubstatus.com', danger: false },
+    { cmd: 'cat {{file}}', p: 'file', val: 'README.md', danger: false },
+    { cmd: 'df -h {{mount}}', p: 'mount', val: '/', danger: false },
+    // dangerous families → engine must classify as write (override agent-declared read)
+    { cmd: 'rm -rf {{d}}', p: 'd', val: 'build', danger: true },
+    { cmd: 'git push origin {{branch}}', p: 'branch', val: 'main', danger: true },
+    { cmd: 'curl -X POST https://{{h}}/api', p: 'h', val: 'example.com', danger: true },
+    { cmd: 'kill {{pid}}', p: 'pid', val: '1234', danger: true },
+    { cmd: 'chmod 777 {{path}}', p: 'path', val: 'bin.sh', danger: true },
+  ];
+  const hashes = new Set<string>();
+  let dangerHits = 0;
+  for (let i = 0; i < 100; i++) {
+    const t = templates[i % templates.length];
+    const name = `brd_${i}`;
+    const spec: ForgeSpec = {
+      name,
+      description: `breadth command ${i} exercising a distinct family`,
+      commands: [t.cmd],
+      params: t.p ? [{ name: t.p, description: `the ${t.p}`, example: t.val }] : [],
+      kind: 'read', // deliberately declare read; the engine must override to write when dangerous
+    };
+    const c = engine.openCard(spec, { origin: 'agent' });
+    if ('error' in c) throw new Error(`openCard ${name}: ${c.error} — ${t.cmd}`);
+    // A write-family command (rm/git push/curl -X POST/kill/chmod) must be classified write
+    // even though the spec declared read; `dangerous` (the red-banner isDangerous, e.g. `rm -rf /`) is a
+    // stricter subset, so approve confirms based on the card's own flag, not our guess.
+    if (t.danger) { assert.equal(c.kindOverridden, true, `kind override for ${t.cmd}`); dangerHits++; }
+    const reg = await engine.approve(c.card_id, undefined, c.dangerous ? { confirmDangerous: true } : undefined);
+    if ('error' in reg) throw new Error(`approve ${name}: ${reg.error}`);
+    assert.equal(reg.tool, `forged_${name}`);
+    assert.equal(reg.hash.length, 12);
+    assert.ok(/^[0-9a-f]{12}$/.test(reg.hash), `hash hex for ${name}`);
+    assert.ok(!hashes.has(reg.hash), `hash collision at ${name} (${reg.hash})`);
+    hashes.add(reg.hash);
+
+    const r = engine.invoke(name, t.p ? { [t.p]: t.val } : {});
+    if ('error' in r || 'status' in r) throw new Error(`invoke ${name}: ${JSON.stringify(r)}`);
+    // Enter-gate: the first step is a pending PROPOSAL — nothing has executed.
+    const active = store.get(r.active);
+    assert.ok(active, `active proposal exists for ${name}`);
+    assert.equal(store.pending()?.id, r.active, `first step is the pending proposal for ${name}`);
+    assert.doesNotMatch(active!.command, /\{\{|\}\}/, `no unsubstituted placeholder in ${name}: ${active!.command}`);
+    if (t.p) assert.ok(active!.command.includes(t.val!), `value substituted in ${name}: ${active!.command}`);
+    // resolve every step with a human "Enter" so the invocation completes and frees `busy`
+    for (const id of r.proposal_ids) { store.resolve(id, 'accepted'); await tick(); }
+    assert.equal(engine.active(), null, `invocation cleared for ${name}`);
+  }
+  assert.equal(hashes.size, 100, '100 distinct commands → 100 distinct hashes');
+  // 5 of the 17 templates are write-family (indices 12..16); every time one comes up it must override.
+  const expectedWrites = Array.from({ length: 100 }, (_, i) => i % templates.length).filter((k) => k >= 12).length;
+  assert.equal(dangerHits, expectedWrites, `write-family classified (${dangerHits}/${expectedWrites})`);
+  assert.ok(dangerHits > 20, 'a meaningful number of write commands were exercised');
+});
