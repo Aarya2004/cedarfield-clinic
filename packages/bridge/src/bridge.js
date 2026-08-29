@@ -131,7 +131,11 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
           exit_code: ev.code,
           ms: state.last_command_ms,
           cwd: state.cwd,
-          ...(state.last_rokan ? { rokan_ms: state.last_rokan.ms, rokan_calls: state.last_rokan.replayed ? 0 : null } : {}),
+          ...(state.last_rokan ? {
+            rokan_ms: state.last_rokan.ms,
+            rokan_calls: state.last_rokan.replayed ? 0 : null,
+            ...(state.last_rokan.native ? { rokan_site: state.last_rokan.native.site, rokan_tool: state.last_rokan.native.tool } : {}),
+          } : {}),
         });
         endStatus = true; // sent AFTER this data frame so the client sees the end marker (and the last output) first
       } else if (ev.kind === 'cwd') {

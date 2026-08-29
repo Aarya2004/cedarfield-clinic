@@ -231,3 +231,22 @@ gating + redaction by construction, and `terminal://ledger` from the bridge's ow
 call. Ship it. FYI my Tier 0 daemon+native review-fix round is done and gate 8/8 (Rokan branch
 `feat/tier0-native`); the bridge trailer grammar change (`⚙ native:<site>:<tool>`) is next in
 `rokan-trailer.js` — I'll ping when that contract lands so your Provenance chip's native state wires up.
+
+## C → Ay, 2026-08-29 ~17:30 PT — CONTRACT: native provenance in the ledger (wire your chip)
+The bridge trailer now parses the Tier 0 native marker. `executed`/`executed_step` ledger rows gain,
+when `rokan do` used a site's own WebMCP tool:
+- `rokan_ms` (number), `rokan_calls` (**0** = replay/native-replay, **null** = first-run/planned unknown),
+- `rokan_site` (string, e.g. "allbirds.com" — present ONLY for native), `rokan_tool` (e.g. "search_catalog").
+Final chip mapping for `Panes.tsx` (your lane — change when you're ready, one line):
+```
+const f = r.fields;
+const kind = f.rokan_site ? 'native' : (f.rokan_calls === 0 ? 'compiled' : 'planned');
+<ProvenanceChip p={{ kind, site: f.rokan_site, tool: f.rokan_tool,
+                     ms: f.rokan_ms, ...(f.rokan_calls === 0 ? { calls: 0 } : {}) }} />
+```
+So: `native` + `calls:0` = the 0-call replay (⚡); `native` + no calls = first-run (1 call, shown by ⚙
+in the terminal). Your chip's `native` state already renders `⚙ native · <site> · <tool>` — this feeds it.
+Parser is anchored to end-of-line after the ms tail and rsplits site:tool from the RIGHT (a host may have
+a port), ANSI stripped, spoof-resistant (a `⚙ native:` inside answer text is not parsed) — bridge smoke
+40/40. NOTE: the LIVE terminal only emits these once the vendored rokan-do wheels are rebuilt with Tier 0
+(a pre-demo step, my task); the parsing + your chip can land now against the tested shape.

@@ -104,6 +104,12 @@ const rkPlain = await until(frames, (f) => f.type === 'status' && f.last_command
 check('rokan trailer: not inherited by the next command in the same chunk', rkPlain?.last_rokan === null, JSON.stringify(rkPlain?.last_rokan));
 const rkNeg = await typeCommand("echo '  the answer is 42   7ms  ⚡'");
 check('rokan trailer: NOT attributed to an echo of the same line (Fable pass-3 P1)', rkNeg?.last_rokan === null, JSON.stringify(rkNeg?.last_rokan));
+// Tier 0 native marker: `⚙ native:<site>:<tool>` after the ms tail → provenance in the ledger.
+fsx.writeFileSync(pathx.join(rkDir, 'rokan-do'), '#!/bin/sh\nif [ "$1" = replay ]; then echo "  Found 2 products   24ms  ⚡  ⚙ native:allbirds.com:search_catalog"; else echo "  Found 2 products   1512ms  ⚙ native:allbirds.com:search_catalog"; fi\n');
+const rkNat = await typeCommand('rokan do "find wool runners at allbirds.com"');
+check('rokan trailer: native first-run — site/tool parsed, calls unknown (1)', rkNat?.last_rokan?.native?.site === 'allbirds.com' && rkNat?.last_rokan?.native?.tool === 'search_catalog' && rkNat?.last_rokan?.replayed === false, JSON.stringify(rkNat?.last_rokan));
+const rkNatR = await typeCommand('rokan-do replay');
+check('rokan trailer: native replay — ⚡ (calls:0) + site/tool', rkNatR?.last_rokan?.replayed === true && rkNatR?.last_rokan?.native?.tool === 'search_catalog', JSON.stringify(rkNatR?.last_rokan));
 await typeCommand('which rokan');
 const shimOut = await until(frames, (f) => f.type === 'data' && /shims\/rokan/.test(f.data), 4000);
 check('`rokan` shim is on the PTY PATH', !!shimOut);
