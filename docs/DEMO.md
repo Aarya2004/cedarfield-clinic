@@ -56,3 +56,19 @@ node packages/bridge/bin/rokan-terminal.js
 ```
 
 The PTY inherits the env, so `rokan do "top 5 HN titles at news.ycombinator.com"` plans (1 model call, ~4 s) and the seeded questions replay at ⚡. Never in the judge container (no key by design).
+
+## v3 — the two measured beats to add to the cut (COMPOSE thesis; numbers from `docs/measurements/2026-08-30-ab.md`)
+
+These are the Impact beats §15 #2/#3 asks for. On-screen numbers are the measured ones — never a rounder,
+nicer number. Shoot both in builder mode (the beats need the model/browser the judge sandbox lacks; say so).
+
+| slot | shot | on-screen (measured) | narration |
+|---|---|---|---|
+| **thesis, first 10 s** | Split screen: left = a forged/compiled tool being called; right = the ledger row landing `⚡ 0 calls`. No terminal chrome yet — just the tool answering instantly. | `calls:0  79ms  ⚡` | "A thing I did once, now answered with the model out of the loop — zero calls." |
+| **Impact (D2)** | Same live question three ways, stopwatch visible: warm `rokan do` vs Codex CLI vs Claude Code. Cut the wait times side by side. | Rokan `0 calls · 79 ms` · Codex `~23 s` · Claude `~16 s` (compiled task). Caption: "N=5 warm / N=3 agents; they re-plan every run." | "The agents re-enter the model every single run. Rokan replays — about 200× faster, at zero calls, and it stays free every time after." |
+| **drift refusal** | A storefront 'redesigns' (v1→v2). The cached script still runs and prints a price; Rokan re-checks and retires the op. | Cached script: `$75` (wrong; true price `$140`) with no warning · Rokan: `refused — the page changed`. | "A cached scrape lies quietly. Rokan verifies, and when the page drifts it refuses out loud." |
+
+**Honesty on camera (say these, don't hide them):** the 79 ms replay is browserless; consuming a site's
+*own* WebMCP tool re-drives a live browser (~1.45 s) and is builder-mode only; the drift 'refuse' is Rokan's
+`recheck` (verified-or-refused), and the naive-script-lies half is the reproduced failure mode. All three
+numbers trace to `evals/ab/` + the measurements file.
