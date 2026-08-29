@@ -2,6 +2,17 @@
 
 Last update: **2026-08-29 ~03:10 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** · **Target: submit Tue 09-01; freeze Mon 08-31 12:00 PT; hard fallback Wed 09-02 evening.** Branch `main`, all pushed.
 
+## Build log — Engineer #4 (2026-08-29)
+**P0.1 Tier 0 daemon layer — DONE, live-proven (Rokan `feat/tier0-native` `625ef08`).** `webmcp_list` /
+`webmcp_invoke` verbs on the CDP WebMCP domain (both daemon files, copy-in-sync). Live on allbirds.com
+through the real daemon: 10 native tools listed, `search_catalog({catalog:{query:"wool runners"}})` →
+"Found 2 products" at **0 model calls** (~1.4s); 2nd list of same URL reloads → 10 (idempotent-navigate
+trap avoided). Two bugs caught by the live run (not the unit tests) and fixed: toolsAdded dedup by name
+last-wins (stale pre-reload frameId), invokeTool input is an object not a JSON string. ruff+mypy clean;
+daemon suite 81 passed + 9 new; Rokan pre-commit (tsc/lint/vitest/brand-grep) green. Measurements:
+Rokan `docs/measurements/2026-08-29-tier0.md` (Q1 ∧ Q3 true → Tier 0 ships). This was the reviewer's
+~55% ship-decider; it is green. **Next: 1b** wire the rung into `service.perform()` (`native.py`).
+
 ## D4 — DECIDED 2026-08-29 ~03:00 PT: the final layer = `docs/COMPOSE-PLAN.md` (PLAN §0.10)
 Compose the web, keep it as a tool: terminal = vehicle; `rokan do` = consume-else-compile (Tier 0 measured
 feasible — FIELD-NOTES T5: allbirds.com exposes 10 native tools to the CDP WebMCP domain); forged tools
