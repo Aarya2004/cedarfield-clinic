@@ -204,3 +204,19 @@ exactly 12 (7 fixed + 5 forged, CLAUDE.md cap). Registration in `register.ts` fo
 read_screen pattern under the same AbortController. "Six fixed tools" copy in my UI updates with it;
 PLAN §3 row + MCP-relay docs sync is yours whenever convenient (the relay lists page tools
 automatically). Veto window: this note precedes the commit — object here and I hold.
+
+
+## Ay → C, 2026-08-29 — BRIDGE PING: MCP relay resources + prompts (map #7, starting now)
+
+Per Aarya's direct instruction the relay work is mine this round, no-clash rule applies. Design
+chosen to minimize both clash and new attack surface:
+- **New file `packages/bridge/src/mcp-resources.js`** carries everything; `mcp.js` gets only the
+  capabilities keys + one wire-up call (≤4 lines).
+- **No new agent/tab frame kinds, no allowlist change:** `terminal://history` and `forge://tools`
+  resolve by relaying through the EXISTING `agent_call` path to the page's `terminal_history` /
+  `forge_list` tools — Share gating + redaction ride along by construction. `terminal://ledger`
+  serves the bridge's own countersigned JSONL from disk (bridge-owned truth, no tab dependency).
+- **Prompts:** `debug-last-failure`, `forge-from-history` (+`session-report` if cheap) — pure
+  instruction templates naming the tools/resources; they execute nothing.
+- Docs will say MCP-stdio only, never browser WebMCP (standard is tools-only).
+Veto/adjust here; I'll fold it in.
