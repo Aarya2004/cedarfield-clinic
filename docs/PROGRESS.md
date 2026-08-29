@@ -42,6 +42,8 @@ ALSO fixed here (forge.ts / terminal UI — done in this session, not routed): P
 
 ## Now / Next / Done / In flight (C builds everything — Arav 03:10 PT; Aarya takes the next *unstarted* item here, never a stale one)
 
+**CLAIMED (Aarya's Claude, 2026-08-29):** frontend revision pass 2 — hero real-birth CTA (button creates a *real* Forge card via `forgeFromLines`; human still approves — first paint becomes an executable birth), visual hierarchy (hero dominates, panes lightened), empty states → one-line invitations, field-notes debris demoted. `apps/web/src/components/**` only; no lib/contract changes; keeps every `data-*` hook the harness uses. NOT touching forged-tool persistence (HANDOFF §8.3 — C's).
+
 **Done 13:50 PT:** `?tour=1` guided first-60-seconds (auto in judge mode; verified by real state; `evals/cases/tour.json`), `docs/SECURITY.md`, `AGENTS.md`, `docs/DEMO.md`, PLAN §3 synced. `wrangler deploy --dry-run` green.
 
 **Done 15:10 PT — MCP parity (PLAN §13.1):** `npx rokan-terminal mcp` is an MCP stdio server for Claude Code / Cursor / Codex CLI that lists the **same** tools the page registers with WebMCP (six fixed + forged, live `listChanged`) and relays calls to the tab; the page is the single source of truth; the agent socket can never send PTY input (tests: `packages/bridge/test/mcp.test.mjs` with a real MCP client over stdio; `terminal-forge-live.json` checks `agentTools()`/`agentCall()` in the page).
