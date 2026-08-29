@@ -47,6 +47,25 @@ function newestMtime(dir) {
 }
 {
   const web = `${root}apps/web`;
+  // Judge mode: the page refuses any pairing host not in NEXT_PUBLIC_BRIDGE_HOSTS (read at BUILD
+  // time — protocol.ts configuredBridgeHosts). A build made with that env unset (a plain `pnpm build`
+  // in a shell without it) silently refuses the live Worker's ws URL: the WS never opens, every case
+  // fails to pair with `sentTypes: []`. Measured twice (2026-08-28 and -29). So for --judge we derive
+  // the allowlist from the judge URL, pass it to the build, and force a rebuild whenever the current
+  // .next was NOT built with this host — never trust a stale build's baked-in env.
+  const buildEnv = { ...process.env };
+  let hostBakedIn = true;
+  if (judgeUrl) {
+    const host = new URL(judgeUrl).host;
+    const existing = (process.env.NEXT_PUBLIC_BRIDGE_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean);
+    buildEnv.NEXT_PUBLIC_BRIDGE_HOSTS = [...new Set([...existing, host])].join(',');
+    buildEnv.NEXT_PUBLIC_SANDBOX_URL = judgeUrl;
+    try {
+      hostBakedIn = execSync(`grep -rql ${JSON.stringify(host)} ${JSON.stringify(`${web}/.next`)} && echo yes || echo no`, { encoding: 'utf8' }).trim() === 'yes';
+    } catch {
+      hostBakedIn = false;
+    }
+  }
   let buildAt = 0;
   try {
     buildAt = statSync(`${web}/.next/BUILD_ID`).mtimeMs;
@@ -54,9 +73,10 @@ function newestMtime(dir) {
     /* no build */
   }
   const srcAt = Math.max(newestMtime(`${web}/src`), statSync(`${web}/package.json`).mtimeMs);
-  if (buildAt < srcAt) {
-    console.log(`web build is ${buildAt ? 'older than the newest source file' : 'missing'} — building`);
-    const b = spawnSync('pnpm', ['build'], { cwd: web, stdio: 'inherit' });
+  if (buildAt < srcAt || !hostBakedIn) {
+    const why = buildAt < srcAt ? (buildAt ? 'older than the newest source file' : 'missing') : `not built with the judge host in NEXT_PUBLIC_BRIDGE_HOSTS`;
+    console.log(`web build is ${why} — building${judgeUrl ? ` (NEXT_PUBLIC_BRIDGE_HOSTS=${buildEnv.NEXT_PUBLIC_BRIDGE_HOSTS})` : ''}`);
+    const b = spawnSync('pnpm', ['build'], { cwd: web, stdio: 'inherit', env: buildEnv });
     if (b.status !== 0) {
       console.error('web build failed');
       process.exit(1);

@@ -9,13 +9,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const src = readFileSync(new URL('../Dockerfile.rokan', import.meta.url), 'utf8');
-const stages = src.split(/^FROM /m).slice(1); // [build stage, runtime stage]
+// Docker treats FROM case-insensitively and allows leading whitespace; split on every real FROM so a
+// sneaked-in final `  from scratch` is counted (Codex review), not silently ignored.
+const stages = src.split(/^[ \t]*from\s/im).slice(1);
 const runtime = stages[stages.length - 1];
 const build = stages[0];
+// Each RUN command = a "RUN ..." with its backslash continuations, up to the next instruction/blank.
+const runCommands = (stage) => [...stage.matchAll(/(?:^|\n)[ \t]*RUN\s[\s\S]*?(?=\n[ \t]*(?:RUN|COPY|ENV|USER|WORKDIR|FROM|ENTRYPOINT|CMD|ARG|LABEL|EXPOSE|VOLUME)\s|\n[ \t]*\n|$)/gi)].map((m) => m[0]);
 
-test('two stages: node-pty compiles in a throwaway stage, the runtime copies the result', () => {
-  assert.equal(stages.length, 2);
-  assert.match(build, /^[^\n]*AS bridge-build/);
+test('exactly two stages: node-pty compiles in a throwaway stage, the runtime copies the result', () => {
+  assert.equal(stages.length, 2, `expected 2 build stages, found ${stages.length}`);
+  assert.match(build, /^[^\n]*AS bridge-build/i);
   assert.match(build, /build-essential/);
   assert.match(runtime, /COPY --from=bridge-build --chown=judge:judge \/opt\/bridge \/opt\/bridge/);
 });
@@ -24,12 +28,14 @@ test('runtime stage carries no compiler, no browser install, no apt/pip caches',
   assert.doesNotMatch(runtime, /build-essential/);
   assert.doesNotMatch(runtime, /playwright install/);
   assert.doesNotMatch(runtime, /--with-deps/);
-  for (const m of runtime.matchAll(/apt-get install[^\n]*(?:\\\n[^\n]*)*/g)) {
-    // every apt install in the runtime stage is followed by a lists purge in the same RUN
-    const rest = runtime.slice(m.index, runtime.indexOf('\n\n', m.index) === -1 ? undefined : runtime.indexOf('\n\n', m.index));
-    assert.match(rest, /rm -rf \/var\/lib\/apt\/lists\/\*/);
-  }
-  assert.match(runtime, /--no-cache-dir/);
+  // Every RUN that installs apt packages must purge the lists IN THE SAME RUN — a purge in a later
+  // RUN leaves the lists in an earlier layer and the image still grows (Codex review).
+  const runs = runCommands(runtime);
+  const aptRuns = runs.filter((r) => /apt-get install/.test(r));
+  assert.ok(aptRuns.length >= 1, 'expected the runtime stage to install apt packages in a RUN');
+  for (const r of aptRuns) assert.match(r, /rm -rf \/var\/lib\/apt\/lists\/\*/, `apt install without a same-RUN lists purge:\n${r}`);
+  const pipRuns = runs.filter((r) => /pip install/.test(r));
+  for (const r of pipRuns) assert.ok(/--no-cache-dir/.test(r) || /--no-cache/.test(r), `pip install without --no-cache:\n${r}`);
   assert.match(runtime, /rm -rf \/root\/\.cache/);
 });
 
