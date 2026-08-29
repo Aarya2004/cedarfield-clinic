@@ -1,27 +1,15 @@
-# HANDOFF — resume point (2026-08-29 ~11:15 PT, Engineer #4 / Fable)
+# HANDOFF — resume point (2026-08-29 ~18:40 local, Engineer #4 / Fable)
 
 **Read this + `docs/PROGRESS.md` (top block) + `~/.claude/plans/optimized-mapping-tarjan.md` (the bible) first.**
 Everything below is pushed to `main` (entry repo `github.com/Aarya2004/webmcp-private`) unless noted.
 
-## WHERE I WAS THE EXACT SECOND THIS STOPPED
-Investigating a **real failure caught on the LIVE judge sandbox**. The interrupted command was:
-```
-node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --only=terminal-insert-cancel
-```
-**Context:** the full judge run was **11/12 PASS, 1 FAIL** = `terminal-insert-cancel.json`.
-- Same case PASSES locally: `node evals/run-all.mjs --bridge` → 12/12. So it's **judge-mode-specific**.
-- Failing steps (all timing-sensitive waits, fixed 3–6 s timeouts):
-  1. after Tab-insert then **Ctrl+C**, `waitFor document.querySelector('[data-ghost]') !== null` (4000 ms) → false
-  2. `waitFor screen(30).some(l => l === 'different_cmd')` (6000 ms) → false
-  3. `pending()?.id === __rokanPid` → false
-- Diag at failure: proposal `echo insert_me` still `awaiting_human`, `ghost.tab_inserted` fired, screen bottom showed partial `echo i` (looks like the 18-char `type "echo different_cmd\r"` was mid-flight — WAN latency to the Cloudflare container vs a local PTY).
-- **Hypothesis (unproven):** the fixed timeouts assume local-PTY speed; the judge sandbox adds ~200 ms/round-trip and this case does many round-trips (Tab, Ctrl+C, type 18 chars), so cumulative > timeout. **NOT yet confirmed flake-vs-deterministic.**
-
-**NEXT STEP (do this first):** re-run `--only=terminal-insert-cancel` against the judge sandbox 1–2× (each spins ONE container session, bounded — resource discipline: one at a time).
-- If it **consistently fails** → real judge-mode timing issue → fix = bump this case's judge-mode timeouts (or gate the Ctrl+C/type sub-flow) — the LOGIC is correct (passes local), it's latency. Add the fix, re-run judge, confirm 12/12.
-- If **intermittent** → flake; note it in FIELD-NOTES + PROGRESS, and check the plan: `~/.claude/plans/optimized-mapping-tarjan.md` §10 says `--judge` target was "11/11" (may predate the 12th case) — reconcile whether 12/12 is required or one case is a known judge exclusion.
-- **Do NOT declare the judge sandbox green until this is resolved.** It's the "nothing a judge touches breaks" bar (#5).
-- Runner supports `--only=<case-basename-without-.json>`.
+## RESOLVED (2026-08-29 ~18:40 local) — the live-judge failure
+`terminal-insert-cancel` on the live judge sandbox was a **one-off container stall, not a timing bug**.
+Measured with the new `--trace=<dir>` flag: 5 live sessions (2 full **12/12**, 2 isolated, 1 probe), 0 failures;
+every wait ≤ 6 % of budget (worst 259 ms / 4000). Budgets unchanged. Judge mode now retries a failed case once,
+labelled, and the final line counts retries. Details: FIELD-NOTES J15, PROGRESS top block. Plan §10 reconciled
+to 12/12. **The judge sandbox may be called green** ("nothing a judge touches breaks", #5) — re-run
+`node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --trace=/tmp/t` before freeze.
 
 ## WHAT I SHIPPED THIS SESSION (all pushed, all verified by me)
 Commits on `main` (newest first): `d310e24 29119ca 0e8b1b4 59bcd8d 21170f0 20f0f45 55b32c4 f0f2c60 3c82bc8 a04ae96 8b5e611 2a2cca3 7b8d017`.
@@ -51,7 +39,7 @@ Eval counts corrected everywhere to VERIFIED **21 cases (9 prompt-line, 12 real-
 - Failure-state UI screens (429, expired link, unauthorized, refused, restore-mismatch).
 
 ## UNBLOCKED-BUT-LOWER-LEVERAGE (mine, if you want more)
-- Resolve the insert-cancel judge failure (ABOVE — do first).
+- ~~Resolve the insert-cancel judge failure~~ — DONE (see RESOLVED at top).
 - README thesis-headline reframe (COMPOSE thesis as lead) — held during review; low churn-risk gain, current "Do it once. Now it's a tool." is already a decent thesis.
 - Chrome evals-cli format (`evals/chrome-format/*.json`) — DEFERRED: needs the authoritative external Chrome evals-cli schema (not in-repo); don't fabricate a format.
 
