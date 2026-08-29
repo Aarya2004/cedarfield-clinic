@@ -117,6 +117,8 @@ test('approve registers forged_<name> with schema, readOnlyHint, live signal; ca
   assert.ok(reg.description.length <= 500);
   assert.equal(engine.cards().length, 0);
   await tick();
+  // the row is appended asynchronously (WebCrypto HMAC) and the engine voids the promise — poll, don't race (flaked on CI)
+  for (let i = 0; i < 50 && !ledger.snapshot().some((r) => r.kind === 'forged' && r.fields.hash === t.hash); i++) await tick();
   assert.ok(ledger.snapshot().some((r) => r.kind === 'forged' && r.fields.hash === t.hash));
 });
 
