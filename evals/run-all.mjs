@@ -187,6 +187,7 @@ let failed = 0;
 for (const f of cases) {
   // A case may start with {"query": "tour=1"} to add page query params for that run.
   const first = JSON.parse(readFileSync(`${root}evals/cases/${f}`, 'utf8'))[0] ?? {};
+  if (first.judgeOnly && !judgeUrl) { console.log(`SKIP ${f} (judge-only; builder shell legitimately has a key)`); continue; }
   const extraQuery = typeof first.query === 'string' ? `&${first.query}` : '';
   const url = `http://localhost:${WEB_PORT}/?test=1${extraQuery}${withBridge || judgeUrl ? pairingHash : ''}`;
   const r = spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], { encoding: 'utf8' });

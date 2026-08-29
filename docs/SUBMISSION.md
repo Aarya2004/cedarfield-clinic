@@ -51,7 +51,7 @@ Next.js 15 on Vercel; xterm.js 6 with ghost text drawn as an overlay (never thro
 parser); a Node bridge (`node-pty` + WebSocket + Cloudflare quick tunnel + 128-bit pairing token in
 the URL fragment) with zsh shell integration (OSC 133/7) so `running`, exit codes and durations
 are measured, not inferred (bash/sh without integration resolve honestly as `measured:false`); judge mode = the same bridge inside a Cloudflare Sandbox container
-(non-root, HMAC-signed session ids, egress allowlist, 3 sessions/IP/10 min, 30-min TTL) — deployed and driven end to end by the headless harness (8/8 real-PTY cases against the live container, cold start ≈ 5 s); an append-only ledger HMAC-chained
+(non-root, HMAC-signed session ids, no API key or secret in the container, ephemeral disk, 3 sessions/IP/10 min, 30-min TTL) — deployed and driven end to end by the headless harness (8/8 real-PTY cases against the live container, cold start ≈ 5 s); an append-only ledger HMAC-chained
 in the tab and countersigned by the bridge; a single redaction choke point; forged tools carry a
 content hash (a changed hash requires a new approval — the "bind tool identity" mitigation from
 arXiv 2606.06387). Four adversarial review passes by two independent reviewers (54 findings) — every one fixed with a regression test in the same commit.

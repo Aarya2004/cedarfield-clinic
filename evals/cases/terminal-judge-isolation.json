@@ -1,0 +1,9 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000, "judgeOnly": true },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+  { "invoke": "terminal_propose", "input": { "command": "A=$(test -z \"$ANTHROPIC_API_KEY\" && echo yes || echo no); V=$(test ! -e \"$HOME/.rokan/vault.json\" && echo yes || echo no); echo \"ISO_NOKEY_${A}_NOVAULT_${V}\"", "why": "the judge container holds no model key and no secret vault (isolation control)" } },
+  { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()", "equals": "string" },
+  { "key": "Enter" },
+  { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid }).then(r => r.status)", "equals": "executed" },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => l.includes('ISO_NOKEY_yes_NOVAULT_yes'))", "timeout": 5000 }
+]

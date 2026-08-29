@@ -67,11 +67,21 @@ Everything below is implemented and covered by a test that fails when it regress
 
 ## 6. Judge mode (Cloudflare Sandbox)
 
-Non-root `judge` user, no sudo; `enableInternet=false` with an HTTP/S allowlist (the SDK cannot
-filter raw TCP/UDP — stated, not hidden); 3 new sessions per IP per 10 min, 3 concurrent (a Gate row is provisional for 180 s until the bridge answers, so an aborted start cannot lock an IP for the TTL); 30-min
-TTL ends the session; no persistent volume; the same token-gated bridge runs inside the
-container; the Worker never stores tokens; a failed session start returns a generic 503 and logs
-internals server-side (no stack/SDK detail to the client). Tests: `infra/sandbox/test/gate.test.mjs`,
+Non-root `judge` user, no sudo; **outbound internet is on** (`enableInternet=true`). We tried to lock
+egress to a demo-host allowlist (`allowedHosts`), but measured live (2026-08-29) that the SDK's HTTPS
+interception never activates in this deployment — the ephemeral CA is never created and, with
+`enableInternet=false`, egress to an allowlisted host times out — so `allowedHosts` gated nothing for
+HTTPS. rokan-do's seeded replay needs a real HTTPS fetch, so egress must work. **We do not claim an
+egress allowlist.** The isolation that actually holds and is tested: the container carries **no model
+API key and no secret vault** (`terminal-judge-isolation.json` verifies `ANTHROPIC_API_KEY` unset and
+no `~/.rokan/vault.json` in a live session), its disk is **ephemeral** (reset every start), **no agent
+path can write to the PTY** (only a human keypress runs a command), and sessions are **per-IP
+rate-limited (3/10 min, 3 concurrent) and 30-min TTL-capped** (a Gate row is provisional for 180 s
+until the bridge answers, so an aborted start cannot lock an IP for the TTL). An open-egress container
+with nothing to steal and nothing to spend is the control — not a filter the SDK didn't enforce.
+No persistent volume; the same token-gated bridge runs inside the container; the Worker never stores
+tokens; a failed session start returns a generic 503 and logs internals server-side (no stack/SDK
+detail to the client). Tests: `infra/sandbox/test/gate.test.mjs`,
 image smoke. (The judge Worker was written after the two external reviews; C self-audited it against
 the same P0/P1 bar — CORS allowlist, per-IP rate limit on the one write endpoint, no secret in code,
 generic errors.)
@@ -82,4 +92,4 @@ generic errors.)
 - Tool descriptions can still be ignored by a non-cooperative agent — by design nothing depends on them.
 - `hex_run` redaction hides git SHAs from the agent (not from the human).
 - CSP: per-request nonce + `'strict-dynamic'` for scripts (no `unsafe-inline`); `style-src` still allows inline styles (Tailwind); `connect-src` is the WebSocket allowlist.
-- Raw TCP/UDP egress from the judge sandbox is not filtered by the SDK.
+- **Judge-container egress is open** (`enableInternet=true`): a stranger's session can make outbound HTTP/S requests from Cloudflare infrastructure. Bounded by the per-IP rate limit + 30-min TTL + ephemeral disk; the container holds no key and no secret, so there is nothing to exfiltrate or spend. The `allowedHosts` list is retained as documentation only — the SDK's interception did not activate here to enforce it (measured). Raw TCP/UDP is likewise unfiltered.
