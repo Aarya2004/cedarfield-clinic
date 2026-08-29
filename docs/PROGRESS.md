@@ -3,6 +3,18 @@
 Last update: **2026-08-29 ~03:10 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** · **Target: submit Tue 09-01; freeze Mon 08-31 12:00 PT; hard fallback Wed 09-02 evening.** Branch `main`, all pushed.
 
 ## Build log — Engineer #4 (2026-08-29)
+**P0.3 Tier 0 FULLY WIRED + live-proven (Rokan `feat/tier0-native` `f13f7fe`).** `rokan do` now resolves
+a site's OWN WebMCP tool before planning the DOM. Live: `rokan do "find wool runners at allbirds.com"
+--json` → `speed=native, model_calls=1, self_reported`, real Allbirds catalog from `search_catalog`,
+1622ms, provenance `{site,tool}`, ids `[redacted]`. `select_native` (1 model call, read-tools only,
+input as a JSON string so the model fills nested schemas), `_try_native` rung gated to read_value/
+read_list (credential tasks never hit search — caught by test_cli_wiring), `Performed.model_calls/.native`,
+`render.py` `⚙ native:<site>:<tool>` after the ms tail, `cli run --json`. Three bugs the LIVE runs caught
+after units were green (parsed_output attr, read-class gate, empty-nested-input). Full non-live rokan-do
+suite **1610 passed**; native 24; ruff+mypy clean. **THIS IS THE REVIEW POINT** — reviewer prompt below;
+0-call replay (memory persistence) is the next unit after review.
+
+## Build log — Engineer #4 (2026-08-29)
 **P0.2 Review round 1 (Opus + Fable) — all blockers fixed, gate 8/8 (Rokan `feat/tier0-native` `46a98eb`).**
 Both reviewers correctly ruled Tier 0 not-safe-to-wire as first built. Fixed, failing-first: read/write
 gate enforced in `invoke()`/`replay()` (write tools refused before any CDP send; Shopify annotates none
