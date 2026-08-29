@@ -44,7 +44,7 @@ against the deployed sandbox). Record `cold_ms` in `docs/FIELD-NOTES.md`.
 
 **If a deploy fails 3 times, stop and write the error into PROGRESS instead of retrying** (see §5).
 
-**A Worker deploy modifies the container fleet and drops every live judge session** (measured by Fable's VERIFY pass: session dropped at 22:43:24, fleet modified 22:43:28). Never `pnpm deploy` in `infra/sandbox` during a rehearsal, the demo, or the judging window (Sep 2 18:00 PT → results). Freeze the Worker at Tue 09-01 12:00 PT with the rest.
+**A Worker deploy modifies the container fleet and drops every live judge session** (measured by Fable's VERIFY pass: session dropped at 22:43:24, fleet modified 22:43:28). Never `pnpm deploy` in `infra/sandbox` during a rehearsal, the demo, or the judging window (from the 08-31 freeze → results). Freeze the Worker on Sun 08-31 evening PT (Arav's target: submit Mon 09-01 end of day) with the rest.
 
 ## 3. Where the work stands
 

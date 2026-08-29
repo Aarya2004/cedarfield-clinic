@@ -1,6 +1,6 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-29 02:10 PT** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
+Last update: **2026-08-29 02:45 PT** · **Target: submit Mon 09-01 end of day (Arav); freeze Sun 08-31 evening.** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
 
 ## Gates
 

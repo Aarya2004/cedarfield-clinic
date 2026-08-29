@@ -44,7 +44,7 @@ Hacker News is **not** in rokan-do's seed pack. For the `calls:0 ⚡` beat type 
 
 ## Freeze rule — judge Worker
 
-A `wrangler deploy` of `infra/sandbox` replaces the container fleet and drops every live judge session (measured 2026-08-28). No Worker deploys from the Tue 09-01 12:00 PT freeze until results. Web-only redeploys (Vercel) are safe for judge sessions.
+A `wrangler deploy` of `infra/sandbox` replaces the container fleet and drops every live judge session (measured 2026-08-28). No Worker deploys from the Sun 08-31 evening freeze (submit Mon 09-01 end of day) until results. Web-only redeploys (Vercel) are safe for judge sessions.
 
 ## Demo shell: the key for the `rokan do` model beat (builder mode only)
 
