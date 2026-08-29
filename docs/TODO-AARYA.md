@@ -8,24 +8,21 @@ light/dark user toggle (terminal canvas always dark), history as browser-native 
 NOT a Warp copy), Aarya's Claude also owns the MCP-relay resources/prompts work with a no-clash
 rule vs C/Arav.
 
-## Active (this weekend)
-- [ ] **Frontend redesign** — terminal-first dark workspace; light/dark toggle on the chrome;
-      hero collapses after first interaction. frontend-design skill drives the aesthetic.
-- [ ] **Run feed (history blocks)** — per-command records for human-typed + agent commands
-      (extend the existing client OSC-133 state machine in `lib/terminal/adapter.ts`; add client
-      OSC-7331 parsing — markers already reach the tab verbatim). Format: round-2 decision.
-- [ ] **Artifacts pane** — round-2 decision on v1 scope (JSON/table/markdown/URL detection from
-      output vs. design-the-slot-only). v2 (files/images via a bridge read frame) needs a
-      `contract:` ping — post-freeze.
-- [ ] **`terminal_history` WebMCP tool** — Share-screen-gated, through `redactForAgent`, block
-      records not raw buffer. Takes the visible-tool budget to exactly 12 (6 fixed + 5 forged + 1).
-      Overlaps `register.ts` (C's wiring) — ALIGNMENT ping + PROGRESS claim before touching.
-- [ ] **MCP relay resources + prompts** (`packages/bridge`) — official SDK low-level `Server`,
-      add `setRequestHandler` for ListResources/ReadResource/ListPrompts/GetPrompt in a new file
-      (`mcp-resources.js`) to avoid clashing with C in `mcp.js`. Catalog: round-2 decision.
-      Honest framing everywhere: WebMCP standard = tools only; resources/prompts are the MCP-stdio
-      half (Codex / Claude Code), never claimed as browser WebMCP.
+## Done (map executed 2026-08-29, commits 13ee8af…6823e5d — see issues #2–#7, #9, all closed)
+- [x] Theme foundation (forge-dark default + light brand toggle; first paint dark for everyone).
+- [x] Terminal-first layout (main column + hairline rail; prompt line reads as terminal canvas).
+- [x] Run feed (human+agent+forged records, OSC-7331 client parse, filters/actions).
+- [x] Artifacts pane v1 (JSON/CSV/markdown/URLs/rokan cards) + HTML artifacts in an inert sandbox (CSP unchanged, proven).
+- [x] `terminal_history` — 7th fixed tool, contract: commit, budget now exactly 12.
+- [x] MCP relay resources (history/forge relayed, ledger raw-bytes) + 3 prompts.
+Gate at close: web **183/183** · bridge **11/11** · evals **9/9**. NOT yet deployed — needs `vercel --prod` from the logged-in machine.
 
+## Awaiting
+- [ ] **Aarya's design review** — issue #8, staged with evidence. Go/adjust.
+- [ ] **rokan_speed/site/tools_used flip** in Panes.tsx + RunFeed.tsx when C's contract fields land (C pings; agreed in ALIGNMENT).
+- [ ] **Birth-pulse signature** (DESIGN-BRIEF) — after the #8 verdict.
+
+## Active (this weekend)
 ## Blocked
 - [ ] **RestoreCard.tsx** — waits on C's `kept.ts` (COMPOSE-PLAN §2.2.5). Claimed in PROGRESS.
 - [ ] **Tools-row `forged by` / `calls_last` / `kept`** — waits on C's `forge_list` contract

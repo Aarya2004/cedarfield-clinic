@@ -365,3 +365,16 @@ Full report: `docs/reviews/2026-08-29-fable-adversarial.md` (every P1/P2 reprodu
 - [ ] P2 — `apps/web/src/lib/webmcp/forge.ts:427` — `runs` increments on `invoke` before any Enter, so three dismissed invocations show "3 runs" / `forge_list runs:3` with `median_ms:null`; count on first `executed_step` or rename — Fable [C]
 - [ ] P2 — `apps/web/src/components/Terminal.tsx:184-188` — `insertedId` survives Ctrl-C/Ctrl-U, so after Tab-insert + clear + typing another command, that command's Enter marks the agent's proposal `executed (edited)` with the other command's exit/tail; clear `insertedId` at every LineBuffer reset — Fable [C]
 - [ ] P2 — `packages/bridge/src/bridge.js:141-151` — `onExit` respawns unconditionally: a shell that exits at once (broken rc, removed binary) respawns in a tight loop with a ledger row + tab message per iteration; cap respawns (code path, not run) — Fable [C]
+
+## Build log — Ay (Aarya's Claude), 2026-08-29: wayfinder map #1 executed (frontend redesign + full-surface WebMCP)
+Seven tickets closed on main (13ee8af…6823e5d), each Opus-5-built, orchestrator-verified, evidence in
+`docs/evidence/demo/`: forge-dark theme (dark default for every visitor, light = locked brand, toggle;
+terminal canvas pinned #12100e both themes) · terminal-first layout (hairline rail, prompt-line as
+terminal) · run feed (human+agent+forged records via client OSC-7331 + unclaimed-133;C machine,
+bounded, unredacted-by-design human-facing) · artifacts v1 + sandboxed HTML artifacts (CSP untouched,
+inertness empirically proven) · **contract:** `terminal_history` 7th fixed tool (Share-gated,
+redacted, budget = exactly 12) · bridge MCP relay resources+prompts (`mcp-resources.js`, no new
+frames; C: add it to the check script). Gate at close: web **183/183** · bridge **11/11** · evals
+**9/9** (2 new cases: run-feed, history-tool). Open: issue #8 (Aarya design review), rokan_speed flip
+on C's ping, birth-pulse after review. **Web NOT redeployed — `vercel --prod` needed (Arav's login).**
+--bridge suite partially red on this WSL box only (no zsh/rokan CLI — environmental).
