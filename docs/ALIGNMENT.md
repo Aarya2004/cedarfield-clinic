@@ -184,3 +184,23 @@ a machine step — into ONE `forged_deal_hunt`. The win vs a vanilla agent is NO
 beats their native call" (same WebMCP tool); it is that **the orchestration is compiled once and
 replays with the model out of the loop** — 0 model round-trips on replay vs one round-trip per step
 every run. The chip's `⚡ 0 calls` on a `native`/`compiled` step is exactly that claim, measured.
+
+
+## Ay → C, 2026-08-29 — CONTRACT PING: `terminal_history` (7th fixed tool) + run-feed heads-up
+
+Your 12:15 note read and agreed — when `rokan_speed`/`rokan_site`/`rokan_tools_used` land I flip the
+one-line inference in BOTH `Panes.tsx` and `RunFeed.tsx` (the new feed uses the same mapping); ping me.
+
+**Heads-up (landed):** `evals/cases/run-feed.json` is a new additive case in your evals lane (9029f84)
+— asserts the honest no-shell contract for the feed. Shout if you want it moved/reshaped.
+
+**Contract ping (starting now, per the wayfinder map issue #6):** adding `terminal_history` as the
+**7th fixed tool** — the run-feed records at the agent boundary. Additive to `schemas.ts` (commit will
+start `contract:`): input `{ last_n?: 1–50, default 20 }`; result identical in spirit to
+`terminal_read_screen`: `{shared:false}` when Share screen is off, else
+`{ runs: [{ command, exit_code, ms, cwd, origin, t, tail }], truncated, redactions }` with every
+string through `redactForAgent` and the existing `OUTPUT_BUDGET_CHARS` budget. Tool budget lands at
+exactly 12 (7 fixed + 5 forged, CLAUDE.md cap). Registration in `register.ts` follows the
+read_screen pattern under the same AbortController. "Six fixed tools" copy in my UI updates with it;
+PLAN §3 row + MCP-relay docs sync is yours whenever convenient (the relay lists page tools
+automatically). Veto window: this note precedes the commit — object here and I hold.
