@@ -1,0 +1,10 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+  { "invoke": "terminal_propose", "input": { "command": "rokan do \"what is the current status at githubstatus.com\"", "why": "is GitHub up? (seeded: replays with 0 model calls)" } },
+  { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()", "equals": "string" },
+  { "key": "Enter" },
+  { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid }).then(r => [r.status, r.exit_code, r.rokan ? r.rokan.calls : 'no-rokan', r.rokan ? r.rokan.replayed : null])", "equals": ["executed", 0, 0, true] },
+  { "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => r.last_rokan && r.last_rokan.calls)", "equals": 0 },
+  { "waitFor": "(window.__rokan.screen(30) ?? []).some(l => /\\d+ms\\s+⚡/.test(l))", "timeout": 5000 }
+]

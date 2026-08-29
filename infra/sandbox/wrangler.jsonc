@@ -7,7 +7,7 @@
   "containers": [
     {
       "class_name": "RokanSandbox",
-      "image": "./Dockerfile",
+      "image": "./Dockerfile.rokan",
       "instance_type": "basic",
       "max_instances": 10
     }

@@ -21,10 +21,11 @@ RUN chown -R judge:judge /opt/bridge
 
 # --- rokan-do: wheels + Playwright Chromium (system deps as root), installed for the judge user ---
 COPY container/vendor /opt/rokan-wheels
-RUN pip install --no-cache-dir --root-user-action=ignore uv \
-  && uv pip install --system --no-cache /opt/rokan-wheels/rokan_mcp-*.whl /opt/rokan-wheels/rokan_agent-*.whl /opt/rokan-wheels/rokan_do-*.whl \
+ENV PATH=/usr/local/python/bin:$PATH
+RUN python3 -m pip install --no-cache-dir --root-user-action=ignore uv \
+  && python3 -m uv pip install --system --python /usr/local/bin/python3 --no-cache /opt/rokan-wheels/rokan_mcp-*.whl /opt/rokan-wheels/rokan_agent-*.whl /opt/rokan-wheels/rokan_do-*.whl \
   && python3 -m playwright install --with-deps chromium \
-  && uv pip install --system --no-cache pytest \
+  && python3 -m uv pip install --system --python /usr/local/bin/python3 --no-cache pytest \
   && rokan-do --help >/dev/null && echo 'rokan-do ok'
 
 COPY --chown=judge:judge container/seed/ /home/judge/

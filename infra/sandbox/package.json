@@ -11,7 +11,8 @@
     "check": "pnpm typecheck && pnpm test",
     "smoke:image": "sh scripts/smoke-image.sh",
     "deploy:dry": "pnpm sync && wrangler deploy --dry-run",
-    "deploy": "pnpm sync && wrangler deploy"
+    "deploy": "pnpm sync && wrangler deploy",
+    "smoke:image:rokan": "sh scripts/smoke-image-rokan.sh"
   },
   "dependencies": {
     "@cloudflare/sandbox": "0.12.9"
