@@ -27,7 +27,7 @@ Commits on `main` (newest first): `d310e24 29119ca 0e8b1b4 59bcd8d 21170f0 20f0f
 
 ## VERIFICATION TALLY (re-run by me, not just subagents)
 web **202/202** + typecheck clean · bridge **11/11** · Tier 0 native **37/37** · prompt-line evals **9/9** · real-PTY evals **12/12** · sandbox gate **15/15** · live web **200** · worker health `{ok,mode:judge}` · error hygiene clean (generic 404/426).
-Eval counts corrected everywhere to VERIFIED **21 cases (9 prompt-line, 12 real-PTY)**.
+Eval counts: VERIFIED **22 cases (9 prompt-line, 12 real-PTY, +1 judge-only)**.
 
 ## BLOCKED — NEEDS ARAV (on the #1 critical path)
 - **ChatGPT Sol/Terra run** — needs Arav OFF screen-share + switched to Sol/Terra (GPT-5.6). Then Engineer #4 drives via AppleScript+screencapture. This is §15 #1 (the birth live in ChatGPT's Site tools) — the single biggest lever.

@@ -2,6 +2,16 @@
 
 Last update: **2026-08-29 ~18:40 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
+## Build log — Engineer #4 (2026-08-29 ~19:50 local, judge image + hero)
+- **Judge image rebuilt + rolled out** (manifest `sha256:808fe11…`, version `1aae9c30`, fleet `active`): the rokan-do
+  first-run disclosure is pre-accepted for the judge user. Proven live with a NEW regression case
+  `terminal-rokan-no-disclosure.json` (judge-only): fresh session (cold 6718 ms), first `rokan do` → `executed, exit 0,
+  calls 0`, ⚡ on screen, no disclosure/API-key text. **Judge suite is now 13 cases.**
+- **Hero example fixed** (`d3ad06a`, crossed into the web lane surgically, pinged in ALIGNMENT): `hn_top` → `status_of`
+  (`rokan do "what is the current status at {{site}}"`). 202/202 · lint 0 errors · build clean. DEMO.md swapped too.
+  **Needs `vercel --prod` (Arav) to reach judges.**
+- Key for the cold/drift rows is in `~/dev/Rokan/.env` (sourced into the harness env at run time, never printed).
+
 ## Build log — Engineer #4 (2026-08-29 ~19:15 local, prod redeployed → regime re-run on the LIVE build)
 Arav ran `vercel --prod` (deployment `EJcniHTebPRLmDXstNotBjVRJd7t`, 44 s, aliased to rokan-terminal.vercel.app).
 Verified the alias serves HEAD by observable diff (Site tools · 7 with `terminal_history`, Runs panel, new hero).
