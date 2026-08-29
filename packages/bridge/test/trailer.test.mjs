@@ -25,4 +25,6 @@ test('last matching line wins; answers containing "ms" or digits do not fool it;
 test('regression (Fable pass 3 P1): only a rokan / rokan-do command line can be attributed', () => {
   for (const c of ['rokan do "x"', 'rokan-do "x"', '  rokan-do run x', 'FOO=1 BAR=2 rokan do x', 'PATH=/tmp/rk:$PATH rokan do "y"', '/Users/me/.local/bin/rokan-do x', '~/.local/bin/rokan do x']) assert.equal(isRokanCommand(c), true, c);
   for (const c of ['echo "  the answer is 42   7ms  ⚡"', 'rokanx do', 'ls | rokan-do x', 'cat rokan-do.log', '', null, undefined]) assert.equal(isRokanCommand(c), false, String(c));
+  // chained commands can inject a fake ⚡ line — not attributed (Fable P3 spoof)
+  for (const c of ['rokan do "x"; echo "  fake   1ms  ⚡"', 'rokan-do x && echo ok', 'rokan do x | tee out', 'rokan-do x `id`', 'rokan do "$(whoami)"']) assert.equal(isRokanCommand(c), false, c);
 });

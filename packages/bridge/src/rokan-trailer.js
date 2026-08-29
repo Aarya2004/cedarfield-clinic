@@ -10,8 +10,13 @@ const LINE_RE = /^\s{2}\S.*?\s{3}(\d{1,7})ms(\s{2}⚡)?\s*$/;
 export const ROKAN_OUT_MAX = 65536;
 /** The command line that ran must BE rokan / rokan-do (env assignments or a path prefix allowed). */
 export const ROKAN_CMD_RE = /^\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:\S*\/)?(?:rokan|rokan-do)(?:\s|$)/;
+// A chained command can print a fake `⚡` line that would be mis-attributed as a rokan replay
+// (`rokan do x; echo '  spoof  1ms  ⚡'` — Fable P3). Only a single, un-chained rokan invocation is
+// attributed. This conservatively also rejects a rokan arg that quotes one of these bytes — we would
+// rather show no ⚡ than a spoofable one (honest numbers).
+const ROKAN_CHAIN_RE = /[;&|\n`]|\$\(/;
 export function isRokanCommand(cmd) {
-  return typeof cmd === 'string' && ROKAN_CMD_RE.test(cmd);
+  return typeof cmd === 'string' && ROKAN_CMD_RE.test(cmd) && !ROKAN_CHAIN_RE.test(cmd);
 }
 
 export function stripAnsi(text) {
