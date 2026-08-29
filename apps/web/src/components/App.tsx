@@ -125,14 +125,17 @@ export function App() {
 
   // The hero's one button: open the real frame-2 card through the same engine the agent uses.
   // Approval (the birth) stays a human click on the card — the button alone registers nothing.
-  const heroExample: HeroExampleState = forged.some((t) => t.name === 'hn_top') ? 'born' : cards.some((c) => c.spec.name === 'hn_top') ? 'pending' : 'ready';
+  const heroExample: HeroExampleState = forged.some((t) => t.name === 'status_of') ? 'born' : cards.some((c) => c.spec.name === 'status_of') ? 'pending' : 'ready';
   const forgeExample = () => {
     const r = forge.openCard(
       {
-        name: 'hn_top',
-        description: 'Top N Hacker News titles via rokan do in your shell — every step still gated by your Enter.',
-        commands: ['rokan do "top {{n}} HN titles"'],
-        params: [{ name: 'n', description: 'How many titles to fetch', example: '5' }],
+        // Seeded phrasing: replays at 0 model calls in the judge sandbox for 24 status pages
+        // (githubstatus.com, www.vercel-status.com, www.netlifystatus.com, www.shopifystatus.com, …).
+        // Keep it byte-exact — rokan-do keys the replay on the normalised question + host.
+        name: 'status_of',
+        description: 'Current status of a service status page via rokan do in your shell — every step still gated by your Enter.',
+        commands: ['rokan do "what is the current status at {{site}}"'],
+        params: [{ name: 'site', description: 'A status page host, e.g. githubstatus.com or www.vercel-status.com', example: 'githubstatus.com' }],
         kind: 'read',
       },
       { origin: 'human' },

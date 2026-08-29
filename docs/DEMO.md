@@ -13,8 +13,8 @@
 ## Shot list (narration recorded separately; on-screen numbers are the measured ones)
 | t | shot | say |
 | --- | --- | --- |
-| 0:00–0:20 | Terminal shows a command already run (`rokan do "top 5 HN titles"` or `git log --oneline -5`). Select the line → **Forge this** → card (`hn_top`, param `n`) → Approve → cut to ChatGPT's Site tools: **7** (was 6); DevTools WebMCP panel shows `forged_hn_top` appear | "I did this once. Now it's a tool — registered live, it didn't exist when the page loaded." |
-| 0:20–0:35 | "top 3 now" → agent calls `forged_hn_top({n:3})` → ghost text at the prompt → Enter → output → ledger `invoked … executed exit 0 · N ms` | "The agent calls it. My Enter runs it. Every millisecond is measured by the page." |
+| 0:00–0:20 | Terminal shows a command already run (`rokan do "what is the current status at githubstatus.com"` or `git log --oneline -5`). Select the line → **Forge this** → card (`status_of`, param `n`) → Approve → cut to ChatGPT's Site tools: **7** (was 6); DevTools WebMCP panel shows `forged_status_of` appear | "I did this once. Now it's a tool — registered live, it didn't exist when the page loaded." |
+| 0:20–0:35 | "top 3 now" → agent calls `forged_status_of({n:3})` → ghost text at the prompt → Enter → output → ledger `invoked … executed exit 0 · N ms` | "The agent calls it. My Enter runs it. Every millisecond is measured by the page." |
 | 0:35–0:55 | "what's in this repo, are the tests passing?" → `ls` ghost → Enter → `pytest -q` ghost → Enter → agent reads the screen → answer | "Every command it wants is a proposal. It can't type Enter." |
 | 0:55–1:10 | Share screen off → `{shared:false}`; on → `export AWS_SECRET_ACCESS_KEY=…` on screen → agent sees `[redacted]` | "It reads what I let it read. Secrets never leave the tab." |
 | 1:10–1:40 | `rokan do …` beat (D3) or the judge sandbox beat: open the live URL on the second laptop → "Try it now" → paired in N s | "Nothing to install. A throttled sandbox on Cloudflare, 30 minutes, one per IP." |
@@ -40,7 +40,7 @@ Switch to `demo-backup.mp4` if: pairing not green in 10 s · any tool call not v
 Hacker News is **not** in rokan-do's seed pack. For the `calls:0 ⚡` beat type one of the seeded questions verbatim, e.g.
 `rokan do "what is the current status at githubstatus.com"` or
 `rokan do "what is the latest version of pydantic at pypi.org/project/pydantic"` (312 ms replay measured for the docs.github.com seed).
-`rokan do "top 5 HN titles"` is honest too — it is the model-call path (`calls:null`, needs the key) or an abstention; say which one you are showing.
+`rokan do "what is the current status at githubstatus.com"` is honest too — it is the model-call path (`calls:null`, needs the key) or an abstention; say which one you are showing.
 
 ## Freeze rule — judge Worker
 
@@ -55,7 +55,7 @@ export ANTHROPIC_API_KEY="$(security find-generic-password -s rokan-anthropic-ke
 node packages/bridge/bin/rokan-terminal.js
 ```
 
-The PTY inherits the env, so `rokan do "top 5 HN titles at news.ycombinator.com"` plans (1 model call, ~4 s) and the seeded questions replay at ⚡. Never in the judge container (no key by design).
+The PTY inherits the env, so `rokan do "what is the current status at githubstatus.com"` plans (1 model call, ~4 s) and the seeded questions replay at ⚡. Never in the judge container (no key by design).
 
 ## v3 — the two measured beats to add to the cut (COMPOSE thesis; numbers from `docs/measurements/2026-08-30-ab.md`)
 

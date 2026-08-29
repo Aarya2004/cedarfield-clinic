@@ -5,13 +5,13 @@
  * (a line you ran → the Forge card you approve → the tool in your agent's list), plus one
  * button that opens the *real* card from frame 2 via the real forge engine. Approval stays
  * with the human; nothing registers from the button alone. Every value in the frames is an
- * illustration of the flow (the demo's `hn_top`), never a measurement — measured numbers
+ * illustration of the flow (the demo's `status_of`), never a measurement — measured numbers
  * live in the status bar, the Tools pane and the Ledger.
  */
 
 import { useState } from 'react';
 
-/** ready → no card/tool named hn_top yet · pending → card awaits approval · born → tool registered */
+/** ready → no card/tool named status_of yet · pending → card awaits approval · born → tool registered */
 export type HeroExampleState = 'ready' | 'pending' | 'born';
 
 /**
@@ -24,7 +24,7 @@ export function HeroStrip({ example, onForgeExample }: { example: HeroExampleSta
   const state =
     example === 'born' ? (
       <>
-        <code className="mono text-ink">forged_hn_top</code> is live — see <span className="font-medium text-ink">Site tools</span>.
+        <code className="mono text-ink">forged_status_of</code> is live — see <span className="font-medium text-ink">Site tools</span>.
       </>
     ) : example === 'pending' ? (
       <>
@@ -66,7 +66,7 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
       <ol className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch" aria-label="how a tool is born">
         <Frame n="1" eyebrow="You ran it">
           <div className="mono text-[12px] leading-5">
-            <span className="text-accent-ink">~ $</span> <mark className="rounded-sm bg-accent-bg px-0.5 text-ink">rokan do &quot;top 5 HN titles&quot;</mark>
+            <span className="text-accent-ink">~ $</span> <mark className="rounded-sm bg-accent-bg px-0.5 text-ink">rokan do &quot;what is the current status at githubstatus.com&quot;</mark>
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">
             <span className="rounded bg-accent px-1.5 py-px text-[10px] text-white">Forge this (1 line)</span>
@@ -76,11 +76,11 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
         <Arrow />
         <Frame n="2" eyebrow="You approve the card">
           <div className="flex flex-wrap items-center gap-1.5">
-            <code className="mono text-[12px] text-ink">forged_hn_top</code>
+            <code className="mono text-[12px] text-ink">forged_status_of</code>
             <span className="tone-ok rounded px-1.5 py-px text-[10px] font-medium uppercase tracking-wide">read</span>
           </div>
           <div className="mono mt-1 text-[11px] leading-5 text-muted">
-            rokan do &quot;top <span className="tone-accent rounded-sm px-0.5">{'{{n}}'}</span> HN titles&quot;
+            rokan do &quot;what is the current status at <span className="tone-accent rounded-sm px-0.5">{'{{site}}'}</span>&quot;
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">
             <span className="rounded bg-ink px-1.5 py-px text-[10px] text-on-fill">Approve</span>
@@ -92,11 +92,11 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
           <ul className="mono text-[11px] leading-4 text-muted" aria-label="the agent's tool list">
             <li>terminal_propose …</li>
             <li className="text-ink">
-              forged_hn_top <span className="text-accent-ink">← appears live, no reload</span>
+              forged_status_of <span className="text-accent-ink">← appears live, no reload</span>
             </li>
           </ul>
           <div className="mono mt-1 text-[12px] leading-5">
-            <span className="text-accent-ink">~ $</span> <span className="text-accent-ink">rokan do &quot;top 3 HN titles&quot;</span>{' '}
+            <span className="text-accent-ink">~ $</span> <span className="text-accent-ink">rokan do &quot;what is the current status at www.vercel-status.com&quot;</span>{' '}
             <kbd className="rounded border border-line bg-bg px-1 text-[10px] text-ink">Enter</kbd>
           </div>
         </Frame>
@@ -116,7 +116,7 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
           </span>
         ) : (
           <span className="text-muted">
-            <code className="mono text-ink">forged_hn_top</code> is live — see <span className="font-medium text-ink">Site tools</span> on the right. Born at runtime, no reload.
+            <code className="mono text-ink">forged_status_of</code> is live — see <span className="font-medium text-ink">Site tools</span> on the right. Born at runtime, no reload.
           </span>
         )}
       </div>

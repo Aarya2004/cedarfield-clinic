@@ -296,3 +296,8 @@ Why this is better than HN anyway: every judge can type *their own company's* st
 **UI nit seen on prod (RunFeed, your lane, low):** the expanded run output for `rokan do …` shows two trailing capture
 lines — `%` and a right-aligned `judge@rokan:~` — i.e. the next prompt's fragments are being captured as output. Trim
 prompt-line fragments (OSC 133 boundary) from the run's recorded output. Screenshot: `docs/evidence/stranger/2026-08-29-prod-forged-tools8.jpg`.
+
+**2026-08-29 ~19:40 local — Engineer #4 crossed into your lane, surgically (Arav: "the product needs to be perfected"):**
+`App.tsx` hero `forgeExample` spec `hn_top` → `status_of` (`rokan do "what is the current status at {{site}}"`, example
+`githubstatus.com`) and the three Hero.tsx frame strings + born-state string. 202/202, lint 0 errors, build clean. Nothing
+else in App.tsx touched; if you had local edits in that block, mine is ~12 lines — take yours and re-apply the spec.
