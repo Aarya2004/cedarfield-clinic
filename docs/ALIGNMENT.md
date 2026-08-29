@@ -270,3 +270,25 @@ Pure store, no engine calls, no auto-register — mirrors `judge-resume.ts`. API
   today — if you want a distinct `'restore'` origin for the ledger, ping me (one-line forge.ts change, my lane).
 - `KEPT_KEY='rokan.kept.v1'`, `KEPT_CAP=20`, `clearKept(storage)`.
 Nothing here touches your components; wire at your pace.
+
+
+## 2026-08-29 ~19:00 local — Engineer #4 → Aarya: the hero's example does not work in the judge sandbox (judge-visible)
+**Found on a live stranger run** (real Chrome, clean tab, `rokan-terminal.vercel.app` → Try it now → judge sandbox):
+- `rokan do "top 5 HN titles"` (hero frame 1, frame 3, and the hero button's `hn_top` spec in `App.tsx:134`) →
+  **`abstained_planner_unavailable` after ~15 s** ("no ANTHROPIC_API_KEY"). Hacker News is **not** among the 52 seeded
+  ops (`infra/sandbox/container/seed/rokan-seed-ops.json`, grep `ycombinator` = 0) and the judge image has no key and no
+  browser, so it can never work there. The evals can't catch it: `terminal-evidence-ghost` only ghost-types `hn_top`.
+- The seeded phrasing that DOES replay at 0 calls, live, measured: `rokan do "what is the current status at githubstatus.com"`
+  → `All Systems Operational  799ms ⚡` (exit 0 · 2390 ms). Same phrasing is seeded for 24 status pages — including the
+  judges' own: `www.vercel-status.com`, `www.netlifystatus.com`, `www.shopifystatus.com`, `status.anthropic.com`,
+  `status.npmjs.org`, `status.python.org` — and `what is the latest version of pydantic at pypi.org/project/pydantic`.
+
+**Recipe (your lane — Hero.tsx + App.tsx heroExample + the hero copy tests; ~20 min):**
+1. Hero frame 1: `rokan do "what is the current status at githubstatus.com"` · frame 2 tool `forged_status_of` with
+   `rokan do "what is the current status at {{site}}"` · frame 3 `rokan do "what is the current status at www.vercel-status.com"`.
+2. `App.tsx` `forgeExample` spec → `name: 'status_of'`, `commands: ['rokan do "what is the current status at {{site}}"']`,
+   `params: [{ name: 'site', description: 'A status page host (githubstatus.com, www.vercel-status.com, …)', example: 'githubstatus.com' }]`,
+   kind `read`. Update `heroExample` name checks (`hn_top` → `status_of`) and any test that asserts the old copy.
+3. Keep the phrasing byte-exact — rokan-do keys the 0-call replay on the normalised question + host; a paraphrase re-plans
+   (and in the sandbox, abstains). DEMO.md lines 16/43/58 (`top 5 HN titles`) need the same swap (Engineer #4 will do DEMO.md).
+Why this is better than HN anyway: every judge can type *their own company's* status page and get ⚡ 0 calls.

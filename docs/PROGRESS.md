@@ -2,6 +2,22 @@
 
 Last update: **2026-08-29 ~18:40 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
+## Build log — Engineer #4 (2026-08-29 ~19:00 local, manual regime after merge — live stranger run)
+Ran the §16 regime on the LIVE URL in a real Chrome tab (clean, no flags). Green: web 200 (1.6 s) · worker `{ok,mode:judge}`
+· cold load: hero, Site tools · 6, terminal, Ledger · 1, no console errors · Try it now → paired **824 ms** · `ls` → `exit 0 · 5 ms`
+· seeded `rokan do "what is the current status at githubstatus.com"` → **All Systems Operational 799ms ⚡** (0 calls, live).
+**Three findings, ranked:**
+1. **PROD IS 22 h BEHIND HEAD.** `vercel ls`: last Production deploy 22 h ago; no git auto-deploy. The live bundle has no
+   RunFeed (committed 12:07 today), no kept.ts hardening, no provenance chip — judges would use yesterday's build. The
+   classifier blocks the deploy from my shell → **Arav: `cd apps/web && vercel --prod --yes`**, then I re-run the regime.
+   (This is also why the human-typed `ls` shows no Runs row / ledger row on prod — RunFeed isn't deployed.)
+2. **Hero example can't work in the judge sandbox**: `rokan do "top 5 HN titles"` → `abstained_planner_unavailable` (~15 s).
+   HN is not seeded; sandbox has no key/browser. Recipe for Aarya in ALIGNMENT (swap to the seeded status-page phrasing —
+   24 status pages incl. vercel/netlify/shopify/anthropic seeded, all 0-call). Evals can't catch it (they only ghost-type).
+3. **First `rokan do` in the sandbox prints Rokan's 12-line first-run disclosure** before the ⚡ line (marker
+   `~/.do-disclosed`, `rokan_do/cli.py:69`). In the judge image no key exists, so nothing can leave the machine — pre-touch
+   the marker in `container/seed/` at the next image rebuild (mine; batch with other container changes, rebuild ≈ 10–20 min).
+
 ## Build log — Engineer #4 (2026-08-29, judge gate closed)
 **Judge sandbox is GREEN: 12/12 twice, live, measured (`evals/run-all.mjs --judge`).** The open item from the
 handoff — `terminal-insert-cancel` failing once on the live judge — is resolved with data, not a guess
