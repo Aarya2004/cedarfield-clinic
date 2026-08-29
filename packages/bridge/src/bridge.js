@@ -81,8 +81,13 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   };
 
   /** Spawn (or respawn after exit) the human's shell. The tab is told either way. */
+  let lastSpawnAt = 0;
+  let quickExits = 0; // consecutive shells that died within QUICK_EXIT_MS of spawning
+  const QUICK_EXIT_MS = 2000;
+  const MAX_QUICK_EXITS = 3;
   const spawnShell = (reason) => {
     term = pty.spawn(shellPath, ['-l'], { name: 'xterm-256color', cols, rows, cwd: cwd || process.env.HOME, env });
+    lastSpawnAt = Date.now();
     termAlive = true;
     sawStart = false;
     osc = new OscParser();
@@ -142,9 +147,19 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
     if (t !== term) return;
     termAlive = false;
     if (closed) return; // close() killed it on purpose — never respawn a shell for a closed bridge
-    log(`shell exited ${exitCode} — restarting`);
     ledger.append('shell_exited', { exit_code: exitCode });
     send(client, { type: 'exit', code: exitCode });
+    // A shell that dies within QUICK_EXIT_MS of spawning is respawned, but only so many times in a row —
+    // an immediately-exiting $SHELL (bad rc, wrong binary) would otherwise loop forever, flooding the
+    // ledger and the tab (Fable P2). A shell that lived long enough resets the counter.
+    quickExits = Date.now() - lastSpawnAt < QUICK_EXIT_MS ? quickExits + 1 : 0;
+    if (quickExits >= MAX_QUICK_EXITS) {
+      log(`shell exited ${exitCode} within ${QUICK_EXIT_MS} ms ${quickExits}× — not restarting`);
+      send(client, { type: 'data', data: `\r\n[rokan-terminal] shell keeps exiting immediately (${exitCode}); stopped restarting it. Check your shell (${shellName(shellPath)}).\r\n` });
+      send(client, { type: 'error', code: 'shell_unstable', message: 'the shell exited immediately too many times' });
+      return;
+    }
+    log(`shell exited ${exitCode} — restarting`);
     // Respawn so a reconnect never touches a dead PTY (Fable review F3); the tab stays paired.
     spawnShell(`exit ${exitCode}`);
     send(client, { type: 'data', data: `\r\n[rokan-terminal] shell exited ${exitCode}; started a new one\r\n` });
