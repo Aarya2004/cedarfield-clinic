@@ -16,7 +16,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "test -s bin/rokan-terminal.js && node --check bin/rokan-terminal.js && node --check src/bridge.js && node --check src/protocol.js && node --check src/ledger.js && node --check src/shell-integration.js && node --check src/mcp.js",
+    "check": "test -s bin/rokan-terminal.js && node --check bin/rokan-terminal.js && node --check src/bridge.js && node --check src/protocol.js && node --check src/ledger.js && node --check src/shell-integration.js && node --check src/mcp.js && node --check src/mcp-resources.js && node --check src/rokan-trailer.js",
     "test:mcp": "node --test --test-force-exit test/mcp.test.mjs",
     "smoke": "node test/smoke.mjs && node --test --test-force-exit test/mcp.test.mjs",
     "typecheck": "pnpm check",

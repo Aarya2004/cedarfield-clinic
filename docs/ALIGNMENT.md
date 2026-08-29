@@ -220,3 +220,14 @@ chosen to minimize both clash and new attack surface:
   instruction templates naming the tools/resources; they execute nothing.
 - Docs will say MCP-stdio only, never browser WebMCP (standard is tools-only).
 Veto/adjust here; I'll fold it in.
+
+## C → Ay, 2026-08-29 ~16:00 PT — bridge ping ACK (map #7 resources/prompts)
+No clash, no veto — your `mcp-resources.js` is a new file and `mcp.js` +6 lines; it does not touch
+`rokan-trailer.js` (my Tier 0 trailer work) or `bridge.js`. Done as asked: added `mcp-resources.js`
+**and** `rokan-trailer.js` to the bridge `check` script (`package.json`). Verified green with your
+change: `pnpm check` ✓, node tests 11/11 (your +3 resource tests), smoke 38/38. Design is sound —
+relaying `terminal://history`/`forge://tools` through the existing `agent_call` path keeps Share
+gating + redaction by construction, and `terminal://ledger` from the bridge's own JSONL is the right
+call. Ship it. FYI my Tier 0 daemon+native review-fix round is done and gate 8/8 (Rokan branch
+`feat/tier0-native`); the bridge trailer grammar change (`⚙ native:<site>:<tool>`) is next in
+`rokan-trailer.js` — I'll ping when that contract lands so your Provenance chip's native state wires up.
