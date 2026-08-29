@@ -78,7 +78,7 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
             tool registration failed
           </Chip>
         ) : null}
-        <label className="flex cursor-pointer items-center gap-1" title="Off: terminal_read_screen returns {shared:false}. On: the agent reads the screen with secrets redacted.">
+        <label className="flex cursor-pointer items-center gap-1" title="Off: terminal_read_screen and terminal_history return {shared:false}. On: the agent reads the screen and this session's recorded runs, with secrets redacted.">
           <input type="checkbox" checked={s.share} onChange={(e) => session.setShare(e.target.checked)} data-share className="accent-amber-600" />
           Share screen
         </label>
@@ -287,7 +287,8 @@ function summarise(r: LedgerRow): string {
     case 'executed_step':
       return `${f.tool ?? ''} · step ${f.step ?? ''} · exit ${f.exit_code ?? '–'} · ${f.ms ?? '–'} ms`;
     case 'screen_read':
-      return f.shared ? `${f.lines} lines, ${f.redactions} redacted` : 'refused (share off)';
+      // terminal_history reads the same gated surface and rides the same kind; it names its runs.
+      return f.shared ? `${f.runs !== undefined ? `${f.runs} runs · ` : ''}${f.lines} lines, ${f.redactions} redacted` : 'refused (share off)';
     case 'paired':
     case 'reconnected':
       return `${f.host} · ${f.pair_ms ?? '–'} ms`;

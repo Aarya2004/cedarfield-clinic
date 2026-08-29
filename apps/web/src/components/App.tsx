@@ -6,7 +6,7 @@
  * (the state: Tools · Forge · Ledger, one bordered box divided by hairlines).
  * Height is owned by the shell: every ancestor of the terminal is `min-h-0` so the xterm host is
  * the only thing that grows, and its ResizeObserver sees a stable box.
- * Registers the six fixed tools once; installs test hooks when enabled.
+ * Registers the seven fixed tools once; installs test hooks when enabled.
  */
 import { Component, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { registerTerminalTools, type RegistrationState } from '@/lib/webmcp/register';
@@ -99,7 +99,7 @@ export function App() {
     if (tourRequested()) setTour('on');
     session.start();
     // If the effect is torn down before registration resolves, dispose on arrival instead of
-    // leaking the AbortController (and six tools) — Fable pass-1 P2.
+    // leaking the AbortController (and seven tools) — Fable pass-1 P2.
     let disposed = false;
     let dispose: (() => void) | null = null;
     registerTerminalTools(setReg).then((d) => {

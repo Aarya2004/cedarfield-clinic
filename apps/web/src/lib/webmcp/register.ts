@@ -8,7 +8,7 @@
  *    arriving as `agent_call` frames are dispatched by `callAgentTool()`. The page stays the
  *    single source of truth; nothing here can reach the PTY — proposals only ghost-type.
  */
-import { getModelContext, type ModelContextTool } from './types';
+import { getModelContext, type ModelContextTool } from './types.ts';
 import {
   FIXED_TOOL_NAMES,
   FORGE_CREATE_DESCRIPTION,
@@ -16,19 +16,25 @@ import {
   OUTPUT_BUDGET_CHARS,
   READ_SCREEN_DEFAULT_LINES,
   READ_SCREEN_MAX_LINES,
+  TERMINAL_HISTORY_DESCRIPTION,
   TERMINAL_PROPOSE_DESCRIPTION,
   TERMINAL_READ_SCREEN_DESCRIPTION,
   TERMINAL_STATUS_DESCRIPTION,
   TERMINAL_WAIT_DESCRIPTION,
   WAIT_DEFAULT_MS,
+  clampLastN,
   forgeCreateSchema,
   forgeListSchema,
+  terminalHistorySchema,
   terminalProposeSchema,
   terminalReadScreenSchema,
   terminalStatusSchema,
   terminalWaitSchema,
   validateProposedCommand,
   isDangerousIn,
+  type TerminalHistoryInput,
+  type TerminalHistoryResult,
+  type TerminalHistoryRun,
   type TerminalProposeInput,
   type TerminalProposeResult,
   type TerminalReadScreenInput,
@@ -36,14 +42,17 @@ import {
   type TerminalStatusResult,
   type TerminalWaitInput,
   type TerminalWaitResult,
-} from './schemas';
-import { getTerminalAdapter } from './adapter';
-import { proposals } from './proposals';
-import { forge } from './forge';
-import { coerceInput, FORGED_PREFIX } from './forge-spec';
-import { redactForAgent } from './redact';
-import { ledger } from './ledger';
-import { note } from './fieldnotes';
+} from './schemas.ts';
+import { getTerminalAdapter } from './adapter.ts';
+import { proposals } from './proposals.ts';
+import { forge } from './forge.ts';
+import { coerceInput, FORGED_PREFIX } from './forge-spec.ts';
+import { redactForAgent } from './redact.ts';
+import { ledger } from './ledger.ts';
+import { note } from './fieldnotes.ts';
+// Relative, with the extension, like every other import here: this module is loaded verbatim by
+// `node --experimental-strip-types` in register.test.ts, which cannot resolve the `@/` alias.
+import { runFeed, type Run } from '../terminal/runfeed.ts';
 
 export { WAIT_DEFAULT_MS, FIXED_TOOL_NAMES };
 
@@ -79,6 +88,65 @@ export function sanitiseWhy(why: unknown): string | undefined {
   return clean.length ? clean : undefined;
 }
 
+/** Envelope allowance for `shared` / `truncated` / `redactions` around the runs array. */
+const HISTORY_ENVELOPE_CHARS = 60;
+
+/**
+ * The run feed, as `terminal_history` returns it (ticket #6). Pure: no adapter, no DOM — the
+ * gating decision belongs to the handler, this only redacts and fits the budget.
+ *
+ * Redaction: EVERY string that leaves here — command, cwd, and each tail line — goes through
+ * `redactForAgent` individually (command and cwd separately, so a `-----BEGIN …-----` in one can
+ * never swallow the other). `redactions` counts only the secrets removed from material that is
+ * actually returned; a tail line the budget dropped is not counted, because the agent never saw it.
+ *
+ * Budget (`OUTPUT_BUDGET_CHARS`, the same 1.5 K cap read_screen honours): the run metadata is paid
+ * for first — if even that overflows, the OLDEST runs are dropped (never the newest, which is what
+ * an agent asks for). Whatever is left is spent on tails newest-run-first through `fitBudget`, so a
+ * long-running session returns full output for the last command and empty tails for older ones.
+ * `truncated` is true whenever the budget cut or clipped anything; asking for fewer runs with
+ * `last_n` is the agent's own choice and does not set it.
+ */
+export function historyForAgent(all: readonly Run[], lastN: number): { runs: TerminalHistoryRun[]; truncated: boolean; redactions: number } {
+  const rows = all.slice(-lastN).map((r) => {
+    const cmd = redactForAgent([r.command ?? '']);
+    const cwd = redactForAgent([r.cwd ?? '']);
+    const tail = redactForAgent(r.tail);
+    const run: TerminalHistoryRun = {
+      command: r.command === null ? null : cmd.lines[0],
+      exit_code: r.exit_code,
+      ms: r.ms,
+      cwd: r.cwd === null ? null : cwd.lines[0],
+      origin: r.origin,
+      t: r.t,
+      tail: [],
+      // measured numbers the bridge parsed from rokan-do's own result line: agent-safe, passed through
+      ...(r.rokan ? { rokan: { ms: r.rokan.ms, replayed: r.rokan.replayed, calls: (r.rokan.replayed ? 0 : null) as 0 | null } } : {}),
+    };
+    const head = (r.command === null ? 0 : cmd.redactions.length) + (r.cwd === null ? 0 : cwd.redactions.length);
+    return { run, tailLines: tail.lines, tailRedactions: tail.redactions, head };
+  });
+
+  let truncated = false;
+  const metaChars = () => JSON.stringify(rows.map((x) => x.run)).length + HISTORY_ENVELOPE_CHARS;
+  while (rows.length > 1 && metaChars() > OUTPUT_BUDGET_CHARS) {
+    rows.shift();
+    truncated = true;
+  }
+
+  let redactions = rows.reduce((n, x) => n + x.head, 0);
+  let used = metaChars();
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const [kept, cut] = fitBudget(rows[i].tailLines, used);
+    rows[i].run.tail = kept;
+    if (cut) truncated = true;
+    const dropped = rows[i].tailLines.length - kept.length; // fitBudget only ever drops from the front
+    redactions += rows[i].tailRedactions.filter((x) => x.line >= dropped).length;
+    used += JSON.stringify(kept).length;
+  }
+  return { runs: rows.map((x) => x.run), truncated, redactions };
+}
+
 /** For a step of a forged invocation, the id of the following step (or null when last / not a step). */
 function nextStepId(pid: string): string | null {
   const p = proposals.get(pid);
@@ -87,7 +155,7 @@ function nextStepId(pid: string): string | null {
   return next?.id ?? null;
 }
 
-/** The six fixed tools. Built once; identical for WebMCP and the MCP relay. */
+/** The seven fixed tools (`FIXED_TOOL_NAMES`). Built once; identical for WebMCP and the MCP relay. */
 export function fixedToolDefs(): ToolDef[] {
   return [
     {
@@ -223,6 +291,32 @@ export function fixedToolDefs(): ToolDef[] {
       },
     },
     {
+      name: 'terminal_history',
+      title: 'Runs recorded this session (if shared)',
+      description: TERMINAL_HISTORY_DESCRIPTION,
+      inputSchema: terminalHistorySchema,
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      // A pure read at the agent boundary: it executes nothing and proposes nothing. Gated by the
+      // same Share-screen toggle as terminal_read_screen — the run feed is buffer-derived too.
+      // `options` is optional on purpose: Chrome 152 calls execute() with one argument.
+      async execute(raw): Promise<TerminalHistoryResult> {
+        const input = coerceInput(raw) as TerminalHistoryInput;
+        const a = getTerminalAdapter();
+        if (!a.shareScreen()) {
+          void ledger.append('screen_read', { shared: false, tool: 'terminal_history' });
+          note('terminal_history.refused');
+          return { shared: false, reason: "The human has not turned on 'Share screen with agent'." };
+        }
+        const last_n = clampLastN(input?.last_n);
+        // No shell paired? The feed is simply empty — an honest `runs: []`, never a fabricated row.
+        const { runs, truncated, redactions } = historyForAgent(runFeed.snapshot(), last_n);
+        const lines = runs.reduce((n, r) => n + r.tail.length, 0);
+        void ledger.append('screen_read', { shared: true, tool: 'terminal_history', runs: runs.length, lines, redactions, truncated });
+        note('terminal_history.called', { last_n, runs: runs.length, lines, redactions, truncated });
+        return { shared: true, runs, truncated, redactions };
+      },
+    },
+    {
       name: 'forge_create',
       title: 'Forge a new tool (needs human approval)',
       description: FORGE_CREATE_DESCRIPTION,
@@ -276,7 +370,7 @@ export function fixedToolDefs(): ToolDef[] {
 
 const fixed = fixedToolDefs();
 
-/** Tool definitions for the MCP relay: the six fixed + the visible forged tools (no executors). */
+/** Tool definitions for the MCP relay: the seven fixed + the visible forged tools (no executors). */
 export function agentTools(): { name: string; description: string; inputSchema: Record<string, unknown>; annotations: ToolDef['annotations'] }[] {
   return [...fixed.map(({ name, description, inputSchema, annotations }) => ({ name, description, inputSchema, annotations })), ...forge.toolDefs()];
 }
