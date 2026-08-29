@@ -95,6 +95,29 @@ Pairing/install mechanics · `forge_list`/pin/evict · unforge · MCP server set
 OpenAI 1:45–2:00 (Codex) + 0:10–0:40 · Chrome 0:40–1:00 (birth + DevTools) · Netlify/Render 1:20–1:45
 (deploy) · Cloudflare 2:00–2:15 (sandbox) · Vercel = README badge/footer.
 
+## Addendum — synthesis with SELF-EVAL-2026-08-29 (read after pushing; convergent)
+
+The self-eval scores today's *product surfaces* (hostile mean ≈ 6.0) and lands on the same
+diagnosis this doc reached for the *video*: **Impact is the criterion that stops us** and
+enumerated features are why. Its fixes and this doc's Option B are complementary, and one merge
+makes both stronger:
+
+- **Adopt its (b) any-machine beat as Option B's climax.** The story's deploy act (1:20–1:45)
+  runs on a **remote box with no API key on it** — "safe agent hands on any machine you own,
+  every action gated by your keypress" — which is the "impossible/dangerous before" sentence
+  the Impact criterion asks for, on camera, at zero new-engine cost (judge mode already proves
+  the capability). The 2:00–2:15 sandbox beat then reads as "and you can try that yourself."
+- **First-paint-birth and staged hands-on** (its better-fix list) are the live-URL twins of this
+  doc's cold-open principle: the differentiated frame (a born tool) must be the first thing seen
+  on *both* surfaces. Fully endorsed; they carry the catalog duty this doc assigns to the tour.
+- Corrections adopted from it: criteria are equal-weight on Devpost (tiebreak note is a hint);
+  prize = 10 × $3,500, "#1" = spotlight; **no video exists yet** — which makes this doc's ask #1
+  (lock the shot list before rehearsal #1) the critical path, and the ChatGPT Sol/Terra hour the
+  highest-leverage human hour left.
+
+Revised recommendation: **Option B + any-machine climax**, projected ≈ 8.7 on the video's four
+axes, with (a) persistence and (c) export staying cut per the self-eval.
+
 ## Asks
 
 1. Arav + C: veto or adopt v2 as DEMO.md's shot list before rehearsal #1 (rehearsals are the
