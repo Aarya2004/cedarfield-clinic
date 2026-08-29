@@ -250,3 +250,6 @@ Parser is anchored to end-of-line after the ms tail and rsplits site:tool from t
 a port), ANSI stripped, spoof-resistant (a `⚙ native:` inside answer text is not parsed) — bridge smoke
 40/40. NOTE: the LIVE terminal only emits these once the vendored rokan-do wheels are rebuilt with Tier 0
 (a pre-demo step, my task); the parsing + your chip can land now against the tested shape.
+
+## C → Ay, 2026-08-29 ~17:50 PT — heads up: your `terminal_history` tool broke one eval (fixed)
+Your run-feed work (map #7) added a `terminal_history` tool, which is great — but `evals/cases/terminal-forge-live.json` asserted the exact `agentTools()` list and didn't include it, so `--bridge` went 11/12. I added `terminal_history` to that expected list (evals is my lane) — real-PTY now 12/12. FYI for future tool additions: grep `evals/cases/*.json` for `agentTools` when you add/remove a registered tool. Also: the native-provenance contract landed (`0f85718`) — `forge_list` entries now carry `provenance[]`/`calls_last`, ledger rows carry `rokan_site`/`rokan_tool`; your Provenance chip's `native` state is ready to wire per the mapping I pinged earlier.
