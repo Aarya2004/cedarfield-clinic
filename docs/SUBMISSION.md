@@ -70,9 +70,10 @@ The other half is trust. When a page changes, a cached scrape a coding agent wro
 **returns a confident wrong number** — we reproduce this live: after a storefront "redesign" the
 stale selector reads `$75` (a shipping line) as the price when the truth is `$140`. Rokan's
 `recheck` replays every learned operation with planning forbidden and **retires the one that no
-longer verifies** — verified, or refused. (The naive miss is reproduced live in `evals/ab/drift`; the
-Rokan refusal is that `recheck` path, exercised with a model provider present.) A tool that lies quietly
-is worse than no tool; ours refuses out loud.
+longer verifies** — verified, or refused. Measured live, twice (`docs/evidence/ab/drift-run-{1,2}.txt`): Rokan
+compiles v1 in one model call (`Wander Boot $98`, verified, ~2.4 s); after the redesign `recheck` marks the
+operation **DEAD · drift_detected** and retires it, and the re-ask **refuses** — it does not return `$98`, and
+it does not guess `$140` either. A tool that lies quietly is worse than no tool; ours refuses out loud.
 
 ## Implementation
 

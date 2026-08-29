@@ -1,0 +1,29 @@
+drift server on :8099
+# DRIFT TEST — true price after redesign: $140
+
+## naive cached script (the failure mode)
+v1 capture: {"mode":"capture","answer":"$98","verified":"value read from live v1"}
+v2 replay : {"mode":"replay","answer":"$75","refused":false,"note":"no verification step — returns whatever the v1 selector now matches"}
+=> naive arm SILENTLY WRONG (no refusal)
+
+## Rokan (verified-or-refused via recheck)
+{
+ "v1_compile": {
+  "status": "ok",
+  "speed": "planned",
+  "answer": "Wander Boot $98",
+  "ms": 2367,
+  "model_calls": 1,
+  "verification": "verified"
+ },
+ "recheck_stdout": "DEAD   127.0.0.1:8099               Wander Boot                              replayed 0 ms · drift_detected\n\n  0 alive · 1 dead · 0 no verdict · 0 skipped — every try is a row in op_use",
+ "v2_reask": {
+  "status": "error",
+  "speed": "planned",
+  "answer": null,
+  "ms": 6096,
+  "model_calls": 2,
+  "verification": "refused"
+ },
+ "stale_98_returned": false
+}

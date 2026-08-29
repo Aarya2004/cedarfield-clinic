@@ -29,7 +29,8 @@ A tool you forged replays with **the model out of the loop**. On a live status r
 and the agents pay that cost *every run*, because they re-plan each time (three-arm harness in
 `evals/ab/`, numbers in `docs/measurements/2026-08-30-ab.md`; N=5 warm / N=3 agents, variance stated).
 And when a page drifts, a cached scrape returns a confident wrong number (shown live in `evals/ab/drift`);
-Rokan re-checks and **refuses** the operation that no longer verifies (its `recheck` — verified, or refused). Consuming a site's *own* WebMCP tools is measured too, in builder mode — the judge sandbox
+Rokan re-checks and **refuses** the operation that no longer verifies (its `recheck` — verified, or refused;
+measured live ×2 in `docs/evidence/ab/drift-run-*.txt`: naive `$75`, Rokan `DEAD · drift_detected`, no stale answer). Consuming a site's *own* WebMCP tools is measured too, in builder mode — the judge sandbox
 has no model or browser, so there it replays compiled operations and runs forged tools.
 
 ## What is on the page (six fixed tools + up to five forged)

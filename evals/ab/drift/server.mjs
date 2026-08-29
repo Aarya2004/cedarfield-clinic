@@ -15,14 +15,16 @@ function page() {
   // v1: price sits in <span class="price">. v2: the site was "redesigned" — the old
   // .price node now holds shipping copy, and the real price moved to [data-amount].
   // A selector/regex captured on v1 keeps matching .price and now reads the WRONG value.
+  // v1 is a product tile (name and price on one line — what Rokan's read_value anchors on);
+  // v2 splits the name into a heading with no value beside it, so a verified replay must refuse.
   if (version === 1) {
     return `<!doctype html><meta charset=utf8><title>Wander Boot</title>
-<main><h1>Wander Boot</h1><span class="price">$${price}</span></main>`;
+<main><div class="tile"><span class="name">Wander Boot</span> <span class="price">$${price}</span></div></main>`;
   }
   return `<!doctype html><meta charset=utf8><title>Wander Boot</title>
 <main><h1>Wander Boot</h1>
-<span class="price">$75 shipping</span>
-<span data-amount="1">$${price}</span></main>`;
+<p class="price">$75 flat-rate shipping</p>
+<div class="buy"><span>Now</span> <span data-amount="1">$${price}</span></div></main>`;
 }
 
 createServer((req, res) => {

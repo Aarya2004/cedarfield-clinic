@@ -10,19 +10,25 @@
 // exactly like evals/ab/arm-agents.mjs. Without it: SKIP with the reason (honest),
 // never a fabricated verdict.
 import { spawn } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE = join(HERE, 'state.json');
 const PORT = Number(process.env.DRIFT_PORT || 8099);
-const SITE = `localhost:${PORT}`;
+// 127.0.0.1, not localhost: rokan-do keys a browser session by `vault.normalize_host`, which accepts
+// dotted hosts/IPs and rejects a bare `localhost` (no dot) with INVALID_URL — a terminal reason in
+// the cascade, so the compile abstained before any planning (found live 2026-08-29).
+const SITE = `127.0.0.1:${PORT}`;
 const Q = `how much is the Wander Boot at ${SITE}`;
+const ROKAN_MCP_HOME = mkdtempSync(join(tmpdir(), 'ab-drift-'));
 
 function sh(cmd, args) {
   return new Promise((res) => {
-    const p = spawn(cmd, args, { env: { ...process.env, ROKAN_BROWSER_HEADLESS: '1' } });
+    // Isolated store (like arm-c): never learn into, or read from, the operator's real ~/.rokan.
+    const p = spawn(cmd, args, { env: { ...process.env, ROKAN_BROWSER_HEADLESS: '1', ROKAN_MCP_HOME } });
     let out = '', err = '';
     p.stdout.on('data', (d) => (out += d));
     p.stderr.on('data', (d) => (err += d));
