@@ -3,6 +3,16 @@
 Last update: **2026-08-29 ~03:10 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** · **Target: submit Tue 09-01; freeze Mon 08-31 12:00 PT; hard fallback Wed 09-02 evening.** Branch `main`, all pushed.
 
 ## Build log — Engineer #4 (2026-08-29)
+**P0.5 0-call native replay + review round 2 closed (Rokan `feat/tier0-native` `a492098`).**
+Review round 2 (Opus + Fable, both confirmed the same 3 P1s; no P0): all fixed — write/read gate catches
+write-shaped names (check_out, get_and_delete_cart) on the no-Enter native path; model_calls counts the
+wasted select on fallback; render anti-spoofs our ⚙/⚡ markers; is_native_blob guarded vs non-object JSON.
+Gate 8/8. Then **0-call native replay**: same question twice → run1 native calls=1, run2 native calls=0
+(live, fresh store). Native ops in their OWN native_op table keyed on the exact normalised question+host,
+never the fuzzy answers()/Plan collision path. Traps #1/#2/#3 closed. native 33, non-live rokan-do 1619,
+ruff+mypy clean. Reviewers dispatched on this unit. Next: entry-side (bridge trailer → chip → kept → A/B).
+
+## Build log — Engineer #4 (2026-08-29)
 **P0.3 Tier 0 FULLY WIRED + live-proven (Rokan `feat/tier0-native` `f13f7fe`).** `rokan do` now resolves
 a site's OWN WebMCP tool before planning the DOM. Live: `rokan do "find wool runners at allbirds.com"
 --json` → `speed=native, model_calls=1, self_reported`, real Allbirds catalog from `search_catalog`,
