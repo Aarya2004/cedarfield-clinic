@@ -3,6 +3,19 @@
 Last update: **2026-08-29 ~03:10 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** · **Target: submit Tue 09-01; freeze Mon 08-31 12:00 PT; hard fallback Wed 09-02 evening.** Branch `main`, all pushed.
 
 ## Build log — Engineer #4 (2026-08-29)
+**P0.7 Tier 0 LIVE end-to-end + entry bridge trailer + review round 3 closed (Rokan `feat/tier0-native`
+`7e0a27d`; entry `be94d37`).** Review round 3 (Opus + Fable): Fable found a real P1 Opus missed — a
+URL-path key collision (a question with a different URL path could replay another's answer at 0 calls);
+root-caused (fold `_path` into the native key + keep URL paths) + regression-tested; phantom-call, forget_native,
+isolation test also fixed. Both cleared it demo-safe, no P0. Gate 8/8. Then: render marks a 0-call native
+replay with ⚡ (`⚙ native:site:tool` after the ms tail); **bridge trailer parses it** → `rokan_site`/`rokan_tool`
+in the ledger (rsplit for host-ports, spoof-resistant, ANSI-stripped; smoke 40/40); Aarya pinged the chip
+mapping. **Installed rokan-do reinstalled editable from the Tier 0 branch** — the LIVE tool now prints
+`⚙ native:allbirds.com:search_catalog`, so terminal → rokan do → marker → bridge → ledger works end to end.
+Next: forge.ts provenance/calls_last wiring (mine) + Aarya's chip + kept tools + A/B; and the judge-image
+wheels (compiled-only there, no browser). Reviewer guidance for all of it is in Rokan `docs/measurements/2026-08-29-tier0.md`.
+
+## Build log — Engineer #4 (2026-08-29)
 **P0.5 0-call native replay + review round 2 closed (Rokan `feat/tier0-native` `a492098`).**
 Review round 2 (Opus + Fable, both confirmed the same 3 P1s; no P0): all fixed — write/read gate catches
 write-shaped names (check_out, get_and_delete_cart) on the no-Enter native path; model_calls counts the

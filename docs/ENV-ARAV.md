@@ -34,3 +34,6 @@ Logins (Vercel, wrangler, ChatGPT), plan tiers, spend caps, accounts, anything s
 
 ## Operating loop
 pull → build → verify (`pnpm gate`) → commit (conventional prefix, output in body) → push → PROGRESS (Now / Next / Done / In flight / Blocked) → `graphify update .` → next item in gate order → every 30 min: "does this demo well?". Reviewers (Opus 5 + Fable 5) write to `docs/reviews/` + PROGRESS "Review findings (open)"; P0s first.
+
+## rokan-do (Tier 0, 2026-08-29)
+`rokan-do` is installed as a uv tool **editable** from `~/dev/Rokan/packages/rokan-do` (branch `feat/tier0-native`), so the live terminal picks up source edits. Reinstall: `uv tool install --force --editable ~/dev/Rokan/packages/rokan-do`. A native answer prints `⚙ native:<site>:<tool>`; the bridge parses it to ledger provenance.
