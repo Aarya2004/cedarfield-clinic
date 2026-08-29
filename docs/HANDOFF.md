@@ -104,6 +104,16 @@ docker exec rk sh -lc 'cat /proc/1/environ | tr "\0" "\n" | grep ^PATH'   # what
 docker exec -u judge rk zsh -lc 'echo $PATH; command -v rokan; command -v rokan-do'
 docker rm -f rk
 ```
+A ready-made **safe** PTY probe for exactly this lives at `evals/diagnostics/judge-path.json` (it
+asks the shell itself for `$PATH`, `command -v rokan`, `command -v rokan-do`, the shim dir and the
+exit code). It is kept out of `evals/cases/` so it never changes sweep counts — run it with:
+
+```
+cp evals/diagnostics/judge-path.json evals/cases/terminal-judge-path.json
+node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --only=judge-path
+rm evals/cases/terminal-judge-path.json
+```
+
 Then the honest end-to-end check is `pnpm smoke:image:rokan` (extend it with a `rokan do` case run
 **through the PTY**, not through `docker exec`), rebuild, `pnpm deploy`, and
 `node evals/run-all.mjs --judge=<worker> --only=terminal-rokan-real`.

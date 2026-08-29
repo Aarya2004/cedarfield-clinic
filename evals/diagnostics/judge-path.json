@@ -1,0 +1,9 @@
+[
+  { "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
+  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
+  { "invoke": "terminal_propose", "input": { "command": "echo P=$PATH; id -un; command -v rokan; command -v rokan-do; head -1 /usr/local/python/bin/rokan-do; ls /opt/bridge/shims; rokan do --help >/dev/null 2>&1; echo EC=$?", "why": "diagnose exit 127" } },
+  { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()", "equals": "string" },
+  { "key": "Enter" },
+  { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid }).then(r => [r.status, r.exit_code])", "equals": ["executed", 0] },
+  { "eval": "(window.__rokan.screen(40) ?? []).join('\\n')", "equals": "__dump__" }
+]
