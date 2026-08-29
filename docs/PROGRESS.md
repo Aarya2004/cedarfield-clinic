@@ -1,6 +1,25 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-29 ~10:00 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
+Last update: **2026-08-29 ~11:00 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
+
+## Build log — Engineer #4 (2026-08-29, review round 4)
+**P0.4c two adversarial reviews closed (entry `29119ca`+, Rokan `feat/tier0-native`).** I dispatched
+two subagents on this session's work; both found real issues; all actioned:
+- **kept.ts security review** — core property held (no auto-register, fail-closed verify). Fixed:
+  MODERATE bounded-load (MAX_SCAN + early break vs whole-array validation DoS), LOW range-guard on
+  keptFromTools (RangeError on out-of-range forgedAt), LOW parseEntry try/catch (no-throw no longer
+  depends on validateForgeSpec being total), length bounds, and the over-claim comment (hash is a
+  DRIFT SIGNAL not a tamper boundary — approval card is the guarantee). +4 regression tests; 18/18.
+- **honesty audit** of every Impact/security claim vs code. Fixed: committed the raw harness output
+  to `docs/evidence/ab/` (native row now backed in-repo — warm speeds==["native"], calls all 0,
+  answers_ok); corrected eval counts to VERIFIED 21 (9 prompt + 12 PTY, re-ran 9/9 & 12/12);
+  softened "Rokan refuses" to its recheck-with-key scoping; killed stale caps ("3/IP", "8/8",
+  "120 tests") + orphan "312 ms"; SECURITY §8 +payment/consequential, §9 kept-store-landed;
+  native.py docstring "NOT yet wired"→wired; wrangler caps comment aligned to §9 (judging=10/5).
+  Non-issue: native.py's tier0 measurements ref DOES exist (in Rokan, auditor checked entry repo).
+**Re-verified myself (subagent green ≠ verification):** web 202/202, typecheck clean; prompt-line
+evals 9/9, real-PTY 12/12; Rokan native 37/37 + full pre-commit gate; sandbox check clean. All pushed.
+**Every public number now traces to committed evidence or a re-run suite.**
 
 ## Build log — Engineer #4 (2026-08-29, cont.)
 **P0.4b kept.ts + SECURITY §8/§9 + README/SUBMISSION Impact + npm-pack verified (entry `55b32c4`+, pushed).**

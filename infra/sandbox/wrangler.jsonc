@@ -22,9 +22,10 @@
   "vars": {
     "APP_ORIGIN": "https://rokan-terminal.vercel.app",
     "SESSION_TTL_MS": "1800000",
-    // TESTING caps — raised so the builder can run many --judge checks from one IP without hitting the
-    // per-IP limit. REVERT BOTH TO "3" BEFORE THE FREEZE (the 3/3 cap is the stranger-abuse story in
-    // docs/SECURITY.md). TTL stays 30 min so a judge session is unaffected. Tracked in docs/PROGRESS.md.
+    // TESTING caps — raised so the builder can run many --judge checks from one IP. Single source of
+    // truth is the caps table in docs/SECURITY.md §9: JUDGING WINDOW = 10 / 5 (per-IP / concurrent),
+    // TTL 60 min; AFTER RESULTS = 3 / 3, TTL 30 min. Set the judging-window row before the freeze
+    // (Arav signs off). TTL currently 30 min so a judge session is unaffected. Tracked in docs/PROGRESS.md.
     "SESSIONS_PER_IP_PER_10MIN": "50",
     "MAX_CONCURRENT_PER_IP": "20"
   },
