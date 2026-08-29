@@ -197,7 +197,9 @@ for (const f of cases) {
   if (first.judgeOnly && !judgeUrl) { console.log(`SKIP ${f} (judge-only; builder shell legitimately has a key)`); continue; }
   const extraQuery = typeof first.query === 'string' ? `&${first.query}` : '';
   const url = `http://localhost:${WEB_PORT}/?test=1${extraQuery}${withBridge || judgeUrl ? pairingHash : ''}`;
-  const runCase = () => spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], { encoding: 'utf8' });
+  // Judge runs own the committed evidence (docs/evidence/demo/*.png); every other mode shoots to scratch.
+  const shotEnv = judgeUrl ? {} : { ROKAN_EVAL_SHOT_DIR: traceDir ?? `${root}evals/.shots` };
+  const runCase = () => spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], { encoding: 'utf8', env: { ...process.env, ...shotEnv } });
   let r = runCase();
   let attempt = 1;
   if (traceDir) writeFileSync(`${traceDir}/${f.replace(/\.json$/, '')}.jsonl`, r.stdout + (r.stderr ? `\n# stderr\n${r.stderr}` : ''));

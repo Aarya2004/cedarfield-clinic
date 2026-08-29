@@ -19,7 +19,8 @@
  * Output: one JSON line per step with `ms`, plus a final summary line. Exit 1 on any failure.
  */
 import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename } from 'node:path';
 
 const args = process.argv.slice(2);
 const flag = (n) => { const i = args.indexOf(`--${n}`); return i === -1 ? undefined : args[i + 1]; };
@@ -80,8 +81,14 @@ for (const step of steps) {
       await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
       await sleep(150);
       const r = await send('Page.captureScreenshot', { format: 'png' });
-      writeFileSync(step.shot, Buffer.from(r.result.data, 'base64'));
-      out({ step: 'shot', file: step.shot, ms: Math.round(performance.now() - t0) });
+      // ROKAN_EVAL_SHOT_DIR redirects every shot's basename into one directory. run-all sets it for
+      // non-judge runs so a `--bridge` pass can't overwrite the judge-sandbox evidence in docs/ (it did,
+      // 2026-08-29: builder-mode shots landed on the committed beat*.png).
+      const shotDir = process.env.ROKAN_EVAL_SHOT_DIR;
+      const file = shotDir ? `${shotDir}/${basename(step.shot)}` : step.shot;
+      if (shotDir) mkdirSync(shotDir, { recursive: true });
+      writeFileSync(file, Buffer.from(r.result.data, 'base64'));
+      out({ step: 'shot', file, ms: Math.round(performance.now() - t0) });
     } else if (typeof step.query === 'string') {
       out({ step: 'query', query: step.query }); // consumed by run-all.mjs (page URL params)
     } else if (step.list) {

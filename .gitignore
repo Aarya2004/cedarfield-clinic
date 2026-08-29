@@ -14,3 +14,4 @@ graphify-out/cache/
 graphify-out/20*/
 .dev.vars
 evals/ab/drift/naive-recipe.json
+evals/.shots/
