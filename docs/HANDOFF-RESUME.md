@@ -32,7 +32,7 @@ Eval counts: VERIFIED **22 cases (9 prompt-line, 12 real-PTY, +1 judge-only)**.
 ## BLOCKED — NEEDS ARAV (on the #1 critical path)
 - **ChatGPT Sol/Terra run** — needs Arav OFF screen-share + switched to Sol/Terra (GPT-5.6). Then Engineer #4 drives via AppleScript+screencapture. This is §15 #1 (the birth live in ChatGPT's Site tools) — the single biggest lever.
 - **`npm login && npm publish`** — package is publish-ready; only login remains.
-- **Live cold-compile A/B & drift Rokan rows** — need `ANTHROPIC_API_KEY` in the Bash env (it is NOT set in the tool shell; was exported in the prior session that ran arm-c). The drift Rokan arm and any cold rokan-do run skip without it.
+- ~~Live cold-compile A/B & drift Rokan rows~~ — DONE 2026-08-29 (drift measured N=2; key lives in `~/dev/Rokan/.env`, grep the one variable into the env).
 
 ## AARYA'S LANE (recipe delivered in ALIGNMENT, don't wire it yourself — collision risk in her App.tsx)
 - RestoreCard.tsx + the `persistKept(keptFromTools(forge.tools()))` write-path subscriber (on approve/pin/unforge/restore) + restore-on-load. `kept.ts` API: `loadKept`/`persistKept`/`verifyKeptHashes`/`keptFromTools`/`clearKept`. `restored` ledger kind already exists both sides.

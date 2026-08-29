@@ -2,6 +2,16 @@
 
 Last update: **2026-08-29 ~18:40 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
+## Build log — Engineer #4 (2026-08-29 ~20:10 local, drift beat measured)
+**Drift Rokan arm is LIVE and measured (N=2, `6c7f964`, raw `docs/evidence/ab/drift-run-{1,2}.txt`):** naive cached
+script `$98 → $75` (true `$140`, `refused:false`); Rokan compiles v1 in 1 call (~2.4 s, verified `Wander Boot $98`) →
+`recheck` after the redesign → **`DEAD · drift_detected`** (op retired) → re-ask **refuses**, no stale `$98`, no guess.
+Honest scope in the docs: refusal, not recovery. Two harness bugs fixed (the arm had never run with a key):
+`localhost` → `127.0.0.1` (`vault.normalize_host` rejects a dotless host → `INVALID_URL`, terminal in the cascade) and an
+isolated `ROKAN_MCP_HOME`. Fixture v1 = product tile, v2 = redesign. SUBMISSION/README/measurements now state the
+measured result. Key is read from `~/dev/Rokan/.env` by grepping the one variable (never `source` it — a malformed
+line in that file executes).
+
 ## Build log — Engineer #4 (2026-08-29 ~19:50 local, judge image + hero)
 - **Judge image rebuilt + rolled out** (manifest `sha256:808fe11…`, version `1aae9c30`, fleet `active`): the rokan-do
   first-run disclosure is pre-accepted for the judge user. Proven live with a NEW regression case
