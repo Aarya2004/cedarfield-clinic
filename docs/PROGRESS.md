@@ -3,6 +3,18 @@
 Last update: **2026-08-29 ~03:10 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** · **Target: submit Tue 09-01; freeze Mon 08-31 12:00 PT; hard fallback Wed 09-02 evening.** Branch `main`, all pushed.
 
 ## Build log — Engineer #4 (2026-08-29)
+**P0.2 Review round 1 (Opus + Fable) — all blockers fixed, gate 8/8 (Rokan `feat/tier0-native` `46a98eb`).**
+Both reviewers correctly ruled Tier 0 not-safe-to-wire as first built. Fixed, failing-first: read/write
+gate enforced in `invoke()`/`replay()` (write tools refused before any CDP send; Shopify annotates none
+so a safe-verb allowlist backs the annotation); nav-failure/host-mismatch never return the open page's
+tools (the daemon runs the user's real Chrome profile — security); `toolResponded` matched to the
+`invocationId`; `schema_hash` verified in replay (no blind replay on a changed schema); native output
+redacted + capped 1.5K; frameId F1→F2 regression test; invoke reuses the loaded page (1389ms→235ms→24ms,
+preserves cart state). Gate red was **bisected to live-site flakiness, not the flag** (real-sites 6/6 WITH
+`--enable-features=WebMCP`). Re-proven live on Allbirds. **Full Rokan gate 8/8** (daemon-live 18/18,
+real-sites 6/6). Daemon 86 tests, native 17, copy-in-sync holds. Reviewers rated wiring-as-was ~35%;
+blockers now closed. **Next: 1b** wire `select_native` + the rung into `service.perform()`, then re-review.
+
 **P0.1 Tier 0 daemon layer — DONE, live-proven (Rokan `feat/tier0-native` `625ef08`).** `webmcp_list` /
 `webmcp_invoke` verbs on the CDP WebMCP domain (both daemon files, copy-in-sync). Live on allbirds.com
 through the real daemon: 10 native tools listed, `search_catalog({catalog:{query:"wool runners"}})` →
