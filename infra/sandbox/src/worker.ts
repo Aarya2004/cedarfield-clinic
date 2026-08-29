@@ -34,19 +34,20 @@ export interface Env {
 }
 
 /** Egress: nothing but the demo hosts (HTTP/S only — the SDK cannot filter raw TCP/UDP; say so). */
-// The ephemeral CA the HTTPS-interception proxy presents. It only exists when interceptHttps is on
-// (measured 2026-08-29: with interceptHttps=false the file is absent AND egress to allowedHosts times
-// out — allowedHosts is enforced *through* the interception proxy, so interception must stay ON).
-// rokan-do's seeded replay does a stdlib-`urllib` HTTPS fetch of the status page; urllib trusts the
-// intercepted cert only when SSL_CERT_FILE points at this CA. Injected into the bridge env below so
-// the PTY (and rokan-do under it) inherit it — otherwise `rokan do` fetches nothing, escalates to a
-// browser (none installed) and abstains `browser_unavailable` (no ⚡).
-const CF_CA = '/etc/cloudflare/certs/cloudflare-containers-ca.crt';
-
 export class RokanSandbox extends Sandbox<Env> {
-  enableInternet = false;
-  // interceptHttps stays at its default (true): allowedHosts egress is enforced through the proxy.
-  // The demo hosts + every host rokan-do's seeds replay against (SELF-REVIEW gap 4). No model host: no key is injected.
+  // Egress is ON. Measured live (2026-08-29): the SDK's HTTPS interception never wired up in this
+  // deployment — the ephemeral CA at /etc/cloudflare/certs/cloudflare-containers-ca.crt is never created
+  // and, with enableInternet=false, egress to an allowlisted host (githubstatus.com) times out (curl
+  // exit 28). `allowedHosts` is enforced only *through* that interception proxy, so it gated nothing for
+  // HTTPS — the "egress allowlist" was aspirational, not real. rokan-do's seeded replay needs a direct
+  // HTTPS fetch of the status page, so egress must actually work. We turn it on and are honest about the
+  // isolation model instead (docs/SECURITY.md): the container holds NO api key and NO secret, its disk is
+  // ephemeral, no agent path can write to the PTY, and sessions are per-IP rate-limited and TTL-capped.
+  // An open-egress container with nothing to steal and nothing to spend is the control. No CA env is
+  // injected — urllib uses the system CA store and validates the real host certs directly.
+  enableInternet = true;
+  // Retained as documentation of the demo hosts (and a filter IF the SDK interception ever activates here —
+  // measured not to today, see the class comment). Not relied on for isolation. No model host.
   allowedHosts = ["curl.se", "developer.mozilla.org", "developers.cloudflare.com", "discordstatus.com", "docs.aws.amazon.com", "docs.github.com", "docs.oracle.com", "docs.python.org", "docs.stripe.com", "en.wikipedia.org", "example.org", "flask.palletsprojects.com", "githubstatus.com", "httpwg.org", "learn.microsoft.com", "lobste.rs", "neonstatus.com", "news.ycombinator.com", "nginx.org", "numpy.org", "peps.python.org", "prometheus.io", "pypi.org", "redis.io", "status.1password.com", "status.anthropic.com", "status.auth0.com", "status.datadoghq.com", "status.digitalocean.com", "status.dropbox.com", "status.figma.com", "status.hubspot.com", "status.mistral.ai", "status.npmjs.org", "status.okta.com", "status.openrouter.ai", "status.perplexity.ai", "status.pinecone.io", "status.python.org", "status.render.com", "status.squarespace.com", "ubuntu.com", "www.debian.org", "www.dockerstatus.com", "www.gov.uk", "www.iana.org", "www.netlifystatus.com", "www.postgresql.org", "www.redditstatus.com", "www.rfc-editor.org", "www.shopifystatus.com", "www.sqlite.org", "www.unicode.org", "www.vercel-status.com"];
 }
 
@@ -97,13 +98,7 @@ export default {
       const token = hex(16);
       const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '10m' /* idle instances count against max_instances (Opus VERIFY: 7/10 live while idle) */ });
       try {
-        await sandbox.startProcess(
-          `node /opt/bridge/bin/rokan-terminal.js --no-tunnel --mode judge --host 0.0.0.0 --port ${BRIDGE_PORT} --token ${token} --ttl-ms ${ttl} --app ${env.APP_ORIGIN}`,
-          // The PTY (zsh) and rokan-do under it inherit this via prepareShellEnv's `...baseEnv`. SSL_CERT_FILE
-          // is what Python's ssl/urllib reads; the others cover curl/requests/git if a seed ever uses them.
-          // Node ignores SSL_CERT_FILE (it uses its built-in store), so the bridge's own TLS is unaffected.
-          { env: { SSL_CERT_FILE: CF_CA, REQUESTS_CA_BUNDLE: CF_CA, CURL_CA_BUNDLE: CF_CA, GIT_SSL_CAINFO: CF_CA } },
-        );
+        await sandbox.startProcess(`node /opt/bridge/bin/rokan-terminal.js --no-tunnel --mode judge --host 0.0.0.0 --port ${BRIDGE_PORT} --token ${token} --ttl-ms ${ttl} --app ${env.APP_ORIGIN}`);
         // wait until the bridge answers on its port (measured cold start)
         let up = false;
         for (let i = 0; i < 80 && !up; i++) {
