@@ -384,7 +384,7 @@ test('regression (Codex review): judge mode marks a forged sudo step dangerous a
 test('forge breadth: 100 diverse commands each forge → invoke (substituted, Enter-gated, unique hash)', async () => {
   const { engine, store } = make();
   // [command template with {{p}}, a value for p, exped to be dangerous(write)]
-  const templates: Array<{ cmd: string; p?: string; val?: string; danger: boolean }> = [
+  const templates: Array<{ cmd: string; p?: string; val: string; danger: boolean }> = [
     { cmd: 'git log --oneline -{{n}}', p: 'n', val: '5', danger: false },
     { cmd: 'python3 -c "print({{e}})"', p: 'e', val: '6*7', danger: false },
     { cmd: 'curl -sS https://{{h}}/health', p: 'h', val: 'example.com', danger: false },
