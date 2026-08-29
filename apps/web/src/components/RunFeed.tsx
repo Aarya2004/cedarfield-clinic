@@ -214,7 +214,11 @@ function RunRow({
                 type="button"
                 data-artifact-open={detected.artifact.kind}
                 onClick={() => onOpenArtifact(run, detected)}
-                title="Render this output in a panel beside the terminal"
+                title={
+                  detected.artifact.kind === 'html'
+                    ? 'Render this page beside the terminal, in a sandbox that can run nothing'
+                    : 'Render this output in a panel beside the terminal'
+                }
                 className="rounded-sm underline decoration-line underline-offset-2 hover:decoration-ink"
               >
                 {detected.action}

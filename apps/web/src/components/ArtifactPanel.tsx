@@ -7,8 +7,19 @@
  * pulse, so this is hairlines, mono data and no motion.
  *
  * SECURITY — this component renders untrusted command output and therefore:
- *   - never executes or embeds anything: no iframe, no `dangerouslySetInnerHTML`, no <img>/<script>
- *     built from output, no fetching of detected URLs (no titles, no favicons, no previews);
+ *   - never executes anything: no `dangerouslySetInnerHTML`, no <img>/<script> built from output, no
+ *     fetching of detected URLs (no titles, no favicons, no previews);
+ *   - the one exception is the `html` artifact, which is *embedded inertly* (ticket #9). It goes into
+ *     <iframe sandbox="" srcdoc={doc}> — the sandbox attribute is literally empty, so the frame gets
+ *     an opaque origin and every sandbox capability stays off: no scripts, no forms, no popups, no
+ *     top-level navigation, no same-origin access to this page. The frame also inherits this page's
+ *     CSP (`default-src 'self'`, nonce script-src, no `unsafe-inline`), which is a second, independent
+ *     reason its scripts cannot run. Proven under the real middleware CSP in headless Chrome
+ *     (2026-08-29): an injected srcdoc document rendered its text, while its inline <script>,
+ *     <body onload> and <img onerror> all failed to fire and `contentDocument` read back null.
+ *     The doc is passed through byte for byte — the sandbox is the boundary, and quietly editing what
+ *     the run printed would misrepresent the run. Adding ANY sandbox token to that iframe would break
+ *     this guarantee;
  *   - renders Markdown with the small parser below, which emits React elements only. Every byte it
  *     does not recognise as one of its few inline forms becomes a React text node, i.e. escaped —
  *     raw HTML in the output is shown as characters, never parsed;
@@ -69,6 +80,8 @@ function Body({ artifact }: { artifact: Artifact }) {
       return <DataTable t={artifact.table} />;
     case 'markdown':
       return <Markdown text={artifact.text} />;
+    case 'html':
+      return <HtmlPage doc={artifact.doc} />;
     case 'urls':
       return <UrlList urls={artifact.urls} />;
     case 'rokan':
@@ -340,6 +353,83 @@ function Markdown({ text }: { text: string }) {
             );
         }
       })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ HTML */
+
+/** Fixed viewport heights, shortest first — the resize control steps through them. */
+const HEIGHTS = [240, 360, 520, 760, 1040];
+
+/**
+ * A page the run printed, shown as a page. The iframe is the whole security story:
+ * `sandbox=""` with no tokens (opaque origin, no scripts, no forms, no navigation, no same-origin)
+ * inside a document whose CSP it inherits. Do not add a token here — see the file header.
+ *
+ * "View source" is the same bytes as a React text node, i.e. escaped, so a human can always check
+ * that the rendered page and the printed output are the same thing.
+ */
+function HtmlPage({ doc }: { doc: string }) {
+  const [source, setSource] = useState(false);
+  const [step, setStep] = useState(1);
+  const height = HEIGHTS[step];
+  return (
+    <div className="space-y-2" data-artifact-html>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+        {/* The note owns its own line: what this frame cannot do is the first thing to read. */}
+        <p className="w-full text-muted" data-artifact-html-note>
+          Rendered in an inert sandbox — scripts, forms and navigation disabled.
+        </p>
+        <div className="ml-auto flex shrink-0 items-center gap-1" role="group" aria-label="artifact height">
+          {(
+            [
+              ['shorter', -1, 'Show a shorter page'],
+              ['taller', 1, 'Show a taller page'],
+            ] as const
+          ).map(([label, delta, title]) => (
+            <button
+              key={label}
+              type="button"
+              data-artifact-html-resize={label}
+              title={`${title} (now ${height} px)`}
+              disabled={step + delta < 0 || step + delta >= HEIGHTS.length}
+              onClick={() => setStep((s) => Math.min(HEIGHTS.length - 1, Math.max(0, s + delta)))}
+              className="rounded px-1.5 py-0.5 text-muted hover:text-ink disabled:cursor-default disabled:opacity-40 disabled:hover:text-muted"
+            >
+              {label === 'shorter' ? 'Shorter' : 'Taller'}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          data-artifact-view={source ? 'source' : 'page'}
+          aria-pressed={source}
+          onClick={() => setSource((v) => !v)}
+          title={source ? 'Back to the rendered page' : 'Show the document as text, exactly as it was printed'}
+          className={`shrink-0 text-muted hover:text-ink ${LINK}`}
+        >
+          {source ? 'View page' : 'View source'}
+        </button>
+      </div>
+      {source ? (
+        <pre data-artifact-html-source className="terminal-canvas mono overflow-auto whitespace-pre-wrap break-words rounded border border-line p-2 text-[11px] leading-4" style={{ height }}>
+          {doc}
+        </pre>
+      ) : (
+        /* sandbox="" — empty on purpose. Any token would let this document act. */
+        <iframe
+          data-artifact-html-frame
+          title="HTML artifact, rendered in an inert sandbox"
+          sandbox=""
+          srcDoc={doc}
+          referrerPolicy="no-referrer"
+          className="w-full rounded border border-line bg-white"
+          style={{ height }}
+        />
+      )}
+      {/* The page keeps its own colours, so it sits on white in both themes — it is a document, not part of this UI. */}
+      <p className="text-[11px] text-muted">{doc.length.toLocaleString()} characters, byte for byte what the run printed.</p>
     </div>
   );
 }

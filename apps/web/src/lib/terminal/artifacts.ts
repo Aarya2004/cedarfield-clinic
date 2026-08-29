@@ -1,8 +1,8 @@
 /**
  * Artifacts (ticket #5): the one thing the browser can do that the terminal beside it cannot —
  * take the output a run already printed and *render* it. A run whose tail parses as structured
- * content (JSON, a delimited table, Markdown, a list of links) can be opened as an artifact in a
- * panel next to the terminal; a `rokan do` run can be opened as its result card.
+ * content (JSON, a delimited table, Markdown, an HTML page, a list of links) can be opened as an
+ * artifact in a panel next to the terminal; a `rokan do` run can be opened as its result card.
  *
  * Nothing here fetches, executes or transforms — it classifies text that already exists in the run
  * feed and hands the panel a model to paint. Detection is deliberately CONSERVATIVE: commands are
@@ -14,8 +14,16 @@
  * everything else is only offered inside the expanded run, where the human asked for detail.
  *
  * SECURITY (the panel that renders these models is bound by the same rules):
- *   - no artifact is ever executed, fetched or embedded: no iframes, no `dangerouslySetInnerHTML`,
- *     no <img>/<script>/<link> built from output, no title/preview fetching of detected URLs;
+ *   - no artifact is ever executed or fetched: no `dangerouslySetInnerHTML`, no <img>/<script>/<link>
+ *     built from output, no title/preview fetching of detected URLs;
+ *   - exactly one artifact is *embedded*, and inertly: `html` goes into `<iframe sandbox="" srcdoc>`
+ *     with no sandbox tokens — no scripts, no forms, no navigation, no same-origin — inside a page
+ *     whose CSP (`default-src 'self'`, nonce script-src, no `unsafe-inline`) the frame inherits.
+ *     Measured under that real CSP in headless Chrome on 2026-08-29: the document renders, its
+ *     inline <script>, <body onload> and <img onerror> never run, no CSP violation is raised, and
+ *     the parent cannot read `contentDocument` (opaque origin). Nothing is stripped from the doc —
+ *     the sandbox is the boundary, and a page that silently differed from the bytes the run printed
+ *     would be a lie about the run;
  *   - the Markdown model is TEXT, never HTML — the renderer is a small self-written one that emits
  *     React elements, so every byte it did not itself recognise is escaped as a text node;
  *   - only `http:`/`https:` URLs survive detection (a `javascript:` or `data:` line is not a link),
@@ -29,7 +37,7 @@
  */
 import type { Run } from './runfeed';
 
-export type ArtifactKind = 'json' | 'csv' | 'tsv' | 'markdown' | 'urls' | 'rokan';
+export type ArtifactKind = 'json' | 'csv' | 'tsv' | 'markdown' | 'html' | 'urls' | 'rokan';
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
 
@@ -72,6 +80,8 @@ export type Artifact =
   | { kind: 'json'; value: JsonValue; table: TableShape | null }
   | { kind: 'csv' | 'tsv'; table: TableShape }
   | { kind: 'markdown'; text: string }
+  /** the document exactly as the run printed it — the panel renders it inside an empty sandbox */
+  | { kind: 'html'; doc: string }
   | { kind: 'urls'; urls: string[] }
   | { kind: 'rokan'; card: RokanCard };
 
@@ -273,6 +283,49 @@ function detectMarkdown(lines: string[]): Detection | null {
   };
 }
 
+/* ------------------------------------------------------------------ HTML */
+
+/** A document opens with `<!doctype html>` or `<html …>` — a BOM and whitespace may precede it. */
+const HTML_START = /^\uFEFF?\s*(?:<!doctype\s+html\b|<html(?=[\s>]))/i;
+const HTML_END = /<\/html\s*>\s*$/i;
+const HTML_BODY = /<body(?=[\s>])/i;
+const HTML_BODY_END = /<\/body\s*>/i;
+/** Any start or end tag. Counting them is how a fragment is told from a page. */
+const TAG = /<\/?[a-zA-Z][a-zA-Z0-9-]*(?=[\s/>])/g;
+const MIN_TAGS = 3;
+
+/**
+ * An HTML *document*, never markup that merely appears in output. The bar is a real document start
+ * — `<!doctype html>` or `<html …>` as the very first thing in the tail — plus a real document end
+ * (`</html>`, or a closed `<body>` for output that was cut off). That prefix rule is what rejects
+ * the shapes that matter: prose with a stray tag, a fragment, a curl trace whose 404 page arrives
+ * after the response headers, and `<?xml …>` / `<svg …>` roots (deliberately out of scope — an SVG
+ * root carries script-adjacent content and nothing here needs to paint one).
+ *
+ * Deliberate choice: an HTML *error* page IS offered when the whole tail is that page. That is what
+ * the run printed, and rendering the 404 the server sent is the honest answer; it is refused only
+ * when it sits inside other output, because then the run printed a log, not a page.
+ *
+ * The doc is handed on byte for byte. It is safe because of where it is rendered, not because of
+ * anything removed here — see the SECURITY note at the top of this file.
+ */
+function detectHtml(lines: string[]): Detection | null {
+  const doc = trimBlank(lines).join('\n');
+  if (doc.length === 0 || doc.length > MAX_CHARS) return null;
+  if (!HTML_START.test(doc)) return null;
+  const closed = HTML_END.test(doc);
+  if (!closed && !(HTML_BODY.test(doc) && HTML_BODY_END.test(doc))) return null;
+  const tags = doc.match(TAG)?.length ?? 0;
+  if (tags < MIN_TAGS) return null;
+  return {
+    artifact: { kind: 'html', doc },
+    action: 'Open as HTML page',
+    type: 'HTML',
+    // Confident only for a whole, closed document: `<html>…` cut off mid-stream is still a guess.
+    confident: closed && tags >= 6,
+  };
+}
+
 /* ------------------------------------------------------------------ URLs */
 
 const URL_LINE = /^https?:\/\/[^\s<>"'`]{1,2000}$/;
@@ -378,7 +431,8 @@ function stripShellFrame(lines: string[]): string[] {
 
 /**
  * Classify a run's captured output. Order is by specificity: a JSON document is never also a CSV,
- * a Markdown page that happens to list links is Markdown.
+ * an HTML page whose lines happen to hold commas is never a table, a Markdown page that happens to
+ * list links is Markdown.
  *
  * `command` is the run's own command line, when the shell recorded one: a terminal without shell
  * integration echoes the command into the capture, and a first line that IS the command, byte for
@@ -390,7 +444,7 @@ export function detect(tail: string[], command?: string | null): Detection | nul
   let lines = stripShellFrame(tail.length > 400 ? tail.slice(-400) : tail);
   if (command && lines.length > 1 && lines[0].trim() === command.trim()) lines = lines.slice(1);
   if (lines.length === 0) return null;
-  return detectJson(lines) ?? detectDelimited(lines, ',') ?? detectDelimited(lines, '\t') ?? detectMarkdown(lines) ?? detectUrls(lines);
+  return detectJson(lines) ?? detectHtml(lines) ?? detectDelimited(lines, ',') ?? detectDelimited(lines, '\t') ?? detectMarkdown(lines) ?? detectUrls(lines);
 }
 
 const cache = new WeakMap<Run, { d: Detection | null }>();

@@ -172,6 +172,57 @@ test('markdown: prose, scripts, diffs and --help output are not Markdown', () =>
   assert.equal(detect(['$ ls', '# notes', '- one', '$ pwd']), null);
 });
 
+/* ------------------------------------------------------------------ HTML */
+
+test('html: a whole document is an HTML artifact, kept byte for byte', () => {
+  const tail = ['<!DOCTYPE html>', '<html lang="en">', '<head><title>Status</title></head>', '<body><h1>All green</h1><p>Nothing to do.</p></body>', '</html>'];
+  const d = detect(tail);
+  assert.equal(d?.artifact.kind, 'html');
+  assert.equal(d?.type, 'HTML');
+  assert.equal(d?.action, 'Open as HTML page');
+  assert.equal(d?.confident, true);
+  // nothing is stripped, rewritten or escaped here — the sandbox in the panel is the boundary
+  assert.equal(d?.artifact.kind === 'html' ? d.artifact.doc : '', tail.join('\n'));
+});
+
+test('html: a doctype-less <html> document counts, and so does a minified one', () => {
+  assert.equal(detect(['<html><head></head><body><p>hi</p></body></html>'])?.confident, true);
+  assert.equal(detect(['<!doctype html><html><body><h1>404 Not Found</h1></body></html>'])?.artifact.kind, 'html');
+  // `<html>` cut off mid-stream still opens (a page is the only sane view of it) but is a guess
+  const cut = detect(['<!doctype html>', '<html><body><h1>Report</h1><p>rows follow…</p></body>']);
+  assert.equal(cut?.artifact.kind, 'html');
+  assert.equal(cut?.confident, false);
+});
+
+test('html: an error page IS the artifact when the whole tail is the page, and is not when it is buried', () => {
+  // Deliberate: what the server sent is what the run printed, so rendering the 404 is the honest view.
+  const page = '<!doctype html><html><head><title>404</title></head><body><h1>404 Not Found</h1><hr><address>nginx</address></body></html>';
+  assert.equal(detect([page])?.artifact.kind, 'html');
+  // …but the same page inside a curl trace is a log with markup in it, not a document
+  assert.equal(detect(['> GET /missing HTTP/1.1', '< HTTP/1.1 404 Not Found', '< content-type: text/html', page]), null);
+  // the command echo is exact chrome, so a recorded command still finds the page behind it
+  const cmd = 'curl -s https://example.com/missing';
+  assert.equal(detect([cmd, page], cmd)?.artifact.kind, 'html');
+  assert.equal(detect([cmd, page]), null);
+});
+
+test('html: prose with tags, fragments, XML and SVG are not HTML documents', () => {
+  // prose that mentions a tag
+  assert.equal(detect(['Use the <html> element to open a document.', 'Then close it.']), null);
+  // a fragment: no document start
+  assert.equal(detect(['<div class="row">', '  <p>one</p>', '</div>']), null);
+  // fewer than three tags, and nothing closed
+  assert.equal(detect(['<html>']), null);
+  assert.equal(detect(['<!doctype html>', '<html>']), null);
+  // XML and SVG roots are out of scope — an SVG can carry script-adjacent content
+  assert.equal(detect(['<?xml version="1.0" encoding="UTF-8"?>', '<rss version="2.0"><channel><title>x</title></channel></rss>']), null);
+  assert.equal(detect(['<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>']), null);
+  // an XML declaration before the doctype means the tail did not start as an HTML document
+  assert.equal(detect(['<?xml version="1.0"?>', '<!DOCTYPE html>', '<html><body><p>x</p></body></html>']), null);
+  // a heredoc that writes a page is a command, not output
+  assert.equal(detect(['cat > page.html <<EOF', '<!doctype html><html><body><p>x</p></body></html>', 'EOF']), null);
+});
+
 /* ------------------------------------------------------------------ URLs */
 
 test('urls: a list of links is a link artifact, deduped and in order', () => {
