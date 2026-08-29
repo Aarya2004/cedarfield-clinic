@@ -14,6 +14,7 @@ import { randomBytes } from 'node:crypto';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { resourceCapabilities, wireResourcesAndPrompts } from './mcp-resources.js';
 
 export const CURRENT_FILE = join(homedir(), '.rokan-terminal', 'current.json');
 const CALL_TIMEOUT_MS = 50_000; // terminal_wait itself returns still_waiting at 45 s
@@ -146,8 +147,8 @@ export class AgentLink {
 }
 
 /** Build the MCP server bound to a link. Exported so tests can drive it without a process. */
-export function createMcpServer(link) {
-  const server = new Server({ name: 'rokan-terminal', version: '0.0.1' }, { capabilities: { tools: { listChanged: true } } });
+export function createMcpServer(link, opts = {}) {
+  const server = new Server({ name: 'rokan-terminal', version: '0.0.1' }, { capabilities: { tools: { listChanged: true }, ...resourceCapabilities() } });
   link.onToolsChanged = () => void server.sendToolListChanged().catch(() => undefined);
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: link.tools.map((t) => ({
@@ -169,6 +170,7 @@ export function createMcpServer(link) {
       return { content: [{ type: 'text', text: e instanceof Error ? e.message : String(e) }], isError: true };
     }
   });
+  wireResourcesAndPrompts(server, link, opts); // read-only resources + instruction prompts (mcp-resources.js)
   return server;
 }
 

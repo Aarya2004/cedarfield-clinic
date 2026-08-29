@@ -37,6 +37,16 @@ Add `?tour=1` for a three-step guide that verifies each step against real state.
 Same tools, second protocol: `node packages/bridge/bin/rokan-terminal.js mcp` (`npx rokan-terminal mcp` once published) serves them over MCP stdio to Claude Code, **Codex CLI (measured end to end — FIELD-NOTES C1–C6: Codex proposes, forges, and calls its own forged tool from a new session; Codex reads MCP tool lists once per session)**,
 Cursor or Codex CLI — the page stays the single source of truth; the MCP process can never type.
 
+That stdio server also offers three **resources** and three **prompts** — an MCP-only surface. The
+browser WebMCP standard is tools-only, so the page neither exposes nor claims either. Resources:
+`terminal://history` and `forge://tools` are read live by relaying to the page tools
+`terminal_history` / `forge_list` (so Share screen gating and redaction apply unchanged — with
+sharing off you get the page's `{"shared":false}` back, verbatim), and `terminal://ledger` serves
+the bridge's own HMAC-chained JSONL for the current session, last 500 rows, byte-identical to what
+was signed. Prompts (`debug-last-failure`, `forge-from-history`, `session-report`) are instruction
+templates: they execute nothing and each one states that every command is a proposal your Enter
+runs. All of it is read-only — the MCP process still cannot type.
+
 ## Security in one paragraph
 
 WebMCP tool descriptions are hints to a cooperative agent, never a security boundary. **Our
