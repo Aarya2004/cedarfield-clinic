@@ -62,15 +62,16 @@ export function PromptLine() {
       onKeyDown={(e) => {
         if (decide(e.key)) e.preventDefault();
       }}
-      className="mono rounded-md border border-line bg-white p-4 text-sm outline-none focus:ring-2 focus:ring-accent/40"
+      className="mono rounded-md border border-line bg-white p-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
       aria-label="terminal prompt (no shell attached)"
+      aria-live="polite"
     >
       <div className="text-muted"># No shell attached. Pair a bridge for a real terminal — proposals still appear here as ghost text.</div>
       <div className="text-muted"># Enter = accept · Esc = dismiss. Nothing runs anywhere.</div>
       <div className="mt-3 flex items-start gap-2">
-        <span className="select-none text-accent">~ $</span>
+        <span className="select-none text-accent-ink" aria-hidden>~ $</span>
         {pending ? (
-          <span className={pending.dangerous ? 'text-danger' : 'text-accent/80'}>
+          <span className={pending.dangerous ? 'text-danger' : 'text-accent-ink'}>
             {pending.command}
             <span className="ml-3 text-xs text-muted [unicode-bidi:isolate]" dir="auto">
               ← {pending.why ?? 'proposed'} · Enter / Esc

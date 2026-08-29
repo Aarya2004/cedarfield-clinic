@@ -264,10 +264,10 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={hostRef} data-terminal className="relative min-h-[160px] flex-1 overflow-hidden rounded-md border border-line bg-bg p-2">
+      <div ref={hostRef} data-terminal aria-label="terminal" className="relative min-h-[160px] flex-1 overflow-hidden rounded-md border border-line bg-bg p-2">
         <div ref={ghostRef} className="ghost" style={{ position: 'absolute', display: 'none', zIndex: 5, overflow: 'hidden', textOverflow: 'ellipsis' }} />
       </div>
-      <div className="mt-2 flex min-h-6 flex-wrap items-center gap-3 text-xs text-muted" data-ghost-bar>
+      <div className="mt-2 flex min-h-6 flex-wrap items-center gap-3 text-xs text-muted" data-ghost-bar aria-live="polite" aria-atomic="true">
         {pending ? (
           <span className={pending.dangerous ? 'text-danger' : ''} dir="auto">
             ← {pending.why ?? 'proposed by the agent'} ·{' '}
@@ -289,7 +289,7 @@ export function Terminal({ onForgeThis }: { onForgeThis: (lines: string[]) => vo
           <span>agent proposals appear at the prompt as ghost text</span>
         )}
         {selection.length > 0 && (
-          <button data-forge-this onClick={() => onForgeThis(selection)} className="ml-auto rounded bg-accent px-2 py-0.5 text-white">
+          <button data-forge-this onClick={() => onForgeThis(selection)} className="ml-auto rounded bg-accent px-2 py-0.5 text-white hover:bg-amber-700" title="Turn the selected lines into a WebMCP tool — a card appears for your approval">
             Forge this ({selection.length} line{selection.length === 1 ? '' : 's'})
           </button>
         )}

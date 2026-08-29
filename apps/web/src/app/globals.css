@@ -5,16 +5,24 @@
   --bg: #fafaf6;
   --ink: #18181b;
   --accent: #d97706;
-  --muted: #71717a;
+  /* accent for small text: 5.0:1 on white (the brand amber is 3.2:1 — borders, buttons, ghost only) */
+  --accent-ink: #b45309;
+  /* 5.8:1 on --bg, 4.7:1 on --line (WCAG AA for body text on every surface we paint) */
+  --muted: #62626b;
   --line: #e4e4e0;
+  --ok: #047857;
+  --danger: #b91c1c;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-ink: var(--ink);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
 }
 
 html, body {
@@ -24,17 +32,19 @@ html, body {
 }
 
 .mono { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
+.serif { font-family: var(--font-serif), ui-serif, Georgia, serif; }
 
-:root {
-  --ok: #047857;
-  --danger: #b91c1c;
+/* One focus language for every control: amber ring, never removed, only on keyboard focus. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
-@theme inline {
-  --color-ok: var(--ok);
-  --color-danger: var(--danger);
-}
+/* The xterm textarea is focused programmatically; its host draws the ring instead. */
+.xterm textarea:focus-visible { outline: none; }
+[data-terminal]:focus-within { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.35); }
 
-/* ghost text drawn by xterm's decoration API — never written to the PTY */
+/* ghost text drawn as an overlay at the cursor cell — never written to the PTY */
 .ghost {
   color: rgba(217, 119, 6, 0.75);
   font-family: var(--font-mono), ui-monospace, Menlo, monospace;
@@ -49,4 +59,8 @@ html, body {
 }
 .xterm .xterm-viewport {
   background: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse { animation: none; }
 }
