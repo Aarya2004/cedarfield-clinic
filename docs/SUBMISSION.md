@@ -1,4 +1,4 @@
-# SUBMISSION.md — Devpost text (draft 2026-08-28; final on Sep 2 with the live URL + video link)
+# SUBMISSION.md — Devpost text (draft 2026-08-29; final on Sep 2 with the live URL + video link)
 
 **Project name:** Rokan Terminal
 **Tagline:** Do it once. Now it's a tool.
@@ -44,6 +44,34 @@ doing*: anything done once can be forged into a tool the agent calls next time �
 operations at zero model calls — the ledger row shows `calls:0 ⚡` parsed from rokan-do's own result
 line (measured 312 ms on the demo machine). Neither side could grow that library alone, and the
 library is portable: it is WebMCP.
+
+## Potential impact — the number, measured (not claimed)
+
+The audience is every developer whose agent redoes the web from scratch each session and whose
+learned workflows do not survive a reload or transfer between vendors. The claim is falsifiable and
+we measured it live (`docs/measurements/2026-08-30-ab.md`, harness in `evals/ab/`), same questions,
+headless, three arms — Rokan, Codex CLI, Claude Code:
+
+| task (live web) | Rokan (warm) | Codex CLI | Claude Code |
+| --- | --- | --- | --- |
+| "is status.python.org all systems operational" | **0 model calls · 79 ms** | 1 turn · ~23 s | 3 turns · ~16 s |
+| "how much are Wool Runners at allbirds.com" (builder mode) | **0 model calls · ~1.45 s** | 1 turn · ~10 s | 22 turns · ~77 s |
+
+The point is not "our web fetch beats theirs." It is that **the agents re-enter the model on every
+run and Rokan does not** — a compiled operation replays with the model out of the loop. On the
+compiled task that is ~200–290× faster at zero model calls, and the agent pays that cost again every
+single time. N = 5 warm / N = 3 agents; small, so we report variance and never round up. Honest
+distinctions we state on camera: the compiled replay (79 ms) is browserless; the native replay
+(~1.45 s) re-drives a live browser to call the site's own WebMCP tool and is builder-mode only — the
+judge sandbox has no model or browser, so there it replays compiled operations and forged tools, not
+native consumption.
+
+The other half is trust. When a page changes, a cached scrape a coding agent wrote keeps running and
+**returns a confident wrong number** — we reproduce this live: after a storefront "redesign" the
+stale selector reads `$75` (a shipping line) as the price when the truth is `$140`. Rokan's
+`recheck` replays every learned operation with planning forbidden and **retires the one that no
+longer verifies** — verified, or refused. A tool that lies quietly is worse than no tool; ours
+refuses out loud.
 
 ## Implementation
 
