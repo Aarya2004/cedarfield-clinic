@@ -76,7 +76,7 @@ egress allowlist.** The isolation that actually holds and is tested: the contain
 API key and no secret vault** (`terminal-judge-isolation.json` verifies `ANTHROPIC_API_KEY` unset and
 no `~/.rokan/vault.json` in a live session), its disk is **ephemeral** (reset every start), **no agent
 path can write to the PTY** (only a human keypress runs a command), and sessions are **per-IP
-rate-limited (3/10 min, 3 concurrent) and 30-min TTL-capped** (a Gate row is provisional for 180 s
+rate-limited and TTL-capped** — the values the Worker enforces right now are `SESSIONS_PER_IP_PER_10MIN=50`, `MAX_CONCURRENT_PER_IP=20`, `SESSION_TTL_MS=1800000` (30 min) and `max_instances=10` (the testing row of the caps table in §9; the judging-window row tightens per-IP to 10/5, unchanged TTL) (a Gate row is provisional for 180 s
 until the bridge answers, so an aborted start cannot lock an IP for the TTL). An open-egress container
 with nothing to steal and nothing to spend is the control — not a filter the SDK didn't enforce.
 No persistent volume; the same token-gated bridge runs inside the container; the Worker never stores
@@ -94,3 +94,49 @@ generic errors.)
 - `hex_run` redaction hides git SHAs from the agent (not from the human).
 - CSP: per-request nonce + `'strict-dynamic'` for scripts (no `unsafe-inline`); `style-src` still allows inline styles (Tailwind); `connect-src` is the WebSocket allowlist.
 - **Judge-container egress is open** (`enableInternet=true`): a stranger's session can make outbound HTTP/S requests from Cloudflare infrastructure. Bounded by the per-IP rate limit + 30-min TTL + ephemeral disk; the container holds no key and no secret, so there is nothing to exfiltrate or spend. The `allowedHosts` list is retained as documentation only — the SDK's interception did not activate here to enforce it (measured). Raw TCP/UDP is likewise unfiltered.
+
+## 8. Tier 0 — consuming a site's own WebMCP tools (builder mode)
+
+`rokan do` can call a site's **own** declared WebMCP tools (via the CDP `WebMCP` domain from
+rokan-do's Chromium) before it ever plans against the DOM. The boundary is read-only by construction:
+
+- **Read-only gate (`rokan_do/native.py`).** A native tool is auto-invokable only when it is a
+  read — either annotated `readOnly`, or its name is a known safe verb (get/list/search/read/…).
+  `_is_write_name` rejects anything whose name segments include a write verb *or* the substrings
+  `checkout`/`purchase`, so `check_out`, `get_and_delete_cart`, `submit_order` never auto-fire.
+  Anything not proven read-only is skipped unless `allow_write=True` — which the terminal never sets.
+- **Nothing executes.** A native call reads; it does not spend or submit. A consequential step still
+  goes through ghost-type + the human's Enter, exactly like every other step.
+- **Untrusted tool output.** A site's tool output is untrusted content: it is redacted through the
+  single choke point and capped at 1.5 K chars (`_clean_output`) before the agent sees it, and the
+  `⚙ native:` / `⚡` provenance markers are **stripped from the answer text** and re-parsed only after
+  the ms tail in the bridge (`rokan-trailer.js`), so a site cannot spoof its own provenance.
+- **No cross-question replay.** Native operations live in a **separate `native_op` table keyed on the
+  exact normalized question + host** (never the fuzzy answer-match path), so one question can never
+  replay another's answer at 0 calls. (Review round 3 found and fixed a URL-path collision here;
+  regression-tested.)
+- **Builder mode only.** The judge sandbox carries no model key and no browser, so it never consumes
+  native tools — it replays compiled operations and runs forged tools. The demo and docs say exactly
+  that; an unseeded step there prints Rokan's real `abstained_planner_unavailable`.
+- Tests: `packages/rokan-do/tests/test_native.py` (37) — read/write gate, 0-call replay, schema-hash
+  re-select, isolation; bridge `trailer.test.mjs` (marker parse) + smoke (`⚙`/`⚡` on an `echo` not attributed).
+
+## 9. Judging-window caps
+
+**Judging-window caps (single source of truth; Arav signs off before the tightening deploy).** The
+Worker vars are the enforcement; this table supersedes any number quoted elsewhere in the docs:
+
+| phase | `SESSION_TTL_MS` | `SESSIONS_PER_IP_PER_10MIN` | `MAX_CONCURRENT_PER_IP` | `max_instances` |
+|---|---|---|---|---|
+| now (testing, **deployed**) | 1 800 000 (30 min) | 50 | 20 | 10 |
+| judging window (freeze → results) | 3 600 000 (60 min) | 10 | 5 | 20 *(container config — deploy only if the image digest is unchanged after; else keep 10 and note it)* |
+| after results | 1 800 000 | 3 | 3 | 10 |
+
+The judging-window row raises the TTL so a judge's session is never cut mid-use and lowers per-IP so
+one abuser cannot starve the fleet. It is applied by editing the Worker vars (not code) and verified
+with `wrangler containers info` showing the image digest unchanged. Tests: `infra/sandbox/test/gate.test.mjs`.
+
+*Planned (not yet in the build): kept tools.* When a viewer keeps a forged tool it will be stored
+per-viewer in `localStorage` and, on restore, re-validated with its content hash recomputed — a
+mismatch re-opens the approval card and never auto-registers. That path is a design commitment, not a
+shipped mechanism; this document will describe it as shipped only once `kept.ts` and its tests land.
