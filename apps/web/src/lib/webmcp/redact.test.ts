@@ -72,6 +72,24 @@ test('PEM private key block collapses to one [redacted]', () => {
   assert.ok(r.redactions.some((x) => x.kind === 'private_key_block' && x.line === 1));
 });
 
+test('single-line PEM does not leak the key body (Fable P1 — service-account JSON, kubectl -o json)', () => {
+  const key = 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQ';
+  const r = redactForAgent([`  "private_key": "-----BEGIN PRIVATE KEY----- ${key} -----END PRIVATE KEY-----",`]);
+  assert.ok(!r.lines.join('\n').includes(key), 'key body must not survive redaction');
+  assert.match(r.lines[0], /-----BEGIN PRIVATE KEY-----/);
+  assert.match(r.lines[0], /-----END PRIVATE KEY-----/);
+  assert.ok(r.lines[0].includes(REDACTED));
+  assert.ok(r.redactions.some((x) => x.kind === 'private_key_block' && x.line === 0));
+});
+
+test('key bytes before the END marker (same line) are dropped, not leaked', () => {
+  const key = 'AAAASECRETKEYBYTESBBBB';
+  const r = redactForAgent(['-----BEGIN PRIVATE KEY-----', 'someBodyLine', `${key}-----END PRIVATE KEY-----`, 'done']);
+  assert.ok(!r.lines.join('\n').includes(key), 'trailing key bytes on the END line must be dropped');
+  assert.ok(r.lines.includes('-----END PRIVATE KEY-----'));
+  assert.ok(r.lines.includes('done'));
+});
+
 test('ANSI + OSC stripped before matching', () => {
   const s = '[32mAKIA[0mIOSFODNN7EXAMPLE ]133;Adone';
   assert.equal(stripAnsi(s), 'AKIAIOSFODNN7EXAMPLE done');
