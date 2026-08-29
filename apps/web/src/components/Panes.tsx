@@ -8,6 +8,7 @@ import { FIXED_TOOL_NAMES } from '@/lib/webmcp/schemas';
 import type { RegistrationState } from '@/lib/webmcp/register';
 import { tryAsAgent } from './ForgeCard';
 import { Chip, KindBadge } from './Chip';
+import { ProvenanceChip } from './Provenance';
 
 const EMPTY: never[] = [];
 
@@ -39,7 +40,7 @@ export function StatusBar({ reg }: { reg: RegistrationState | { kind: 'pending' 
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-line pb-2" data-statusbar>
       <h1 className="serif text-2xl leading-none text-ink">Rokan Terminal</h1>
-      <span className="text-xs text-muted">Do it once. Now it&apos;s a tool.</span>
+      <span className="text-xs text-muted">Do it once. Now it&apos;s a tool. Now every agent can call it.</span>
       <span className="ml-auto flex flex-wrap items-center gap-2 text-xs">
         {s.mode === 'unpaired' && !s.pairError && <Chip tone="muted" title="No terminal is paired. Proposals still land on the prompt line; the tools already work.">no shell</Chip>}
         {s.state === 'connecting' && <Chip tone="accent">pairing…</Chip>}
@@ -240,6 +241,9 @@ export function LedgerPane() {
               <span className="w-5 shrink-0 text-right text-muted tabular-nums">{r.seq}</span>
               <span className="min-w-0 break-words">
                 <span className={r.kind === 'forged' ? 'text-accent-ink' : r.kind === 'executed_step' ? 'text-ok' : r.kind === 'dismissed' ? 'text-muted' : 'text-ink'}>{r.kind}</span> <span className="text-muted">{summarise(r)}</span>
+                {r.kind === 'executed_step' && typeof r.fields.rokan_ms === 'number' && (
+                  <ProvenanceChip p={{ kind: r.fields.rokan_calls === 0 ? 'compiled' : 'planned', ms: r.fields.rokan_ms, ...(r.fields.rokan_calls === 0 ? { calls: 0 } : {}) }} />
+                )}
                 {r.bridge_sig && (
                   <span className="ml-1 text-ok" title="countersigned by the bridge — HMAC with a key that never leaves your disk" aria-label="countersigned by the bridge">
                     ✓
@@ -264,7 +268,7 @@ function summarise(r: LedgerRow): string {
     case 'invoked':
       return `${f.tool} ×${f.steps} ${f.hash}`;
     case 'executed_step':
-      return `${f.tool ?? ''}${f.rokan_calls === 0 ? ` ⚡ calls:0 · ${f.rokan_ms} ms` : typeof f.rokan_ms === 'number' ? ` · rokan ${f.rokan_ms} ms` : ''} · step ${f.step ?? ''} · exit ${f.exit_code ?? '–'} · ${f.ms ?? '–'} ms`;
+      return `${f.tool ?? ''} · step ${f.step ?? ''} · exit ${f.exit_code ?? '–'} · ${f.ms ?? '–'} ms`;
     case 'screen_read':
       return f.shared ? `${f.lines} lines, ${f.redactions} redacted` : 'refused (share off)';
     case 'paired':
@@ -357,7 +361,7 @@ export function MobileCard() {
     <main className="mx-auto max-w-md px-6 py-10 text-sm">
       <h1 className="serif text-3xl leading-none">Rokan Terminal</h1>
       <p className="serif mt-3 text-xl">
-        Do it once. <span className="text-accent-ink">Now it&apos;s a tool.</span>
+        Do it once. Now it&apos;s a tool. <span className="text-accent-ink">Now every agent can call it.</span>
       </p>
       <p className="mt-4 text-muted">A terminal where anything you approve becomes a live WebMCP tool your agent can call — born at runtime, run only by your Enter.</p>
       <p className="mt-4 rounded-md border border-line bg-white p-3 text-ink">Open this on a desktop browser — ChatGPT desktop (GPT-5.6 Sol/Terra) or Chrome 149+ with WebMCP — to pair a terminal. This screen is too narrow for a shell and a tools pane side by side.</p>

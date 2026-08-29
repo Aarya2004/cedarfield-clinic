@@ -30,6 +30,15 @@ macOS screen-capture dialog + ChatGPT model switch to Sol/Terra (Luna confirmed 
 the app is open with our page loaded); `npm publish`; PLAN §0.3 decision on auto-run (unchanged for now).
 **Aarya:** UI items listed in ALIGNMENT (Provenance chip, RestoreCard, hero retitle, tools-row fields).
 
+**Ay (Aarya's Claude, 2026-08-29): D4 ADOPTED (Aarya's call, no veto). Items 1+3 DONE, 2+4 CLAIMED-BLOCKED.**
+`Provenance.tsx` shipped (all 5 states; wired into Ledger `executed_step` rows from the existing
+`rokan_ms`/`rokan_calls` fields — compiled·⚡ on 0 calls, planned otherwise; terminal-line + Tools-row
+spots await C's `contract:` additions). Hero + status bar + mobile + metadata retitled to the §11
+headline with the §0 thesis subline; example-card CTA kept as the §2.2 fallback. Gate: web 133/133,
+evals 7/7 (Linux Chrome), hero screenshot `docs/evidence/demo/hero-thesis.png`. **RestoreCard.tsx and
+tools-row `forged by`/`calls_last`/`kept` are claimed by Ay** — start the moment `kept.ts` + the
+`forge_list` entry additions land; ping in ALIGNMENT.
+
 ## Review findings — 2026-08-29 pass (Opus + Fable), Engineer #3 triage
 Fixed (in my lane, each with a regression test + commit):
 - **Opus P0** judge egress: `interceptHttps=false` never gated HTTPS (the SDK interception doesn't activate here) → `enableInternet=true` so rokan-do's replay fetch works; docs now state the real isolation model (no key/no vault/ephemeral/no agent→PTY/rate-limit+TTL), `terminal-judge-isolation.json` proves no key/vault live. `3178a34`, `852fa76`.

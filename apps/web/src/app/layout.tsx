@@ -9,7 +9,7 @@ const serif = Instrument_Serif({ variable: '--font-serif', subsets: ['latin'], w
 export const metadata: Metadata = {
   title: 'Rokan Terminal',
   description:
-    "Do it once. Now it's a tool. A terminal where anything you approve becomes a live WebMCP tool your agent can call — born at runtime, run only by your Enter.",
+    "Do it once. Now it's a tool. Now every agent can call it. A terminal where what you and your agent compose — across sites and your machine — becomes a live WebMCP tool, born at runtime, kept, callable by any agent.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

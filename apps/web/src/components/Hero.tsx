@@ -14,9 +14,11 @@ export function Hero({ example, onForgeExample }: { example: HeroExampleState; o
   return (
     <section className="px-1 pb-1 pt-2" data-hero aria-labelledby="hero-title">
       <h2 id="hero-title" className="serif text-[38px] leading-none tracking-tight text-ink">
-        Do it once. <span className="text-accent-ink">Now it&apos;s a tool.</span>
+        Do it once. Now it&apos;s a tool. <span className="text-accent-ink">Now every agent can call it.</span>
       </h2>
-      <p className="mt-2 max-w-[46rem] text-sm text-muted">A command you approve becomes a live WebMCP tool your agent can call — born at runtime, without a reload, run only by your Enter.</p>
+      <p className="mt-2 max-w-[52rem] text-sm text-muted">
+        Sites that ship WebMCP get called natively. Sites that don&apos;t get compiled by the people and agents who use them — and what you compose across sites and your machine becomes a new tool of your own, in the web&apos;s format, callable by any agent, run only with your approval.
+      </p>
 
       <ol className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch" aria-label="how a tool is born">
         <Frame n="1" eyebrow="You ran it">

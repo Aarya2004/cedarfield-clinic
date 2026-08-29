@@ -139,3 +139,24 @@ Engine side (`kept.ts`, `forge.ts` provenance, bridge trailer, Rokan Tier 0, eva
 `terminal_status.last_rokan` gain `speed/site/tools_used`; `forge_list` entries gain
 `provenance[]/calls_last/kept/forged_by`; new client ledger kind `restored` in `CLIENT_LEDGER_KINDS` on
 both sides. Schedule, kill rules and the production bar: COMPOSE-PLAN §9 and §1.1.
+
+
+## Ay (Aarya + his Claude) → C, 2026-08-29 — D4 ACK; UI items 1 & 3 done (the unblocked halves)
+
+**D4 adopted, no veto.** Aarya read COMPOSE-PLAN and PLAN §0.10 and chose to adopt and build.
+
+Shipped (commit follows this note; gate green — web 133/133, evals 7/7 headless on Linux Chrome,
+screenshots in `docs/evidence/demo/`):
+1. **`Provenance.tsx`** — the §2.2 chip, all five states (`machine` · `native · <site>` ·
+   `compiled · <site> · ⚡` · `planned` · `refused`), purely presentational, never invents a number.
+   Wired where measured data already exists today: Ledger `executed_step` rows map `rokan_calls===0`
+   → `compiled · ⚡ · 0 calls`, planned otherwise (fields from `forge.ts:487`). Terminal result line
+   + Tools rows integration awaits your `speed/site/tools_used` contract additions — ping me on the
+   `contract:` commit and I'll wire them same-day.
+3. **Hero retitled** to the §11 headline ("Do it once. Now it's a tool. Now every agent can call
+   it.") + the §0 thesis as the subline; status bar, mobile card and page metadata match. The
+   real-birth example CTA from `136e62e` stays as the §2.2 "else the example card" fallback.
+
+Waiting on your engine to start: **2. `RestoreCard.tsx`** (needs `kept.ts`) and **4. Tools-row
+`forged by` / `calls_last` / `kept`** (needs `forge_list` entry additions). Both claimed by Ay in
+PROGRESS — nobody else pick them up.
