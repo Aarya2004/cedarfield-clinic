@@ -1,36 +1,51 @@
-# Judge-mode container WITH the star command. Staged: becomes `Dockerfile` (wrangler.jsonc `image`)
-# only after `pnpm smoke:image` passes on it and one seeded replay has been measured under 1/4 vCPU.
-# Delta vs Dockerfile: uv + the three Rokan wheels (vendor/) + Playwright Chromium + seeds installed
-# for the judge user. No API key is ever injected: rokan-do can only replay seeds here.
-FROM docker.io/cloudflare/sandbox:0.12.9-python
+# Judge-mode container WITH the star command (wrangler.jsonc `image`). Delta vs Dockerfile: uv + the
+# three Rokan wheels (vendor/) + the seeds installed for the judge user. No API key is ever injected:
+# rokan-do here can only replay seeds. There is NO browser in this image: seeded replays are
+# browserless (measured in-image with PLAYWRIGHT_BROWSERS_PATH=/nonexistent → 481 ms ⚡, exit 0), and
+# the model/planning path needs a key the container never has.
+#
+# Size is a boot constraint, not a nicety: Cloudflare counts the image against the instance disk
+# (4 GB on `basic`). The 2026-08-28 image with build-essential + Chromium apt deps + apt caches
+# unpacked to 2 221 MB and its rollout never produced a healthy instance (rollout API: failed 1,
+# healthy 0) — the fleet silently kept serving the previous image and `rokan do` exited 127 live.
+# The bridge's native module (node-pty has no linux prebuild) is compiled in a throwaway stage;
+# `pnpm smoke:image:rokan` fails the build if the unpacked image grows past the size that boots.
 
+# --- stage 1: compile node-pty (needs gcc/make; none of that ships) ---
+FROM docker.io/cloudflare/sandbox:0.12.9-python AS bridge-build
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends zsh git curl jq ca-certificates build-essential python3 \
+  && apt-get install -y --no-install-recommends build-essential \
+  && rm -rf /var/lib/apt/lists/*
+COPY container/bridge /opt/bridge
+WORKDIR /opt/bridge
+# Fail loudly if deps do not install (a swallowed failure here cost an hour on 2026-08-28).
+RUN npm install --omit=dev --no-audit --no-fund --loglevel=error \
+  && test -d node_modules/ws && test -d node_modules/node-pty \
+  && node -e "import('node-pty').then(() => console.log('node-pty ok'))"
+
+# --- stage 2: the image that ships ---
+FROM docker.io/cloudflare/sandbox:0.12.9-python
+# zsh for shell integration (OSC 133), git/curl/jq for the demo, no sudo for the judge user.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends zsh git curl jq ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
   && useradd -m -s /bin/zsh -u 1000 judge \
   && echo 'export PS1="judge@rokan:%~ %# "' > /home/judge/.zshrc \
   && echo 'autoload -Uz compinit && compinit -u' >> /home/judge/.zshrc \
   && chown -R judge:judge /home/judge
+COPY --from=bridge-build --chown=judge:judge /opt/bridge /opt/bridge
 
-COPY container/bridge /opt/bridge
-WORKDIR /opt/bridge
-RUN npm install --omit=dev --no-audit --no-fund --loglevel=error \
-  && test -d node_modules/ws && test -d node_modules/node-pty \
-  && node -e "import('node-pty').then(() => console.log('node-pty ok'))"
-RUN chown -R judge:judge /opt/bridge
-
-# --- rokan-do: wheels + Playwright Chromium (system deps as root), installed for the judge user ---
+# rokan-do: wheels installed system-wide (root), console script at /usr/local/python/bin/rokan-do.
 COPY container/vendor /opt/rokan-wheels
 ENV PATH=/usr/local/python/bin:$PATH
 RUN python3 -m pip install --no-cache-dir --root-user-action=ignore uv \
-  && python3 -m uv pip install --system --python /usr/local/bin/python3 --no-cache /opt/rokan-wheels/rokan_mcp-*.whl /opt/rokan-wheels/rokan_agent-*.whl /opt/rokan-wheels/rokan_do-*.whl \
-  && python3 -m playwright install --with-deps chromium \
-  && python3 -m uv pip install --system --python /usr/local/bin/python3 --no-cache pytest \
+  && python3 -m uv pip install --system --python /usr/local/bin/python3 --no-cache /opt/rokan-wheels/rokan_mcp-*.whl /opt/rokan-wheels/rokan_agent-*.whl /opt/rokan-wheels/rokan_do-*.whl pytest \
+  && rm -rf /root/.cache /tmp/* \
   && rokan-do --help >/dev/null && echo 'rokan-do ok'
 
 COPY --chown=judge:judge container/seed/ /home/judge/
 USER judge
 WORKDIR /home/judge
-ENV HOME=/home/judge SHELL=/bin/zsh TERM=xterm-256color ROKAN_MODE=judge PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV HOME=/home/judge SHELL=/bin/zsh TERM=xterm-256color ROKAN_MODE=judge
 # Seeds: the package's own 54 plus the ones exported from the builder's store (rokan-seed-ops.json)
 RUN rokan-do seed install && rokan-do seed install /home/judge/rokan-seed-ops.json && rokan-do ops | tail -1
