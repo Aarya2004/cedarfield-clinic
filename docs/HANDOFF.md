@@ -1,229 +1,200 @@
-# HANDOFF — Rokan Terminal, engineering sprint (rewritten 2026-08-29 ~04:00 PT)
+# HANDOFF — Rokan Terminal (rewritten 2026-08-29 by Fable 5, "Engineer #3")
 
-**Read this first, then `docs/PROGRESS.md`, then `docs/SELF-REVIEW.md`.** This file is the current
-runway: what is true, what is measured, what is broken, and what to do next, in order. Everything
-below was verified by the session that wrote it; every number is measured by the code or command
-named beside it.
-
----
-
-## 0. The 60-second brief
-
-**Product.** *Do it once. Now it's a tool.* A terminal in a browser tab that a human and an agent
-share. The agent gets WebMCP tools; **no tool ever executes** — they ghost-type at the prompt and
-the **human's Enter** runs the command. Anything the human approved can be **forged** into a live
-WebMCP tool (`forged_<name>`, registered at runtime, content-hashed) that the agent can then call,
-still gated by Enter. Same tools are served over MCP stdio (Codex CLI / Claude Code). `rokan do`
-(Rokan's browsing engine, in the shell) is the star command: seeded operations replay with **0
-model calls**.
-
-**Deadlines (PT).** Arav's target: **submit Mon 09-01 end of day**. Freeze Sun **08-31 evening**.
-Devpost hard deadline Sep 3 13:00; do not use it.
-
-**Three plans** (`docs/FORGE-PLAN.md`, `docs/TERMINAL-PLAN.md`, then UI/UX): forge ✅, terminal ✅,
-UI/UX pass 1 ✅ (`3907895`). Each plan's §16-style discipline: test every baby step, one batched
-gate per change, honest numbers.
+**This supersedes the prior runway.** Read this first, then `docs/PROGRESS.md`, then
+`docs/SELF-EVAL-2026-08-29.md` (the strategy call). Everything below was verified by the session that
+wrote it. The mission: **submit by Mon 09-01 EOD; freeze Sun 08-31 evening; Devpost hard close Wed
+09-03 13:00 PT — do not use it as the plan.** Quality bar: production-usable, measured, honest.
 
 ---
 
-## 1. Live right now
+## 0. 60-second brief
 
-| thing | state | how |
-| --- | --- | --- |
-| Web app | **LIVE** `https://rokan-terminal.vercel.app` — 200, nonce CSP, HSTS, `X-Frame-Options: DENY`; first screen shows the birth hero | `cd apps/web && vercel --prod --yes` |
-| Judge sandbox | **LIVE** `https://rokan-sandbox.rokan-sandbox.workers.dev` — `/api/health` 200; image = `Dockerfile.rokan` (rokan-do + 54 seeds + pytest demo project, **no browser**, 1 532 MB unpacked — multi-stage; see §3) | `cd infra/sandbox && pnpm deploy` |
-| Env wiring | `NEXT_PUBLIC_SANDBOX_URL` + `NEXT_PUBLIC_BRIDGE_HOSTS` set in Vercel production (build-time; redeploy web after changing) | `vercel env ls production` |
-| Vercel | logged in `medportgeneral-7293`, project `rokan-terminal` linked from `apps/web` | — |
-| Cloudflare | Workers **Paid** (upgraded 2026-08-28), wrangler logged in, `SID_SECRET` secret set | — |
-| Codex | registered as an MCP server for Claude Code (`claude mcp add --scope user codex -- codex mcp-server`) → tools `mcp__codex__codex` / `codex-reply` | ChatGPT-plan account: `gpt-5.3-codex` is refused; use the default model |
-| Anthropic key | **live key = Keychain service `rokan-anthropic-key`, account `rokan`** (`security find-generic-password -s rokan-anthropic-key -a rokan -w`). The `ANTHROPIC_API_KEY` Keychain entry is **dead (401)** | never print it; never inject it into the container |
-| GitHub | `Aarya2004/webmcp-private`, **private**, Apache-2.0; CI green on `main` | — |
+**Product (the locked pitch, PLAN §0.9 + confirmed against the theme this session):**
+> **Do it once. Now it's a tool.** A terminal in a browser tab that a human and an agent share. Anything
+> you approve becomes a live **WebMCP tool** born at runtime (`forged_<name>`, content-hashed), that your
+> agent (ChatGPT / Codex / Claude Code) can call — run only by **your Enter**. The same tools are served
+> over MCP stdio too (one registry, two protocols).
 
----
+**The official theme (got the exact words this session):** *"Build a WebMCP-powered web app that imagines
+and explores the future of the open web — where humans and agents can interact, collaborate, and **create
+together**."* The **forge is co-creation** — it maps almost word-for-word. This is why forge leads.
 
-## 2. The gate (all green at `b10edfd` unless noted)
-
-```
-pnpm install
-cd apps/web && pnpm typecheck && pnpm lint && pnpm build && pnpm test     # 126/126
-cd ../../packages/bridge && pnpm check && node --test test/*.test.mjs && pnpm smoke   # units 8, smoke 38/38
-cd ../../infra/sandbox && pnpm check                                     # 12/12
-cd ../.. && node --test evals/test/*.test.mjs                            # runner-cleanup 2/2
-node evals/run-all.mjs                                                   # prompt-line 7/7
-node evals/run-all.mjs --bridge                                          # real PTY 10/10
-node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev   # live 9/10 (see §3)
-```
-
-Extras: `node evals/run-all.mjs --bridge --mode=judge` (local bridge in judge mode),
-`--only=<substr>`, `ROKAN_EVAL_WEB_PORT` / `ROKAN_EVAL_BRIDGE_PORT` to pin ports.
-`cd infra/sandbox && pnpm smoke:image:rokan` smokes the judge image locally (`LIMITS="--cpus 0.25
---memory 1g"` reproduces the judge instance but starves node-pty under amd64 emulation — leave it
-unset locally).
+**No tool ever executes.** `terminal_propose` and every `forged_*` tool only ghost-type at the prompt;
+the human's Enter runs the command. That is the trust boundary — the *second* sentence, never the headline.
 
 ---
 
-## 3. CLOSED — `rokan do` exited 127 in the deployed judge container (root cause + fix, 2026-08-28 18:00–18:15 PT)
+## 1. THE STRATEGY DECISION (this session's main output — read before touching the pitch)
 
-**Symptom:** `evals/cases/terminal-rokan-real.json` against the live sandbox returned
-`["executed", 127, "no-rokan", null]` twice after the shim/PATH fix (`fbb824a`) and a redeploy.
+We spent this session pressure-testing the whole idea against the rubric and the field. Conclusions,
+all defended in `docs/SELF-EVAL-2026-08-29.md` and the PROGRESS `## Objections` block:
 
-**Root cause (measured, not guessed):** the live fleet was **never running `Dockerfile.rokan`**.
-A diagnostic eval case (`terminal_propose` of `echo $PATH; command -v rokan-do; head -1
-/usr/local/python/bin/rokan-do` → Enter → screen read) showed the live PTY had the shim on PATH but
-**`/usr/local/python/bin` did not exist**. The Cloudflare container API then showed why: the
-application's applied image was still digest `f00568…` = tag `9a12cea1`, the 654 MB pre-rokan image
-from 22:39Z; both rokan deploys (`e30d1d79`, `10b2957a`) created Worker versions but their
-**rollouts stuck at step 1** — `health.instances: failed 1, healthy 0`, "Count of healthy target
-instances observed = 0" — while every smaller image finished step 1 in ~90 s. `wrangler deploy`
-succeeds when the rollout *starts*, not when it applies (docs: rollouts are not transactional), so
-the deploy looked green. The rokan image unpacked to **2 221 MB** (docker history: a 1.46 GB layer
-of `playwright install --with-deps` apt deps + build-essential + 266 MB of apt cache) against the
-4 GB disk of a `basic` instance, which Cloudflare counts the image against; the 1 602 MB image
-before it booted every time. Chromium itself was **never in the image** (no `/ms-playwright`, no
-binary > 40 MB) — the 454 ms replay of J12 was already browserless.
+1. **Ship rokan-terminal + forge. Do NOT pivot, do NOT build a "synthetic-WebMCP-for-any-site" generator.**
+   Reasons (grounded, not vibes):
+   - **Theme:** forge = "create together" (on-theme). "Give agents tools for sites lacking WebMCP" = an
+     agent capability that *argues against the hackathon's premise* (off-theme) and one judge (Sean
+     Roberts, Netlify) publicly calls browser-driving "the wrong way"; OpenAI's own framing is anti-DOM.
+   - **Field:** the ONLY two repos in the field with real stars — `alpic-ai/webmcp` (15★, site-owner SDK)
+     and `pauloportella/auto-webmcp-chrome` (12★, scrapes current-page forms) — are BOTH in that
+     "turn-a-site-into-tools" lane. Both do **static form→tool**; **neither records+replays an operation,
+     neither does runtime tool-birth from your actions.** So our forge is genuinely different, but leading
+     with "any-site tools" files us #3 in a contested, off-thesis lane. (Details: `docs/WEBMCP-RESEARCH.md`
+     §6b — we verified these against the GitHub API on 08-28.)
+   - **The forge is the empty lane:** ~48% of entries gate a *fixed* tool list; almost none do runtime
+     `registerTool` of a *user-made* tool. That is the strongest reading of **WebMCP Leverage** (tiebreak #1).
 
-**Fix (`7bef1d3`):** multi-stage `Dockerfile.rokan` — node-pty compiles in a throwaway stage
-(`bridge-build`), the runtime stage has no compiler, no browser install, apt lists and pip cache
-purged: **1 532 MB unpacked**. Proof before deploy: `pnpm smoke:image:rokan` now fails the build
-above `MAX_MB=1800`, computes the PTY PATH through the bridge's own `prepareShellEnv`, runs
-`rokan do` via the shim in a **login zsh** (exit 0), and measures the seeded replay (373 ms ⚡,
-emulated); `infra/sandbox/test/dockerfile-rokan.test.mjs` (3) guards the runtime stage statically.
-Deployed as version `3a1d0ee7`, image digest `b159699a…`; the rollout replaced the fleet (FIELD-NOTES
-J13 has the live numbers).
+2. **rokan-do is ONE demo beat, never the thesis.** "You ran a web op once → forged it into a tool → the
+   agent calls it → it replays at `calls:0`" is on-theme ("look what we made together"), and it's now
+   demoable **hands-on** in the judge sandbox (the 54 seeds replay with no key — I fixed the container this
+   session). Never pitch it as "a better browser."
 
-**Rule learned:** after any sandbox deploy, confirm the rollout *applied* —
-`npx wrangler containers info <app-id>` → `configuration.image` must be the new digest and
-`health.instances.failed` 0. A green `wrangler deploy` is not a deployed image.
+3. **Lead with the HUMAN-INITIATED forge** ("Forge this" from your own history), not the agent-initiated
+   one. Agent-proposes-you-approve reads as *supervision*; you-did-it-and-shaped-it-into-a-tool reads as
+   *co-creation*. This is the sharpest on-theme framing and it also answers "why not just my terminal?":
+   **you don't replace your terminal — rokan-terminal is where you and your agent build your shared toolkit.**
 
-**Honesty for the docs/submission:** the container has **no browser**; `rokan do` there replays
-seeds only (0 model calls). Planning/unseeded tasks run in builder mode on the builder's machine
-(V5 347 ms ⚡ replay, V7 HN 2186 ms). Never claim the container browses.
+4. **Honest score (pessimistic, hostile judge):** Leverage 7→8, Execution 6→7.5, **Impact 5→~7** (the
+   ceiling: our artifact is a *tool*/dev-flavored vs OpenAI's *content* demos; the judge's hands-on is
+   seed-only), Creativity 7→8. Mean ≈ **7.5–7.75. Real #1 contention, not a lock.** The two biggest levers
+   are NOT code: the **video** (missing → Stage-1 pass/fail) and the **ChatGPT-desktop measurement**
+   (Arav-gated). **The Devpost gallery is sealed (3,577 participants) — every "we beat the field" number,
+   ours included, is an estimate.**
 
----
-
-## 4. What is measured (FIELD-NOTES index — read `docs/FIELD-NOTES.md` for the rows)
-
-- **R1–R8** `rokan do` on the Mac: install/seeds; **54-site sweep 53/54 replayed at 0 calls, mean
-  1 232 ms** (R6); HN is a model path, not seedable (R7); **A/B replay vs forced planning: 4.8×
-  wall / ~17× on the operation, 0 vs 1 model call, 53 vs 46 answered** (R8); result-line grammar (R5).
-- **J1–J12** judge sandbox: `ContainerProxy` re-export was the root cause of every failed start
-  (J1); cold start 4.0–6.8 s (J2/J11); provisional Gate rows (J3); shared-IP lockout (J4); `/ws`
-  path allowlist (J5); tab takeover 662 ms (J6); fatal-resize root cause (J7); wrapped-line
-  redaction leak (J8); **live suite 8/8 then 9/10** (J9/J11); real-Chrome stranger run (J10);
-  image with rokan-do smoked (J12).
-- **V1–V8** builder-mode rehearsal on the real video path (live page + quick tunnel + Arav's shell,
-  driven from a real Chrome tab): tunnel 19 s, pair 855 ms, ghost→Enter `exit 0 · 3 ms`, redaction
-  1/1, seeded replay 347 ms ⚡, forge→invoke→Enter 212 ms ⚡, HN 2186 ms.
-- **C1–C6** Codex CLI as the consumer: proposes → Enter → `executed`; forges → human approves →
-  **a new Codex session** calls the forged tool → Enter → recorded. **Codex reads MCP tool lists
-  once per session** and ignores `listChanged` (C3); identical spec ⇒ identical hash across sessions
-  (C4); agent-slot takeover (C5).
-- Evidence: `docs/evidence/gate-a|b|c|d/`, `docs/evidence/demo/`, `docs/evidence/verify-{opus,fable}/`.
+**Saturday plan (agreed): framing + persistence + seeded ops. NOT a new engine.**
+- (1) Headline + first-20-seconds script leading with human-initiated forge.
+- (2) **Persist forged tools** to localStorage, restore-on-load **with human re-approval (no auto-register**,
+  so the session-TTL trust story survives) — kills the "PoC not product" objection.
+- (3) **Seed 3–4 recognizable operations** into the judge image so a judge hits `calls:0` themselves.
+- Then: the "any-machine" beat (b) is optional upside for Impact; export/import (c) is dropped.
 
 ---
 
-## 5. Reviews — all closed
+## 2. LIVE right now (verified 2026-08-29)
 
-Four reviewer passes (Opus 5 ×3 + VERIFY, Fable 5 ×3 + VERIFY) and two Codex passes. **Every
-finding is fixed with a regression test in the same commit** and ticked in `docs/PROGRESS.md`.
-Highlights of what those passes caught (do not regress them): recursive ledger digest, pairing-host
-allowlist, `$'…'` injection, redaction `\b` bug + wrapped lines + unknown key names, judge-mode
-`sudo`, fatal resize frame, replaced-tab writes, trailer attribution (`isRokanCommand`), eval-runner
-process leak (16 stale `next start`, 767 MB), stale `.next` builds, bare eval steps asserting
-nothing, unquoted test glob silently running one file.
-
-`docs/SELF-REVIEW.md` holds the spec-by-spec audit, judge-by-judge scores (mean ≈ 6.4 before the
-last two nights of work), criterion-by-criterion gaps and the ranked gap list; gaps 4/5/6/12/14/15
-are done, 1/2/3/7/9/10/11 are human- or money-gated.
+| thing | state |
+| --- | --- |
+| Web | **200** `https://rokan-terminal.vercel.app` (nonce CSP, HSTS, X-Frame-Options DENY). Deploy: `cd apps/web && vercel --prod --yes`. |
+| Judge sandbox | **200** `https://rokan-sandbox.rokan-sandbox.workers.dev/api/health`. Worker version `9fba0038`+; image = `Dockerfile.rokan` (multi-stage, 1 532 MB, **no browser**). |
+| **`rokan do` LIVE** | **Fixed this session.** Judge suite **11/11** incl. `terminal-rokan-real` (⚡ replay) + `terminal-judge-isolation` (no key/no vault). |
+| Caps | `SESSIONS_PER_IP_PER_10MIN=50`, `MAX_CONCURRENT_PER_IP=20` — **kept high for testing on Arav's explicit instruction (do NOT revert now)**. The 3/3 stranger-abuse story is the pre-freeze value; decision to lower is Arav's, later. TTL unchanged (30 min). |
+| Green gate (this session) | web **133** · bridge **8 units + smoke 38/38** · sandbox **15** · evals runner 2 + prompt-line 7 + **real-PTY 12** · **live judge 11/11**. |
+| Git | HEAD `c6a5b0a`, `main`, clean (except demo-evidence PNGs). Aarya pushes demo docs; **you share this checkout — never `git add -A`, add only your files.** |
 
 ---
 
-## 6. What is left, in order
+## 3. What was BUILT this session (all pushed to `main`)
 
-**C (Claude) can do now**
-1. §3 bug: `rokan do` in the container → fix or honestly descope, then rerun the live suite (10/10).
-2. Re-run the **full gate** cold and update `docs/PROGRESS.md` numbers.
-3. Second UX pass items deliberately skipped: substituted-span colouring in the live ghost overlay;
-   `?tour=1` copy re-read after the hero landed; Safari/no-WebMCP screenshot.
-4. `docs/SUBMISSION.md` final pass once the ChatGPT measurement exists (or the kill rule fires).
-5. Keep `docs/PROGRESS.md` + `docs/FIELD-NOTES.md` current before every stop.
+1. **`rokan do` 127 → root-caused & fixed (3-layer bug):**
+   - Oversized image (2 221 MB) → **stuck Cloudflare rollout** → fleet served a stale image → no
+     `/usr/local/python/bin` → exit 127. Fixed: **multi-stage `Dockerfile.rokan`** (node-pty compiled in a
+     throwaway stage, no browser, caches purged) → 1 532 MB. FIELD-NOTES J13.
+   - Eval-runner bug: local `--judge` build lacked `NEXT_PUBLIC_BRIDGE_HOSTS` → page refused the ws host →
+     0/10 pairing. Fixed: runner always rebuilds with the allowlist from `--judge`.
+   - **The real one — egress:** rokan-do's seeded replay does a stdlib-`urllib` HTTPS fetch; the SDK's
+     HTTPS interception never activates here (no CA), so `allowedHosts` gated nothing and `enableInternet=false`
+     timed out even allowlisted hosts (measured, curl 28). Fix: **`enableInternet=true`**. FIELD-NOTES J14.
+     Egress is now **open** (measured: allowed 301, non-allowed 200) — documented **honestly** in
+     `docs/SECURITY.md`/`SUBMISSION.md` (isolation = no key + no vault + ephemeral disk + no agent→PTY +
+     rate-limit/TTL, NOT an egress allowlist). This was Opus's P0; addressed by making egress work + honest docs.
 
-**Only Arav**
-1. **ChatGPT desktop on GPT-5.6 Sol/Terra** — open the live URL, count Site tools (expect 6), ask it
-   to `propose ls`, forge a tool, and record **whether the Site-tools list refreshes on
-   `toolchange` without a reload**. Screenshots → `docs/evidence/gate-a|b/`. This single fact
-   decides the hero shot (PLAN §0.9 / §10 kill rule #1). Chrome 152 refreshes live (measured).
-2. Video (< 3:00) + 5 logged rehearsals + a camera-recorded `demo-backup.mp4`
-   (`docs/evidence/demo-backup.gif` is the current fallback).
-3. Repo **public** + Devpost submission + YouTube public (Sep 1 EOD target).
-4. `npm publish rokan-terminal` if `npx rokan-terminal` should be true (README currently says
-   clone + `node packages/bridge/bin/rokan-terminal.js` — honest as-is).
-5. **History-purge decision** — the only open checkbox in PROGRESS: commit `0bb4cba` contains a
-   screenshot showing a listing of Arav's home directory (folder names only, no secrets). Removing
-   it means rewriting `main` (force-push). Leave it, or purge before the repo goes public.
-6. Optional beats needing accounts/money: Netlify/Render consequential write, a Linux VM for the
-   "any machine" beat.
+2. **Every Opus + Fable reviewer finding closed here (none routed to Aarya, per Arav):**
+   - redact.ts single-line PEM key leak → redact body only (+2 tests).
+   - pairing bearer-link (any `*.trycloudflare.com`) → can't be fixed in-band (everything's in the link);
+     `docs/SECURITY.md §4/§7` corrected honestly (judge mode unaffected).
+   - rokan ⚡ spoof via `; echo` → `isRokanCommand` chain guard (+5 cases).
+   - bridge respawn loop → rapid-exit backoff.
+   - forge: `runs` counted before Enter → now counts a real run; re-forge stats reset on hash change;
+     `cancelActive` double dismissed-row → single; `restore()` rollback + typed error (no phantom tool).
+   - `insertedId` mis-attribution (Tab-insert → Ctrl-C → different Enter) → cleared on empty line; E2E
+     `terminal-insert-cancel.json` on a real shell; harness gained ctrl-modifier keys.
 
----
+3. **Forge breadth test:** 100 diverse commands each forge→invoke (unique hash, params substituted,
+   Enter-gated, write-classified). Proves the forge is command-agnostic. (Answered Arav's "have you tested
+   the forge broadly" — yes, 100 commands; the "website" breadth is rokan-do's 54 seeds, R6, not 100.)
 
-## 7. HARD rules (violating these has already cost this project time)
+4. **`docs/SELF-EVAL-2026-08-29.md`** — the adversarial scoring + the strategy call above.
 
-1. **Resource discipline.** One process/tab at a time, killed in the same step. Close every Chrome
-   tab you open. No persistent monitors or poll loops. 3-strike stop: if something fails 3× and is
-   not working, STOP and write the state into PROGRESS.
-2. **Kill only by PID / your own children** — never `pkill -f rokan-terminal.js` or `pkill -f next`:
-   reviewers run the same suites in this checkout.
-3. **Reviewers get their own `git worktree`.** Three agents in one tree made a green run and a red
-   run differ by who else was typing.
-4. **Safeguard note (new).** Ad-hoc scripts that open WebSockets into running containers read as
-   `[cyber]` to the model-level safeguards and can force a model switch mid-sprint. Use
-   `pnpm smoke:image:rokan`, `docker exec` with plain commands, and the eval harness instead.
-5. **Freeze rule.** A `wrangler deploy` of `infra/sandbox` **replaces the container fleet and drops
-   every live judge session** (measured). No sandbox deploys from the Sun 08-31 evening freeze
-   through judging, and never during a rehearsal or the demo. Vercel web redeploys are safe.
-6. **Per-IP cap.** 3 sessions/IP/10 min, 3 concurrent, 30-min TTL. The builder's network and the
-   judge share one IP: never burn slots before a rehearsal; a `--judge` run costs one slot.
-7. **Honest numbers only.** Every ms / call count on screen is produced by the code that shows it.
-   If something is unmeasured, the docs say unmeasured.
-8. **Verify before "done":** one batched gate run per change, never a loop.
+Commits since the prior handoff: `7bef1d3` (slim image), `699b47e`/`852fa76` (rokan-do fix + honest docs),
+`b3a087f`/`3178a34` (eval allowlist + enableInternet), `2c35b33` (rokan spoof), redact/respawn/forge-P2/
+insertedId commits, `2b22ffa` (self-eval).
 
 ---
 
-## 8. Map of the repo (what to read when)
+## 4. HARD RULES (violating these has cost this project real time)
 
-- `CLAUDE.md` — constitution, lanes, non-negotiables.
-- `docs/PROGRESS.md` — standup: gates, state, every reviewer finding with fix hashes.
-- `docs/SELF-REVIEW.md` — spec-by-spec + judge-by-judge audit and the ranked gap list.
-- `docs/PLAN.md` §0 (locked decisions, §0.9 "forge leads"), §3 (tool contracts), §4 (security),
-  §8 (video shot list), §10 (kill rules), §13 (judges), §17 (criterion by criterion).
-- `docs/FORGE-PLAN.md` §2 (product spec), §7 (verification), §13 (judge personas), §17.
-- `docs/TERMINAL-PLAN.md`, `docs/SANDBOX-PLAN.md`, `docs/SECURITY.md`, `docs/FIELD-NOTES.md`,
-  `docs/DEMO.md` (beats + backup trigger + the demo-shell key export line), `docs/SUBMISSION.md`,
-  `docs/ENV-ARAV.md` (machine facts), `docs/WEBMCP-RESEARCH.md` (§6b competition analysis).
-- Code: `apps/web/src/lib/webmcp/*` (tools, forge, redact, ledger, schemas),
-  `apps/web/src/lib/terminal/*` (adapter, session, linebuffer, osc),
-  `apps/web/src/lib/ws/*` (client, protocol), `apps/web/src/components/*` (UI),
-  `packages/bridge/src/*` (PTY, WS, MCP relay, trailer), `infra/sandbox/src/*` (Worker, Gate, sid,
-  origin), `evals/` (harness + 17 cases + runner tests).
+1. **Resource discipline (non-negotiable — Arav's laptop crashed from this once).** ONE process/tab/
+   container at a time, killed in the SAME command. No persistent monitors/poll loops. **3-strike stop.**
+   Kill only by PID / your own children — never `pkill -f rokan-terminal.js`/`next` (reviewers share this
+   checkout). No `docker build` / `graphify update` / full sweeps unless asked.
+2. **Deploys are Arav-gated in TWO ways:** (a) the **auto-mode classifier blocks `wrangler deploy`** (even
+   `--dry-run`) intermittently — when it does, ask Arav to run it. (b) **Arav must run deploys WITHOUT the
+   `!` prefix** — `!` is the Claude-prompt convention but in his raw zsh it mangles the command (silent
+   fails). Give him plain `cd ~/dev/webmcp-private/infra/sandbox && npx wrangler deploy`.
+3. **Sandbox deploy = a container rollout that drops every live judge session** IF the image digest
+   changes. Worker-code-only changes (vars, worker.ts) do NOT roll containers. Never deploy sandbox during
+   the freeze or a rehearsal. Confirm a rollout *applied* with `npx wrangler containers info <app-id>`
+   (`configuration.image` = new digest, `health.instances.failed` 0) — a green `wrangler deploy` only means
+   it *started*.
+4. **NEVER write ad-hoc WebSocket probe scripts against containers** — it trips a `[cyber]` safeguard and
+   force-switches the model. Use `pnpm smoke:image:rokan`, plain `docker exec`, and the eval harness.
+5. **Verify before "done":** always run **`pnpm typecheck`** after TS changes (this session, `pnpm test`
+   passed but a type error broke CI — local `node --test` strips types). One batched gate per change.
+6. **Honest numbers only** — every ms/count on screen is produced by the code that shows it.
 
 ---
 
-## 9. Commands cheat-sheet
+## 5. ENVIRONMENT (verified this session)
 
-```
-# demo shell (builder mode, with the live key so `rokan do` can plan)
-export ANTHROPIC_API_KEY="$(security find-generic-password -s rokan-anthropic-key -a rokan -w)"
-node packages/bridge/bin/rokan-terminal.js            # prints ONE pairing link; open it in Chrome
+- Node 25.9, pnpm 11.1.2, macOS. Vercel logged in (`medportgeneral-7293`, project `rokan-terminal`,
+  cwd-deploy from `apps/web`). wrangler logged in (Workers Paid).
+- **Anthropic key** = macOS Keychain: `security find-generic-password -s rokan-anthropic-key -a rokan -w`
+  (the `ANTHROPIC_API_KEY` Keychain entry is DEAD/401). Never print it; never inject into the container.
+- **Codex** wired as MCP (`mcp__codex__codex` / `codex-reply`) — ChatGPT-plan account, no `gpt-5.3-codex`;
+  use for adversarial review. It found 4 real verification-layer holes this session (all fixed).
+- Gate cheat-sheet:
+  ```
+  cd apps/web && pnpm typecheck && pnpm lint && pnpm build && pnpm test     # 133
+  cd ../../packages/bridge && pnpm check && node --test 'test/*.test.mjs' && pnpm smoke   # 8 + 38/38
+  cd ../../infra/sandbox && pnpm check                                      # 15
+  cd ../.. && node --test 'evals/test/*.test.mjs'; node evals/run-all.mjs; node evals/run-all.mjs --bridge
+  node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev   # 11/11 (needs a slot)
+  ```
+- Eval gotchas: `--judge` rebuilds web with the allowlist automatically; `judgeOnly` cases skip `--bridge`;
+  each `--judge` run costs a per-IP session slot (caps now 50/20). `--only=<substr>` filters by filename.
 
-# deploys
-cd apps/web && vercel --prod --yes
-cd infra/sandbox && pnpm deploy                        # rebuilds the image; NOT during the freeze
+---
 
-# judge sandbox
-curl -sS https://rokan-sandbox.rokan-sandbox.workers.dev/api/health
-node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev
+## 6. ONLY ARAV can do (ask once, don't block)
+1. **ChatGPT desktop measurement** (GPT-5.6 Sol/Terra): open the live URL, count Site tools, `propose ls`,
+   forge a tool, record whether the Site-tools list refreshes on `toolchange` without reload. Screens →
+   `docs/evidence/gate-a|b/`. **Single highest-leverage hour left** (moves the OpenAI judge + every
+   criterion's "works in the named consumer" clause). Chrome 152 refreshes live (measured).
+2. **Video < 3:00** + 5 logged rehearsals + a camera backup. Stage-1 pass/fail. Lead with human-initiated forge.
+3. Repo **public** + OSS license in the About section + Devpost + YouTube public.
+4. `npm publish rokan-terminal` if `npx rokan-terminal` should be true (README currently says clone + node — honest).
+5. History-purge decision (commit `0bb4cba` has a home-dir listing screenshot; folder names only).
 
-# Codex as the consumer (MCP relay against a running bridge)
-#   mcp_servers.rokan = node packages/bridge/bin/rokan-terminal.js mcp --ws ws://127.0.0.1:7331 --token <token>
-#   forged tools need a NEW Codex session (C3)
-```
+---
+
+## 7. Map of the repo (read what you need)
+- `CLAUDE.md` — constitution, lanes (Arav's lane = `packages/bridge`, `infra/sandbox`, `evals`,
+  `apps/web/src/lib/webmcp/{redact,ledger}.ts`, `terminal_*` wiring, `docs/SECURITY.md`; Aarya = `apps/web/**`
+  UI/forge — but **Arav said do everything here, don't route to Aarya this sprint**).
+- `docs/PROGRESS.md` — standup + `## Objections` (the strategy verdict) + all reviewer findings ticked.
+- `docs/SELF-EVAL-2026-08-29.md` — the adversarial scoring + strategy call.
+- `docs/PLAN.md` §0 (locked decisions, §0.9 "forge leads"), §8 (video shot list), §10 (kill rules).
+- `docs/FORGE-PLAN.md` §2 (forge spec), §13 (judge personas — incl. Roberts anti-DOM, Nahas taxonomy).
+- `docs/WEBMCP-RESEARCH.md` §5 (criteria verbatim), §6b (competitor GitHub research — the starred repos).
+- `docs/FIELD-NOTES.md` (measurements; J13/J14 = the rokan-do fix; R6/R8 = 54-seed sweep).
+- Code: `apps/web/src/lib/webmcp/*` (forge, redact, ledger, register), `apps/web/src/components/Terminal.tsx`,
+  `packages/bridge/src/*`, `infra/sandbox/src/worker.ts`.
+
+---
+
+## 8. NEXT ACTIONS (in order, for the incoming session)
+1. **Confirm the strategy with Arav** (§1) — he had converged; don't reopen it, execute it.
+2. **Write the headline + first-20-seconds script** (no code) leading with human-initiated forge; Arav vetoes words.
+3. **Persist forged tools** (localStorage, restore-on-load with human re-approval, NO auto-register) — the
+   "PoC→product" fix. `apps/web/src/lib/webmcp/forge.ts` + a load-time restore card + tests. Keep the 133 green.
+4. **Seed 3–4 recognizable ops** into `Dockerfile.rokan` seed dir so a judge hits `calls:0` hands-on.
+5. Keep `docs/PROGRESS.md` + `docs/FIELD-NOTES.md` current before you stop.
