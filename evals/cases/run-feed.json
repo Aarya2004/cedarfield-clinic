@@ -1,0 +1,17 @@
+[
+  { "list": true },
+  { "expect": { "tool": "terminal_propose" } },
+  { "eval": "typeof window.__rokan.runFeed", "equals": "function" },
+  { "eval": "window.__rokan.runFeed()", "equals": [] },
+  { "eval": "window.__rokan.session().mode", "equals": "unpaired" },
+  { "eval": "document.querySelector('[data-run-feed]') === null", "equals": true },
+  { "invoke": "terminal_propose", "input": { "command": "echo run_feed_probe", "why": "prove the feed records nothing without a shell" } },
+  { "eval": "window.__rokan.proposals.pending()?.command", "equals": "echo run_feed_probe" },
+  { "key": "Enter" },
+  { "sleep": 300 },
+  { "eval": "window.__rokan.proposals.all().at(-1).status", "equals": "accepted" },
+  { "eval": "window.__rokan.runFeed()", "equals": [] },
+  { "eval": "window.__rokan.ledger().rows.some(r => r.kind === 'proposed' && r.fields.command === 'echo run_feed_probe')", "equals": true },
+  { "eval": "window.__rokan.fieldNotes().filter(n => n.event === 'ui.pane_error').length", "equals": 0 },
+  { "eval": "document.querySelectorAll('[data-pane-error]').length", "equals": 0 }
+]

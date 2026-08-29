@@ -20,6 +20,14 @@
  * forever and every later `acceptProposal` would be refused. Fallback: the proposal completes when
  * output has been quiet for `FALLBACK_QUIET_MS`, with `exit_code: null`, `ms: null`,
  * `measured: false` — the honest values; nothing is inferred.
+ *
+ * Run feed (ticket #4, additive): the same byte stream also feeds `runfeed.ts`.
+ * - every resolved proposal is recorded once, inside `finish()` — no second capture;
+ * - a command with NO proposal in flight (the human typed it) gets its own small state machine:
+ *   7331;cmd gives the command line, 133;C starts it, 133;D + the `status` frame end it. It is
+ *   deliberately the same shape as the proposal machine, and deliberately requires 133;C — the
+ *   shell's first prompt and a bare Enter emit 133;D alone and must never invent a record.
+ *   Without shell integration there are no markers, so human runs are simply not captured.
  */
 import type { BridgeStatus } from '@/lib/ws/protocol';
 import type { HelloFrame } from '@/lib/ws/client';
@@ -27,6 +35,7 @@ import { proposals as defaultStore, type ProposalStore, type ProposeOptions } fr
 import type { ResolvedProposal, TerminalAdapter } from '@/lib/webmcp/adapter';
 import { stripAnsi } from '../webmcp/redact.ts';
 import { PromptDetector } from './osc.ts';
+import { runFeed, runFromResolved, type RunSink } from './runfeed.ts';
 
 export interface TermLike {
   buffer: {
@@ -75,35 +84,88 @@ interface InFlight {
   startedAt: number;
 }
 
+/** A command the human typed: no proposal, so only the shell's markers describe it. */
+interface HumanRun {
+  /** from OSC 7331;cmd; null when the shell did not announce it */
+  command: string | null;
+  /** running (133;C seen) → ended (133;D seen; waiting for the status frame) */
+  phase: 'running' | 'ended';
+  /** exit code from the 133;D marker, kept in case the run is cut short before the status frame */
+  exitFromMarker: number | null;
+  pendingStatus: BridgeStatus | null;
+  cwd: string | null;
+  tail: string[];
+  partial: string;
+}
+
+let humanSeq = 0;
+
 export const TAIL_MAX_LINES = 200;
 /** No-integration fallback: a command counts as finished after this much output silence. */
 export const FALLBACK_QUIET_MS = 750;
 
-export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike; share: () => boolean; store?: ProposalStore; quietMs?: number }): LiveTerminalAdapter {
+export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike; share: () => boolean; store?: ProposalStore; quietMs?: number; runs?: RunSink }): LiveTerminalAdapter {
   const store = deps.store ?? defaultStore;
   const detector = new PromptDetector();
   const quietMs = deps.quietMs ?? FALLBACK_QUIET_MS;
+  const runs = deps.runs ?? runFeed;
   let inflight: InFlight | null = null;
   let quietTimer: ReturnType<typeof setTimeout> | null = null;
   const results = new Map<string, ResolvedProposal>();
   const waiters = new Map<string, Set<(r: ResolvedProposal) => void>>();
   const resultListeners = new Set<(r: ResolvedProposal) => void>();
+  // run-feed state (ticket #4): the human's own commands, plus the newest cwd/command the shell announced
+  let human: HumanRun | null = null;
+  let pendingCommand: string | null = null;
+  let lastCwd: string | null = null;
 
   const integrated = () => deps.client.hello?.integration === true;
+  const cwdNow = () => deps.client.lastStatus?.cwd ?? lastCwd;
 
   const finish = (r: ResolvedProposal) => {
     if (quietTimer) clearTimeout(quietTimer);
     quietTimer = null;
     results.set(r.id, r);
     inflight = null;
+    // The one place a proposal ends, so the one place it becomes a run: the feed can never
+    // double-count a resolution, and never re-parses the byte stream to get one.
+    runs.record(runFromResolved(r, cwdNow()));
     waiters.get(r.id)?.forEach((fn) => fn(r));
     waiters.delete(r.id);
     resultListeners.forEach((fn) => fn(r));
   };
 
-  const tailOf = (f: InFlight) => {
+  const tailOf = (f: { tail: string[]; partial: string }) => {
     const lines = f.partial ? [...f.tail, f.partial] : f.tail;
     return lines.filter((l, i, a) => !(i === a.length - 1 && l.trim() === '')).slice(-TAIL_MAX_LINES);
+  };
+
+  /** Append a raw PTY chunk to a capture's tail (ANSI stripped, bounded). */
+  const appendTail = (f: { tail: string[]; partial: string }, chunk: string) => {
+    const text = stripAnsi(f.partial + chunk).replace(/\r/g, '');
+    const parts = text.split('\n');
+    f.partial = parts.pop() ?? '';
+    for (const line of parts) {
+      if (f.tail.length < TAIL_MAX_LINES) f.tail.push(line);
+    }
+  };
+
+  /** A human-typed command ended. `st` present = the shell measured exit/ms; absent = it did not. */
+  const finishHuman = (h: HumanRun, st: BridgeStatus | null) => {
+    human = null;
+    runs.record({
+      id: `r_${Date.now().toString(36)}_${humanSeq++}`,
+      command: h.command,
+      origin: 'human',
+      exit_code: st ? st.last_exit_code : h.exitFromMarker,
+      ms: st ? st.last_command_ms : null,
+      cwd: st?.cwd ?? h.cwd,
+      tail: tailOf(h),
+      t: Date.now(),
+      measured: st !== null,
+      ...(st ? {} : { interrupted: true }),
+      ...(st?.last_rokan ? { rokan: st.last_rokan } : {}),
+    });
   };
 
   /** Nothing measurable will come: close the in-flight proposal honestly (exit/ms unknown). */
@@ -137,38 +199,62 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
   const offData = deps.client.on('data', (chunk) => {
     const events = detector.feed(chunk);
     const f = inflight;
-    if (!f) return;
-    // capture output lines (ANSI stripped) for the tail — before the markers are interpreted, so
-    // output sharing a frame with 133;D is in the tail when the proposal finishes
-    const text = stripAnsi(f.partial + chunk).replace(/\r/g, '');
-    const parts = text.split('\n');
-    f.partial = parts.pop() ?? '';
-    for (const line of parts) {
-      if (f.tail.length < TAIL_MAX_LINES) f.tail.push(line);
+    if (f) {
+      // capture output lines (ANSI stripped) for the tail — before the markers are interpreted, so
+      // output sharing a frame with 133;D is in the tail when the proposal finishes
+      appendTail(f, chunk);
+      for (const ev of events) {
+        if (inflight !== f) break; // finished inside this loop
+        if (ev.kind === 'start' && f.phase === 'sent') {
+          f.phase = 'running';
+        } else if (ev.kind === 'end' && f.phase === 'running') {
+          f.phase = 'ended';
+          if (f.pendingStatus) finishMeasured(f, f.pendingStatus);
+        } else if (ev.kind === 'prompt' && f.phase === 'sent' && integrated()) {
+          finishUnmeasured(f); // the prompt came back without a 133;C: nothing ran
+        }
+      }
+      if (inflight === f && !integrated()) armQuiet();
     }
+    // Run feed (ticket #4). Runs after the proposal machine so `inflight` already reflects a
+    // proposal that ended inside this same frame; the same chunk's tail is captured first, for the
+    // same reason it is above.
+    if (human) appendTail(human, chunk);
     for (const ev of events) {
-      if (inflight !== f) break; // finished inside this loop
-      if (ev.kind === 'start' && f.phase === 'sent') {
-        f.phase = 'running';
-      } else if (ev.kind === 'end' && f.phase === 'running') {
-        f.phase = 'ended';
-        if (f.pendingStatus) finishMeasured(f, f.pendingStatus);
-      } else if (ev.kind === 'prompt' && f.phase === 'sent' && integrated()) {
-        finishUnmeasured(f); // the prompt came back without a 133;C: nothing ran
+      if (ev.kind === 'cwd') {
+        lastCwd = ev.cwd;
+      } else if (ev.kind === 'command') {
+        pendingCommand = ev.command; // preexec: always immediately before 133;C
+      } else if (ev.kind === 'start') {
+        const command = pendingCommand;
+        pendingCommand = null;
+        // A proposal in flight owns this command; only an unclaimed 133;C is the human's own.
+        if (!inflight && !human) human = { command, phase: 'running', exitFromMarker: null, pendingStatus: null, cwd: lastCwd, tail: [], partial: '' };
+      } else if (ev.kind === 'end' && human && human.phase === 'running') {
+        human.phase = 'ended';
+        human.exitFromMarker = ev.code;
+        if (human.pendingStatus) finishHuman(human, human.pendingStatus);
       }
     }
-    if (inflight === f && !integrated()) armQuiet();
   });
 
   const offStatus = deps.client.on('status', (st) => {
     const f = inflight;
-    if (!f || st.running) return;
-    if (f.phase === 'ended') finishMeasured(f, st);
-    else if (f.phase === 'running') f.pendingStatus = st; // the data frame carrying 133;D is still to come
+    if (f) {
+      if (st.running) return;
+      if (f.phase === 'ended') finishMeasured(f, st);
+      else if (f.phase === 'running') f.pendingStatus = st; // the data frame carrying 133;D is still to come
+      return;
+    }
+    const h = human;
+    if (!h || st.running) return;
+    if (h.phase === 'ended') finishHuman(h, st);
+    else h.pendingStatus = st; // the data frame carrying 133;D is still to come
   });
 
   const offState = deps.client.on('state', (s) => {
     if (s !== 'disconnected' && s !== 'closed') return;
+    if (human) finishHuman(human, null); // cut short: exit/ms unknown, whatever was printed is kept
     if (!inflight) return;
     const p = store.get(inflight.id);
     if (!p) return;

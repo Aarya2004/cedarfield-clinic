@@ -14,9 +14,11 @@ import { forge, type ForgeCard as Card } from '@/lib/webmcp/forge';
 import { installTestHooks } from '@/lib/webmcp/testhooks';
 import { forgeFromLines } from '@/lib/webmcp/forge-this';
 import { session } from '@/lib/terminal/session';
+import { runFeed } from '@/lib/terminal/runfeed';
 import { clearFieldNotes, fieldNotes, note, subscribeFieldNotes } from '@/lib/webmcp/fieldnotes';
 import { initTheme } from '@/lib/theme';
 import { Terminal } from './Terminal';
+import { RunFeed } from './RunFeed';
 import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
 import { Hero, HeroStrip, type HeroExampleState } from './Hero';
@@ -82,7 +84,14 @@ export function App() {
 
   useEffect(() => {
     initTheme();
-    setHooks(installTestHooks());
+    const hooksOn = installTestHooks();
+    setHooks(hooksOn);
+    // The run feed lives in this lane, so its read-only handle is installed here rather than in
+    // the shared testhooks.ts. Read-only on purpose: nothing may write a run that did not run.
+    if (hooksOn) {
+      const w = window as Window & { __rokan?: Record<string, unknown> };
+      if (w.__rokan) w.__rokan.runFeed = () => runFeed.snapshot();
+    }
     if (tourRequested()) setTour('on');
     session.start();
     // If the effect is torn down before registration resolves, dispose on arrival instead of
@@ -136,11 +145,11 @@ export function App() {
         {liveTerminal ? (
           <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
             <HeroStrip example={heroExample} onForgeExample={forgeExample} />
-            {/* Ticket #4 fills this with the run history; until then it stays one quiet line of
-                invitation rather than a card, so the terminal keeps the height. */}
-            <section className="max-h-[38%] min-h-0 shrink-0 overflow-y-auto px-1 text-xs text-muted" data-run-feed aria-label="run feed">
-              Runs will appear here as you and your agent work — each command with its output, exit and timing.
-            </section>
+            {/* The history: grows with its content to at most 45 % of the column, so the live
+                terminal below always keeps the larger half. Empty, it is one line of invitation. */}
+            <Boundary name="run feed">
+              <RunFeed onForgeThis={forgeThis} />
+            </Boundary>
             {/* The floor the xterm host (min-h-[160px]) plus its ghost bar need. Stated here so
                 flex shrinks the expanded hero instead of clipping the terminal on a short screen. */}
             <div className="min-h-[200px] flex-1">

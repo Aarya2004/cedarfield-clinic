@@ -1,13 +1,26 @@
 /**
- * Client-side detector for the bridge's shell-integration markers (OSC 133 A/C/D, OSC 7).
+ * Client-side detector for the bridge's shell-integration markers (OSC 133 A/C/D, OSC 7, and the
+ * bridge's private OSC 7331;cmd;<base64> command line).
  * Same algorithm as `packages/bridge/src/shell-integration.js`; handles sequences split across
  * `data` frames. Used to reset the local line buffer on a new prompt and to know when the
  * command after an Enter has ended (its exit code arrives in the `status` frame).
+ *
+ * The `command` event (ticket #4) is additive: zsh's preexec prints 7331;cmd;<b64> immediately
+ * before 133;C, so the run feed can name a command the human typed themselves. Consumers that
+ * only care about prompt/start/end simply never match it.
  */
 const ESC = String.fromCharCode(27);
 const BEL = String.fromCharCode(7);
 
-export type PromptEvent = { kind: 'prompt' } | { kind: 'start' } | { kind: 'end'; code: number | null } | { kind: 'cwd'; cwd: string };
+/** A command line may not be longer than this once decoded (the bridge caps it the same way). */
+const COMMAND_MAX = 2000;
+
+export type PromptEvent =
+  | { kind: 'prompt' }
+  | { kind: 'start' }
+  | { kind: 'end'; code: number | null }
+  | { kind: 'cwd'; cwd: string }
+  | { kind: 'command'; command: string };
 
 export class PromptDetector {
   private carry = '';
@@ -54,6 +67,10 @@ function interpret(body: string): PromptEvent | null {
     }
     return null;
   }
+  if (body.startsWith('7331;cmd;')) {
+    const command = decodeBase64Utf8(body.slice(9));
+    return command === null ? null : { kind: 'command', command: command.slice(0, COMMAND_MAX) };
+  }
   if (body.startsWith('7;')) {
     const m = /^7;file:\/\/[^/]*(\/.*)$/.exec(body);
     if (m) {
@@ -67,4 +84,15 @@ function interpret(body: string): PromptEvent | null {
     }
   }
   return null;
+}
+
+/** base64 → UTF-8, tolerating the garbage a half-written escape can leave behind. Never throws. */
+function decodeBase64Utf8(b64: string): string | null {
+  try {
+    const bin = atob(b64);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
 }
