@@ -2,6 +2,26 @@
 
 Last update: **2026-08-29 ~10:00 PT (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
+## Build log — Engineer #4 (2026-08-29, cont.)
+**P0.4b kept.ts + SECURITY §8/§9 + README/SUBMISSION Impact + npm-pack verified (entry `55b32c4`+, pushed).**
+- **`kept.ts`** (deliverable 3, engine side — my lane per ALIGNMENT L136): pure per-viewer store
+  (`rokan.kept.v1`), `loadKept`/`persistKept`/`verifyKeptHashes`/`keptFromTools`/`clearKept`; never
+  auto-registers (restore re-opens the approval card), hash-mismatch → `changed`, throwing storage →
+  nothing kept, cap 20. `kept.test.ts` 14/14; web suite **197/197**; typecheck clean. **Aarya's
+  RestoreCard (her item 2) is unblocked** — wiring recipe in ALIGNMENT. (Write-path subscriber is in
+  App.tsx = her lane; I left it to her to avoid a collision.)
+- **SECURITY.md** §8 (Tier 0 read-only gate — grep-confirmed in `native.py`: `_is_write_name`,
+  `_OUTPUT_BUDGET=1500`, separate `native_op` table) + §9 (caps table; deployed testing row 50/20/30min/10
+  verified vs `wrangler.jsonc`); fixed §6's stale "3/10min, 3 concurrent"; kept tools marked PLANNED (no
+  over-claim — `kept.ts` store shipped, the App wiring not yet).
+- **SUBMISSION.md + README.md**: measured Impact section/callout (compiled replay 0 calls/79ms vs Codex
+  ~23s / Claude ~16s; native ~1.45s builder-mode; drift refusal), sourced to the measurements file.
+- **npm pack --dry-run**: clean 10-file tarball (bin/src/shims, no secrets), deps declared (node-pty/ws/
+  MCP SDK/zod), engines ≥20 — `npx rokan-terminal` publish-ready; only `npm login && npm publish` (Arav) remains.
+**Still blocked (Arav/key):** ChatGPT Sol/Terra run; npm publish; live cold-compile A/B & drift rows.
+**Next (unblocked, mine):** README headline thesis reframe; DEMO v3 shot list with measured ms; Chrome
+evals-cli format (§5, feeds Jude/Vercel). **Aarya:** RestoreCard + write-path wiring (recipe in ALIGNMENT).
+
 ## Build log — Engineer #4 (2026-08-29)
 **P0.4 A/B Impact harness measured + drift test + SUBMISSION Impact + CI hardening (entry `a04ae96`, pushed).**
 The Impact number is measured, live, three arms (`evals/ab/`, `docs/measurements/2026-08-30-ab.md`):
