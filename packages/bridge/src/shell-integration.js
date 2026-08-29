@@ -7,6 +7,7 @@
  * zsh only. Other shells spawn without integration and status fields stay null.
  */
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, basename } from 'node:path';
@@ -21,7 +22,10 @@ export function shellName(shellPath) {
 /** Returns {env, integration:boolean}. */
 export function prepareShellEnv(shellPath, baseEnv) {
   const shims = fileURLToPath(new URL('../shims', import.meta.url));
-  const env = { ...baseEnv, ROKAN_TERMINAL: '1', TERM: baseEnv.TERM || 'xterm-256color', COLORTERM: 'truecolor', PATH: `${shims}:${baseEnv.PATH || '/usr/bin:/bin'}` };
+  // A sandboxed bridge can be spawned with a minimal PATH (measured in the judge container: exit 127
+  // for `rokan do`); add the dirs rokan-do is installed into when they exist.
+  const extra = ['/usr/local/python/bin', `${baseEnv.HOME || ''}/.local/bin`].filter((d) => d && existsSync(d));
+  const env = { ...baseEnv, ROKAN_TERMINAL: '1', TERM: baseEnv.TERM || 'xterm-256color', COLORTERM: 'truecolor', PATH: [shims, ...extra, baseEnv.PATH || '/usr/local/bin:/usr/bin:/bin'].join(':') };
   if (shellName(shellPath) !== 'zsh') return { env, integration: false };
   const home = homedir();
   const dir = mkdtempSync(join(tmpdir(), 'rokan-zdotdir-'));

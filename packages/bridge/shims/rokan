@@ -1,5 +1,10 @@
 #!/bin/sh
 # Rokan Terminal convenience: `rokan do "<task>"` runs `rokan-do "<task>"` (Rokan ships `rokan-do`
-# as its console script; there is no `rokan` binary). Put on the PTY's PATH by the bridge.
+# as its console script; there is no `rokan` binary). Put on the PTY's PATH by the bridge. Resolves
+# rokan-do from the usual install dirs too — a sandboxed process may start with a minimal PATH.
 [ "$1" = "do" ] && shift
-exec rokan-do "$@"
+for c in rokan-do /usr/local/python/bin/rokan-do "$HOME/.local/bin/rokan-do" /usr/local/bin/rokan-do; do
+  if command -v "$c" >/dev/null 2>&1; then exec "$c" "$@"; fi
+done
+echo "rokan-do is not installed on this machine (see packages/rokan-do in the Rokan repo)" >&2
+exit 127
