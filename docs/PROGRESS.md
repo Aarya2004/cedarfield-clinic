@@ -10,7 +10,7 @@ Fixed (in my lane, each with a regression test + commit):
 - **Fable P2.5** rokan ⚡ spoof via chained `; echo` → `isRokanCommand` rejects shell separators. `+5 cases`.
 - **Fable P2.8** bridge respawn loop → rapid-exit backoff (3× within 2s → stop).
 
-Routed to Aarya (forge.ts / terminal UI lane): Fable P2.3 restore() no rollback after a rejected registerTool; P2.4 cancelActive writes two `dismissed` rows; P2.6/Opus-P2 `runs` counts invocations before Enter (and carries across a re-forge that changes the hash); P2.7 insertedId survives Ctrl-C so a later Enter marks the agent's proposal executed.
+ALSO fixed here (forge.ts / terminal UI — done in this session, not routed): P2.3 restore() rolls back on a rejected registerTool + returns an error (no phantom tool); P2.4 cancelActive writes exactly one `dismissed` row; P2.6/Opus-P2 `runs` counts a real run (first executed step), not an all-Esc'd invocation, and resets on a re-forge that changes the hash; P2.7 insertedId clears when the line empties (Tab-insert → Ctrl-C → a different Enter no longer mis-attributes). Each with a regression test. Plus a **forge breadth test**: 100 diverse commands each forge→invoke (unique hash, substituted, Enter-gated). **Every Opus + Fable finding is now closed.** Gate after: web 133 · bridge 8+38 · sandbox 15 · evals 7 + real-PTY 12 · live judge 11/11.
 
 ## ⚠️ REVERT BEFORE FREEZE
 - `infra/sandbox/wrangler.jsonc`: `SESSIONS_PER_IP_PER_10MIN` and `MAX_CONCURRENT_PER_IP` are temporarily **50 / 20** (raised 2026-08-29 to run many `--judge` checks from one IP while fixing `rokan do`). **Set both back to `3` before the Sun 08-31 freeze** — 3/3 is the stranger-abuse control in `docs/SECURITY.md`. TTL is unchanged (30 min), so the demo is unaffected either way.
