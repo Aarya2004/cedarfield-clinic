@@ -448,3 +448,74 @@ test('forge breadth: 100 diverse commands each forge → invoke (substituted, En
   assert.equal(dangerHits, expectedWrites, `write-family classified (${dangerHits}/${expectedWrites})`);
   assert.ok(dangerHits > 20, 'a meaningful number of write commands were exercised');
 });
+
+// --- reviewer P2 regressions (Opus + Fable, 2026-08-29) ---
+const findRun = (engine: ForgeEngine, name: string) => engine.list().tools.find((x) => x.name === name);
+
+test('runs: an all-Esc invocation is not counted; runs increments when the first step executes (Opus/Fable P2)', async () => {
+  const { engine, store } = make();
+  await engine.approve(card(engine, { ...hn, name: 'r1', commands: ['echo a', 'echo b'], params: [] }).card_id);
+  const r = engine.invoke('r1', {});
+  if ('error' in r || 'status' in r) throw new Error(JSON.stringify(r));
+  assert.equal(findRun(engine, 'r1')?.runs, 0, 'not counted at invoke, before any Enter');
+  store.resolve(r.active, 'dismissed'); // Esc the first (only pending) step → run dismisses the rest and settles
+  await tick();
+  assert.equal(engine.active(), null);
+  assert.equal(findRun(engine, 'r1')?.runs, 0, 'an invocation with no executed step is not a run');
+  const r2 = engine.invoke('r1', {});
+  if ('error' in r2 || 'status' in r2) throw new Error(JSON.stringify(r2));
+  store.resolve(r2.proposal_ids[0], 'accepted'); await tick();
+  store.resolve(r2.proposal_ids[1], 'accepted'); await tick(); // resolve every step so run() completes (no leaked promise)
+  assert.equal(engine.active(), null);
+  assert.equal(findRun(engine, 'r1')?.runs, 1, 'runs increments once the first step executes');
+});
+
+test('re-forge with new content resets runs/stats — the hash is the identity (Opus P2)', async () => {
+  const { engine, store } = make();
+  await engine.approve(card(engine, { ...hn, name: 'rf', commands: ['echo x'], params: [] }).card_id);
+  const r = engine.invoke('rf', {});
+  if ('error' in r || 'status' in r) throw new Error(JSON.stringify(r));
+  store.resolve(r.proposal_ids[0], 'accepted'); await tick();
+  assert.equal(engine.active(), null);
+  assert.equal(findRun(engine, 'rf')?.runs, 1);
+  const c2 = engine.openCard({ ...hn, name: 'rf', commands: ['echo y'], params: [] }, { origin: 'agent' });
+  if ('error' in c2) throw new Error(c2.error);
+  const t2 = await engine.approve(c2.card_id);
+  if ('error' in t2) throw new Error(t2.error);
+  assert.equal(findRun(engine, 'rf')?.runs, 0, 'a re-forge that changes the command (new hash) starts fresh stats');
+});
+
+test('cancelActive writes exactly one dismissed row (Fable P2)', async () => {
+  const { engine, store, ledger } = make();
+  await engine.approve(card(engine, { ...hn, name: 'ca', commands: ['echo a', 'echo b', 'echo c'], params: [] }).card_id);
+  const r = engine.invoke('ca', {});
+  if ('error' in r || 'status' in r) throw new Error(JSON.stringify(r));
+  engine.cancelActive();
+  await tick(); await tick(); // let run()'s abort path settle
+  assert.equal(engine.active(), null);
+  assert.equal(ledger.snapshot().filter((x) => x.kind === 'dismissed').length, 1, 'exactly one dismissed row per cancel');
+  void store;
+});
+
+test('restore rolls back and returns an error when registerTool rejects — no phantom visible tool (Fable P2)', async () => {
+  const store = new ProposalStore();
+  const ledger = new Ledger();
+  const { adapter } = fakeAdapter(store);
+  let failNext = false;
+  const regs: Reg[] = [];
+  const mc = {
+    registerTool: async (tool: ModelContextTool<unknown>, options?: RegisterToolOptions) => {
+      if (failNext) throw new Error('registerTool rejected');
+      regs.push({ tool, signal: options?.signal });
+    },
+    getTools: async () => regs.filter((r) => !r.signal?.aborted).map((r) => ({ name: r.tool.name, description: r.tool.description, origin: 'test' })),
+    ontoolchange: null,
+  } as unknown as ModelContext;
+  const engine = new ForgeEngine({ modelContext: () => mc, adapter: () => adapter, store, ledger });
+  for (let i = 0; i < 6; i++) { const t = await engine.approve(card(engine, { ...hn, name: `e${i}`, commands: ['echo x'], params: [] }).card_id); if ('error' in t) throw new Error(t.error); }
+  assert.equal(findRun(engine, 'e0')?.visible ?? false, false, 'e0 evicted (not visible)');
+  failNext = true;
+  const res = await engine.restore('e0');
+  assert.ok('error' in res, 'restore returns an error when registration fails');
+  assert.equal(findRun(engine, 'e0')?.visible ?? false, false, 'e0 is not left phantom-visible');
+});

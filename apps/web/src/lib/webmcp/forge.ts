@@ -296,8 +296,10 @@ export class ForgeEngine {
       registered: false,
       forgedAt: performance.now(),
       forgedAtIso: new Date().toISOString(),
-      runs: replacing?.runs ?? 0,
-      stats: replacing?.stats ?? [],
+      // Stats belong to a content hash (identity). A re-forge that changes the command changes the
+      // hash, so its runs/history must NOT carry over (Opus P2); an idempotent re-register (same hash) keeps them.
+      runs: replacing && replacing.hash === hash ? replacing.runs : 0,
+      stats: replacing && replacing.hash === hash ? replacing.stats : [],
       ac: null,
     };
     this.toolMap.set(spec.name, t);
@@ -324,20 +326,30 @@ export class ForgeEngine {
       return;
     }
     const t0 = performance.now();
-    await mc.registerTool(
-      {
-        name: t.tool,
-        title: `Forged: ${t.name}`,
-        description: forgedDescription(t.spec),
-        inputSchema: forgedInputSchema(t.spec),
-        annotations: { readOnlyHint: t.spec.kind === 'read' },
-        execute: (input: unknown) => {
-          if (ac.signal.aborted) return Promise.resolve({ error: 'unregistered' } as ForgeError);
-          return Promise.resolve(this.invoke(t.name, coerceInput(input)));
+    try {
+      await mc.registerTool(
+        {
+          name: t.tool,
+          title: `Forged: ${t.name}`,
+          description: forgedDescription(t.spec),
+          inputSchema: forgedInputSchema(t.spec),
+          annotations: { readOnlyHint: t.spec.kind === 'read' },
+          execute: (input: unknown) => {
+            if (ac.signal.aborted) return Promise.resolve({ error: 'unregistered' } as ForgeError);
+            return Promise.resolve(this.invoke(t.name, coerceInput(input)));
+          },
         },
-      },
-      { signal: ac.signal },
-    );
+        { signal: ac.signal },
+      );
+    } catch (e) {
+      // A rejected registerTool must never leave a phantom visible-but-unregistered tool that `invoke`
+      // would accept and the MCP relay would advertise (Fable P2). Roll back this tool's own flags; the
+      // approve path also cleans the map, and restore() now returns an error instead of throwing.
+      t.visible = false;
+      t.registered = false;
+      t.ac = null;
+      throw e;
+    }
     t.registered = true;
     note('forge.registered', { ms: Math.round(performance.now() - t0), tool: t.tool, kind: t.spec.kind });
   }
@@ -396,7 +408,11 @@ export class ForgeEngine {
     if (t.visible) return pub(t);
     if (!this.budgetAllows(name)) return { error: 'unpin_one' };
     t.forgedAt = performance.now();
-    await this.registerWithBrowser(t);
+    try {
+      await this.registerWithBrowser(t);
+    } catch {
+      return { error: 'unregistered' }; // registerWithBrowser already rolled back visible/registered
+    }
     this.evictIfOver(name);
     void this.deps.ledger.append('restored', { name, hash: t.hash });
     this.emit();
@@ -424,7 +440,6 @@ export class ForgeEngine {
       const p: Proposal = i === 0 ? adapter.ghostType(sub.lines[i], why, opts) : store.propose(sub.lines[i], why, opts);
       ids.push(p.id);
     }
-    t.runs += 1;
     this.activeInv = { invocation_id, tool: t.tool, hash: t.hash, proposal_ids: ids, activeIndex: 0, startedAt: t0 };
     this.invAc = new AbortController();
     void this.deps.ledger.append('invoked', { tool: t.tool, hash: t.hash, invocation_id, steps: n });
@@ -461,6 +476,7 @@ export class ForgeEngine {
         }
         const stat: RunStat = { t: new Date().toISOString(), invocation_id: inv.invocation_id, step: i, exit_code: p!.exit_code ?? null, ms: p!.ms ?? null };
         t.stats = [...t.stats, stat].slice(-STATS_WINDOW);
+        if (i === 0) t.runs += 1; // a run counts once, when the first step actually executes (a human Enter) — not on invoke (Opus/Fable P2)
         // `executed_step`, not `executed`: the bridge owns `executed` (from OSC markers) and rejects it from clients.
         void this.deps.ledger.append('executed_step', {
           tool: t.tool,
@@ -494,10 +510,10 @@ export class ForgeEngine {
   }
 
   /** Cancel the active invocation (e.g. bridge disconnected). */
-  cancelActive(reason: DismissReason = 'invocation_cancelled'): void {
-    if (!this.activeInv || !this.invAc) return;
-    const inv = this.activeInv;
-    this.dismissFrom(inv, inv.activeIndex, reason);
+  cancelActive(_reason: DismissReason = 'invocation_cancelled'): void {
+    // Only abort. run()'s abort path dismisses the remaining steps and writes ONE `dismissed` row;
+    // doing dismissFrom here too logged the same range twice (Fable P2).
+    if (!this.invAc) return;
     this.invAc.abort();
   }
 
