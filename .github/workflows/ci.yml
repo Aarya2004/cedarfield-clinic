@@ -42,3 +42,7 @@ jobs:
       # real PTY on Linux (zsh for shell integration) + MCP relay over stdio
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh
       - run: pnpm --filter rokan-terminal smoke
+      # standalone unit tests not covered by smoke: trailer parser (native marker) + MCP relay
+      - run: pnpm --filter rokan-terminal test
+      # eval runner leaves no orphaned web/bridge processes
+      - run: node --test evals/test/runner-cleanup.test.mjs

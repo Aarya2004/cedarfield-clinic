@@ -20,7 +20,8 @@
     "test:mcp": "node --test --test-force-exit test/mcp.test.mjs",
     "smoke": "node test/smoke.mjs && node --test --test-force-exit test/mcp.test.mjs",
     "typecheck": "pnpm check",
-    "lint": "pnpm check"
+    "lint": "pnpm check",
+    "test": "node --test --test-force-exit test/mcp.test.mjs test/trailer.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
