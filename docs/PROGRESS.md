@@ -2,6 +2,9 @@
 
 Last update: **2026-08-29 04:00 PT** · **Target: submit Mon 09-01 end of day (Arav); freeze Sun 08-31 evening.** by C (Arav's Claude, Fable 5 — owns the whole tree per `docs/HANDOFF.md`). Branch `main`, all pushed.
 
+## ⚠️ REVERT BEFORE FREEZE
+- `infra/sandbox/wrangler.jsonc`: `SESSIONS_PER_IP_PER_10MIN` and `MAX_CONCURRENT_PER_IP` are temporarily **50 / 20** (raised 2026-08-29 to run many `--judge` checks from one IP while fixing `rokan do`). **Set both back to `3` before the Sun 08-31 freeze** — 3/3 is the stranger-abuse control in `docs/SECURITY.md`. TTL is unchanged (30 min), so the demo is unaffected either way.
+
 ## Gates
 
 | Gate | State | Owner | Evidence |

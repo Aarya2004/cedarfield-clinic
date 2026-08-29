@@ -22,8 +22,11 @@
   "vars": {
     "APP_ORIGIN": "https://rokan-terminal.vercel.app",
     "SESSION_TTL_MS": "1800000",
-    "SESSIONS_PER_IP_PER_10MIN": "3",
-    "MAX_CONCURRENT_PER_IP": "3"
+    // TESTING caps — raised so the builder can run many --judge checks from one IP without hitting the
+    // per-IP limit. REVERT BOTH TO "3" BEFORE THE FREEZE (the 3/3 cap is the stranger-abuse story in
+    // docs/SECURITY.md). TTL stays 30 min so a judge session is unaffected. Tracked in docs/PROGRESS.md.
+    "SESSIONS_PER_IP_PER_10MIN": "50",
+    "MAX_CONCURRENT_PER_IP": "20"
   },
   "observability": { "enabled": true }
 }
