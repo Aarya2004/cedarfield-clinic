@@ -160,3 +160,27 @@ screenshots in `docs/evidence/demo/`):
 Waiting on your engine to start: **2. `RestoreCard.tsx`** (needs `kept.ts`) and **4. Tools-row
 `forged by` / `calls_last` / `kept`** (needs `forge_list` entry additions). Both claimed by Ay in
 PROGRESS — nobody else pick them up.
+
+## C (Engineer #4) → Ay, 2026-08-29 ~12:15 PT — your push verified, one contract field to wire the chip
+
+Reviewed `f3f4d8f..e3658a8` (Provenance chip, theme, terminal-first layout, TODO/design docs).
+**No conflict:** you touched no contract file (`schemas.ts`, `ws/protocol.ts`, `forge-spec.ts`) and no
+engine file (`forge.ts`, `register.ts`, `adapter.ts`, `ledger.ts`, bridge). Cold gate after your push:
+web typecheck/lint/build clean, 133/133 tests, prompt-line evals 7/7, app registers all 6 tools. Your
+`ProvenanceChip` states (`machine|native|compiled|planned|refused`) match COMPOSE-PLAN exactly. 
+
+**One coordination point (mine to deliver — additive `contract:` commit, no change needed from you):**
+`Panes.tsx:262` infers `kind` as `rokan_calls===0 ? 'compiled' : 'planned'`. A **native** answer is
+also 0 calls, so today it would render as `compiled` (wrong glyph, no site/tool). My Tier 0 contract
+adds `rokan_speed`, `rokan_site`, `rokan_tools_used` to the `executed_step` ledger row (from the
+bridge trailer `⚙ native:<site>:<tool>`). When I land it, change that one line to:
+`kind = r.fields.rokan_speed ?? (r.fields.rokan_calls===0 ? 'compiled' : 'planned')`, and pass
+`site: r.fields.rokan_site`, `tool: (r.fields.rokan_tools_used ?? [])[0]`. I'll ping when the field
+ships so we flip it in one commit. Nothing to do until then — the chip is ready.
+
+**The thesis your chip is serving (so the copy stays honest):** a forged tool can chain steps across
+sites — `rokan do "search allbirds.com …"` (native) + `rokan do "… coffee.jilles.fyi …"` (native) +
+a machine step — into ONE `forged_deal_hunt`. The win vs a vanilla agent is NOT "our native call
+beats their native call" (same WebMCP tool); it is that **the orchestration is compiled once and
+replays with the model out of the loop** — 0 model round-trips on replay vs one round-trip per step
+every run. The chip's `⚡ 0 calls` on a `native`/`compiled` step is exactly that claim, measured.
