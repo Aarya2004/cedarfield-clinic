@@ -167,3 +167,40 @@ test('keptFromTools maps engine tools (epoch ms -> ISO forged_at), passing round
   persistKept(s2, mapped);
   assert.equal(loadKept(s2).length, 2); // survives a persist/load round-trip
 });
+
+// --- regression: security review findings (kept.ts hardening) ---
+
+test('finding 1: a huge store is bounded — distinct names cap at KEPT_CAP, same-name spam returns 1 fast', () => {
+  const s = new MemStorage();
+  const distinct = Array.from({ length: 5000 }, (_, i) => kept(`x${i}`));
+  s.map.set(KEPT_KEY, JSON.stringify({ v: 1, tools: distinct }));
+  assert.equal(loadKept(s).length, KEPT_CAP); // early break, not 5000 validations
+  const sameName = Array.from({ length: 5000 }, () => kept('spammy'));
+  s.map.set(KEPT_KEY, JSON.stringify({ v: 1, tools: sameName }));
+  assert.equal(loadKept(s).length, 1); // MAX_SCAN bounds the work; still correct
+});
+
+test('finding 2: keptFromTools never throws on a finite out-of-range forgedAt', () => {
+  for (const bad of [1e300, 8.64e15 + 1, Number.MAX_VALUE, -1e300]) {
+    const mapped = keptFromTools([{ spec: spec('rangey'), hash: 'H', pinned: false, forgedAt: bad }]);
+    assert.equal(Number.isNaN(Date.parse(mapped[0].forged_at)), false); // valid ISO, no RangeError
+  }
+});
+
+test('finding 3: a hostile entry with a throwing getter is skipped, never thrown', () => {
+  const s = new MemStorage();
+  const hostile = { spec: spec('ok_name'), get hash(): string { throw new Error('boom'); }, forged_at: 'x', pinned: false };
+  persistKept(s, [hostile as unknown as KeptTool, kept('good')]); // must not throw
+  assert.deepEqual(loadKept(s).map((k) => k.spec.name), ['good']);
+});
+
+test('finding 5: an absurd hash length is rejected; an over-long forged_by is dropped but the entry kept', () => {
+  const s = new MemStorage();
+  const longHash = { ...kept('h1'), hash: 'a'.repeat(200) };
+  const longBy = { ...kept('h2'), forged_by: 'z'.repeat(200) };
+  s.map.set(KEPT_KEY, JSON.stringify({ v: 1, tools: [longHash, longBy] }));
+  const back = loadKept(s);
+  assert.equal(back.find((k) => k.spec.name === 'h1'), undefined); // over-long hash → entry dropped
+  const h2 = back.find((k) => k.spec.name === 'h2');
+  assert.ok(h2 && h2.forged_by === undefined); // entry kept, over-long forged_by dropped
+});

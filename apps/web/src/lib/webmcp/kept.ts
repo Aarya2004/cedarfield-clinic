@@ -3,9 +3,13 @@
  *
  * Posture, on purpose: a kept entry is *data*, never a registration. Loading the store
  * NEVER calls `registerTool`; the restore card re-opens the approval card and the human
- * approves again. Every entry carries the spec's content hash; on restore the hash is
- * recomputed and a mismatch flags the entry `changed` so a tampered or drifted store can
- * never silently arm a tool. Pure helpers, unit-tested; `App.tsx` wires them to the engine.
+ * approves again — that approval gate, not the hash, is the guarantee that nothing arms
+ * itself. Every entry carries the spec's content hash; on restore the hash is recomputed
+ * and a mismatch flags the entry `changed`. The hash is a *drift signal* (spec edited but
+ * hash stale, or engine version drift), not a tamper boundary: the store is same-origin and
+ * the hash is deterministic, so anyone able to write it could recompute a matching hash.
+ * Never treat `changed:false` as "safe to register" — restore always re-approves.
+ * Pure helpers, unit-tested; `App.tsx` wires them to the engine.
  *
  * Mirrors `terminal/judge-resume.ts`: a `StorageLike` seam, field-by-field validation,
  * every access wrapped so a private-mode / blocked / throwing `localStorage` degrades to
@@ -39,21 +43,37 @@ interface StorageLike {
   removeItem(k: string): void;
 }
 
-/** A single stored entry that passes structural validation, or null. */
+/** Length bounds — reject the absurd rather than store it. A sha-256 hex hash is 64 chars; an ISO instant is 24. */
+const HASH_MAX = 128;
+const FORGED_AT_MAX = 40;
+const FORGED_BY_MAX = 64;
+/** The largest `Date`-representable epoch-ms magnitude; `new Date(x).toISOString()` throws past it. */
+const MAX_EPOCH_MS = 8_640_000_000_000_000;
+
+/**
+ * A single stored entry that passes structural validation, or null. Wrapped so that even a
+ * future validator change (or a hostile object with throwing getters) can never crash the
+ * load path — the caller's no-throw guarantee does not depend on `validateForgeSpec` staying total.
+ */
 function parseEntry(raw: unknown): KeptTool | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const e = raw as Partial<KeptTool>;
-  if (validateForgeSpec(e.spec) !== null) return null;
-  if (typeof e.hash !== 'string' || e.hash.length === 0) return null;
-  if (typeof e.forged_at !== 'string' || e.forged_at.length === 0) return null;
-  const out: KeptTool = {
-    spec: e.spec as ForgeSpec,
-    hash: e.hash,
-    pinned: e.pinned === true,
-    forged_at: e.forged_at,
-  };
-  if (typeof e.forged_by === 'string' && e.forged_by.length > 0) out.forged_by = e.forged_by;
-  return out;
+  try {
+    if (!raw || typeof raw !== 'object') return null;
+    const e = raw as Partial<KeptTool>;
+    if (validateForgeSpec(e.spec) !== null) return null;
+    if (typeof e.hash !== 'string' || e.hash.length === 0 || e.hash.length > HASH_MAX) return null;
+    if (typeof e.forged_at !== 'string' || e.forged_at.length === 0 || e.forged_at.length > FORGED_AT_MAX) return null;
+    const out: KeptTool = {
+      spec: e.spec as ForgeSpec,
+      hash: e.hash,
+      pinned: e.pinned === true,
+      forged_at: e.forged_at,
+    };
+    if (typeof e.forged_by === 'string' && e.forged_by.length > 0 && e.forged_by.length <= FORGED_BY_MAX)
+      out.forged_by = e.forged_by;
+    return out;
+  } catch {
+    return null; // defense-in-depth: a bad entry is skipped, never thrown
+  }
 }
 
 /**
@@ -74,10 +94,15 @@ export function loadKept(storage: StorageLike | null): KeptTool[] {
   if (!parsed || typeof parsed !== 'object') return [];
   const list = (parsed as Partial<KeptStore>).tools;
   if (!Array.isArray(list)) return [];
+  // Bound the validation work a hostile/corrupt store can force on the page-load path:
+  // scan at most MAX_SCAN entries and stop once KEPT_CAP unique names are collected.
+  const MAX_SCAN = KEPT_CAP * 10;
   const byName = new Map<string, KeptTool>();
-  for (const raw of list) {
-    const entry = parseEntry(raw);
-    if (entry) byName.set(entry.spec.name, entry); // last wins on a duplicate name
+  for (let i = 0; i < list.length && i < MAX_SCAN; i++) {
+    const entry = parseEntry(list[i]);
+    if (!entry) continue;
+    byName.set(entry.spec.name, entry); // last wins within the scanned window
+    if (byName.size >= KEPT_CAP) break;
   }
   return [...byName.values()].slice(0, KEPT_CAP);
 }
@@ -150,7 +175,10 @@ interface ForgedLike {
  */
 export function keptFromTools(tools: readonly ForgedLike[]): KeptTool[] {
   return tools.map((t) => {
-    const forged_at = new Date(Number.isFinite(t.forgedAt) ? t.forgedAt : Date.now()).toISOString();
+    // Finite-but-out-of-range timestamps (past ±8.64e15 ms) make `new Date(x).toISOString()` throw,
+    // so bound the magnitude too — never `Invalid Date`, never a RangeError.
+    const ms = Number.isFinite(t.forgedAt) && Math.abs(t.forgedAt) <= MAX_EPOCH_MS ? t.forgedAt : Date.now();
+    const forged_at = new Date(ms).toISOString();
     const entry: KeptTool = { spec: t.spec, hash: t.hash, pinned: t.pinned === true, forged_at };
     if (typeof t.forged_by === 'string' && t.forged_by.length > 0) entry.forged_by = t.forged_by;
     return entry;
