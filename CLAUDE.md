@@ -33,7 +33,7 @@
 - Freeze Tue 09-01 12:00. Submit Wed 09-02 by 18:00.
 
 ## Verify before "done"
-`pnpm typecheck && pnpm lint && pnpm build` in `apps/web`; `node --check` + a real PTY smoke in `packages/bridge`; `wrangler deploy --dry-run` in `infra/sandbox`; then open the *deployed* URL in ChatGPT desktop (GPT-5.6 Sol/Terra) and in Chrome 149 with `chrome://flags/#enable-webmcp-testing` + the Model Context Tool Inspector. Screenshot into `docs/evidence/`. The April 23 hackathon was lost because the app didn't open at demo. Zero tolerance.
+`pnpm typecheck && pnpm lint && pnpm build` in `apps/web`; `node --check` + a real PTY smoke in `packages/bridge`; `wrangler deploy --dry-run` in `infra/sandbox`; then open the *deployed* URL in ChatGPT desktop (GPT-5.6 Sol/Terra) and in Chrome 152+ (stable 153; `navigator.modelContext` was removed in 152 — `document.modelContext` only) with `chrome://flags/#enable-webmcp-testing` + DevTools → Application → **WebMCP** pane. Screenshot into `docs/evidence/`. The April 23 hackathon was lost because the app didn't open at demo. Zero tolerance.
 
 ## Stack
 Next.js 15 (App Router, TS strict, Tailwind, shadcn) on Vercel · xterm.js (+fit, +webgl) · Node 20 + node-pty + ws · cloudflared · Cloudflare Workers Paid + `@cloudflare/sandbox` · Python 3.11 + uv in the container · Rokan palette (`--bg #fafaf6 --ink #18181b --accent #d97706`), Instrument Serif / Geist Sans / Geist Mono.

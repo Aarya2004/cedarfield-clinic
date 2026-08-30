@@ -351,7 +351,7 @@ export function fixedToolDefs(): ToolDef[] {
       title: 'List forged tools',
       description: FORGE_LIST_DESCRIPTION,
       inputSchema: forgeListSchema,
-      annotations: { readOnlyHint: true },
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute() {
         const l = forge.list();
         note('forge_list.called', { tools: l.tools.length });
