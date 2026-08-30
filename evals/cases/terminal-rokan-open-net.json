@@ -11,8 +11,8 @@
   {
     "invoke": "terminal_propose",
     "input": {
-      "command": "rokan do \"what is the latest version of requests at pypi.org/project/requests\"",
-      "why": "an UNSEEDED target (not in the seed pack): the sandbox plans for real through the capped model proxy — a cold run can take tens of seconds on ½ vCPU, so the harness polls the screen instead of a long RPC"
+      "command": "rokan do \"what is the default port at www.postgresql.org/docs/current/runtime-config-connection.html\"",
+      "why": "an UNSEEDED page (postgresql.org/docs/…/runtime-config-connection is not in the seed pack): the sandbox plans for real through the capped model proxy; verified in the local image 2026-08-29 (1 call, verified, \"5432 by default\"). A cold run can take tens of seconds on ½ vCPU, so the harness polls the screen."
     }
   },
   {
@@ -23,7 +23,7 @@
     "key": "Enter"
   },
   {
-    "waitFor": "(window.__rokan.screen(40) ?? []).some(l => /requests \\d+\\.\\d+|abstained|planner_unavailable|drift_detected/.test(l))",
+    "waitFor": "(window.__rokan.screen(40) ?? []).some(l => /5432|abstained|planner_unavailable|drift_detected/.test(l))",
     "timeout": 120000
   },
   {
@@ -31,7 +31,7 @@
     "equals": false
   },
   {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /requests \\d+\\.\\d+/.test(l))",
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /5432/.test(l))",
     "equals": true
   },
   {
@@ -44,7 +44,7 @@
   {
     "invoke": "terminal_propose",
     "input": {
-      "command": "rokan do \"what is the latest version of requests at pypi.org/project/requests\"",
+      "command": "rokan do \"what is the default port at www.postgresql.org/docs/current/runtime-config-connection.html\"",
       "why": "the same question again: born in the sandbox a minute ago, it must replay at 0 model calls"
     }
   },
