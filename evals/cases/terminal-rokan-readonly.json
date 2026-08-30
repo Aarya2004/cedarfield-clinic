@@ -11,7 +11,7 @@
   {
     "invoke": "terminal_propose",
     "input": {
-      "command": "rokan do \"sign up for the newsletter with judge@example.org at example.org\"",
+      "command": "rokan do \"sign up for the newsletter with judge@example.org at httpbin.org/forms/post\"",
       "why": "a write-shaped task: the sandbox's read-only policy (ROKAN_TASK_CLASSES) must refuse it before any browser action"
     }
   },

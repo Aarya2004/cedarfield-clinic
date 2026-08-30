@@ -35,7 +35,7 @@ what the agent arms are timed on, so that is the number the multiplier uses.
 And when a page drifts, a cached scrape returns a confident wrong number (shown live in `evals/ab/drift`);
 Rokan re-checks and **refuses** the operation that no longer verifies (its `recheck` — verified, or refused;
 measured live ×2 in `docs/evidence/ab/drift-run-*.txt`: naive `$75`, Rokan `DEAD · drift_detected`, no stale answer). Consuming a site's *own* WebMCP tools is measured too, in builder mode — the judge sandbox
-has no model or browser, so there it replays compiled operations and runs forged tools.
+now carries headless Chromium and a capped, sid-bound model proxy (the key never enters the container — `docs/SECURITY.md` §6), so a stranger can `rokan do` any site on the open web there; the native-consumption numbers above were measured in builder mode.
 
 ## What is on the page (seven fixed tools + up to five forged)
 

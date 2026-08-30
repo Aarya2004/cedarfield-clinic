@@ -74,9 +74,9 @@ by your Enter. (Old order, kept as the second sentence: a terminal you and your 
 your Enter is the trust boundary.)
 
 **Hero moment (the 15 seconds that must land):** a command you ran a minute ago is in the
-history → select it → **Forge** → card (name `hn_top`, param `n`) → approve → **`forged_hn_top`
+history → select it → **Forge** → card (name `status_of`, param `site`) → approve → **`forged_status_of`
 appears in the agent's site-tools list without a reload** → "top 3 now" → the agent calls
-`forged_hn_top({n:3})` → ghost-typed → your Enter → `calls:0 · 0.36s` in the ledger. _Then_ the
+`forged_status_of({site:"www.vercel-status.com"})` → ghost-typed → your Enter → `calls:0 · 0.36s` in the ledger. _Then_ the
 second act: proposals, Share-screen + redaction, the signed ledger — why the birth was safe.
 
 **Audience (Impact criterion):** developers whose ChatGPT/Codex needs to act on their machine,
@@ -88,7 +88,7 @@ shell without ever getting execution; the human gets a co-pilot that proposes, r
 remembers — and the two of them grow a tool library neither had at the start.
 
 **Why Rokan:** `rokan do` is the command most worth forging: typed once (model plans, browser
-verifies), forged into `forged.hn_top({n})`, replayed at 0 calls. The thesis — operations
+verifies), forged into `forged.status_of({site})`, replayed at 0 calls. The thesis — operations
 compile, the model leaves the hot path — on camera, in the world's format, without exposing
 browser replay to the WebMCP layer.
 
@@ -301,7 +301,7 @@ Gates are binary. A gate not green by its time triggers its kill rule (§10) —
 
 - 11:00 A + Ay: **challenge office hours** (Netlify/Render pages). Ask: are inert proposal tools
   OK; iframe/decl limits; any tool-count guidance; whether judges test in ChatGPT or Chrome.
-- C: seeded ops in the sandbox; `rokan do "top 5 HN titles"` → forge → `forged_hn_top({n})` →
+- C: seeded ops in the sandbox; `rokan do "what is the current status at githubstatus.com"` → forge → `forged_status_of({site})` →
   0-call replay shows `calls:0 ms:<400` in the ledger; no key in the container (no model calls possible); egress allowlist.
 - Ay: polish — empty states, error states (bridge down, tunnel died, WS reconnect), keyboard
   focus discipline, the 12-tool budget, mobile = "open on desktop" card.
@@ -366,7 +366,7 @@ L3 — ChatGPT desktop (A)
 L4 — Judge mode (A from a second account, Ay from his machine)
 
 - T4.1 Cold open → sandbox within 15 s; shell responsive.
-- T4.2 `rokan do "top 5 HN titles"` seeded → answer + `calls:0`. Unseeded task → answer with `calls:1..3`, or honest refusal.
+- T4.2 `rokan do "what is the current status at githubstatus.com"` seeded → answer + `calls:0`. Unseeded task → answer with `calls:1..3`, or honest refusal.
 - T4.3 Model-call cap hit → clear message, shell still works.
 - T4.4 Egress: `curl https://example.org` OK; `curl https://evil.example` blocked.
 - T4.5 TTL expiry → "session ended" card with a "new session" button.
@@ -387,11 +387,11 @@ laptop (Aarya) mirrors the setup for a second take. `demo-backup.mp4` one keypre
 
 | t         | shot                                                                                                                                                             | narration (short)                                                                     |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 0:00–0:20 | **Cold open on the birth.** History shows `rokan do "top 5 HN titles"` already run. Select → **Forge** → card `hn_top`, param `n` → approve → cut to the agent's site-tools list: **`forged_hn_top` appears** (DevTools WebMCP panel 2 s) | "I did this once. Now it's a tool. Registered live — it didn't exist when the page loaded." |
-| 0:20–0:35 | "top 3 now" → agent calls `forged_hn_top({n:3})` → ghost-typed → Enter → ledger `calls:0 · 0.36s`                                                                | "The agent calls it. My Enter runs it. Zero model calls — the model left the hot path." |
+| 0:00–0:20 | **Cold open on the birth.** History shows `rokan do "what is the current status at githubstatus.com"` already run. Select → **Forge** → card `hn_top`, param `n` → approve → cut to the agent's site-tools list: **`forged_hn_top` appears** (DevTools WebMCP panel 2 s) | "I did this once. Now it's a tool. Registered live — it didn't exist when the page loaded." |
+| 0:20–0:35 | "top 3 now" → agent calls `forged_status_of({site:"www.vercel-status.com"})` → ghost-typed → Enter → ledger `calls:0 · 0.36s`                                                                | "The agent calls it. My Enter runs it. Zero model calls — the model left the hot path." |
 | 0:35–0:55 | Rewind: "how did that command get there?" — ask "what's in this repo, are tests passing?" → `ls` ghost-typed → Enter → `pytest -q` → Enter → agent reads screen → answer | "Every command the agent wants is a proposal. It can't type Enter."                  |
 | 0:55–1:10 | Share-screen off → `{shared:false}`; on → a fake key renders `[redacted]`                                                                                          | "It reads what I let it read. Secrets never leave the tab."                           |
-| 1:10–1:40 | "get me the top 5 HN titles" → `rokan do …` proposed → Enter → browser does it → terminal shows the answer + `2186ms` (planned: 1 model call, no ⚡; counts are not printed — FIELD-NOTES R5/R7) — _this is the command we forged at 0:00_                | "`rokan do` browses for real — the model plans once, the page verifies."              |
+| 1:10–1:40 | "what is the main heading at httpbin.org/html" (unseeded) → `rokan do …` proposed → Enter → browser does it → terminal shows the answer + `2186ms` (planned: 1 model call, no ⚡; counts are not printed — FIELD-NOTES R5/R7) — _this is the command we forged at 0:00_                | "`rokan do` browses for real — the model plans once, the page verifies."              |
 | 1:40–2:05 | Second birth, agent-initiated: three approved commands → agent calls `forge_create` → card → approve → `forged_deploy` (kind: write, **CONSEQUENTIAL** banner) → invoke → Enter | "It forged its own workflow after I approved it three times. Writes are marked. Still my Enter." |
 | 2:05–2:25 | Recovery beat: forged tool exits non-zero → agent reads the redacted tail → proposes the fix → Enter → ledger fail→fix                                             | "When it breaks, it reads, proposes, and I decide."                                   |
 | 2:25–2:40 | Ledger scroll: registered / proposed / executed / forged / invoked, each with ms and calls; export JSON, HMAC-verified                                            | "Every tool, who made it, who called it, what it cost. Do it once. Now it's a tool."  |

@@ -11,5 +11,6 @@ Try:
 Then ask your agent (ChatGPT desktop with GPT-5.6 Sol/Terra, or Chrome 149+ with WebMCP)
 to propose a command, press Enter, and forge what you just did into a tool.
 
-`rokan do "<question> at <site>"` replays a verified, seeded operation with zero model calls (⚡) — 54
-seeded sites; see SKILL.md here. The sandbox has no API key by design: anything unseeded abstains honestly.
+`rokan do "<question> at <site>"` replays a verified, seeded operation with zero model calls (⚡) — 52 seeded
+operations across 49 hosts; see SKILL.md here. Anything unseeded plans for real through a capped model proxy
+(read-only task classes; the key never enters this container) and then replays at ⚡ next time.

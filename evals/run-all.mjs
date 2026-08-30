@@ -174,7 +174,10 @@ if (!up) {
 let pairingHash = '';
 async function judgeHash() {
   const t0 = Date.now();
-  const r = await fetch(`${judgeUrl.replace(/\/$/, '')}/api/session`, { method: 'POST' });
+  // /api/session is issued to the app's Origin or to the eval secret (worker.ts). The secret comes from
+  // ROKAN_EVAL_SECRET or infra/sandbox/.dev.vars (EVAL_SECRET=…; gitignored) — never from a case file.
+  const evalSecret = process.env.ROKAN_EVAL_SECRET ?? (() => { try { return /^EVAL_SECRET=(.+)$/m.exec(readFileSync(`${root}infra/sandbox/.dev.vars`, 'utf8'))?.[1]?.trim() ?? ''; } catch { return ''; } })();
+  const r = await fetch(`${judgeUrl.replace(/\/$/, '')}/api/session`, { method: 'POST', headers: evalSecret ? { 'x-rokan-eval': evalSecret } : {} });
   const text = await r.text();
   let body;
   try {

@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(headless=True, args=args)
         pg = b.new_page()
-        pg.goto("https://example.org", timeout=30000)
+        pg.goto("https://httpbin.org/html", timeout=30000)  # example.org resolves to 127.0.0.1 on some dev hosts (found 2026-08-29)
         title = pg.title()
         b.close()
 except Exception as e:  # noqa: BLE001 — the smoke wants the reason on one line

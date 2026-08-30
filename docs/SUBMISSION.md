@@ -69,7 +69,7 @@ compiled task that is **28.9×–42.4× faster in wall clock at zero model calls
 agents; small, so we report min/max in `docs/measurements/2026-08-29-ab.md` and never round up.
 Honest distinctions we state on camera: the compiled replay is browserless; the native replay
 re-drives a live browser to call the site's own WebMCP tool and is builder-mode only — the judge
-sandbox has no model or browser, so there it replays compiled operations and forged tools, not
+sandbox carries headless Chromium and a capped model proxy (no key in the container — SECURITY §6), so a judge can `rokan do` any site there; the native numbers were measured in builder mode, not
 native consumption. Against Codex on the native task the margin is only 3.3×; we say that too.
 
 The other half is trust. When a page changes, a cached scrape a coding agent wrote keeps running and

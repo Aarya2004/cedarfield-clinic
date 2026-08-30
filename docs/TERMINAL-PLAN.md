@@ -70,7 +70,7 @@ executed continuously; PROGRESS "Now / In flight" is the hand-off.
 - Rendered as an xterm **decoration** (`term.registerMarker(0)` at the cursor line +
   `term.registerDecoration({marker, x: cursorX, layer:'top'})`; text set in `onRender`), never
   written to the PTY. Colour: accent at 70%; dangerous: red + banner. The `why` (sanitised) shows
-  as a second line under the prompt: `← forged_hn_top · step 1/1 · Tab insert · Enter run · Esc dismiss`.
+  as a second line under the prompt: `← forged_status_of · step 1/1 · Tab insert · Enter run · Esc dismiss`.
 - Shown only while the **local line buffer is empty** (typed printable chars since the last prompt
   marker, minus backspaces; reset on Enter, Ctrl-C, Ctrl-U, and on OSC 133;A). If the human is
   mid-typing, the ghost hides (proposal stays pending; Esc still dismisses).

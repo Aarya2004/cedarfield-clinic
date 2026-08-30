@@ -11,7 +11,7 @@
   {
     "invoke": "terminal_propose",
     "input": {
-      "command": "rokan do \"what is the main heading at example.org\"",
+      "command": "rokan do \"what is the main heading at httpbin.org/html\"",
       "why": "an UNSEEDED site: the sandbox must plan for real through the capped model proxy (cold run, ≥1 model call)"
     }
   },
@@ -36,13 +36,13 @@
     "equals": false
   },
   {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /Example Domain/i.test(l))",
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /Moby/i.test(l))",
     "equals": true
   },
   {
     "invoke": "terminal_propose",
     "input": {
-      "command": "rokan do \"what is the main heading at example.org\"",
+      "command": "rokan do \"what is the main heading at httpbin.org/html\"",
       "why": "the same question again: born in the sandbox a minute ago, it must replay at 0 model calls"
     }
   },
