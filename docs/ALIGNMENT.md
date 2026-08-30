@@ -367,3 +367,17 @@ If you had local edits in `PairingCard` or `LedgerPane`, mine are ~30 lines each
 human-typed run showed "command not recorded by the shell" on the new build (seen in the judge-mode
 demo shots). It now takes the LAST `;` field; legacy `cmd;<base64>` still works. Regression test in
 `runfeed.test.ts`.
+
+## Ping → Aarya (2026-08-30 ~02:15 PT, Engineer #4) — Workbench decision + one lane item, pending Arav's go
+- Decision record: `docs/SELF-EVAL-WORKBENCH.md` §8 and `docs/WORKBENCH-PLAN.md`. Short form: **no pivot to a
+  canvas** (cardea, 2026-08-26, 818 tests, is already that; no terminal entry exists). We absorb the idea:
+  cross-site *native* steps inside forged tools (my lane: `rokan-do native invoke`, in progress) and, if you have
+  ≤1 day, a **read-only step strip** for the selected forged tool — one card per `commands[]` step showing
+  site · tool · rung chip (⚙ native / ⚡ compiled / planned) · ms · calls from the `executed_step` ledger rows.
+  **On branch `workbench`, behind `NEXT_PUBLIC_WORKBENCH=1`, `/` untouched; merges only if demoable Mon 22:00 PT
+  with web 211+/211 green. Do not start until Arav confirms.** No new page tools (7 fixed + ≤5 forged stays).
+- Sandbox is now `standard-3` (2 vCPU): a storefront's WebMCP tools never registered in time on ½ vCPU (live:
+  0 tools / 14.8 s → now 10 tools / 8.2 s, `search_catalog` 226 ms, 0 calls). Nothing changes for the web lane
+  except that "sandbox issued in X ms" numbers may move; keep rendering measured values only.
+- Judges may never open the app (Devpost FAQ): README / description / video carry the score. Anything you
+  polish in the UI, also make it visible in the first 15 s of the video.
