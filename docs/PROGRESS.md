@@ -1,6 +1,29 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-29 ~22:45 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
+Last update: **2026-08-30 ~08:30 local (Aarya's Claude)** Branch `main`, all pushed.
+
+## Build log — Aarya's Claude (2026-08-30 ~08:30 local) — submission map #10: six tickets closed (RestoreCard live, video script, copy pass)
+Worked via the wayfinder map (issue #10); web lane + docs only. Final gate re-run by me after every merge:
+typecheck/lint/build clean · web suite **228/228** (215 + 13 restore tests) · headless evals **9/9**.
+- **#12 `b1a3501`** — RestoreCard + the kept **write path**. New `restore.ts` (importable decision logic,
+  13 tests) + `RestoreCard.tsx` in the right rail (null on empty store); `persistKept` wired into the
+  forge subscriber. Three deliberate deviations, all tested: `forgedAt` is `performance.now()` so entries
+  add `timeOrigin` (else every `forged_at` is 1970); the writer retains page-load entries until seen live
+  (else the restore's own first emit wipes the store); a kept spec matching a hard-blocked pattern lands
+  as `needs_confirmation` in Forge, never auto-confirmed. `restored` was already in `CLIENT_LEDGER_KINDS`
+  — rows forward + countersign, **no contract file touched**. Live proof (17-step CDP run): forge 2 →
+  reload → restore → both registered, `restored` rows, **kept badges lit** (closes the #13 caveat below).
+  Shots in `scratch/restore-card-*.png`.
+- **#15** — `docs/VIDEO-SCRIPT.md`: 2:50 script, scoring closes by 1:02, every figure → evidence path.
+  Untraceable numbers excluded (233 ms native-invoke → raw-backed 469 ms). Do NOT film status.openai.com
+  / www.cloudflarestatus.com (measured abstain, J19).
+- **#22** — README + SUBMISSION honesty pass: retired-claim grep zero hits; cut unverifiable "54 findings",
+  "≈5 s cold start", "200+ tests"; `npx rokan-terminal` confirmed NOT on npm (404) — prose uses the
+  `node …/bin` form with a publish TODO; kept/restore copy updated to shipped state after #12 verified.
+- **Flake for the freeze checklist:** `forge-injection.json` step 4 (`approve → null`) failed once on a
+  full eval run, green alone + on re-run; pre-existing path, untouched by these tickets.
+**Remaining on map #10, all human-gated:** #16 Workbench go/no-go (→ #17 step strip), #18 vercel --prod +
+`NEXT_PUBLIC_SANDBOX_CAPS`, #19 ChatGPT Sol/Terra recording, #20 npm publish, #21 record video, #23 file Devpost.
 
 ## Build log — Aarya's Claude (2026-08-30 ~07:45 local) — UI tickets #11 / #13 / #14, all green
 Web lane only (`apps/web/**`); no registered tool changed (`agentTools()` lists in `evals/cases/*.json`
