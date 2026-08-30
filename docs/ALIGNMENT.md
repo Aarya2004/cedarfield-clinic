@@ -381,3 +381,6 @@ demo shots). It now takes the LAST `;` field; legacy `cmd;<base64>` still works.
   except that "sandbox issued in X ms" numbers may move; keep rendering measured values only.
 - Judges may never open the app (Devpost FAQ): README / description / video carry the score. Anything you
   polish in the UI, also make it visible in the first 15 s of the video.
+- **Branch `workbench` exists** (from `main@6af2d52`, 2026-08-30 ~02:30 PT, Arav's instruction): every Workbench-shaped
+  change in this repo goes there; `main` stays the shipped product and the freeze target. Merge forward only
+  under the Mon 22:00 PT kill rule in `docs/WORKBENCH-PLAN.md`.
