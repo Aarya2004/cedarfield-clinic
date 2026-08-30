@@ -28,6 +28,7 @@ import { corsHeaders, originAllowed } from './origin';
 import { issueSid, verifySid, SID_RE } from './sid';
 import { PROBE_HTML } from './probe-page';
 import { NATIVE_PROBE_PY } from './probe-native';
+import { CAMERA_PROBE_HTML } from './probe-camera';
 import { allowedPath, validateModelRequest, upstreamHeaders, settledUsdMicros, estimateUsdMicros, callWeight, capError, isPassthroughStatus, UPSTREAM_MESSAGES, MAX_BODY_BYTES, DUMMY_API_KEY, type Usage } from './model-proxy';
 
 export { Gate };
@@ -122,6 +123,7 @@ export default {
     // Step-1 probe page for the Workbench decision (2026-08-30) — static, registers one tool; no session.
     if (url.pathname === '/probe/next-step') return new Response(PROBE_HTML, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
     if (url.pathname === '/probe/native-invoke.py') return new Response(NATIVE_PROBE_PY, { headers: { 'content-type': 'text/x-python; charset=utf-8', 'cache-control': 'no-store' } });
+    if (url.pathname === '/probe/camera') return new Response(CAMERA_PROBE_HTML, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 
     // ---- model proxy ---------------------------------------------------------------------------
     if (url.pathname.startsWith('/api/model/')) {
