@@ -105,6 +105,17 @@ export function estimateUsdMicros(model: string, bodyBytes: number, maxTokens: n
   return usdMicros(model, { input_tokens: Math.ceil(bodyBytes / 3), output_tokens: maxTokens });
 }
 
+/**
+ * What a call finally costs. With `usage` (2xx) the real numbers; a 4xx (e.g. rokan-do's per-model temperature
+ * probe, which Anthropic answers 400) produced no output, so only the input estimate is kept — measured live
+ * 2026-08-29: the pessimistic reservation charged a 400 as 46 800 µ$; a network failure keeps the reservation.
+ */
+export function settledUsdMicros(model: string, status: number, usage: Usage | undefined, bodyBytes: number, reservedMicros: number): number {
+  if (usage) return usdMicros(model, usage);
+  if (status >= 400 && status < 500) return usdMicros(model, { input_tokens: Math.ceil(bodyBytes / 3) });
+  return reservedMicros;
+}
+
 /** Sonnet calls count triple against the call caps (they cost ~2–3× and are the ladder's second rung). */
 export function callWeight(model: string): number {
   return model.startsWith('claude-sonnet') ? 3 : 1;

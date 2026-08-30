@@ -28,10 +28,10 @@
     // (Arav signs off). TTL currently 30 min so a judge session is unaffected. Tracked in docs/PROGRESS.md.
     "SESSIONS_PER_IP_PER_10MIN": "10",
     "MAX_CONCURRENT_PER_IP": "5",
-    "MODEL_CALLS_PER_SID": "30",
-    "MODEL_CALLS_PER_SID_PER_MIN": "10",
-    "MODEL_CALLS_PER_IP_PER_10MIN": "60",
-    "MODEL_CALLS_PER_DAY": "600",
+    "MODEL_CALLS_PER_SID": "120",
+    "MODEL_CALLS_PER_SID_PER_MIN": "40",
+    "MODEL_CALLS_PER_IP_PER_10MIN": "240",
+    "MODEL_CALLS_PER_DAY": "2000",
     "MODEL_USD_TOTAL_MAX": "40"
   },
   "observability": { "enabled": true }

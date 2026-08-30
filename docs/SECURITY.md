@@ -162,9 +162,9 @@ Worker vars are the enforcement; this table supersedes any number quoted elsewhe
 
 | phase | `SESSION_TTL_MS` | `SESSIONS_PER_IP_PER_10MIN` | `MAX_CONCURRENT_PER_IP` | `max_instances` (`standard-1`) | model calls / session (`MODEL_CALLS_PER_SID`) | / sid / min | / IP / 10 min | / day | all-time USD (`MODEL_USD_TOTAL_MAX`) |
 |---|---|---|---|---|---|---|---|---|---|
-| now (open-net, **deployed 2026-08-29 evening**) | 1 800 000 (30 min) | 10 | 5 | 20 | 30 (a Sonnet call weighs 3) | 10 | 60 | 600 | 40 |
-| judging window (freeze → results) | 3 600 000 (60 min) | 10 | 5 | 20 | 30 | 10 | 60 | 600 | 40 (+ the key's own console limit) |
-| after results | 1 800 000 | 3 | 3 | 10 | 20 | 10 | 40 | 300 | 40 |
+| now (open-net, **deployed 2026-08-29 evening**) | 1 800 000 (30 min) | 10 | 5 | 20 | 120 weighted (a Sonnet call weighs 3; one cold `rokan do` ≈ 6–10) | 40 | 240 | 2 000 | 40 |
+| judging window (freeze → results) | 3 600 000 (60 min) | 10 | 5 | 20 | 120 | 40 | 240 | 2 000 | 40 (+ the key's own console limit) |
+| after results | 1 800 000 | 3 | 3 | 10 | 60 | 40 | 120 | 600 | 40 |
 
 Per-IP model caps use the IP recorded at `/api/session` (proxy traffic itself leaves through Cloudflare's
 shared egress, so its source address identifies no one). Reservation precedence usd → day → ip → sid →

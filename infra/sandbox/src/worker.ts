@@ -26,7 +26,7 @@ import { Gate, MODEL_BUDGET_NAME } from './gate';
 import { gateKey, type ModelCaps } from './gate-logic';
 import { corsHeaders, originAllowed } from './origin';
 import { issueSid, verifySid, SID_RE } from './sid';
-import { allowedPath, validateModelRequest, upstreamHeaders, usdMicros, estimateUsdMicros, callWeight, capError, isPassthroughStatus, UPSTREAM_MESSAGES, MAX_BODY_BYTES, DUMMY_API_KEY, type Usage } from './model-proxy';
+import { allowedPath, validateModelRequest, upstreamHeaders, settledUsdMicros, estimateUsdMicros, callWeight, capError, isPassthroughStatus, UPSTREAM_MESSAGES, MAX_BODY_BYTES, DUMMY_API_KEY, type Usage } from './model-proxy';
 
 export { Gate };
 
@@ -90,11 +90,11 @@ const num = (v: string | undefined, dflt: number) => {
 
 function modelCaps(env: Env): ModelCaps {
   return {
-    perSid: num(env.MODEL_CALLS_PER_SID, 30),
-    perSidPerMin: num(env.MODEL_CALLS_PER_SID_PER_MIN, 10),
+    perSid: num(env.MODEL_CALLS_PER_SID, 120),
+    perSidPerMin: num(env.MODEL_CALLS_PER_SID_PER_MIN, 40),
     perSidInflight: 1,
-    perIpPerWindow: num(env.MODEL_CALLS_PER_IP_PER_10MIN, 60),
-    perDay: num(env.MODEL_CALLS_PER_DAY, 600),
+    perIpPerWindow: num(env.MODEL_CALLS_PER_IP_PER_10MIN, 240),
+    perDay: num(env.MODEL_CALLS_PER_DAY, 2000),
     usdTotalMicros: num(env.MODEL_USD_TOTAL_MAX, 40) * 1_000_000,
   };
 }
@@ -169,7 +169,7 @@ export default {
       } catch (e) {
         console.error('model upstream fetch failed', sid.slice(0, 8), e instanceof Error ? e.message : String(e));
       }
-      const actual = usage ? usdMicros(v.model, usage) : est; // no usage → the pessimistic reservation stands
+      const actual = settledUsdMicros(v.model, status, usage, text.length, est);
       await budget.settleModel(d.charge_id ?? -1, actual, status);
       console.log(JSON.stringify({ evt: 'model', sid: sid.slice(0, 8), model: v.model, status, ms: Date.now() - t0, in: usage?.input_tokens, out: usage?.output_tokens, cr: usage?.cache_read_input_tokens, usd_micros: actual }));
       if (isPassthroughStatus(status)) return new Response(upText, { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...h } });

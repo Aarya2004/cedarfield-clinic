@@ -1,7 +1,7 @@
 // node --experimental-strip-types --test infra/sandbox/test/model-proxy.test.mjs — pure proxy policy.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allowedPath, validateModelRequest, upstreamHeaders, usdMicros, estimateUsdMicros, capError, isPassthroughStatus, callWeight, MAX_TOKENS_CAP, DUMMY_API_KEY } from '../src/model-proxy.ts';
+import { allowedPath, validateModelRequest, upstreamHeaders, usdMicros, estimateUsdMicros, settledUsdMicros, capError, isPassthroughStatus, callWeight, MAX_TOKENS_CAP, DUMMY_API_KEY } from '../src/model-proxy.ts';
 
 const SID = 'a'.repeat(24) + '.1700000000.' + 'b'.repeat(16);
 const plannerBody = () => ({
@@ -116,4 +116,13 @@ test('passthrough statuses and call weights', () => {
   for (const s of [401, 402, 403, 500, 502, 503, 529]) assert.equal(isPassthroughStatus(s), false, String(s));
   assert.equal(callWeight('claude-haiku-4-5-20251001'), 1);
   assert.equal(callWeight('claude-sonnet-5'), 3);
+});
+
+test('settledUsdMicros: usage wins; a 4xx keeps only the input estimate; a network failure keeps the reservation', () => {
+  const reserved = estimateUsdMicros('claude-sonnet-5', 9000, 4000);
+  assert.equal(settledUsdMicros('claude-sonnet-5', 200, { input_tokens: 100, output_tokens: 10 }, 9000, reserved), usdMicros('claude-sonnet-5', { input_tokens: 100, output_tokens: 10 }));
+  const probe = settledUsdMicros('claude-sonnet-5', 400, undefined, 9000, reserved);
+  assert.equal(probe, usdMicros('claude-sonnet-5', { input_tokens: 3000 }));
+  assert.ok(probe < reserved / 5, `${probe} << ${reserved}`);
+  assert.equal(settledUsdMicros('claude-sonnet-5', 502, undefined, 9000, reserved), reserved);
 });
