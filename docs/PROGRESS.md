@@ -31,6 +31,9 @@ abstains without the key — **not yet a policy proof**; it is one once the key 
   reaches the proxy and renders our generic 503 as an honest `abstained_planner_unavailable` (13.6 s incl. the
   SDK's retry — generic upstream errors now carry `x-should-retry:false`, `467a2c3`). Evidence in
   `docs/evidence/stranger/2026-08-29-prod-open-net-env-and-honest-abstain.jpg`.
+- **`sleepAfter` fix proven live:** the stranger session sat idle 12+ minutes, then `echo alive-after-idle` answered
+  with 17:19 of TTL left (the old `sleepAfter '10m'` hibernated the container mid-session; now `35m` + the Gate
+  alarm destroys the sandbox at TTL).
 
 ## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
 **Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a
