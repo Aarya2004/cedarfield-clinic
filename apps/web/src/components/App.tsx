@@ -11,6 +11,8 @@
 import { Component, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { registerTerminalTools, type RegistrationState } from '@/lib/webmcp/register';
 import { forge, type ForgeCard as Card } from '@/lib/webmcp/forge';
+import { loadKept, persistKept } from '@/lib/webmcp/kept';
+import { createKeptWriter } from '@/lib/webmcp/restore';
 import { installTestHooks } from '@/lib/webmcp/testhooks';
 import { forgeFromLines } from '@/lib/webmcp/forge-this';
 import { session } from '@/lib/terminal/session';
@@ -25,6 +27,7 @@ import { PromptLine } from './PromptLine';
 import { ForgeCardView } from './ForgeCard';
 import { Hero, HeroStrip, type HeroExampleState } from './Hero';
 import { LedgerPane, MobileCard, PairingCard, StatusBar, ToolsPane, useForged, useSession } from './Panes';
+import { RestoreCard } from './RestoreCard';
 import { Tour, tourRequested } from './Tour';
 
 const EMPTY: never[] = [];
@@ -98,6 +101,18 @@ export function App() {
     }
     if (tourRequested()) setTour('on');
     session.start();
+    // Write path for kept tools: every approve / pin / unforge / restore goes through the engine's
+    // `emit()`, so one subscription mirrors the live tools into `rokan.kept.v1`. The writer retains
+    // the entries this page loaded until they are restored, so the first emit of a session (when
+    // `tools()` is still empty — opening a card is an emit) cannot erase them.
+    let storage: Storage | null = null;
+    try {
+      storage = window.localStorage;
+    } catch {
+      storage = null; // blocked / private mode: nothing is kept, the page still works
+    }
+    const kept = createKeptWriter({ storage, tools: () => forge.tools(), loaded: loadKept(storage), timeOrigin: performance.timeOrigin, persist: persistKept });
+    const unsubKept = forge.subscribe(() => kept.write());
     // If the effect is torn down before registration resolves, dispose on arrival instead of
     // leaking the AbortController (and seven tools) — Fable pass-1 P2.
     let disposed = false;
@@ -108,6 +123,7 @@ export function App() {
     });
     return () => {
       disposed = true;
+      unsubKept();
       dispose?.();
     };
   }, []);
@@ -201,6 +217,11 @@ export function App() {
         <aside className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface" data-rail aria-label="session state">
           <Boundary name="tools">
             <ToolsPane reg={reg} />
+          </Boundary>
+          {/* Kept tools sit between what this browser has and what it is being asked to approve:
+              nothing on a first visit, and directly above the cards Restore opens. */}
+          <Boundary name="kept tools">
+            <RestoreCard />
           </Boundary>
           <section className="max-h-[45%] shrink-0 overflow-y-auto border-b border-line p-2.5 text-sm" data-forge-pane aria-labelledby="forge-title">
             <h2 id="forge-title" className="text-xs font-medium">
