@@ -3,7 +3,7 @@
 Last update: **2026-08-29 ~22:45 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
 ## Build log — Engineer #4 (2026-08-29 ~20:25 local, open-net sandbox LIVE — proofs so far)
-Deployed: image `sha256:506cb8e0…` on **`standard-1`**, fleet `ready`; Worker versions `ae7003af` → sid-first fix
+Deployed: image `sha256:506cb8e0…` on **`standard-3`** (2 vCPU — standard-1's ½ vCPU listed 0 store tools live, 2026-08-30), fleet `ready`; Worker versions `ae7003af` → sid-first fix
 (`9f10bfd`). Live probes: health ok · header-less `POST /api/session` → **403** · eval secret → **201** · bogus sid →
 **403** · GET → 405 · `count_tokens` → 404 · real sid without the key → 503 "model proxy not configured" (honest).
 Judge suite on the new fleet: **13/15** — `terminal-judge-isolation` PASS on the new image (dummy key, proxy URL,
@@ -69,7 +69,7 @@ demo.** Shipped on `main` (commits `52080c9 f904528 6c425db a896ac6 3834e84 196e
   **$40 all-time**), 429 + `x-should-retry:false` on a trip. Container gets `ANTHROPIC_BASE_URL` + the literal
   `ANTHROPIC_API_KEY=judge-sandbox-proxy`. Verified against the real SDK (1.2.0 in rokan-do's venv) with a stub base
   URL: body keys `{model,max_tokens,messages,system,temperature,output_config}`, no `anthropic-beta`, 9.9 KB.
-- **Image:** Playwright full `chromium` on `standard-1` (½ vCPU, 4 GiB, 8 GB disk). Local smoke: **2 424 MB
+- **Image:** Playwright full `chromium` on `standard-3` (2 vCPU, 8 GiB; was standard-1 ½ vCPU until 2026-08-30 — Tier 0 needs the CPU, see FIELD-NOTES). Local smoke: **2 424 MB
   unpacked** (guard 3 500), bridge hello 1 590 ms, seeded replay ⚡ 917 ms, **headless Chromium boots as uid 1000
   and loads a page in 2.6 s** (`scripts/browser-probe.py`). Read-only policy baked in: `ROKAN_TASK_CLASSES=
   read_value,read_list`, `ROKAN_GUARD_ALL_HOSTS=1`, `ROKAN_BROWSER_NO_SANDBOX=1`, `--disable-dev-shm-usage`.

@@ -81,7 +81,7 @@ all defended in `docs/SELF-EVAL-2026-08-29.md` and the PROGRESS `## Objections` 
 | Web | **200** `https://rokan-terminal.vercel.app` (nonce CSP, HSTS, X-Frame-Options DENY). Deploy: `cd apps/web && vercel --prod --yes`. |
 | Judge sandbox | **200** `https://rokan-sandbox.rokan-sandbox.workers.dev/api/health`. Worker version `9fba0038`+; image = `Dockerfile.rokan` (multi-stage, 1 532 MB, **no browser**). |
 | **`rokan do` LIVE** | **Fixed this session.** Judge suite **11/11** incl. `terminal-rokan-real` (⚡ replay) + `terminal-judge-isolation` (no key/no vault). |
-| Caps | `SESSIONS_PER_IP_PER_10MIN=10`, `MAX_CONCURRENT_PER_IP=5`, `max_instances=20` on `standard-1`; model proxy caps in SECURITY §9 (30/session, 60/IP/10 min, 600/day, $40 all-time). Set 2026-08-29 evening per the approved open-net plan; the earlier 50/20 testing row is retired. |
+| Caps | `SESSIONS_PER_IP_PER_10MIN=10`, `MAX_CONCURRENT_PER_IP=5`, `max_instances=20` on `standard-3` (2 vCPU; Tier 0 live needs it); model proxy caps in SECURITY §9 (30/session, 60/IP/10 min, 600/day, $40 all-time). Set 2026-08-29 evening per the approved open-net plan; the earlier 50/20 testing row is retired. |
 | Green gate (this session) | web **133** · bridge **8 units + smoke 38/38** · sandbox **15** · evals runner 2 + prompt-line 7 + **real-PTY 12** · **live judge 11/11**. |
 | Git | HEAD `c6a5b0a`, `main`, clean (except demo-evidence PNGs). Aarya pushes demo docs; **you share this checkout — never `git add -A`, add only your files.** |
 

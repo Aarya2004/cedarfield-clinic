@@ -10,7 +10,7 @@
 # Size is a boot constraint: Cloudflare counts the image against the instance disk. The 2026-08-28 image
 # (build-essential + Chromium apt deps + apt caches, 2 221 MB unpacked) never produced a healthy instance on
 # the 4 GB `basic` disk — the fleet silently kept the previous image and `rokan do` exited 127 live. We now
-# run on `standard-1` (8 GB disk, 4 GiB RAM — Chromium needs the RAM) and `pnpm smoke:image:rokan` fails the
+# run on `standard-3` (2 vCPU, 8 GiB — Chromium needs the RAM; a storefront's WebMCP tools need the CPU: ½ vCPU listed 0 tools live) and `pnpm smoke:image:rokan` fails the
 # build past MAX_MB=3500. The bridge's native module (node-pty has no linux prebuild) is compiled in a
 # throwaway stage; apt lists, apt archives and pip caches are purged in the SAME RUN that creates them.
 

@@ -160,7 +160,7 @@ rokan-do's Chromium) before it ever plans against the DOM. The boundary is read-
 **Judging-window caps (single source of truth; Arav signs off before the tightening deploy).** The
 Worker vars are the enforcement; this table supersedes any number quoted elsewhere in the docs:
 
-| phase | `SESSION_TTL_MS` | `SESSIONS_PER_IP_PER_10MIN` | `MAX_CONCURRENT_PER_IP` | `max_instances` (`standard-1`) | model calls / session (`MODEL_CALLS_PER_SID`) | / sid / min | / IP / 10 min | / day | all-time USD (`MODEL_USD_TOTAL_MAX`) |
+| phase | `SESSION_TTL_MS` | `SESSIONS_PER_IP_PER_10MIN` | `MAX_CONCURRENT_PER_IP` | `max_instances` (`standard-3`, 2 vCPU) | model calls / session (`MODEL_CALLS_PER_SID`) | / sid / min | / IP / 10 min | / day | all-time USD (`MODEL_USD_TOTAL_MAX`) |
 |---|---|---|---|---|---|---|---|---|---|
 | now (open-net, **deployed 2026-08-29 evening**) | 1 800 000 (30 min) | 10 | 5 | 20 | 120 weighted (a Sonnet call weighs 3; one cold `rokan do` ≈ 6–10) | 40 | 240 | 2 000 | 40 |
 | judging window (freeze → results) | 3 600 000 (60 min) | 10 | 5 | 20 | 120 | 40 | 240 | 2 000 | 40 (+ the key's own console limit) |

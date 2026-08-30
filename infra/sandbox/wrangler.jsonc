@@ -8,7 +8,7 @@
     {
       "class_name": "RokanSandbox",
       "image": "./Dockerfile.rokan",
-      "instance_type": "standard-1",
+      "instance_type": "standard-3",
       "max_instances": 20
     }
   ],
