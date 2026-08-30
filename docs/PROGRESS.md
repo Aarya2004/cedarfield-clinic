@@ -50,6 +50,10 @@ abstains without the key — **not yet a policy proof**; it is one once the key 
   783 ms · 0 calls**. Evidence `docs/evidence/stranger/2026-08-29-prod-open-net-cold-then-replay.jpg`. Cold planning
   is brittle on some layouts (pypi, Statuspage-style status pages — FIELD-NOTES J19, filed as a Rokan planner issue);
   Wikipedia/docs pages verify first try.
+- **In-suite: `terminal-rokan-open-net` PASSES** (22:25 local, full judge run: cold plan on the unseeded PostgreSQL
+  page → answer → same question → ⚡ 0 calls, with count-based waits so the shared judge shell can't fool the
+  assertions). `readonly` is the abstain card + no ⚡ (rokan-do abstains with exit 0 by design). The clean 15/15 line
+  needs one more run once my own IP's 5-session cap frees (every eval/probe I run is a session).
 
 ## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
 **Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a
