@@ -1,0 +1,1 @@
+{"step": "list", "ok": true, "ms": 5463, "tools": [["search_catalog", true], ["browse_store", true], ["get_product", true], ["show_variant", true], ["get_cart", true], ["update_cart", false], ["cancel_cart", false], ["proceed_to_checkout", false], ["manage_orders", false], ["search_shop_policies_and_faqs", true]]}
