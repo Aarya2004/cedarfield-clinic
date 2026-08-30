@@ -361,3 +361,9 @@ If you had local edits in `PairingCard` or `LedgerPane`, mine are ~30 lines each
   bridge test fails if the two drift — keep them in sync when you touch redaction.
 - OSC 133/7331 markers now carry a per-session nonce (dropped otherwise) so in-band bytes can't forge a signed
   `executed` row; `forged_markers` count appears on the row when > 0 — a chip for it is yours if you want one.
+
+**2026-08-29 ~20:50 local — Engineer #4 (web, regression I caused, fixed):** the bridge's rc now emits
+`7331;cmd;<nonce>;<base64>`; `src/lib/terminal/osc.ts` took everything after `cmd;` as base64, so every
+human-typed run showed "command not recorded by the shell" on the new build (seen in the judge-mode
+demo shots). It now takes the LAST `;` field; legacy `cmd;<base64>` still works. Regression test in
+`runfeed.test.ts`.

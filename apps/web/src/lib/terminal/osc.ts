@@ -68,7 +68,10 @@ function interpret(body: string): PromptEvent | null {
     return null;
   }
   if (body.startsWith('7331;cmd;')) {
-    const command = decodeBase64Utf8(body.slice(9));
+    // The bridge's shell rc emits `7331;cmd;<nonce>;<base64>` since 2026-08-29 (the nonce lets the bridge
+    // drop forged markers); older rcs emit `7331;cmd;<base64>`. The payload is always the LAST field.
+    const fields = body.slice(9).split(';');
+    const command = decodeBase64Utf8(fields[fields.length - 1] ?? '');
     return command === null ? null : { kind: 'command', command: command.slice(0, COMMAND_MAX) };
   }
   if (body.startsWith('7;')) {

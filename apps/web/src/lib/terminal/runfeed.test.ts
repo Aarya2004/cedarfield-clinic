@@ -247,3 +247,14 @@ test('the store is bounded at RUN_FEED_MAX and evicts the oldest first', () => {
   runs.clear();
   assert.deepEqual(runs.snapshot(), []);
 });
+
+
+test('OSC 7331;cmd tolerates the bridge nonce field (2026-08-29 rc) and the legacy form', () => {
+  const p = new PromptDetector();
+  const legacy = p.feed('\u001b]7331;cmd;bHMgLWxh\u0007');
+  const nonced = p.feed('\u001b]7331;cmd;0123456789abcdef;bHMgLWxh\u0007');
+  const ended = p.feed('\u001b]133;D;7;0123456789abcdef\u0007');
+  assert.deepEqual(legacy.filter((e) => e.kind === 'command'), [{ kind: 'command', command: 'ls -la' }]);
+  assert.deepEqual(nonced.filter((e) => e.kind === 'command'), [{ kind: 'command', command: 'ls -la' }]);
+  assert.deepEqual(ended.filter((e) => e.kind === 'end'), [{ kind: 'end', code: 7 }]);
+});
