@@ -1,0 +1,46 @@
+[
+  {
+    "waitFor": "window.__rokan?.session().state === 'paired'",
+    "timeout": 10000,
+    "judgeOnly": true
+  },
+  {
+    "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0",
+    "timeout": 8000
+  },
+  {
+    "eval": "(() => { window.__rokanL0 = (window.__rokan.screen(80) ?? []).length; window.__rokanT0 = Date.now(); return true; })()",
+    "equals": true
+  },
+  {
+    "invoke": "terminal_propose",
+    "input": {
+      "command": "curl -s https://rokan-sandbox.rokan-sandbox.workers.dev/probe/native-invoke.py | python3 - allbirds.com https://www.allbirds.com/ search_catalog \"wool runners\"",
+      "why": "Tier 0 native probe: does the sandbox's headless Chromium reach a Shopify storefront's declared WebMCP tools from Cloudflare egress?"
+    }
+  },
+  {
+    "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()",
+    "equals": "string"
+  },
+  {
+    "sleep": 800
+  },
+  {
+    "key": "Enter"
+  },
+  {
+    "waitFor": "(window.__rokan.screen(80) ?? []).some(l => /\"step\": \"invoke\"|Traceback|rror/.test(l))",
+    "timeout": 150000
+  },
+  {
+    "waitFor": "window.__rokan.agentCall('terminal_status', {}).then(r => r.running === false)",
+    "timeout": 60000
+  },
+  {
+    "eval": "JSON.stringify({ ms: Date.now() - window.__rokanT0, tail: (window.__rokan.screen(80) ?? []).filter(l => l.trim()).slice(-14) })"
+  },
+  {
+    "shot": "docs/evidence/probe/2026-08-30-native-store-sandbox.png"
+  }
+]
