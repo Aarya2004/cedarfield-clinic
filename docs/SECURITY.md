@@ -72,13 +72,43 @@ egress to a demo-host allowlist (`allowedHosts`), but measured live (2026-08-29)
 interception never activates in this deployment — the ephemeral CA is never created and, with
 `enableInternet=false`, egress to an allowlisted host times out — so `allowedHosts` gated nothing for
 HTTPS. rokan-do's seeded replay needs a real HTTPS fetch, so egress must work. **We do not claim an
-egress allowlist.** The isolation that actually holds and is tested: the container carries **no model
-API key and no secret vault** (`terminal-judge-isolation.json` verifies `ANTHROPIC_API_KEY` unset and
-no `~/.rokan/vault.json` in a live session), its disk is **ephemeral** (reset every start), **no agent
-path can write to the PTY** (only a human keypress runs a command), and sessions are **per-IP
-rate-limited and TTL-capped** — the values the Worker enforces right now are `SESSIONS_PER_IP_PER_10MIN=50`, `MAX_CONCURRENT_PER_IP=20`, `SESSION_TTL_MS=1800000` (30 min) and `max_instances=10` (the testing row of the caps table in §9; the judging-window row tightens per-IP to 10/5, unchanged TTL) (a Gate row is provisional for 180 s
-until the bridge answers, so an aborted start cannot lock an IP for the TTL). An open-egress container
-with nothing to steal and nothing to spend is the control — not a filter the SDK didn't enforce.
+egress allowlist** — and since 2026-08-29 evening open egress is the product: a judge runs `rokan do` on any
+site on the open web from inside the sandbox. The isolation that actually holds and is tested:
+
+- **No real secret in the container.** The Worker starts the bridge with `ANTHROPIC_BASE_URL=https://<worker>/api/model/<sid>`
+  and the literal `ANTHROPIC_API_KEY=judge-sandbox-proxy` (`infra/sandbox/src/worker.ts`, `startProcess` env).
+  The real key is a Worker secret that never leaves the Worker. The judge's shell inherits the bridge env
+  (`packages/bridge/src/shell-integration.js`), so anything in it is one `echo` away — which is why nothing
+  secret is in it. `terminal-judge-isolation.json` verifies in a live session: key == the dummy, base URL is the
+  proxy, no `~/.rokan/vault.json`, and `sk-ant-` appears in no process environment.
+- **The model proxy is sid-authenticated and capped, and the caps — not secrecy — bound the spend** (the sid
+  is readable from the judge's own shell). `src/model-proxy.ts` + `src/gate-logic.ts`: exactly one upstream
+  path (`/v1/messages`; no `count_tokens`), `POST` only, body ≤ 256 KB, model must be on rokan-do's shipped
+  ladder (`claude-haiku-4-5-20251001`, `claude-sonnet-5`; anything else → 400, never rewritten), `max_tokens`
+  clamped to 8192, no streaming, no tools, text blocks only; request headers allow-listed (`content-type`,
+  `anthropic-version`; the client's `x-api-key`/`authorization`/`anthropic-beta` are dropped); upstream
+  401/402/403/5xx are never relayed. Every call is **reserved before it is forwarded** at a pessimistic
+  estimate and settled from `usage` after (§9 table). Log lines carry an 8-char sid prefix, model, status,
+  token counts — never a body.
+- **Read-only for strangers — enforced against accidents, stated against intent.** rokan-do's task classes
+  are `read_value | read_list | get_api_key` plus a write-shaped `general`; an empty vault is *not* a guard
+  in rokan-do's policy (a public-host click on a label outside its deny list is allowed). The image bakes
+  `ROKAN_TASK_CLASSES=read_value,read_list` (other classes and the `general` route are refused before any
+  browser action) and `ROKAN_GUARD_ALL_HOSTS=1` (every non-navigation click/Enter needs a persisted grant, and
+  there are none); native WebMCP writes are refused by name (§8); `rokan-do run` has no `--allow-write` flag.
+  The judge owns the shell env, so a hostile judge can unset those — what bounds them then is the model cap
+  plus attribution (the Worker logs `session sid= ip=`), and they could already do the same with `curl`.
+  `terminal-rokan-readonly.json` proves a write-shaped task is refused in a live session.
+- **Headless Chromium runs as the non-root `judge` user with `--no-sandbox`** (Cloudflare's container runtime
+  does not expose the setuid/userns sandbox to uid 1000). Honest consequence: a renderer exploit is code
+  execution as `judge` — the user the judge already is through the PTY; no new privilege. The container's disk
+  is **ephemeral**, **no agent path can write to the PTY** (only a human keypress runs a command), and sessions
+  are **per-IP (per IPv6 /64) rate-limited and TTL-capped**; the Gate destroys a session's sandbox at its TTL.
+- Minting a sandbox needs a browser on **our** page (`Origin === APP_ORIGIN`) or the eval harness's secret
+  header — a header-less `curl` or a page on the judge's own localhost cannot spawn containers (review P0,
+  fixed 2026-08-29).
+
+The values the Worker enforces are in §9 (single source of truth).
 No persistent volume; the same token-gated bridge runs inside the container; the Worker never stores
 tokens; a failed session start returns a generic 503 and logs internals server-side (no stack/SDK
 detail to the client). Tests: `infra/sandbox/test/gate.test.mjs`,
@@ -93,7 +123,8 @@ generic errors.)
 - Tool descriptions can still be ignored by a non-cooperative agent — by design nothing depends on them.
 - `hex_run` redaction hides git SHAs from the agent (not from the human).
 - CSP: per-request nonce + `'strict-dynamic'` for scripts (no `unsafe-inline`); `style-src` still allows inline styles (Tailwind); `connect-src` is the WebSocket allowlist.
-- **Judge-container egress is open** (`enableInternet=true`): a stranger's session can make outbound HTTP/S requests from Cloudflare infrastructure. Bounded by the per-IP rate limit + 30-min TTL + ephemeral disk; the container holds no key and no secret, so there is nothing to exfiltrate or spend. The `allowedHosts` list is retained as documentation only — the SDK's interception did not activate here to enforce it (measured). Raw TCP/UDP is likewise unfiltered.
+- **Judge-container egress is open by design** (`enableInternet=true`): a stranger's session can make outbound HTTP/S requests — and drive a headless browser — from Cloudflare infrastructure. Bounded by the per-IP session caps, the 30-min TTL, the model-call caps and ephemeral disk; attribution is the `session sid= ip=` log line. Rokan's own HTTP path refuses private/link-local/metadata targets; the shell does not (a judge can `curl` them regardless).
+- **The model proxy's sid is a bearer credential inside the sandbox** (readable via `echo $ANTHROPIC_BASE_URL`). It expires with the session and spends at most the §9 per-session cap; `redactForAgent` redacts the sid shape so a shared screen never hands it to an agent.
 
 ## 8. Tier 0 — consuming a site's own WebMCP tools (builder mode)
 
@@ -116,9 +147,11 @@ rokan-do's Chromium) before it ever plans against the DOM. The boundary is read-
   exact normalized question + host** (never the fuzzy answer-match path), so one question can never
   replay another's answer at 0 calls. (Review round 3 found and fixed a URL-path collision here;
   regression-tested.)
-- **Builder mode only.** The judge sandbox carries no model key and no browser, so it never consumes
-  native tools — it replays compiled operations and runs forged tools. The demo and docs say exactly
-  that; an unseeded step there prints Rokan's real `abstained_planner_unavailable`.
+- **In the judge sandbox too (since 2026-08-29 evening).** The image carries headless Chromium and the
+  capped model proxy, so unseeded questions plan for real against read classes only (`ROKAN_TASK_CLASSES`,
+  `ROKAN_GUARD_ALL_HOSTS` — §6), and a site's own WebMCP tools can be consumed there as in builder mode.
+  `terminal-rokan-open-net.json` proves a never-seen site answers on the first run and replays at ⚡ 0 calls
+  on the second.
 - Tests: `packages/rokan-do/tests/test_native.py` (37) — read/write gate, 0-call replay, schema-hash
   re-select, isolation; bridge `trailer.test.mjs` (marker parse) + smoke (`⚙`/`⚡` on an `echo` not attributed).
 
@@ -127,11 +160,17 @@ rokan-do's Chromium) before it ever plans against the DOM. The boundary is read-
 **Judging-window caps (single source of truth; Arav signs off before the tightening deploy).** The
 Worker vars are the enforcement; this table supersedes any number quoted elsewhere in the docs:
 
-| phase | `SESSION_TTL_MS` | `SESSIONS_PER_IP_PER_10MIN` | `MAX_CONCURRENT_PER_IP` | `max_instances` |
-|---|---|---|---|---|
-| now (testing, **deployed**) | 1 800 000 (30 min) | 50 | 20 | 10 |
-| judging window (freeze → results) | 3 600 000 (60 min) | 10 | 5 | 20 *(container config — deploy only if the image digest is unchanged after; else keep 10 and note it)* |
-| after results | 1 800 000 | 3 | 3 | 10 |
+| phase | `SESSION_TTL_MS` | `SESSIONS_PER_IP_PER_10MIN` | `MAX_CONCURRENT_PER_IP` | `max_instances` (`standard-1`) | model calls / session (`MODEL_CALLS_PER_SID`) | / sid / min | / IP / 10 min | / day | all-time USD (`MODEL_USD_TOTAL_MAX`) |
+|---|---|---|---|---|---|---|---|---|---|
+| now (open-net, **deployed 2026-08-29 evening**) | 1 800 000 (30 min) | 10 | 5 | 20 | 30 (a Sonnet call weighs 3) | 10 | 60 | 600 | 40 |
+| judging window (freeze → results) | 3 600 000 (60 min) | 10 | 5 | 20 | 30 | 10 | 60 | 600 | 40 (+ the key's own console limit) |
+| after results | 1 800 000 | 3 | 3 | 10 | 20 | 10 | 40 | 300 | 40 |
+
+Per-IP model caps use the IP recorded at `/api/session` (proxy traffic itself leaves through Cloudflare's
+shared egress, so its source address identifies no one). Reservation precedence usd → day → ip → sid →
+burst → in-flight; a trip is a 429 with `x-should-retry: false`, which rokan-do renders as its
+"model provider is rate-limiting" abstention — never a hang. The key itself is a dedicated one with a
+spend limit set in the Anthropic console, the guard that survives a bug in ours.
 
 The judging-window row raises the TTL so a judge's session is never cut mid-use and lowers per-IP so
 one abuser cannot starve the fleet. It is applied by editing the Worker vars (not code) and verified

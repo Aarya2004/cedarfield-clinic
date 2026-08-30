@@ -1,13 +1,20 @@
 /**
  * rokan-sandbox — judge mode. A stranger gets a throttled container running OUR bridge; the
  * page pairs over the same protocol as builder mode. Routes:
- *   POST   /api/session        → { sid, ws, token, ttl_ms, mode:"judge", cold_ms }   (rate-limited per IP)
- *   GET    /ws/:sid            → WebSocket upgrade proxied to the bridge inside the sandbox (port 7331)
- *   GET    /api/health         → { ok:true }
- * `sid` is HMAC-signed with the `SID_SECRET` secret (`wrangler secret put SID_SECRET`); `/ws/:sid`
- * verifies it before touching a sandbox, so an unissued id never starts a container. There is no
- * DELETE route: nothing calls one, and an unauthenticated one let a third party destroy a session.
- * The bridge token is issued once and never stored by the Worker; the bridge verifies it.
+ *   POST   /api/session                   → { sid, ws, token, ttl_ms, mode:"judge", cold_ms }   (rate-limited per IP; app origin or eval secret)
+ *   GET    /ws/:sid                       → WebSocket upgrade proxied to the bridge inside the sandbox (port 7331)
+ *   POST   /api/model/:sid/v1/messages    → capped, sid-authenticated proxy to the Anthropic Messages API (src/model-proxy.ts)
+ *   GET    /api/health                    → { ok:true }
+ * `sid` is HMAC-signed with the `SID_SECRET` secret (`wrangler secret put SID_SECRET`); `/ws/:sid` and the
+ * model proxy verify it before touching anything, so an unissued id never starts a container or spends.
+ * There is no DELETE route: nothing calls one, and an unauthenticated one let a third party destroy a
+ * session. The bridge token is issued once and never stored by the Worker; the bridge verifies it.
+ *
+ * Isolation model (docs/SECURITY.md §6): the container holds NO real secret. It gets
+ * `ANTHROPIC_BASE_URL=https://<this worker>/api/model/<sid>` and the literal `ANTHROPIC_API_KEY=judge-sandbox-proxy`;
+ * the real key lives only here as a Worker secret and every call is charged against the per-session,
+ * per-IP, per-day and all-time caps in gate-logic.ts BEFORE it is forwarded. The sid is readable from the
+ * judge's own shell — the caps, not secrecy, bound the spend.
  */
 import { getSandbox, Sandbox } from '@cloudflare/sandbox';
 
@@ -15,9 +22,11 @@ import { getSandbox, Sandbox } from '@cloudflare/sandbox';
 // Worker entrypoint to re-export it. Without this every container start logs
 // `ctx.exports.ContainerProxy is undefined` and times out (measured 2026-08-28: 135 s → 503).
 export { ContainerProxy } from '@cloudflare/sandbox';
-import { Gate } from './gate';
+import { Gate, MODEL_BUDGET_NAME } from './gate';
+import { gateKey, type ModelCaps } from './gate-logic';
 import { corsHeaders, originAllowed } from './origin';
-import { issueSid, verifySid } from './sid';
+import { issueSid, verifySid, SID_RE } from './sid';
+import { allowedPath, validateModelRequest, upstreamHeaders, usdMicros, estimateUsdMicros, callWeight, capError, isPassthroughStatus, UPSTREAM_MESSAGES, MAX_BODY_BYTES, DUMMY_API_KEY, type Usage } from './model-proxy';
 
 export { Gate };
 
@@ -28,27 +37,32 @@ export interface Env {
   SESSION_TTL_MS: string;
   SESSIONS_PER_IP_PER_10MIN: string;
   MAX_CONCURRENT_PER_IP: string;
+  MODEL_CALLS_PER_SID: string;
+  MODEL_CALLS_PER_SID_PER_MIN: string;
+  MODEL_CALLS_PER_IP_PER_10MIN: string;
+  MODEL_CALLS_PER_DAY: string;
+  MODEL_USD_TOTAL_MAX: string;
   /** secret: `wrangler secret put SID_SECRET` (any long random string); sessions are refused without it */
   SID_SECRET?: string;
-  // No model key is wired into the sandbox on purpose: rokan-do there can only replay seeds; nothing can spend.
+  /** secret: `wrangler secret put ANTHROPIC_API_KEY` — a DEDICATED key with a spend limit in the Anthropic console; never the personal one. Lives only here. */
+  ANTHROPIC_API_KEY?: string;
+  /** secret: `wrangler secret put EVAL_SECRET` — lets the eval harness (no browser Origin) mint sessions via the `x-rokan-eval` header. */
+  EVAL_SECRET?: string;
 }
 
-/** Egress: nothing but the demo hosts (HTTP/S only — the SDK cannot filter raw TCP/UDP; say so). */
+/**
+ * Egress is ON. Measured live (2026-08-29): the SDK's HTTPS interception never wired up in this deployment —
+ * the ephemeral CA at /etc/cloudflare/certs/cloudflare-containers-ca.crt is never created and, with
+ * enableInternet=false, egress to an allowlisted host (githubstatus.com) times out (curl exit 28).
+ * `allowedHosts` is enforced only *through* that interception proxy, so it gated nothing for HTTPS — the
+ * "egress allowlist" was aspirational, not real. `rokan do` on any site needs open egress anyway (that is the
+ * product), so we are honest about the isolation model instead (docs/SECURITY.md): no real secret in the
+ * container, ephemeral disk, no agent path can write to the PTY, sessions per-IP rate-limited and TTL-capped,
+ * model spend capped by the proxy. If interception is ever turned on, this Worker's own host must be
+ * reachable and a CA bundle injected for httpx — the proxy URL is HTTPS.
+ */
 export class RokanSandbox extends Sandbox<Env> {
-  // Egress is ON. Measured live (2026-08-29): the SDK's HTTPS interception never wired up in this
-  // deployment — the ephemeral CA at /etc/cloudflare/certs/cloudflare-containers-ca.crt is never created
-  // and, with enableInternet=false, egress to an allowlisted host (githubstatus.com) times out (curl
-  // exit 28). `allowedHosts` is enforced only *through* that interception proxy, so it gated nothing for
-  // HTTPS — the "egress allowlist" was aspirational, not real. rokan-do's seeded replay needs a direct
-  // HTTPS fetch of the status page, so egress must actually work. We turn it on and are honest about the
-  // isolation model instead (docs/SECURITY.md): the container holds NO api key and NO secret, its disk is
-  // ephemeral, no agent path can write to the PTY, and sessions are per-IP rate-limited and TTL-capped.
-  // An open-egress container with nothing to steal and nothing to spend is the control. No CA env is
-  // injected — urllib uses the system CA store and validates the real host certs directly.
   enableInternet = true;
-  // Retained as documentation of the demo hosts (and a filter IF the SDK interception ever activates here —
-  // measured not to today, see the class comment). Not relied on for isolation. No model host.
-  allowedHosts = ["curl.se", "developer.mozilla.org", "developers.cloudflare.com", "discordstatus.com", "docs.aws.amazon.com", "docs.github.com", "docs.oracle.com", "docs.python.org", "docs.stripe.com", "en.wikipedia.org", "example.org", "flask.palletsprojects.com", "githubstatus.com", "httpwg.org", "learn.microsoft.com", "lobste.rs", "neonstatus.com", "news.ycombinator.com", "nginx.org", "numpy.org", "peps.python.org", "prometheus.io", "pypi.org", "redis.io", "status.1password.com", "status.anthropic.com", "status.auth0.com", "status.datadoghq.com", "status.digitalocean.com", "status.dropbox.com", "status.figma.com", "status.hubspot.com", "status.mistral.ai", "status.npmjs.org", "status.okta.com", "status.openrouter.ai", "status.perplexity.ai", "status.pinecone.io", "status.python.org", "status.render.com", "status.squarespace.com", "ubuntu.com", "www.debian.org", "www.dockerstatus.com", "www.gov.uk", "www.iana.org", "www.netlifystatus.com", "www.postgresql.org", "www.redditstatus.com", "www.rfc-editor.org", "www.shopifystatus.com", "www.sqlite.org", "www.unicode.org", "www.vercel-status.com"];
 }
 
 const BRIDGE_PORT = 7331;
@@ -56,6 +70,9 @@ const BRIDGE_PORT = 7331;
  *  Worker invocation that dies) before then must not lock its IP for the full TTL (measured
  *  2026-08-28: three aborted starts → "3 active sandboxes", retry in 977 s). */
 const PROVISIONAL_MS = 180_000;
+/** Longer than the TTL: the bridge ends the session at TTL and the Gate alarm destroys the sandbox then;
+ *  a shorter sleepAfter (the old 10m) hibernated a live session's container mid-TTL (review P1). */
+const SLEEP_AFTER = '35m';
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extra } });
@@ -66,39 +83,138 @@ function hex(bytes: number): string {
   return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
 }
 
+const num = (v: string | undefined, dflt: number) => {
+  const n = Number.parseInt(v ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : dflt;
+};
+
+function modelCaps(env: Env): ModelCaps {
+  return {
+    perSid: num(env.MODEL_CALLS_PER_SID, 30),
+    perSidPerMin: num(env.MODEL_CALLS_PER_SID_PER_MIN, 10),
+    perSidInflight: 1,
+    perIpPerWindow: num(env.MODEL_CALLS_PER_IP_PER_10MIN, 60),
+    perDay: num(env.MODEL_CALLS_PER_DAY, 600),
+    usdTotalMicros: num(env.MODEL_USD_TOTAL_MAX, 40) * 1_000_000,
+  };
+}
+
+/** Constant-time-enough comparison for the eval secret (short, non-attacker-controlled lengths). */
+function secretMatches(given: string | null, expected: string | undefined): boolean {
+  if (!given || !expected || given.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < given.length; i++) diff |= given.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     // Disallowed origin → 403 before any handler (never before-the-Gate work for a stranger's page).
     const origin = request.headers.get('origin');
-    if (origin !== null && !originAllowed(env.APP_ORIGIN, origin)) return json({ error: 'origin not allowed' }, 403);
+    if (origin !== null && !originAllowed(env.APP_ORIGIN, origin)) return json({ error: 'origin not allowed' }, 403, corsHeaders(env.APP_ORIGIN, null));
     const h = corsHeaders(env.APP_ORIGIN, origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: h });
 
     if (url.pathname === '/api/health') return json({ ok: true, mode: 'judge' }, 200, h);
 
+    // ---- model proxy ---------------------------------------------------------------------------
+    if (url.pathname.startsWith('/api/model/')) {
+      const sid = allowedPath(url.pathname);
+      if (!sid) return json({ error: 'not found' }, 404, h);
+      if (request.method !== 'POST') return json({ error: 'method not allowed' }, 405, { ...h, allow: 'POST' });
+      if (!env.SID_SECRET || !env.ANTHROPIC_API_KEY) return json({ type: 'error', error: { type: 'api_error', message: 'model proxy not configured' } }, 503, h);
+      const id = await verifySid(env.SID_SECRET, sid, Date.now());
+      if (!id) return json({ type: 'error', error: { type: 'authentication_error', message: 'unknown or expired session' } }, 403, h);
+      if (!/^application\/json/i.test(request.headers.get('content-type') ?? '')) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'json required' } }, 415, h);
+      const declared = Number(request.headers.get('content-length') ?? 0);
+      if (declared > MAX_BODY_BYTES) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'request too large' } }, 413, h);
+      const text = await request.text();
+      if (text.length > MAX_BODY_BYTES) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'request too large' } }, 413, h);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        return json({ type: 'error', error: { type: 'invalid_request_error', message: 'bad json' } }, 400, h);
+      }
+      const v = validateModelRequest(parsed);
+      if (!v.ok) return json({ type: 'error', error: { type: 'invalid_request_error', message: v.message } }, v.status, h);
+
+      const budget = env.Gate.get(env.Gate.idFromName(MODEL_BUDGET_NAME));
+      const est = estimateUsdMicros(v.model, text.length, v.maxTokens);
+      const weight = callWeight(v.model);
+      const d = await budget.chargeModel(sid, weight, est, modelCaps(env));
+      if (!d.ok) {
+        const e = capError(d.reason ?? 'cap', d.retry_after_s ?? 60);
+        console.log(JSON.stringify({ evt: 'model_cap', sid: sid.slice(0, 8), reason: d.reason }));
+        return json(e.body, 429, { ...h, ...e.headers });
+      }
+
+      const t0 = Date.now();
+      let status = 502;
+      let upText = '';
+      let usage: Usage | undefined;
+      try {
+        const up = await fetch(UPSTREAM_MESSAGES, { method: 'POST', headers: upstreamHeaders(env.ANTHROPIC_API_KEY, request.headers.get('anthropic-version')), body: JSON.stringify(v.body), signal: request.signal });
+        status = up.status;
+        upText = await up.text();
+        if (up.ok) {
+          try {
+            usage = (JSON.parse(upText) as { usage?: Usage }).usage;
+          } catch {
+            /* body passes through regardless */
+          }
+        }
+      } catch (e) {
+        console.error('model upstream fetch failed', sid.slice(0, 8), e instanceof Error ? e.message : String(e));
+      }
+      const actual = usage ? usdMicros(v.model, usage) : est; // no usage → the pessimistic reservation stands
+      await budget.settleModel(d.charge_id ?? -1, actual, status);
+      console.log(JSON.stringify({ evt: 'model', sid: sid.slice(0, 8), model: v.model, status, ms: Date.now() - t0, in: usage?.input_tokens, out: usage?.output_tokens, cr: usage?.cache_read_input_tokens, usd_micros: actual }));
+      if (isPassthroughStatus(status)) return new Response(upText, { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...h } });
+      // Auth/billing/5xx/network: never relay upstream internals (a client must not learn our key's state).
+      return json({ type: 'error', error: { type: 'api_error', message: 'model upstream unavailable' } }, status >= 500 ? 502 : 503, h);
+    }
+
+    // ---- session -------------------------------------------------------------------------------
     if (url.pathname === '/api/session' && request.method === 'POST') {
       if (!env.SID_SECRET) {
         console.error('SID_SECRET is not set — refusing to issue sessions (wrangler secret put SID_SECRET)');
         return json({ error: 'the sandbox is not configured; please try again later' }, 503, h);
       }
+      // Minting a container needs a browser on OUR page (Origin === APP_ORIGIN) or the eval secret. A
+      // header-less POST used to work (review P0: any curl, or any page on a judge's localhost, could spawn).
+      const evalOk = secretMatches(request.headers.get('x-rokan-eval'), env.EVAL_SECRET);
+      const localApp = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(env.APP_ORIGIN);
+      const originOk = origin !== null && (origin === env.APP_ORIGIN || (localApp && originAllowed(env.APP_ORIGIN, origin)));
+      if (!originOk && !evalOk) return json({ error: 'sessions are issued to the app only' }, 403, h);
       const ip = request.headers.get('cf-connecting-ip') ?? '0.0.0.0';
-      const ttl = Number.parseInt(env.SESSION_TTL_MS, 10) || 1_800_000;
+      const key = gateKey(ip);
+      const ttl = num(env.SESSION_TTL_MS, 1_800_000);
       const id = hex(12);
       const sid = await issueSid(env.SID_SECRET, id, Date.now() + ttl);
-      const gate = env.Gate.get(env.Gate.idFromName(ip));
-      const perWindow = Number.parseInt(env.SESSIONS_PER_IP_PER_10MIN, 10) || 1;
-      const maxConcurrent = Number.parseInt(env.MAX_CONCURRENT_PER_IP, 10) || 3;
-      const d = await gate.allow(sid, PROVISIONAL_MS, perWindow, maxConcurrent);
+      const gate = env.Gate.get(env.Gate.idFromName(key));
+      const perWindow = num(env.SESSIONS_PER_IP_PER_10MIN, 1);
+      const maxConcurrent = num(env.MAX_CONCURRENT_PER_IP, 3);
+      const d = await gate.allow(sid, PROVISIONAL_MS, perWindow, maxConcurrent, id);
       if (!d.ok) {
-        const msg = d.reason === 'rate' ? `This IP already started ${perWindow} sandbox${perWindow === 1 ? '' : 'es'} in the last 10 minutes; try again in ${d.retry_after_s} s` : `This IP already has ${d.active} active sandboxes (limit ${maxConcurrent})`;
+        const msg = d.reason === 'rate' ? `This IP started too many sandboxes in the last 10 minutes; try again in ${d.retry_after_s} s` : `This IP already has its maximum of active sandboxes; try again in ${d.retry_after_s} s`;
         return json({ error: msg, retry_after_s: d.retry_after_s }, 429, { ...h, 'retry-after': String(d.retry_after_s ?? 60) });
       }
       const t0 = Date.now();
       const token = hex(16);
-      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '10m' /* idle instances count against max_instances (Opus VERIFY: 7/10 live while idle) */ });
+      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: SLEEP_AFTER });
       try {
-        await sandbox.startProcess(`node /opt/bridge/bin/rokan-terminal.js --no-tunnel --mode judge --host 0.0.0.0 --port ${BRIDGE_PORT} --token ${token} --ttl-ms ${ttl} --app ${env.APP_ORIGIN}`);
+        await sandbox.startProcess(`node /opt/bridge/bin/rokan-terminal.js --no-tunnel --mode judge --host 0.0.0.0 --port ${BRIDGE_PORT} --token ${token} --ttl-ms ${ttl} --app ${env.APP_ORIGIN}`, {
+          env: {
+            // The judge's shell inherits all of this (bridge spreads process.env). Nothing here is a secret.
+            ANTHROPIC_BASE_URL: `${url.origin}/api/model/${sid}`,
+            ANTHROPIC_API_KEY: DUMMY_API_KEY,
+            ROKAN_BROWSER_NO_SANDBOX: '1',
+            ROKAN_BROWSER_HEADLESS: 'true',
+            PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright',
+          },
+        });
         // wait until the bridge answers on its port (measured cold start)
         let up = false;
         for (let i = 0; i < 80 && !up; i++) {
@@ -112,13 +228,15 @@ export default {
           return json({ error: 'sandbox did not start in time' }, 503, h);
         }
         await gate.confirm(sid, ttl); // the bridge answered: now the session holds its full TTL
+        await env.Gate.get(env.Gate.idFromName(MODEL_BUDGET_NAME)).bindModelSession(sid, key, Date.now() + ttl);
       } catch (e) {
         await gate.release(sid);
         await sandbox.destroy().catch(() => undefined); // never leave a half-started instance counting against max_instances
         // Log internals server-side; return a generic message (never leak stack/SDK details to clients).
-        console.error('session start failed', sid, e instanceof Error ? e.stack : String(e));
+        console.error('session start failed', sid.slice(0, 8), e instanceof Error ? e.stack : String(e));
         return json({ error: 'the sandbox could not be started; please try again' }, 503, h);
       }
+      console.log(JSON.stringify({ evt: 'session', sid: sid.slice(0, 8), ip: key, cold_ms: Date.now() - t0 }));
       const ws = `${url.protocol === 'https:' ? 'wss' : 'ws'}://${url.host}/ws/${sid}`;
       return json({ sid, ws, token, ttl_ms: ttl, mode: 'judge', cold_ms: Date.now() - t0 }, 201, h);
     }
@@ -128,9 +246,9 @@ export default {
       if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') return json({ error: 'websocket upgrade required' }, 426, h);
       // Verify the signature BEFORE getSandbox(): the SDK starts a container on first fetch, so an
       // unverified id would let anyone burn max_instances with random sids (Fable F4).
-      const id = env.SID_SECRET ? await verifySid(env.SID_SECRET, wsm[1], Date.now()) : null;
+      const id = env.SID_SECRET && SID_RE.test(wsm[1]) ? await verifySid(env.SID_SECRET, wsm[1], Date.now()) : null;
       if (!id) return json({ error: 'unknown or expired session' }, 403, h);
-      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: '10m' /* idle instances count against max_instances (Opus VERIFY: 7/10 live while idle) */ });
+      const sandbox = getSandbox(env.Sandbox, id, { sleepAfter: SLEEP_AFTER });
       return sandbox.wsConnect(request, BRIDGE_PORT);
     }
 

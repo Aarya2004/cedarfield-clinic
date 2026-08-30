@@ -1,9 +1,9 @@
 // node --experimental-strip-types --test infra/sandbox/test/dockerfile-rokan.test.mjs — static guard on the
-// judge image. Cloudflare counts the image against the instance disk (4 GB on `basic`); the 2026-08-28
+// judge image. Cloudflare counts the image against the instance disk (8 GB on `standard-1`); the 2026-08-28
 // image (build-essential + Chromium apt deps + apt caches, 2 221 MB unpacked) never produced a healthy
 // instance and the fleet silently kept the previous image — `rokan do` exited 127 live. The runtime
 // stage must stay lean; the compiler lives in a throwaway stage. `pnpm smoke:image:rokan` measures the
-// real unpacked size; this test catches the regression before a build.
+// real unpacked size (MAX_MB=3500); this test catches the regression before a build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -24,10 +24,17 @@ test('exactly two stages: node-pty compiles in a throwaway stage, the runtime co
   assert.match(runtime, /COPY --from=bridge-build --chown=judge:judge \/opt\/bridge \/opt\/bridge/);
 });
 
-test('runtime stage carries no compiler, no browser install, no apt/pip caches', () => {
+test('runtime stage carries no compiler, exactly one Playwright chromium install with a same-RUN purge, no apt/pip caches', () => {
   assert.doesNotMatch(runtime, /build-essential/);
-  assert.doesNotMatch(runtime, /playwright install/);
-  assert.doesNotMatch(runtime, /--with-deps/);
+  assert.doesNotMatch(runtime, /--with-deps/); // the 1.46 GB variant of 2026-08-28: retained .debs + full X stack
+  const pw = runCommands(runtime).filter((r) => /playwright install chromium/.test(r));
+  assert.equal(pw.length, 1, 'exactly one RUN installs the browser');
+  assert.match(pw[0], /playwright install-deps chromium/);
+  assert.match(pw[0], /rm -rf \/var\/lib\/apt\/lists\/\* \/var\/cache\/apt\/archives\/\*/, 'apt lists AND archives purged in the same RUN');
+  assert.match(runtime, /ENV PLAYWRIGHT_BROWSERS_PATH=\/ms-playwright/);
+  assert.match(runtime, /ROKAN_BROWSER_NO_SANDBOX=1/);
+  assert.match(runtime, /ROKAN_TASK_CLASSES=read_value,read_list/);
+  assert.match(runtime, /ROKAN_GUARD_ALL_HOSTS=1/);
   // Every RUN that installs apt packages must purge the lists IN THE SAME RUN — a purge in a later
   // RUN leaves the lists in an earlier layer and the image still grows (Codex review).
   const runs = runCommands(runtime);
@@ -44,5 +51,6 @@ test('runtime stage installs rokan-do where the bridge looks and seeds it for th
   assert.match(runtime, /rokan-do --help >\/dev\/null/);
   assert.match(runtime, /USER judge/);
   assert.match(runtime, /rokan-do seed install && rokan-do seed install \/home\/judge\/rokan-seed-ops\.json/);
-  assert.doesNotMatch(runtime, /ANTHROPIC_API_KEY/);
+  // No key in the image: the proxy URL + the documented dummy come from worker.ts at startProcess time.
+  assert.doesNotMatch(runtime, /ANTHROPIC_API_KEY|sk-ant-/);
 });

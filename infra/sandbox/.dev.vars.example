@@ -1,2 +1,6 @@
-# copy to .dev.vars for `wrangler dev`; in production: wrangler secret put SID_SECRET
+# copy to .dev.vars for `wrangler dev`; in production: wrangler secret put <NAME>
 SID_SECRET=replace-with-a-long-random-string
+# a DEDICATED Anthropic key with a spend limit set in the console — the container never sees it (docs/SECURITY.md §6)
+ANTHROPIC_API_KEY=
+# lets evals/run-all.mjs mint sessions without a browser Origin (header x-rokan-eval)
+EVAL_SECRET=replace-with-another-long-random-string

@@ -17,12 +17,12 @@ IMG="${IMG:-rokan-sandbox:rokan}"
 # ample; it is a boot guard, not a runtime-space guarantee. Measured as ROOT (the image runs as
 # `judge`, which cannot read root-only dirs → undercount) with du's own exit checked (a bare
 # `du | cut` returns cut's success and would hide a failed measurement).
-MAX_MB="${MAX_MB:-1800}"
+MAX_MB="${MAX_MB:-3500}"
 echo "--- unpacked image size, measured as root (limit ${MAX_MB} MB) ---"
 MB=$(docker run --rm --platform linux/amd64 --user 0:0 --entrypoint sh "$IMG" -c 'set -e; du -sxm / | awk "END{print \$1}"')
 case "$MB" in ''|*[!0-9]*) echo "FAIL could not measure image size (got: '$MB')"; exit 1;; esac
 echo "unpacked ${MB} MB"
-[ "$MB" -le "$MAX_MB" ] || { echo "FAIL image unpacks to ${MB} MB > ${MAX_MB} MB — this will not boot on a basic instance"; exit 1; }
+[ "$MB" -le "$MAX_MB" ] || { echo "FAIL image unpacks to ${MB} MB > ${MAX_MB} MB — this will not boot on a standard-1 instance (8 GB disk)"; exit 1; }
 TOKEN=$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'))")
 docker rm -f rokan-sandbox-smoke-rokan >/dev/null 2>&1 || true
 # LIMITS="--cpus 0.25 --memory 1g" reproduces the judge instance; under amd64 emulation on an arm64 Mac that
@@ -45,6 +45,9 @@ echo "--- seeded replay (timed; local = emulated amd64, not the judge CPU) ---"
 X 'start=$(date +%s%N); out=$(rokan-do run "what is the current status at githubstatus.com" 2>&1); ec=$?; end=$(date +%s%N); printf "%s\n" "$out" | tail -3; echo "wall $(( (end-start)/1000000 )) ms"; [ $ec -eq 0 ] || { echo "FAIL replay exit $ec"; exit 1; }; printf "%s" "$out" | grep -q "⚡" || { echo "FAIL replay printed no ⚡ line"; exit 1; }; echo "replay ok (exit 0, ⚡)"'
 echo "--- recovery-beat project ---"
 X 'cd demo && python3 -m pytest -q 2>&1 | tail -2'
-echo "--- no key, no browser in the container (replays are browserless; nothing here can plan or spend) ---"
-X 'test -z "${ANTHROPIC_API_KEY:-}" && echo "no ANTHROPIC_API_KEY (by design)"'
-X 'test ! -d /ms-playwright && test ! -d "$HOME/.cache/ms-playwright" && echo "no browser (by design)"'
+echo "--- no real key in the image; headless Chromium boots as the judge user ---"
+X 'case "${ANTHROPIC_API_KEY:-}" in ""|judge-sandbox-proxy) echo "ANTHROPIC_API_KEY is empty or the documented dummy (ok)";; *) echo "FAIL a real-looking ANTHROPIC_API_KEY is in the image env"; exit 1;; esac'
+X 'test -n "$(ls -d /ms-playwright/chromium-* 2>/dev/null)" || { echo "FAIL no Playwright chromium under /ms-playwright"; exit 1; }; echo "chromium present"'
+X 'echo "$ROKAN_TASK_CLASSES" | grep -q read_value && [ "$ROKAN_GUARD_ALL_HOSTS" = 1 ] && [ "$ROKAN_BROWSER_NO_SANDBOX" = 1 ] && echo "read-only policy env baked in" || { echo "FAIL policy env missing"; exit 1; }'
+docker exec -i -u judge -w /home/judge rokan-sandbox-smoke-rokan python3 - < "$HERE/scripts/browser-probe.py" | tee /tmp/rokan-browser-probe.txt
+grep -q "^PROBE_OK " /tmp/rokan-browser-probe.txt || { echo "FAIL headless Chromium did not boot / navigate as judge"; exit 1; }

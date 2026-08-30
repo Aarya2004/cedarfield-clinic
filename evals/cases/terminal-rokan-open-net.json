@@ -1,0 +1,69 @@
+[
+  {
+    "waitFor": "window.__rokan?.session().state === 'paired'",
+    "timeout": 10000,
+    "judgeOnly": true
+  },
+  {
+    "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0",
+    "timeout": 8000
+  },
+  {
+    "invoke": "terminal_propose",
+    "input": {
+      "command": "rokan do \"what is the main heading at example.org\"",
+      "why": "an UNSEEDED site: the sandbox must plan for real through the capped model proxy (cold run, ≥1 model call)"
+    }
+  },
+  {
+    "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()",
+    "equals": "string"
+  },
+  {
+    "key": "Enter"
+  },
+  {
+    "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid, timeout_ms: 90000 }).then(r => [r.status, r.exit_code, r.rokan ? r.rokan.replayed : 'no-rokan'])",
+    "equals": [
+      "executed",
+      0,
+      false
+    ],
+    "timeout": 95000
+  },
+  {
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /abstained|planner_unavailable|ANTHROPIC_API_KEY/.test(l))",
+    "equals": false
+  },
+  {
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /Example Domain/i.test(l))",
+    "equals": true
+  },
+  {
+    "invoke": "terminal_propose",
+    "input": {
+      "command": "rokan do \"what is the main heading at example.org\"",
+      "why": "the same question again: born in the sandbox a minute ago, it must replay at 0 model calls"
+    }
+  },
+  {
+    "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()",
+    "equals": "string"
+  },
+  {
+    "key": "Enter"
+  },
+  {
+    "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid, timeout_ms: 60000 }).then(r => [r.status, r.exit_code, r.rokan ? r.rokan.calls : 'no-rokan'])",
+    "equals": [
+      "executed",
+      0,
+      0
+    ],
+    "timeout": 65000
+  },
+  {
+    "waitFor": "(window.__rokan.screen(40) ?? []).some(l => /\\d+ms\\s+⚡/.test(l))",
+    "timeout": 5000
+  }
+]

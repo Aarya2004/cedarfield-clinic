@@ -1,15 +1,18 @@
 # Judge-mode container WITH the star command (wrangler.jsonc `image`). Delta vs Dockerfile: uv + the
-# three Rokan wheels (vendor/) + the seeds installed for the judge user. No API key is ever injected:
-# rokan-do here can only replay seeds. There is NO browser in this image: seeded replays are
-# browserless (measured in-image with PLAYWRIGHT_BROWSERS_PATH=/nonexistent → 481 ms ⚡, exit 0), and
-# the model/planning path needs a key the container never has.
+# three Rokan wheels (vendor/) + the seeds + headless Chromium, installed for the judge user.
 #
-# Size is a boot constraint, not a nicety: Cloudflare counts the image against the instance disk
-# (4 GB on `basic`). The 2026-08-28 image with build-essential + Chromium apt deps + apt caches
-# unpacked to 2 221 MB and its rollout never produced a healthy instance (rollout API: failed 1,
-# healthy 0) — the fleet silently kept serving the previous image and `rokan do` exited 127 live.
-# The bridge's native module (node-pty has no linux prebuild) is compiled in a throwaway stage;
-# `pnpm smoke:image:rokan` fails the build if the unpacked image grows past the size that boots.
+# Isolation model (docs/SECURITY.md §6): NO real secret is in this image or its env. `rokan do` on any
+# site plans through the Worker's sid-bound, capped model proxy (worker.ts passes ANTHROPIC_BASE_URL and the
+# literal ANTHROPIC_API_KEY=judge-sandbox-proxy at startProcess time). Read-only task classes and the
+# guard-all-hosts policy are baked in below (ROKAN_TASK_CLASSES / ROKAN_GUARD_ALL_HOSTS) — they prevent
+# ACCIDENTAL writes; the judge owns the shell env, so the spend cap + attribution bound a hostile one.
+#
+# Size is a boot constraint: Cloudflare counts the image against the instance disk. The 2026-08-28 image
+# (build-essential + Chromium apt deps + apt caches, 2 221 MB unpacked) never produced a healthy instance on
+# the 4 GB `basic` disk — the fleet silently kept the previous image and `rokan do` exited 127 live. We now
+# run on `standard-1` (8 GB disk, 4 GiB RAM — Chromium needs the RAM) and `pnpm smoke:image:rokan` fails the
+# build past MAX_MB=3500. The bridge's native module (node-pty has no linux prebuild) is compiled in a
+# throwaway stage; apt lists, apt archives and pip caches are purged in the SAME RUN that creates them.
 
 # --- stage 1: compile node-pty (needs gcc/make; none of that ships) ---
 FROM docker.io/cloudflare/sandbox:0.12.9-python AS bridge-build
@@ -43,14 +46,29 @@ RUN python3 -m pip install --no-cache-dir --root-user-action=ignore uv \
   && rm -rf /root/.cache /tmp/* \
   && rokan-do --help >/dev/null && echo 'rokan-do ok'
 
+# Headless Chromium for `rokan do` on any site: the Playwright-managed FULL chromium build (rokan's daemon
+# uses a persistent context, --enable-features=WebMCP and playwright-stealth; the headless shell is not
+# enough). World-readable so the non-root judge user can launch it. Purge apt lists/archives + caches in
+# this same RUN (the base image keeps downloaded .debs by default).
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN python3 -m playwright install chromium \
+  && python3 -m playwright install-deps chromium \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /root/.cache /tmp/* \
+  && chmod -R a+rX /ms-playwright \
+  && test -n "$(ls -d /ms-playwright/chromium-* 2>/dev/null)" && echo 'chromium ok'
+
 COPY --chown=judge:judge container/seed/ /home/judge/
 USER judge
 WORKDIR /home/judge
-ENV HOME=/home/judge SHELL=/bin/zsh TERM=xterm-256color ROKAN_MODE=judge
-# Seeds: the package's own 54 plus the ones exported from the builder's store (rokan-seed-ops.json)
-RUN rokan-do seed install && rokan-do seed install /home/judge/rokan-seed-ops.json && rokan-do ops | tail -1
-# First-run disclosure pre-accepted for the judge user: it describes what leaves the machine when a model
-# plans a task, but this image has no API key and no browser — nothing can leave. Without the marker a judge's
-# first `rokan do` prints 12 lines of consent text before the ⚡ 0-call line (seen live 2026-08-29).
-# Marker path = rokan_mcp.paths.home() / '.do-disclosed' (home = $HOME/.rokan; rokan_do/cli.py:69).
-RUN touch /home/judge/.rokan/.do-disclosed && test -f /home/judge/.rokan/.do-disclosed
+# Runtime policy for the judge user (worker.ts repeats the browser vars at startProcess; a judge's manual
+# `rokan do` must behave identically). No real key: the proxy URL + dummy key come from the Worker.
+ENV HOME=/home/judge SHELL=/bin/zsh TERM=xterm-256color \
+    ROKAN_BROWSER_NO_SANDBOX=1 ROKAN_BROWSER_HEADLESS=true \
+    ROKAN_BROWSER_EXTRA_ARGS="--disable-dev-shm-usage --disable-gpu" \
+    ROKAN_TASK_CLASSES=read_value,read_list ROKAN_GUARD_ALL_HOSTS=1
+# Seeds: the package's own 54 plus the ones exported from the builder's store (rokan-seed-ops.json).
+# The first-run disclosure marker (rokan_mcp.paths.home()/.do-disclosed): the disclosure text describes the
+# builder's own key; here planning goes through the capped proxy and the tour says so on screen instead.
+# Folded into the seed RUN (one layer). rokan-do's seed install created ~/.rokan just above.
+RUN rokan-do seed install && rokan-do seed install /home/judge/rokan-seed-ops.json && rokan-do ops | tail -1 \
+  && mkdir -p /home/judge/.rokan && touch /home/judge/.rokan/.do-disclosed

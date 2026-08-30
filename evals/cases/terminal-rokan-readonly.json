@@ -1,0 +1,38 @@
+[
+  {
+    "waitFor": "window.__rokan?.session().state === 'paired'",
+    "timeout": 10000,
+    "judgeOnly": true
+  },
+  {
+    "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0",
+    "timeout": 8000
+  },
+  {
+    "invoke": "terminal_propose",
+    "input": {
+      "command": "rokan do \"sign up for the newsletter with judge@example.org at example.org\"",
+      "why": "a write-shaped task: the sandbox's read-only policy (ROKAN_TASK_CLASSES) must refuse it before any browser action"
+    }
+  },
+  {
+    "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()",
+    "equals": "string"
+  },
+  {
+    "key": "Enter"
+  },
+  {
+    "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid, timeout_ms: 60000 }).then(r => r.status)",
+    "equals": "executed",
+    "timeout": 65000
+  },
+  {
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /abstained|refus|reads and fetches|cannot|not allowed/i.test(l))",
+    "equals": true
+  },
+  {
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /⚡|subscribed|thank you/i.test(l))",
+    "equals": false
+  }
+]
