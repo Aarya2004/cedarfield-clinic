@@ -161,3 +161,10 @@ on bundled 151; `navigator.modelContextTesting` absent (Cloudflare Browser Run's
 Chromium left running after each probe (checked). **Conclusion:** Tier 0 is mechanically feasible from
 rokan-do's own Playwright; Allbirds is the demo storefront; invoke/latency numbers pending
 `docs/measurements/2026-08-29-tier0.md` in the Rokan repo.
+
+## Agent-as-executor probe — `next_step()` two-site workflow (2026-08-30, Engineer #4; Workbench directive step 1)
+
+- **Page:** `https://rokan-sandbox.rokan-sandbox.workers.dev/probe/next-step` (`infra/sandbox/src/probe-page.ts`, commit `2316970`). One tool `next_step` → literal instruction: allbirds.com `search_catalog` "wool runners" → brooklinen.com `search_catalog` "linen sheets" → `DONE`. Logs to `#log` + `localStorage`.
+- **Contract (Chrome 152 + `--enable-features=WebMCP`, CDP harness):** `list` → `[next_step]`; 3 invocations CONTINUE(1) → CONTINUE(2) → DONE at **22–24 ms** each; 0 failed, 0 page errors; N=2. Evidence: `docs/evidence/probe/2026-08-30-next-step-contract-chrome-harness.jsonl`.
+- **Site survey (same Chrome, `list` after 4 s):** allbirds / brooklinen / kyliecosmetics each declare the identical 10 Shopify tools (`search_catalog browse_store get_product show_variant get_cart update_cart cancel_cart proceed_to_checkout manage_orders search_shop_policies_and_faqs`); gymshark, bombas declare **0**; Cloudflare's `webmcp-challenge.examples.workers.dev` declares 1 promo tool (`reveal_extra_credits_link`) — it is not a store, so it was dropped as site 2.
+- **Consumer runs — NOT yet measured:** ChatGPT desktop (Sol/Terra) needs Arav's keyboard; Chrome's `document.modelContext` absent in the running Chrome until restart. Prior from research (ChatGPT drops a page's tools when the page closes) + A/B agent overhead (15.8 s Claude / 23.2 s Codex per tool call): a two-site run via the agent ≈ 60–120 s vs 783 ms compiled. Verdict + scores: `docs/SELF-EVAL-WORKBENCH.md`.

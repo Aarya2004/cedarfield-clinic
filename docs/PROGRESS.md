@@ -434,6 +434,7 @@ Drop `--no-tunnel` to get a `wss://…trycloudflare.com` link (≈ 15–20 s, wa
 
 ## Objections
 
+- **2026-08-30 Workbench directive (Fable 5):** do not switch — hostile-judge mean ≈ 4.3 vs ≈ 6.9 shipped; a tool that returns instructions is the §0.5 meta-tool; on today's open web (Allbirds/Brooklinen/Kylie = the same 10 Shopify tools, Gymshark/Bombas = 0) every demo is commerce cosplay; executor (c) unmeasured until a ChatGPT desktop run. Full reasoning: `docs/SELF-EVAL-WORKBENCH.md`.
 - **Engineer #3 (2026-08-29), `docs/SELF-EVAL-2026-08-29.md`:** we do NOT finish #1 as-is — hostile-panel mean ≈ 6.0 (Leverage 7, Execution 6, Impact **5**, Creativity 6); a strong top-10, blocked from #1 by **Potential Impact** and by ChatGPT-desktop being unmeasured (caps the OpenAI judge across all four). The two biggest levers are NOT code — the **video** (Stage-1 pass/fail, still missing) and the **ChatGPT measurement** (Arav-gated); of the code options, ship **(b) any-machine beat first** (Impact +1–2, mostly already built), then **first-paint-is-a-birth** (~0.5–1 h, moves Creativity for every judge — better ROI than (a) or (c)); (a) localStorage is a minor Execution polish; **drop (c)**.
 - None from C before that. (D1 above is a recommendation on pitch framing, not an objection to a locked decision.)
 
