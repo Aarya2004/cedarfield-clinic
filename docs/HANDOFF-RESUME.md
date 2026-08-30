@@ -3,15 +3,15 @@
 **Read this + `docs/PROGRESS.md` (top block) + `~/.claude/plans/optimized-mapping-tarjan.md` (the bible) first.**
 Everything below is pushed to `main` (entry repo `github.com/Aarya2004/webmcp-private`) unless noted.
 
-## RESUME POINT (2026-08-29 ~22:30 local) — OPEN-NET JUDGE SANDBOX PROVEN; one clean suite line left
+## RESUME POINT (2026-08-29 ~22:45 local) — OPEN-NET JUDGE SANDBOX GREEN (suite 15/15)
 Plan of record: `~/.claude/plans/bright-squishing-corbato.md` (approved; executed). Code on `main` (see PROGRESS
 top blocks); Rokan `feat/tier0-native` `10ffc26` (unpushed — Arav's call).
 **Proven live, real Chrome, stranger path:** unseeded page → `rokan do` **planned · 9 019 ms** → same question
 **⚡ compiled · 783 ms · 0 calls** (`docs/evidence/stranger/2026-08-29-prod-open-net-cold-then-replay.jpg`); proxy
 caps trip live; read-only refusal in 232 ms; sleepAfter fix; Sonnet 5 thinking pinned off (proxy + planner).
-**Judge suite:** 14/15 with `open-net` passing in-suite; `readonly` fixed after (abstain exits 0); the last full run
-was refused at `/api/session` by MY IP's 5-concurrent cap (each eval/probe is a session) — re-run when a slot frees:
-`node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --trace=/tmp/t` → expect **15/15**.
+**Judge suite: 15/15, 0 retries, 96 s** (`docs/evidence/sandbox/2026-08-29-judge-suite-15-of-15.txt`). Re-run before
+freeze: `node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --trace=/tmp/t` (each run is a
+session against your IP's 5-concurrent cap — space runs ≥ 6 min apart).
 **Known Rokan gap (filed, FIELD-NOTES J19):** cold planning is brittle on some layouts (pypi package pages,
 Statuspage-style status pages); Wikipedia/docs pages verify first try. Not a sandbox issue.
 **Needs Arav:** push the Rokan branch; a dedicated Anthropic key with a console spend limit (the personal key is in
