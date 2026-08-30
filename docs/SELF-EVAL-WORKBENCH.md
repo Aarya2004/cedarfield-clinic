@@ -126,3 +126,34 @@ and visual" surface SELF-EVAL-2026-08-29 said the generalist judges want.
 Workbench scores ≈ 4.3 hostile vs ≈ 6.9 for the shipped product; its execution model is the banned §0.5
 meta-tool and, on today's open web, unavoidably commerce cosplay; the two right sentences in the brief go into
 the pitch; executor (c) stays unmeasured until one consumer run. Do not start the canvas.
+
+## 8. Re-score for executor (a) — Arav's actual proposal (2026-08-30 ~01:30 PT)
+
+§§1–7 scored the brief as written: executor **(c)**. Arav's version is executor **(a)** — our headless daemon in
+the sandbox runs the declared tools, Enter gates each step, the canvas is where human + agent compose. That
+retires §3 items 1–2 (meta-tool, honest numbers). What was measured and found since:
+
+- **Executor (a) works in the judge image**: `list_tools(allbirds.com)` 10 tools / 8 866 ms; `search_catalog`
+  ok / 469 ms / 0 model calls (`docs/evidence/probe/2026-08-30-native-invoke-local-image.jsonl`). In the live
+  sandbox: 0 tools in 14.8 s — HTTP 200, Chromium 151 fine; the daemon's 3 s post-`domcontentloaded` window
+  closes before Allbirds registers on ½ vCPU. Fixed: `ROKAN_WEBMCP_QUIET_MS` (Rokan `d62b290`, image `787f810`).
+- **Prior art** (`docs/research/2026-08-30-workbench-prior-art.md`): **cardea** (2026-08-26, 818 tests) is a
+  live canvas that "runs the branches in parallel on the actual web" and "stops at every move that spends, sends,
+  or signs"; six more canvas entries; **no terminal entry**; the forge is the only empty column; cross-site supply
+  = Shopify's 10 tools + OpenAI docs; ChatGPT: "a tool from one page does not carry over"; judge Nahas's wiki
+  lists cross-origin leakage as a vulnerability class; OpenAI is sunsetting its own canvas (Agent Builder).
+- **Scope**: 48-h canvas = 8–9 h me + 14–16 h Aarya on an isolated route; the full thing does not fit.
+
+| Criterion | Workbench (a), Monday state | Shipped product + absorbed composition (plan D0–D4) |
+|---|---|---|
+| Leverage | 6 — consumes declared tools natively, registers the forged tool; nothing new vs terminal | 7–8 — same, plus runtime `registerTool` and a measured cross-site composed tool |
+| Execution | 4 — 36 h canvas vs cardea's 818 tests; baseline at risk | 8 — green baseline kept; one new subcommand + one view on a branch |
+| Impact | 6 — reliability-layer story, demonstrated on Shopify only (compile cut) | 7 — same story, and "any website" stays true via compile fallback |
+| Creativity | 4 — canvas is the most crowded shape; "differ from existing concepts" | 6–7 — no terminal entry exists; forge column empty |
+| **Mean** | **≈ 5.0** | **≈ 7.2** |
+
+**Verdict: no pivot; absorb.** The Workbench's real content — compose other sites' declared tools into a kept
+tool, executed by our daemon, gated by Enter — ships as `rokan-do native invoke` steps inside forged tools; the
+visual ships as a read-only step strip on branch `workbench` under the Monday-22:00 kill rule; the compile
+engine stays as the fallback (cutting it contradicts the open-net directive and turns every demo into a Shopify
+demo). Plan: `docs/WORKBENCH-PLAN.md`.
