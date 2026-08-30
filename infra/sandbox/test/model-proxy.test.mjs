@@ -126,3 +126,13 @@ test('settledUsdMicros: usage wins; a 4xx keeps only the input estimate; a netwo
   assert.ok(probe < reserved / 5, `${probe} << ${reserved}`);
   assert.equal(settledUsdMicros('claude-sonnet-5', 502, undefined, 9000, reserved), reserved);
 });
+
+test('validate: Sonnet 5 gets thinking pinned off unless the client set it; haiku untouched', () => {
+  const v = validateModelRequest({ ...plannerBody(), model: 'claude-sonnet-5' });
+  assert.equal(v.ok, true);
+  if (v.ok) assert.deepEqual(v.body.thinking, { type: 'disabled' });
+  const explicit = validateModelRequest({ ...plannerBody(), model: 'claude-sonnet-5', thinking: { type: 'adaptive' } });
+  if (explicit.ok) assert.deepEqual(explicit.body.thinking, { type: 'adaptive' });
+  const h = validateModelRequest(plannerBody());
+  if (h.ok) assert.equal('thinking' in h.body, false);
+});

@@ -70,7 +70,13 @@ export function validateModelRequest(raw: unknown): Validated {
     if (!isRecord(m) || !onlyTextBlocks(m.content)) return { ok: false, status: 400, message: 'only text content is allowed through the sandbox proxy' };
   }
   if ('system' in raw && raw.system !== undefined && !onlyTextBlocks(raw.system)) return { ok: false, status: 400, message: 'only text content is allowed through the sandbox proxy' };
-  return { ok: true, body: { ...raw, max_tokens: maxTokens }, model, maxTokens };
+  const body: Record<string, unknown> = { ...raw, max_tokens: maxTokens };
+  // Sonnet 5 runs adaptive thinking when `thinking` is omitted; thinking tokens count against max_tokens, so
+  // rokan-do's structured plan (max_tokens 4000) came back truncated after 48 s / 4 000 output tokens
+  // (measured live 2026-08-29). Planning is a structured extraction, not reasoning: pin thinking off unless
+  // the client set it explicitly. Bounded output cost is the other reason.
+  if (model.startsWith('claude-sonnet-5') && body.thinking === undefined) body.thinking = { type: 'disabled' };
+  return { ok: true, body, model, maxTokens };
 }
 
 /** Exactly the headers that reach upstream. The client's x-api-key / authorization / anthropic-beta never do. */
