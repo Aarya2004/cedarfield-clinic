@@ -89,7 +89,7 @@ Headless WebMCP evals (Chrome 152 via the CDP `WebMCP` domain, no consumer neede
 ## Repo
 
 - `apps/web` — Next.js 15 client: tools, xterm pane with ghost text, forge card, ledger.
-- `packages/bridge` — `npx rokan-terminal`: node-pty + WebSocket + Cloudflare quick tunnel + pairing token; `mcp` subcommand.
+- `packages/bridge` — `node packages/bridge/bin/rokan-terminal.js` (`npx rokan-terminal` once published to npm): node-pty + WebSocket + Cloudflare quick tunnel + pairing token; `mcp` subcommand.
 - `infra/sandbox` — judge mode: Cloudflare Worker + Sandbox container running the same bridge.
 - `evals/` — headless harness + 24 cases in `evals/cases/` (9 on the prompt line, 15 on a real PTY — 4 of those judge-only, so a builder-mode `--bridge` run executes 11 and skips 4; the terminal cases also run against the live judge sandbox); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
 

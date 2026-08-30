@@ -1,6 +1,14 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-29 ~22:45 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
+Last update: **2026-08-30 ~04:30 PT (Engineer #4, Fable 5)** Branch **`workbench`** (created from main@6af2d52 on Arav's instruction; main = shipped product). Rokan `feat/tier0-native` at `f5fea13`, unpushed (Arav).
+
+## State right now (2026-08-30 04:30 PT) — read this first
+- **Live sandbox:** `standard-3` (2 vCPU) + image `787f810` (rokan-mcp 0.1.3, 15 s tool-listen window). **Judge suite 15/15, 0 retries** on this fleet (`docs/evidence/sandbox/2026-08-30-judge-suite-15-of-15-standard-3.txt`). Tier 0 native from the judge shell: Allbirds 10 tools / 5.5–8.2 s, `search_catalog` ok 226 ms tool time (`docs/evidence/probe/`). On standard-1 it listed 0 tools — CPU, not egress.
+- **In progress (background):** deploy of the 0.0.3 image (`rokan-do native list/invoke`, first-line attribution) → in-sandbox CLI smoke → suite again.
+- **Workbench decision:** no pivot; absorb (`docs/WORKBENCH-PLAN.md`, `docs/SELF-EVAL-WORKBENCH.md` §8). **Hostile independent eval** (`docs/reviews/2026-08-30-hostile-eval-workbench.md`): A canvas ≈ 3.5 / top-10 ~6 %; B absorbed ≈ 6.5 / ~29 %; C as-is ≈ 6.6 / ~26 %; recommends **B−**: cut D3 (step strip), keep D2, and spend the hours on the four zero-items below.
+- **Zero-items that decide the submission (all Arav-gated or tooling-blocked):** (1) **video** — none exists; ffmpeg broken on the Mac; (2) **repo is private** — SUBMISSION links it; make public + rename; (3) **ChatGPT desktop run** (Sol/Terra) — never done; (4) caps revert to the judging row before freeze (`wrangler.jsonc`); (5) re-lead the pitch on drift, demote the n=3 42.4× headline.
+- Honesty fixes landed this session: 12-tool "Chrome guidance" citation; FORGE-PLAN §17.1 "works in ChatGPT desktop, measured"; README `npx`; two live-invoke evidence files that held only the `list` line (one fixed, one marked partial until the 0.0.3 run).
+
 
 ## Build log — Engineer #4 (2026-08-29 ~20:25 local, open-net sandbox LIVE — proofs so far)
 Deployed: image `sha256:506cb8e0…` on **`standard-3`** (2 vCPU — standard-1's ½ vCPU listed 0 store tools live, 2026-08-30), fleet `ready`; Worker versions `ae7003af` → sid-first fix
