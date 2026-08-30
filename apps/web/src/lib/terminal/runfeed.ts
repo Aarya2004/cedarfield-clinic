@@ -42,8 +42,11 @@ export interface Run {
   interrupted?: boolean;
   /** the human inserted the ghost text (Tab) and edited before running */
   edited?: boolean;
-  /** rokan-do trailer parsed by the bridge: replayed=true means zero model calls */
-  rokan?: { ms: number; replayed: boolean };
+  /**
+   * rokan-do trailer parsed by the bridge: replayed=true means zero model calls. `native` is set
+   * only when a site's own WebMCP tools served the answer — display provenance, never inferred.
+   */
+  rokan?: { ms: number; replayed: boolean; native?: { site: string; tool: string } };
 }
 
 /** Bounded on purpose: a long session must not grow the tab without limit. Oldest out first. */

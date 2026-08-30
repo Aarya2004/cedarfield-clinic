@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { matchesFilter, runFeed, type Run, type RunFilter } from '@/lib/terminal/runfeed';
 import { detectionFor, rokanArtifact, type Detection } from '@/lib/terminal/artifacts';
 import { Chip } from './Chip';
-import { ProvenanceChip } from './Provenance';
+import { ProvenanceChip, type Provenance } from './Provenance';
 
 const EMPTY: Run[] = [];
 const FILTERS: { id: RunFilter; label: string; title: string }[] = [
@@ -36,6 +36,21 @@ const ORIGIN: Record<Run['origin'], { label: string; title: string }> = {
 
 function useRuns(): Run[] {
   return useSyncExternalStore((fn) => runFeed.subscribe(fn), () => runFeed.snapshot(), () => EMPTY);
+}
+
+/**
+ * Where a `rokan do` run's answer came from. `native` wins over the call count: a site's own WebMCP
+ * tool answers in zero model calls too, so reading `replayed` first labelled every native answer
+ * "compiled" (contract from the bridge side, 2026-08-29). Only fields the trailer carried are passed
+ * — an unmeasured call count stays absent rather than becoming a zero.
+ */
+function rokanProvenance(r: NonNullable<Run['rokan']>): Provenance {
+  return {
+    kind: r.native ? 'native' : r.replayed ? 'compiled' : 'planned',
+    ...(r.native ? { site: r.native.site, tool: r.native.tool } : {}),
+    ms: r.ms,
+    ...(r.replayed ? { calls: 0 } : {}),
+  };
 }
 
 export function RunFeed({ onForgeThis, onOpenArtifact }: { onForgeThis: (lines: string[]) => void; onOpenArtifact: (run: Run, d: Detection) => void }) {
@@ -185,7 +200,7 @@ function RunRow({
         <span className="mono shrink-0 text-muted tabular-nums" title={run.ms === null ? 'Duration was not measured' : 'Duration, measured by the shell'}>
           {run.ms === null ? '– ms' : `${run.ms} ms`}
         </span>
-        {run.rokan && <ProvenanceChip p={{ kind: run.rokan.replayed ? 'compiled' : 'planned', ms: run.rokan.ms, ...(run.rokan.replayed ? { calls: 0 } : {}) }} />}
+        {run.rokan && <ProvenanceChip p={rokanProvenance(run.rokan)} />}
         {run.cwd && (
           <span className="mono hidden max-w-[28%] shrink-0 truncate text-muted lg:inline" title={run.cwd}>
             {run.cwd}

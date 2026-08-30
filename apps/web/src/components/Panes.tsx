@@ -9,7 +9,7 @@ import { FIXED_TOOL_NAMES } from '@/lib/webmcp/schemas';
 import type { RegistrationState } from '@/lib/webmcp/register';
 import { tryAsAgent } from './ForgeCard';
 import { Chip, KindBadge } from './Chip';
-import { ProvenanceChip } from './Provenance';
+import { ProvenanceChip, type Provenance } from './Provenance';
 
 const EMPTY: never[] = [];
 
@@ -263,9 +263,7 @@ export function LedgerPane() {
               <span className="w-5 shrink-0 text-right text-muted tabular-nums">{r.seq}</span>
               <span className="min-w-0 break-words">
                 <span className={r.kind === 'forged' ? 'text-accent-ink' : r.kind === 'executed_step' ? 'text-ok' : r.kind === 'dismissed' ? 'text-muted' : 'text-ink'}>{r.kind}</span> <span className="text-muted">{summarise(r)}</span>
-                {r.kind === 'executed_step' && typeof r.fields.rokan_ms === 'number' && (
-                  <ProvenanceChip p={{ kind: r.fields.rokan_calls === 0 ? 'compiled' : 'planned', ms: r.fields.rokan_ms, ...(r.fields.rokan_calls === 0 ? { calls: 0 } : {}) }} />
-                )}
+                {r.kind === 'executed_step' && typeof r.fields.rokan_ms === 'number' && <ProvenanceChip p={stepProvenance(r.fields)} />}
                 {r.bridge_sig && (
                   <span className="ml-1 text-ok" title="countersigned by the bridge — HMAC with a key that never leaves your disk" aria-label="countersigned by the bridge">
                     ✓
@@ -283,6 +281,25 @@ export function LedgerPane() {
       )}
     </section>
   );
+}
+
+/**
+ * An `executed_step` row's provenance, read from the fields the bridge measured.
+ * `rokan_site` is present only when the site's own WebMCP tools served the answer, so it decides the
+ * kind before the call count does — a native answer also costs zero model calls, and reading
+ * `rokan_calls` first labelled every native step "compiled" (contract, 2026-08-29). Only fields the
+ * row actually carries are passed on: an uncounted run has no `calls`, not a zero.
+ */
+function stepProvenance(f: LedgerRow['fields']): Provenance {
+  const site = typeof f.rokan_site === 'string' && f.rokan_site ? f.rokan_site : undefined;
+  const tool = typeof f.rokan_tool === 'string' && f.rokan_tool ? f.rokan_tool : undefined;
+  return {
+    kind: site ? 'native' : f.rokan_calls === 0 ? 'compiled' : 'planned',
+    ...(site ? { site } : {}),
+    ...(tool ? { tool } : {}),
+    ...(typeof f.rokan_ms === 'number' ? { ms: f.rokan_ms } : {}),
+    ...(f.rokan_calls === 0 ? { calls: 0 } : {}),
+  };
 }
 
 function summarise(r: LedgerRow): string {
