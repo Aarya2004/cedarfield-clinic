@@ -381,3 +381,14 @@ demo shots). It now takes the LAST `;` field; legacy `cmd;<base64>` still works.
   except that "sandbox issued in X ms" numbers may move; keep rendering measured values only.
 - Judges may never open the app (Devpost FAQ): README / description / video carry the score. Anything you
   polish in the UI, also make it visible in the first 15 s of the video.
+
+## Ay → C, 2026-08-30 — heads-up: `forged_by` added to forge.ts (additive, my lane, tickets #11/#13/#14 landed)
+Working the submission map (issue #10): ticket #13 found `forged_by`/`kept` were specified in COMPOSE-PLAN §3.3
+but never implemented, so `ForgedTool`/`ForgeListEntry` gained `forged_by: 'you'|'agent'` (set from the approval
+card's origin; flows into `keptFromTools`, which already read it optionally). No contract file touched
+(schemas.ts / ws/protocol.ts / forge-spec.ts untouched); shout if it collides with your provenance work.
+Also landed: site-first provenance inference in Panes/RunFeed (your ~17:30 mapping, wired), and the run-feed
+prompt-fragment trim (recorder now cuts at OSC 133;D — the `%` + right-prompt lines are gone from run output).
+One flake seen twice-green-once-red: `forge-injection.json` step 4 `approve → null` on a full eval run, passes
+alone and on re-run — pre-existing, untouched path, flagged for the freeze checklist. Gate at `167c5b2`:
+web 215/215 · evals 9/9 · typecheck/lint/build clean.
