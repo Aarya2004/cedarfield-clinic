@@ -68,7 +68,7 @@ honest numbers (§0.6); WebMCP-touching code public; timestamped commits after 0
 - **Card**: a pending spec awaiting the human (edit → Approve / Reject). One card visible at a
   time; others queue FIFO (max 5 pending; 6th `forge_create` → `{error:'too_many_pending'}`).
 - **Forged tool**: an approved spec registered as WebMCP tool `forged_<name>`.
-- **Visible**: currently registered (≤ 5 forged visible; 6 fixed + 5 = 11 ≤ the §0.4 cap of 12; `sandbox_status` was never built).
+- **Visible**: currently registered (≤ 5 forged visible; **7 fixed + 5 = 12**, exactly the §0.4 cap of 12 — `terminal_history` took the slack; `sandbox_status` was never built).
 - **Pinned**: exempt from eviction. **Evicted**: unregistered by budget, still listed, restorable.
 - **Hash**: 12-hex prefix of SHA-256 over canonical `{name, description, params, commands, kind}`.
 - **Invocation**: one call of a forged tool → 1..5 sequential proposals (steps).
@@ -375,10 +375,10 @@ Existing 14 tests stay green.
 
 ### 7.3 Headed (Claude's Chrome extension, connected)
 Open `http://localhost:3311/?test=1`, run the birth by hand, DevTools → Application → WebMCP:
-screenshot the panel showing `forged_hn_top` appearing + its invocation → `docs/evidence/gate-c/`.
+screenshot the panel showing `forged_status_of` appearing + its invocation → `docs/evidence/gate-c/`.
 
 ### 7.4 ChatGPT desktop (Arav; after Sol/Terra confirmed + Vercel prod)
-1. Open prod URL → Site tools arrow → count = 6. 2. "Forge a tool called hn_top that runs `rokan do "top {{n}} HN titles"`" → card → Approve → **does the Site tools list show `forged_hn_top` without reload?** (record yes/no + seconds in FIELD-NOTES). 3. "top 3 now" → agent calls it → ghost text → Enter → agent's `terminal_wait` → summary. 4. Ask it to wait on an untouched proposal → measure `terminal_wait.aborted_by_consumer` / `still_waiting` (per-call budget). Screenshots → `docs/evidence/gate-c/chatgpt-*.png`.
+1. Open prod URL → Site tools arrow → count = 7. 2. "Forge a tool called status_of that runs `rokan do "what is the current status at {{site}}"`" → card → Approve → **does the Site tools list show `forged_status_of` without reload?** (record yes/no + seconds in FIELD-NOTES). 3. "now check www.vercel-status.com" → agent calls `forged_status_of({site:"www.vercel-status.com"})` → ghost text → Enter → agent's `terminal_wait` → summary. 4. Ask it to wait on an untouched proposal → measure `terminal_wait.aborted_by_consumer` / `still_waiting` (per-call budget). Screenshots → `docs/evidence/gate-c/chatgpt-*.png`.
 
 ### 7.5 Static + regression
 `pnpm typecheck && pnpm lint && pnpm build && pnpm test` (web) · `pnpm check && pnpm smoke` (bridge, 14/14) · all `evals/cases/*.json` exit 0 · CI green on push.
@@ -562,7 +562,7 @@ Judging is Stage 1 pass/fail (on theme; uses the API) then four × 25%, tiebreak
 ### 17.1 WebMCP Leverage — "thorough, skillful, non-trivial, working" (25%, tiebreak #1)
 - **Demands**: breadth of the API used *correctly* (registration, lifecycle, schemas, annotations, `toolchange`, `getTools`/`executeTool`), non-trivial semantics (tools that could not be a form), and proof it *works* in a real consumer.
 - **Judge probes**: opens the Site tools list — count, names, descriptions read well? Calls one — does it do what it says? Opens DevTools → WebMCP — registrations and invocations visible? Reads the code — `registerTool` with `AbortSignal`? Hard-coded list?
-- **Our 10**: 6 fixed + runtime-forged tools; per-tool `AbortController`; `toolchange` observed; `readOnlyHint`/`untrustedContentHint`/`CONSEQUENTIAL:` set from human-approved `kind`; `additionalProperties:false` schemas with param descriptions + examples; output budget; `forge_list` introspection; `executeTool` used by the card's "Try as agent"; MCP parity (§13.1) shows one library / two protocols; FIELD-NOTES documents measured consumer behaviour nobody else has. Works in ChatGPT desktop **and** Chrome, measured.
+- **Our 10**: 7 fixed + runtime-forged tools; per-tool `AbortController`; `toolchange` observed; `readOnlyHint`/`untrustedContentHint`/`CONSEQUENTIAL:` set from human-approved `kind`; `additionalProperties:false` schemas with param descriptions + examples; output budget; `forge_list` introspection; `executeTool` used by the card's "Try as agent"; MCP parity (§13.1) shows one library / two protocols; FIELD-NOTES documents measured consumer behaviour nobody else has. Works in ChatGPT desktop **and** Chrome, measured.
 - **Gap to close**: ChatGPT `toolchange` refresh (unverified); Chrome `toolsRemoved` on abort (unverified); MCP parity not built.
 
 ### 17.2 Execution — "a complete product experience, not a PoC" (25%, tiebreak #2)

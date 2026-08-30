@@ -16,7 +16,9 @@ const PORT = Number(process.env.DRIFT_PORT || 8099);
 const mode = process.argv[2];
 
 async function html() {
-  const r = await fetch(`http://localhost:${PORT}/`);
+  // 127.0.0.1, not localhost: the server binds v4 only, and a `localhost` that resolves to ::1
+  // first fails the fetch on some setups.
+  const r = await fetch(`http://127.0.0.1:${PORT}/`);
   return r.text();
 }
 
@@ -34,8 +36,9 @@ if (mode === 'capture') {
   const recipe = JSON.parse(readFileSync(RECIPE, 'utf8'));
   const m = doc.match(new RegExp(recipe.regex));
   // The script has no idea the meaning changed. It reports a number with full confidence.
+  // RE captures [0-9.,]+ by construction, so the old `m[1].match(/^[0-9.,]+$/)` guard was dead.
   console.log(JSON.stringify({
-    mode, answer: m ? (m[1].match(/^[0-9.,]+$/) ? `$${m[1]}` : m[1]) : recipe.learned && `$${recipe.learned}`,
+    mode, answer: m ? `$${m[1]}` : recipe.learned && `$${recipe.learned}`,
     refused: false, note: 'no verification step — returns whatever the v1 selector now matches',
   }));
 } else {

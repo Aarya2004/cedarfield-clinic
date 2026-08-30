@@ -41,10 +41,13 @@
           "n": 3
         },
         "cost_usd": {
-          "mean": 1,
+          "mean": null,
+          "mean_lower_bound": 0.943304,
+          "mean_upper_bound": 1.062761,
           "min": 0.823848,
           "max": 1.1822169999999999,
-          "n": 3
+          "n": 3,
+          "note": "CORRECTION 2026-08-29: the mean recorded here was 1, because stats() in evals/ab/arm-agents.mjs applied Math.round to it (right for ms, wrong for dollars). The script is fixed (Number(x.toFixed(4))) but the agents were NOT re-run. Per-run costs were never persisted, so min/max/n are the only exact values; for n=3 the mean is bounded by (2*min+max)/3 and (min+2*max)/3, recorded above. See docs/measurements/2026-08-29-ab.md."
         },
         "all_ok": true,
         "sample": "Wool Runners (men's and women's, classic + NZ) are **$110** at allbirds.com right now, no "
@@ -89,10 +92,13 @@
           "n": 3
         },
         "cost_usd": {
-          "mean": 0,
+          "mean": null,
+          "mean_lower_bound": 0.277746,
+          "mean_upper_bound": 0.454306,
           "min": 0.101186,
           "max": 0.630866,
-          "n": 3
+          "n": 3,
+          "note": "CORRECTION 2026-08-29: the mean recorded here was 0, because stats() in evals/ab/arm-agents.mjs applied Math.round to it (right for ms, wrong for dollars). The script is fixed (Number(x.toFixed(4))) but the agents were NOT re-run. Per-run costs were never persisted, so min/max/n are the only exact values; for n=3 the mean is bounded by (2*min+max)/3 and (min+2*max)/3, recorded above. See docs/measurements/2026-08-29-ab.md."
         },
         "all_ok": true,
         "sample": "Yes — status.python.org reports \"All Systems Operational\" (indicator: none, updated 2026-0"

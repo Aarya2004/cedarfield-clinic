@@ -68,7 +68,7 @@ duty for anything B drops: pairing mechanics, builder install, forge_list, pin/e
 
 | t | shot | say |
 | --- | --- | --- |
-| 0:00–0:10 | Flash-forward: Site tools **6→7**, `forged_run_checks` appearing; DevTools WebMCP panel split-screen 2 s | "This tool didn't exist a minute ago. I made it by pressing Enter. Watch." |
+| 0:00–0:10 | Flash-forward: Site tools **7→8**, `forged_run_checks` appearing; DevTools WebMCP panel split-screen 2 s | "This tool didn't exist a minute ago. I made it by pressing Enter. Watch." |
 | 0:10–0:40 | "Why is CI red?" → `pytest -q` ghost → Enter → failing test → Share-screen ON → agent reads (a stray `AWS_SECRET_ACCESS_KEY` on screen renders `[redacted]`, 2 s highlight) → agent names the failing test, proposes the fix | "Every command it wants is a proposal. It can't type Enter. It reads what I let it read." |
 | 0:40–1:00 | Fix → `pytest -q` green → select both commands in history → **Forge this** → card `run_checks` → Approve → **tools 6→7, no reload** | "I did this once. Now it's a tool — born at runtime, in WebMCP's own format." |
 | 1:00–1:20 | "check again" → agent calls `forged_run_checks` → ghost → Enter → `exit 0 · N ms` ledger row. Then the seeded beat: `rokan do "what is the current status at githubstatus.com"` → `347 ms ⚡ calls:0` | "Second time costs nothing. Even a *browsing* task compiles — zero model calls on replay." |

@@ -15,7 +15,8 @@ terminal you and your agent share, where the page's tools are the trust boundary
   calls `document.modelContext.registerTool()` for `forged_<name>` with its own `AbortSignal`, and
   the agent's tool list changes while the page is open (`toolchange`). A judge can watch a tool
   appear in ChatGPT's Site tools list — or in DevTools → Application → WebMCP — seconds after the
-  human did something once. Six fixed tools plus up to five forged (the ≤ 12 picker budget), each
+  human did something once. Seven fixed tools plus up to five forged (7 + 5 = 12, exactly the ≤ 12
+  picker budget), each
   with `readOnlyHint` / `untrustedContentHint` derived from a human-approved `kind`, writes prefixed
   `CONSEQUENTIAL:`, `additionalProperties:false` schemas with examples, outputs ≤ 1.5 K chars.
 - **Nothing a tool does executes.** `terminal_propose` and every `forged_*` tool ghost-type; the
@@ -27,7 +28,7 @@ terminal you and your agent share, where the page's tools are the trust boundary
 - **Measured, not claimed.** `docs/FIELD-NOTES.md` records what Chrome 152's WebMCP actually does
   (no `{signal}` passed to `execute`, `executeTool` wants a JSON string, `toolsRemoved` on abort,
   decorations need `allowProposedApi`) — measured by our headless harness that drives the CDP
-  `WebMCP` domain with no consumer in the loop. 21 cases (9 on the prompt line, 12 on a real PTY — all green, verified 2026-08-29), run on every commit.
+  `WebMCP` domain with no consumer in the loop. 24 cases (9 on the prompt line, 15 on a real PTY, 4 of those judge-only — 9/9 and 11/11 green in builder mode, verified 2026-08-29), run on every commit.
 
 ## The better experience
 
@@ -42,29 +43,34 @@ The agent gets hands on a real shell without ever getting execution. The human g
 doing*: anything done once can be forged into a tool the agent calls next time — including
 `rokan do`, our browsing engine, which acts behind the user's own logins and replays its seeded
 operations at zero model calls — the ledger row shows `calls:0 ⚡` parsed from rokan-do's own result
-line at 0 model calls (a compiled read measured 79 ms — `docs/measurements/2026-08-30-ab.md`). Neither side could grow that library alone, and the
+line at 0 model calls (a compiled read measured 546 ms wall / 79 ms on rokan-do's own clock —
+`docs/measurements/2026-08-29-ab.md`). Neither side could grow that library alone, and the
 library is portable: it is WebMCP.
 
 ## Potential impact — the number, measured (not claimed)
 
 The audience is every developer whose agent redoes the web from scratch each session and whose
 learned workflows do not survive a reload or transfer between vendors. The claim is falsifiable and
-we measured it live (`docs/measurements/2026-08-30-ab.md`, harness in `evals/ab/`), same questions,
+we measured it live (`docs/measurements/2026-08-29-ab.md`, harness in `evals/ab/`), same questions,
 headless, three arms — Rokan, Codex CLI, Claude Code:
 
-| task (live web) | Rokan (warm) | Codex CLI | Claude Code |
-| --- | --- | --- | --- |
-| "is status.python.org all systems operational" | **0 model calls · 79 ms** | 1 turn · ~23 s | 3 turns · ~16 s |
-| "how much are Wool Runners at allbirds.com" (builder mode) | **0 model calls · ~1.45 s** | 1 turn · ~10 s | 22 turns · ~77 s |
+Every arm is timed the same way — **wall clock around the whole process** — so the multipliers below
+are wall-vs-wall. Rokan's own internal clock is shown beside it, never in place of it.
+
+| task (live web) | Rokan warm ×5 (internal / **wall**) | Codex CLI ×3 (wall) | Claude Code ×3 (wall) | Rokan advantage (wall) |
+| --- | --- | --- | --- | --- |
+| "is status.python.org all systems operational" | **0 model calls** · 79 ms / **546 ms** | 1 turn · 23 164 ms | 3 turns · 15 780 ms | **42.4× / 28.9×** |
+| "how much are Wool Runners at allbirds.com" (builder mode) | **0 model calls** · 1451 ms / **2983 ms** | 1 turn · 10 059 ms | 22 turns · 77 421 ms | **3.3× / 25.9×** |
 
 The point is not "our web fetch beats theirs." It is that **the agents re-enter the model on every
 run and Rokan does not** — a compiled operation replays with the model out of the loop. On the
-compiled task that is ~200–290× faster at zero model calls, and the agent pays that cost again every
-single time. N = 5 warm / N = 3 agents; small, so we report variance and never round up. Honest
-distinctions we state on camera: the compiled replay (79 ms) is browserless; the native replay
-(~1.45 s) re-drives a live browser to call the site's own WebMCP tool and is builder-mode only — the
-judge sandbox has no model or browser, so there it replays compiled operations and forged tools, not
-native consumption.
+compiled task that is **28.9×–42.4× faster in wall clock at zero model calls** (23 164 ÷ 546 = 42.4;
+15 780 ÷ 546 = 28.9), and the agent pays that cost again every single time. N = 5 warm / N = 3
+agents; small, so we report min/max in `docs/measurements/2026-08-29-ab.md` and never round up.
+Honest distinctions we state on camera: the compiled replay is browserless; the native replay
+re-drives a live browser to call the site's own WebMCP tool and is builder-mode only — the judge
+sandbox has no model or browser, so there it replays compiled operations and forged tools, not
+native consumption. Against Codex on the native task the margin is only 3.3×; we say that too.
 
 The other half is trust. When a page changes, a cached scrape a coding agent wrote keeps running and
 **returns a confident wrong number** — we reproduce this live: after a storefront "redesign" the

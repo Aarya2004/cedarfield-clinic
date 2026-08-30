@@ -14,13 +14,17 @@
  *   {"shot": "docs/evidence/demo/01.png"}            // screenshot now (evidence per demo beat)
  *   {"eval": "document.title"},
  *   {"sleep": 500},
- *   {"expect": {"tool": "forged_hn_top"}}            // fails the run if not registered by now
+ *   {"expect": {"tool": "forged_status_of"}}         // fails the run if not registered by now
  * ]
+ * The FIRST step may also carry {"allowErrors": true} — without it, any page exception or
+ * console.error observed during the run fails the case.
  * Output: one JSON line per step with `ms`, plus a final summary line. Exit 1 on any failure.
  */
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename } from 'node:path';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
 
 const args = process.argv.slice(2);
 const flag = (n) => { const i = args.indexOf(`--${n}`); return i === -1 ? undefined : args[i + 1]; };
@@ -28,14 +32,38 @@ const [url, stepsPath] = args.filter((a, i) => !a.startsWith('--') && (i === 0 |
 if (!url || !stepsPath) { console.error('usage: webmcp-cdp.mjs <url> <steps.json> [--shot out.png] [--chrome path]'); process.exit(2); }
 const CHROME = flag('chrome') ?? process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const steps = JSON.parse(readFileSync(stepsPath, 'utf8'));
-const port = 9500 + Math.floor(Math.random() * 400);
-const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=/tmp/webmcp-cdp-${port}`, '--enable-features=WebMCP', '--no-first-run', 'about:blank'], { stdio: 'ignore' });
+const caseName = basename(stepsPath).replace(/\.json$/, '');
+// A real free port, not 9500 + random: two harnesses started in the same second used to collide on
+// the debugging port and one of them attached to the other's browser.
+const freePort = () => new Promise((resolve, reject) => {
+  const s = createServer();
+  s.listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)); });
+  s.on('error', reject);
+});
+const port = await freePort();
+// Profile dir under this run's root when run-all gives us one, so its cleanup can scope the reap to
+// its own children instead of pkill-ing every webmcp-cdp Chrome on the machine (another agent's included).
+const profileRoot = process.env.ROKAN_EVAL_CHROME_PROFILE_ROOT || tmpdir();
+const profileDir = join(profileRoot, `webmcp-cdp-${port}`);
+const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, '--enable-features=WebMCP', '--no-first-run', 'about:blank'], { stdio: 'ignore' });
+// Any uncaught throw past this point must still reap Chrome — a leaked headless browser per failed
+// case is how the 767 MB RSS of 2026-08-28 happened.
+const reap = () => { try { chrome.kill('SIGKILL'); } catch { /* gone */ } try { rmSync(profileDir, { recursive: true, force: true }); } catch { /* gone */ } };
+process.on('exit', reap);
+process.on('uncaughtException', (e) => { console.error(e); reap(); process.exit(1); });
+process.on('unhandledRejection', (e) => { console.error(e); reap(); process.exit(1); });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let targets;
 for (let i = 0; i < 40; i++) { await sleep(250); try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); break; } catch { /* booting */ } }
 if (!targets) { console.error('chrome did not start'); process.exit(1); }
 const ws = new WebSocket(targets.find((t) => t.type === 'page').webSocketDebuggerUrl);
-await new Promise((r) => (ws.onopen = r));
+// Bounded: an onopen that never fires (Chrome up, page target already gone) used to hang the case
+// forever, and run-all's spawnSync had no timeout to end it.
+await new Promise((resolve, reject) => {
+  const t = setTimeout(() => reject(new Error('CDP WebSocket did not open within 10 s')), 10000);
+  ws.onopen = () => { clearTimeout(t); resolve(); };
+  ws.onerror = (e) => { clearTimeout(t); reject(new Error(`CDP WebSocket error: ${e?.message ?? 'unknown'}`)); };
+});
 let id = 0; const pending = new Map();
 const tools = new Map(); const responded = []; const pageErrors = [];
 ws.onmessage = (ev) => {
@@ -84,9 +112,11 @@ for (const step of steps) {
       // ROKAN_EVAL_SHOT_DIR redirects every shot's basename into one directory. run-all sets it for
       // non-judge runs so a `--bridge` pass can't overwrite the judge-sandbox evidence in docs/ (it did,
       // 2026-08-29: builder-mode shots landed on the committed beat*.png).
+      // The basename is prefixed with the case name when redirected: two cases both shooting
+      // `beat1-born.png` into one scratch dir silently overwrote each other.
       const shotDir = process.env.ROKAN_EVAL_SHOT_DIR;
-      const file = shotDir ? `${shotDir}/${basename(step.shot)}` : step.shot;
-      if (shotDir) mkdirSync(shotDir, { recursive: true });
+      const file = shotDir ? `${shotDir}/${caseName}-${basename(step.shot)}` : step.shot;
+      mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, Buffer.from(r.result.data, 'base64'));
       out({ step: 'shot', file, ms: Math.round(performance.now() - t0) });
     } else if (typeof step.query === 'string') {
@@ -175,6 +205,14 @@ if (shot) {
   const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
   writeFileSync(shot, Buffer.from(r.result.data, 'base64'));
 }
-out({ summary: { steps: steps.length, failed, tools: [...tools.keys()], pageErrors: pageErrors.slice(0, 5) } });
-ws.close(); chrome.kill();
+// A page exception / console.error was reported in the summary and counted for nothing — a case
+// could go green while the app threw. It now fails the case unless the case's FIRST step opts in
+// with `"allowErrors": true` (with a comment saying which error and why).
+const allowErrors = steps[0]?.allowErrors === true;
+if (pageErrors.length && !allowErrors) {
+  failed++;
+  out({ step: 'pageErrors', ok: false, count: pageErrors.length, errors: pageErrors.slice(0, 5), hint: 'set "allowErrors": true on the first step of this case to accept them' });
+}
+out({ summary: { steps: steps.length, failed, tools: [...tools.keys()], pageErrors: pageErrors.slice(0, 5), ...(allowErrors ? { allowErrors: true } : {}) } });
+ws.close(); reap();
 process.exit(failed ? 1 : 0);

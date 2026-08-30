@@ -38,7 +38,10 @@ async function codexRun(q) {
   }
   return { wall: r.wall, turns, web_searches: webSearches, input_tokens: inTok, output_tokens: outTok, answer, ok: !!answer };
 }
-const stats = (xs) => { const a = xs.filter((x) => typeof x === 'number').sort((p, q) => p - q); return a.length ? { mean: Math.round(a.reduce((s, x) => s + x, 0) / a.length), min: a[0], max: a[a.length - 1], n: a.length } : { mean: null, n: 0 }; };
+// Math.round here is right for milliseconds and destroys a dollar figure: it printed
+// cost_usd.mean 0 next to min 0.101186 in docs/evidence/ab/arm-agents.json (fixed 2026-08-29).
+// toFixed(4) keeps sub-cent costs and is still exact enough for ms/turns.
+const stats = (xs) => { const a = xs.filter((x) => typeof x === 'number').sort((p, q) => p - q); return a.length ? { mean: Number((a.reduce((s, x) => s + x, 0) / a.length).toFixed(4)), min: a[0], max: a[a.length - 1], n: a.length } : { mean: null, n: 0 }; };
 
 const out = { arms: {}, n: N, tasks: [] };
 for (const task of TASKS) {
@@ -47,8 +50,10 @@ for (const task of TASKS) {
   for (let i = 0; i < N; i++) { codex.push(await codexRun(task.q)); console.error(`[A codex ] ${task.label} #${i + 1}: ${codex.at(-1).turns}t/${codex.at(-1).web_searches}ws ${codex.at(-1).wall}ms`); }
   out.tasks.push({
     label: task.label, q: task.q,
-    codex: { wall: stats(codex.map((c) => c.wall)), turns: stats(codex.map((c) => c.turns)), web_searches: stats(codex.map((c) => c.web_searches)), all_ok: codex.every((c) => c.ok), sample: codex[0]?.answer },
-    claude: { wall: stats(claude.map((c) => c.wall)), turns: stats(claude.map((c) => c.turns)), cost_usd: stats(claude.map((c) => c.cost)), all_ok: claude.every((c) => c.ok), sample: claude[0]?.answer },
+    // `runs` keeps the per-run values next to the aggregate: the 2026-08-29 file could not have its
+    // cost mean recomputed after the Math.round bug because only min/max/n survived. Never again.
+    codex: { wall: stats(codex.map((c) => c.wall)), turns: stats(codex.map((c) => c.turns)), web_searches: stats(codex.map((c) => c.web_searches)), all_ok: codex.every((c) => c.ok), sample: codex[0]?.answer, runs: codex.map((c) => ({ wall: c.wall, turns: c.turns, web_searches: c.web_searches, input_tokens: c.input_tokens, output_tokens: c.output_tokens, ok: c.ok })) },
+    claude: { wall: stats(claude.map((c) => c.wall)), turns: stats(claude.map((c) => c.turns)), cost_usd: stats(claude.map((c) => c.cost)), all_ok: claude.every((c) => c.ok), sample: claude[0]?.answer, runs: claude.map((c) => ({ wall: c.wall, turns: c.turns, duration_ms: c.duration_ms, cost_usd: c.cost, ok: c.ok })) },
   });
 }
 console.log(JSON.stringify(out, null, 2));

@@ -25,15 +25,19 @@ Add `?tour=1` for a three-step guide that verifies each step against real state.
 ## Why it matters, measured
 
 A tool you forged replays with **the model out of the loop**. On a live status read, a warmed
-`rokan do` answers in **~79 ms at 0 model calls** where Codex CLI takes ~23 s and Claude Code ~16 s —
-and the agents pay that cost *every run*, because they re-plan each time (three-arm harness in
-`evals/ab/`, numbers in `docs/measurements/2026-08-30-ab.md`; N=5 warm / N=3 agents, variance stated).
+`rokan do` answers at **0 model calls in 546 ms wall-clock** where Codex CLI takes 23 164 ms and
+Claude Code 15 780 ms — **28.9×–42.4×**, measured the same way on both sides (23 164 ÷ 546 = 42.4;
+15 780 ÷ 546 = 28.9) — and the agents pay that cost *every run*, because they re-plan each time
+(three-arm harness in `evals/ab/`, numbers and per-run variance in
+`docs/measurements/2026-08-29-ab.md`, raw output in `docs/evidence/ab/`; N=5 warm / N=3 agents).
+`rokan-do`'s own internal clock for that replay is 79 ms; the 546 ms is the whole process, which is
+what the agent arms are timed on, so that is the number the multiplier uses.
 And when a page drifts, a cached scrape returns a confident wrong number (shown live in `evals/ab/drift`);
 Rokan re-checks and **refuses** the operation that no longer verifies (its `recheck` — verified, or refused;
 measured live ×2 in `docs/evidence/ab/drift-run-*.txt`: naive `$75`, Rokan `DEAD · drift_detected`, no stale answer). Consuming a site's *own* WebMCP tools is measured too, in builder mode — the judge sandbox
 has no model or browser, so there it replays compiled operations and runs forged tools.
 
-## What is on the page (six fixed tools + up to five forged)
+## What is on the page (seven fixed tools + up to five forged)
 
 | tool | what it does | never |
 | --- | --- | --- |
@@ -41,6 +45,7 @@ has no model or browser, so there it replays compiled operations and runs forged
 | `terminal_read_screen` | last N lines, **only if you turned on Share screen**, secrets `[redacted]` | leaks a key |
 | `terminal_status` | cwd (if shared), running, last exit code + ms **measured by the shell** | guesses |
 | `terminal_wait` | blocks until your Enter/Esc, returns the real exit code and redacted tail | runs anything |
+| `terminal_history` | the runs recorded this session, oldest first — command, exit code, ms, cwd, who started it (human / agent / forged) and a redacted tail; **only if you turned on Share screen** (`readOnlyHint`, `untrustedContentHint`) | executes or proposes |
 | `forge_create` | opens a card you edit and approve → `forged_<name>` is registered live | registers without you |
 | `forge_list` | every forged tool, its content hash, pin state, measured stats | — |
 | `forged_<name>` | substitutes params (shell-safe), ghost-types each step; each step needs your Enter | executes |
@@ -86,6 +91,6 @@ Headless WebMCP evals (Chrome 152 via the CDP `WebMCP` domain, no consumer neede
 - `apps/web` — Next.js 15 client: tools, xterm pane with ghost text, forge card, ledger.
 - `packages/bridge` — `npx rokan-terminal`: node-pty + WebSocket + Cloudflare quick tunnel + pairing token; `mcp` subcommand.
 - `infra/sandbox` — judge mode: Cloudflare Worker + Sandbox container running the same bridge.
-- `evals/` — headless harness + 21 cases (9 on the prompt line, 12 on a real PTY, the terminal cases also run against the live judge sandbox); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
+- `evals/` — headless harness + 24 cases in `evals/cases/` (9 on the prompt line, 15 on a real PTY — 4 of those judge-only, so a builder-mode `--bridge` run executes 11 and skips 4; the terminal cases also run against the live judge sandbox); `docs/` — `PLAN.md`, `FORGE-PLAN.md`, `TERMINAL-PLAN.md`, `SANDBOX-PLAN.md`, `SECURITY.md`, `FIELD-NOTES.md` (measured consumer behaviour), `PROGRESS.md` (what is green right now).
 
 Every millisecond and call count shown on screen is measured by the code that shows it.

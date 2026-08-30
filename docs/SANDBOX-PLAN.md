@@ -53,7 +53,7 @@ discipline: Handset-scoped, every external fact verified today (Cloudflare docs 
 | sessions per IP | 1 new session / 10 min; 3 concurrent per IP | `Gate` Durable Object (sqlite) |
 | session TTL | 30 min (bridge `--ttl-ms 1800000` exits; sandbox `sleepAfter:"35m"`; `destroy()` on `DELETE /api/session/:id` and from the bridge exit hook) | Worker + bridge |
 | instance | `basic` (1/4 vCPU, 1 GiB, 4 GB) — enough for zsh + node + rokan-do replay; `standard-1` if Chromium is needed on D3 | wrangler.jsonc |
-| egress | `enableInternet=false`, `allowedHosts`: `news.ycombinator.com`, `lobste.rs`, `example.org`, `api.anthropic.com` (D3) | Sandbox subclass |
+| egress | **open** — `enableInternet = true`. `allowedHosts` is kept as a list of the demo hosts but enforces nothing: the SDK's HTTPS interception never activated in this deployment (measured 2026-08-29 — no ephemeral CA, and `enableInternet=false` timed out even an allowlisted host, curl exit 28), and rokan-do's seeded replay needs a real HTTPS fetch. Isolation rests on "no real secret in the container, ephemeral disk, no write path to the PTY, rate-limited, model spend capped by the Worker's own proxy" instead — see `RokanSandbox` in `worker.ts` for the measurement and the reasoning. | `RokanSandbox` in `infra/sandbox/src/worker.ts` |
 | model calls | none possible — no key is injected (a 20/session cap was planned; not implemented because not needed) | container |
 | user | non-root `judge` (uid 1000), home `/home/judge`, no sudo | Dockerfile |
 | tools in the shell | zsh, git, curl, python3.11 + uv (python image), node 20, rokan-do (D3) | Dockerfile |
@@ -81,7 +81,7 @@ infra/sandbox/
   Dockerfile              FROM docker.io/cloudflare/sandbox:0.12.9-python · apt zsh git · useradd judge · COPY container/bridge /opt/bridge · npm ci --omit=dev in /opt/bridge · seed files · CMD default
   container/bridge/       synced copy of packages/bridge (scripts/sync-bridge.sh; gitignored)
   container/seed/         README, SKILL.md (D3), operations.json (D3)
-  src/worker.ts           routes; RokanSandbox extends Sandbox {enableInternet=false; allowedHosts}; Gate DO
+  src/worker.ts           routes; RokanSandbox extends Sandbox {enableInternet=true; allowedHosts kept as docs only — §2.2}; Gate DO
   src/gate.ts             sqlite DO: ip → [timestamps]; allow(ip) → {ok, retry_after_s}
   test/worker.test.mjs    unit tests for gate logic + route parsing (node:test, no network)
   scripts/sync-bridge.sh  copies bridge into the build context

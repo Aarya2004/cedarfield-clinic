@@ -160,7 +160,10 @@ Implemented deltas vs. the original rows (2026-08-28): `terminal_wait` default i
 Reverse direction (human → agent), UI only: select 1–5 lines in history → **Forge this** → card
 prefilled from the selection → same approval path → tool appears for the agent.
 
-Tool budget: 6 fixed + up to 5 forged visible (11 ≤ the 12 cap); beyond 5, `forge_list` still returns all and the
+Tool budget: **7 fixed** (`terminal_propose`, `terminal_read_screen`, `terminal_status`, `terminal_wait`,
+`terminal_history`, `forge_create`, `forge_list` — `FIXED_TOOL_NAMES` in
+`apps/web/src/lib/webmcp/schemas.ts`) + up to 5 forged visible: **7 + 5 = 12, exactly at the §0.4 cap**,
+not under it. A new fixed tool now costs a forged slot. Beyond 5 forged, `forge_list` still returns all and the
 oldest unpinned forged tools unregister (the human pins from the card).
 
 Chrome DevTools → Application → WebMCP panel must show every registration and invocation
@@ -196,8 +199,13 @@ _and_ are highlighted in the pane so the human sees what would have leaked.
 the URL fragment (never sent to Vercel); one client per bridge; bridge refuses a second
 connection; idle timeout 30 min; `Ctrl-C` twice in the bridge kills the tunnel.
 
-**Judge sandbox**: non-root user, no network egress except an allowlist (PyPI mirror off; HN,
-lobste.rs, example.org, a demo Shopify store, and the Anthropic API host), 30-min TTL,
+**Judge sandbox**: non-root user; **egress is open** (`enableInternet = true` in
+`infra/sandbox/src/worker.ts`). The `allowedHosts` list is retained as documentation of the demo hosts,
+but the Sandbox SDK's HTTPS interception never wired up in this deployment (measured 2026-08-29: no CA at
+`/etc/cloudflare/certs/`, and with `enableInternet=false` even an allowlisted host timed out, curl exit 28),
+so it gates nothing — the planned allowlist was aspirational and is not the isolation model. The controls are
+elsewhere: no real secret in the container, ephemeral disk, no agent path that can write to the PTY, and
+rate limits — 30-min TTL,
 3 sessions/IP/10 min (3 concurrent), no API key in the container (so no model-call cap is needed or implemented), no persistent volume, image rebuilt from a
 pinned Dockerfile. The `$`-capped Anthropic key lives in Worker secrets, never in the image.
 

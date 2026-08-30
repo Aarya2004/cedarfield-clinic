@@ -11,7 +11,15 @@ const STATE = join(HERE, 'state.json'); // { version, price } — swapped betwee
 const PORT = Number(process.env.DRIFT_PORT || 8099);
 
 function page() {
-  const { version, price } = JSON.parse(readFileSync(STATE, 'utf8'));
+  // The fixture is written between requests by run.mjs / rokan-arm.mjs, so a read can land on a
+  // half-written or (after an interrupted run) missing file. Fall back to v1 rather than throwing
+  // inside the request handler, which would kill the server mid-test.
+  let version = 1, price = 98;
+  try {
+    ({ version, price } = JSON.parse(readFileSync(STATE, 'utf8')));
+  } catch {
+    version = 1; price = 98;
+  }
   // v1: price sits in <span class="price">. v2: the site was "redesigned" — the old
   // .price node now holds shipping copy, and the real price moved to [data-amount].
   // A selector/regex captured on v1 keeps matching .price and now reads the WRONG value.

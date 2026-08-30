@@ -27,7 +27,7 @@ executed continuously; PROGRESS "Now / In flight" is the hand-off.
 
 - **Execution (25%, tiebreak #2)** is mostly earned here: opens cold, every state handled, no
   dead buttons, design that is not AI-generic, judge completes the hero in < 60 s.
-- **Leverage** keeps its proof: the same six fixed + forged tools now act on a real shell;
+- **Leverage** keeps its proof: the same seven fixed + forged tools now act on a real shell;
   `terminal_read_screen` returns real, redacted output; `terminal_wait` returns real exit codes.
 - **Impact**: the audience (developers whose ChatGPT/Codex must act on *their* machine) sees their
   own shell, their own `~`, their own commands.

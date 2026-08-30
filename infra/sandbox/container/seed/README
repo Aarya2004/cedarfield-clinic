@@ -1,7 +1,8 @@
 Rokan Terminal — judge sandbox
 
 This is a throttled Linux container (1/4 vCPU, 1 GiB) that lives for 30 minutes.
-You are `judge` (no sudo). Outbound HTTP/S is limited to a few demo hosts.
+You are `judge` (no sudo). It holds no API key and no secret, and its disk is wiped when it ends.
+Outbound network access is open — the isolation here is that there is nothing to steal and nothing to spend.
 
 Try:
   ls; git --version; python3 --version

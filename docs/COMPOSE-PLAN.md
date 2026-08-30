@@ -138,7 +138,7 @@ Binding definition of "production" for this entry — each line is a test in §7
 2. Terminal pane: every step runs here and is visible with its provenance chip inline after the
    result line (`⚡ compiled · pypi.org · 312 ms · 0 calls`, `⚙ native · allbirds.com · search_catalog
    · 640 ms`).
-3. Tools pane: six fixed + forged; each forged row shows `provenance[]` (the kinds its steps
+3. Tools pane: seven fixed + forged; each forged row shows `provenance[]` (the kinds its steps
    resolved to on the last run), `runs`, `median_ms`, `calls` (sum of model calls on last run —
    0 is the number we want on screen), `forged by <identity>`, `hash`.
 4. Forge card: unchanged fields + a per-command provenance preview (`machine` / `web`), and the
@@ -196,7 +196,7 @@ out of the loop.** The honest mechanism, and the three traps:
   - **Arm C (Rokan composed tool):** forge `deal_hunt({{product}})` once (first run ≈ 1 call/site to
     select+fill), then **replay ×5** — the composed tool runs both `rokan do` steps at **0 model
     calls** and the machine compare step. Measure the same.
-  - N=5 per arm, Wilson CIs, in `docs/measurements/2026-08-30-ab.md`. The headline is **0 vs N model
+  - N=5 per arm, Wilson CIs, in `docs/measurements/2026-08-29-ab.md`. The headline is **0 vs N model
     calls on repeat and the measured × on wall-clock**, with the first-run parity stated. Plus the
     **drift test**: change a page → Arm A answers wrong silently, Rokan **refuses** (verified-or-
     refused). *They re-plan the whole cross-site workflow every run; ours replays it at 0 calls.*
@@ -311,7 +311,7 @@ prints the new grammar; negative via `echo`).
   invoke ×5, read `rokan.ms/calls`), and records Arm A/B from **scripted Codex CLI / Claude Code
   sessions** (`codex exec` / `claude -p` with Playwright / DevTools MCP configured) with wall time
   and model calls taken from their own transcripts/usage output — never estimated. Output:
-  `docs/measurements/2026-08-30-ab.md` with N, means, Wilson CIs, and the drift test.
+  `docs/measurements/2026-08-29-ab.md` with N, means, Wilson CIs, and the drift test.
 - `terminal-compose.json`: forge a 3-step mixed tool → invoke → three Enters → ledger rows carry
   `rokan.speed` per step → `forge_list.provenance` = `['machine','compiled','compiled']`.
 - Chrome evals-cli format: mirror our cases as `evals/chrome-format/*.json` (`messages` →
@@ -384,11 +384,11 @@ card → approve → tool back with same hash) and `--bridge` (real PTY 12 → 1
 `terminal-compose.json`). `--judge` live: 11/11 unchanged + `terminal-compose` in compiled-only form.
 
 ### 7.5 A/B (`evals/ab/run.mjs`)
-N=5 per arm, numbers in `docs/measurements/2026-08-30-ab.md`, screenshots of each arm's transcript
+N=5 per arm, numbers in `docs/measurements/2026-08-29-ab.md`, screenshots of each arm's transcript
 in `docs/evidence/ab/`. The drift test recorded once with before/after.
 
 ### 7.6 Consumer (Arav + Engineer #4)
-ChatGPT desktop on **Sol/Terra** (Luna confirmed useless 2026-08-28 night): Site tools = 6 →
+ChatGPT desktop on **Sol/Terra** (Luna confirmed useless 2026-08-28 night): Site tools = 7 →
 `propose ls` → Enter → forge `release_check` → does the list gain `forged_release_check` without
 reload? → call it → three ghosts/Enters → ledger. Screens → `docs/evidence/gate-a|b/`. Then the
 Codex session calling the same hash (C1–C6 path). **This is still the single highest-leverage
@@ -478,7 +478,7 @@ this repo beyond the three wheels + seeds + SKILL.md.
 ## 12. Demo — shot list v3 (≤ 2:50; every number the measured one)
 | t | shot | say |
 | --- | --- | --- |
-| 0:00–0:12 | Flash-forward: ChatGPT Site tools **6 → 7**, `forged_release_check` appearing | "This tool didn't exist a minute ago. I made it by pressing Enter. Watch." |
+| 0:00–0:12 | Flash-forward: ChatGPT Site tools **7 → 8**, `forged_release_check` appearing | "This tool didn't exist a minute ago. I made it by pressing Enter. Watch." |
 | 0:12–0:40 | "Why is CI red?" → `pytest -q` ghost → Enter → agent reads (Share screen, a key renders `[redacted]`) → proposes the fix → Enter → green | "Every command is a proposal. It can't type Enter. It reads what I let it read." |
 | 0:40–1:05 | `rokan do "latest pydantic version at pypi.org"` → `⚡ compiled · 0 calls · 312 ms`; `rokan do "search allbirds.com for wool runners"` → `⚙ native · search_catalog · 640 ms` | "The web, two ways: the site's own WebMCP tools when it ships them — compiled when it doesn't. Zero model calls on replay." |
 | 1:05–1:30 | Select the steps → **Forge this** → `release_check({{pkg}})` → Approve → tools 6→7 **no reload** | "I did this once. Now it's a tool — born at runtime, in WebMCP's own format." |

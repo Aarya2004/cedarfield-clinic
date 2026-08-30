@@ -96,8 +96,9 @@ evals 9/9, real-PTY 12/12; Rokan native 37/37 + full pre-commit gate; sandbox ch
   `_OUTPUT_BUDGET=1500`, separate `native_op` table) + §9 (caps table; deployed testing row 50/20/30min/10
   verified vs `wrangler.jsonc`); fixed §6's stale "3/10min, 3 concurrent"; kept tools marked PLANNED (no
   over-claim — `kept.ts` store shipped, the App wiring not yet).
-- **SUBMISSION.md + README.md**: measured Impact section/callout (compiled replay 0 calls/79ms vs Codex
-  ~23s / Claude ~16s; native ~1.45s builder-mode; drift refusal), sourced to the measurements file.
+- **SUBMISSION.md + README.md**: measured Impact section/callout, sourced to the measurements file.
+  (Superseded 2026-08-29 by the wall-vs-wall correction below — the copy written that day divided Rokan's
+  internal ms by the agents' wall clock.)
 - **npm pack --dry-run**: clean 10-file tarball (bin/src/shims, no secrets), deps declared (node-pty/ws/
   MCP SDK/zod), engines ≥20 — `npx rokan-terminal` publish-ready; only `npm login && npm publish` (Arav) remains.
 **Still blocked (Arav/key):** ChatGPT Sol/Terra run; npm publish; live cold-compile A/B & drift rows.
@@ -106,9 +107,14 @@ evals-cli format (§5, feeds Jude/Vercel). **Aarya:** RestoreCard + write-path w
 
 ## Build log — Engineer #4 (2026-08-29)
 **P0.4 A/B Impact harness measured + drift test + SUBMISSION Impact + CI hardening (entry `a04ae96`, pushed).**
-The Impact number is measured, live, three arms (`evals/ab/`, `docs/measurements/2026-08-30-ab.md`):
-- **compiled** ("status.python.org operational?"): Rokan warm **0 calls / 79 ms** vs Codex ~23 s / Claude ~16 s → ~200–290× at 0 model calls, and the agents pay it *every* run.
-- **native** ("wool runners price", builder mode): Rokan warm **0 calls / ~1.45 s** vs Codex ~10 s / Claude ~77 s.
+The Impact number is measured, live, three arms (`evals/ab/`, `docs/measurements/2026-08-29-ab.md`):
+- **compiled** ("status.python.org operational?"): Rokan warm **0 calls / 546 ms wall** (79 ms on rokan-do's
+  own clock) vs Codex 23 164 ms / Claude Code 15 780 ms wall → **28.9×–42.4×** at 0 model calls, and the
+  agents pay it *every* run. **Correction 2026-08-29:** the first write-up of this row printed ~200–290× by
+  dividing Rokan's *internal* ms by the agents' *wall* clock. Retracted; every multiplier is now wall-vs-wall
+  (`docs/evidence/ab/arm-c.json` `warm.wall.mean` vs `docs/evidence/ab/arm-agents.json` `wall.mean`).
+- **native** ("wool runners price", builder mode): Rokan warm **0 calls / 2983 ms wall** (1451 ms internal) vs
+  Codex 10 059 ms / Claude Code 77 421 ms → 3.3× / 25.9×.
 - N=5 warm / N=3 agents; variance flagged; native-warm re-drives a live browser (honest, stated).
 **Drift test** (`evals/ab/drift/`): a static page swaps v1→v2; a naive cached script returns **$75** (a shipping
 line) when the true price is **$140** — reproduced live, silently wrong. Rokan arm rests on the built-in
