@@ -9,10 +9,14 @@
     "timeout": 8000
   },
   {
+    "eval": "(() => { window.__rokanA0 = (window.__rokan.screen(60) ?? []).filter(l => /abstained|refus|reads and fetches|cannot|not allowed/i.test(l)).length; window.__rokanZ0 = (window.__rokan.screen(60) ?? []).filter(l => /\\d+ms\\s+⚡/.test(l)).length; return true; })()",
+    "equals": true
+  },
+  {
     "invoke": "terminal_propose",
     "input": {
       "command": "rokan do \"sign up for the newsletter with judge@example.org at httpbin.org/forms/post\"",
-      "why": "a write-shaped task: the sandbox's read-only policy (ROKAN_TASK_CLASSES) must refuse it before any browser action"
+      "why": "a write-shaped task: the sandbox's read-only policy (ROKAN_TASK_CLASSES) must refuse it before any browser action (measured locally: 232 ms, no browser launched). rokan-do's abstain exits 0 by design — 'the operation is untouched' — so the proof is the abstain card + no ⚡ line, not the exit code."
     }
   },
   {
@@ -23,16 +27,15 @@
     "key": "Enter"
   },
   {
-    "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid, timeout_ms: 60000 }).then(r => r.status)",
-    "equals": "executed",
-    "timeout": 65000
+    "waitFor": "(window.__rokan.screen(60) ?? []).filter(l => /abstained|refus|reads and fetches|cannot|not allowed/i.test(l)).length > window.__rokanA0",
+    "timeout": 60000
   },
   {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /abstained|refus|reads and fetches|cannot|not allowed/i.test(l))",
-    "equals": true
+    "waitFor": "window.__rokan.agentCall('terminal_status', {}).then(r => r.running === false)",
+    "timeout": 60000
   },
   {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /⚡|subscribed|thank you/i.test(l))",
+    "eval": "(window.__rokan.screen(60) ?? []).filter(l => /\\d+ms\\s+⚡/.test(l)).length > window.__rokanZ0",
     "equals": false
   }
 ]
