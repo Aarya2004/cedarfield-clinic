@@ -2,6 +2,25 @@
 
 Last update: **2026-08-29 ~22:45 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
+## Build log — Aarya's Claude (2026-08-30 ~07:45 local) — UI tickets #11 / #13 / #14, all green
+Web lane only (`apps/web/**`); no registered tool changed (`agentTools()` lists in `evals/cases/*.json`
+untouched, `history-tool.json` still 7). `pnpm typecheck && lint && build` clean, web suite **215/215**
+(was 211 — +1 `forged_by`, +3 prompt-fragment regressions), headless evals **9/9**.
+- **#11 `150455e`** — the native provenance chip. `rokan_calls === 0` is also true for a native answer,
+  so ledger rows and run-feed rows labelled every native step `compiled`. Both now read `rokan_site`
+  first per C's 17:30 contract; `Run.rokan` gained the `native {site, tool}` the adapter already passed
+  through untyped. Only fields a row carries reach the chip.
+- **#13 `a4ab584`** — forged rows say `forged by you` / `forged by agent` (new `forged_by` on
+  `ForgedTool` + the `forge_list` entry, from the card's origin — the only identity the consumer gives
+  us), `last: 0 calls` from `calls_last` (silent when `null`), and a quiet `kept` badge read from
+  `rokan.kept.v1`. **The badge cannot light up yet**: nothing calls `persistKept`, so the write path is
+  still the RestoreCard item. `provenance[]` is in the entry but not yet drawn in the row.
+- **#14 `167c5b2`** — a run's captured output now stops at OSC 133;D. zsh prints PROMPT_EOL_MARK
+  (`%`, spaces, CR) and the next prompt *after* precmd has emitted the end marker, and the feed was
+  appending the whole frame: an expanded `rokan do` run ended in a stray `%` and `judge@rokan:~`.
+  `beforeEndMarker` cuts there (output sharing the frame is still kept), `trimPromptFragments` is the
+  backstop for a marker split across frames. Agent path (`stripShellFrame`) was already covered.
+
 ## Build log — Engineer #4 (2026-08-29 ~20:25 local, open-net sandbox LIVE — proofs so far)
 Deployed: image `sha256:506cb8e0…` on **`standard-3`** (2 vCPU — standard-1's ½ vCPU listed 0 store tools live, 2026-08-30), fleet `ready`; Worker versions `ae7003af` → sid-first fix
 (`9f10bfd`). Live probes: health ok · header-less `POST /api/session` → **403** · eval secret → **201** · bogus sid →
