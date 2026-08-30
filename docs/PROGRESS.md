@@ -16,6 +16,13 @@ abstains without the key — **not yet a policy proof**; it is one once the key 
   **429 `burst`** (`retry-after: 10`); the 33rd (30 charged) → **429 `sid`** (`retry-after: 970` = the session's
   remaining TTL); every trip carries `x-should-retry: false`. Also seen live: the per-IP concurrency cap (5)
   refusing a 6th sandbox with the honest card copy (`docs/evidence/stranger/2026-08-29-prod-429-concurrent-cap.png`).
+- **Local proofs of the sandbox's Rokan code (same wheels, key present, policy env set):** write-shaped task
+  `sign up for the newsletter … at httpbin.org/forms/post` → refused in **232 ms, no browser launched**
+  (`abstained_no_repair_class`); unseeded `what is the latest version of requests at pypi.org/project/requests`
+  → **1 call · 2 018 ms · verified · "requests 2.34.2"**, then **replayed · 0 calls · 169 ms**. Two wrong eval targets
+  learned: a bare heading ("main heading at httpbin.org/html") has no label→value shape for `read_value`, and
+  www.cloudflarestatus.com's markup carries none of the standard status phrases — the open-net case now asks
+  the pypi question.
 
 ## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
 **Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a
