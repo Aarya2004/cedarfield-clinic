@@ -27,7 +27,7 @@
 3. **All execution is a human keypress.** Agent tools never run a command. Not `propose`, not
    forged tools. "Trusted auto-run" is a stretch goal, off by default, never in the demo.
 4. **Imperative WebMCP, top-level document only.** ChatGPT's consumer ignores declarative forms
-   and iframe tools. ≤ 12 tools visible at any time (picker noise, Chrome's guidance).
+   and iframe tools. ≤ 12 tools visible at any time — our own discipline against picker noise; neither Chrome nor OpenAI documents a cap (Chrome: "there isn't a maximum number of tools"; the real limits are per tool: 500-char description, 150 per param, 30-char name, 1.5 K output — developer.chrome.com/docs/ai/webmcp/secure-tools, checked 2026-08-30).
 5. **No acquisition, no voice, no channels, no mascot, no Shopify re-registration, no
    chat-style `ask/do` meta-tools, no live writes that spend money.** §R stays parked.
 6. **Honest numbers only.** Every ms and call count on screen is measured by the code that

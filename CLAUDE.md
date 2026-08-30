@@ -14,7 +14,7 @@
 
 ## Non-negotiables (from PLAN §0 — edit there, not here)
 - No tool ever executes a command. `terminal_propose` and every `forged_*` tool ghost-type; the human's Enter runs it.
-- Imperative WebMCP, top-level document, ≤ 12 tools visible. No declarative forms, no iframes (ChatGPT ignores both).
+- Imperative WebMCP, top-level document, ≤ 12 tools visible (our discipline — no vendor documents a cap). No declarative forms, no iframes (ChatGPT ignores both).
 - Two modes, one client: builder (own machine, local bridge + Cloudflare quick tunnel) and judge (Cloudflare Sandbox container). No Durable Object relay in v1.
 - Nothing from Rokan except three wheels in `vendor/`, seeded operations, and `SKILL.md`. Rokan source stays in Rokan.
 - Honest numbers only: every ms / call count on screen is measured by the code that shows it.
