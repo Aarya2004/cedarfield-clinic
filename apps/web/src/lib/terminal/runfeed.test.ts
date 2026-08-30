@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createTerminalAdapter, type ClientLike, type TermLike } from './adapter.ts';
 import { PromptDetector } from './osc.ts';
-import { RunFeedStore, RUN_FEED_MAX, matchesFilter, runFromResolved, type Run } from './runfeed.ts';
+import { RunFeedStore, RUN_FEED_MAX, beforeEndMarker, matchesFilter, runFromResolved, trimPromptFragments, type Run } from './runfeed.ts';
 import { ProposalStore } from '../webmcp/proposals.ts';
 import type { BridgeStatus } from '../ws/protocol.ts';
 
@@ -221,6 +221,36 @@ test('the tail is bounded exactly like the proposal tail (200 lines)', () => {
   c.emit('data', precmd(0));
   c.emit('status', status({ last_exit_code: 0, last_command_ms: 30 }));
   assert.equal(runs.snapshot()[0].tail.length, 200);
+});
+
+// --- regression (ticket #14): the next prompt is not this run's output ---
+
+test('the next prompt never lands in a run: PROMPT_EOL_MARK and the prompt line are cut at OSC 133;D', () => {
+  const { runs, c } = harness();
+  // `rokan do` prints its answer with no trailing newline, so zsh emits PROMPT_EOL_MARK before the
+  // next prompt: a `%`, spaces to the right margin, a CR, then the prompt (here with an RPROMPT).
+  // precmd — and therefore 133;D — is printed before all of it.
+  c.emit('data', preexec('rokan do "top 3 HN titles"'));
+  c.emit('data', '  Show HN: a thing   312ms  ⚡');
+  c.emit('data', `${precmd(0)}%${' '.repeat(78)}\r\njudge@rokan:~${' '.repeat(40)}\r\n`);
+  c.emit('status', status({ last_exit_code: 0, last_command_ms: 400, last_command: 'rokan do "top 3 HN titles"' }));
+  const [r] = runs.snapshot();
+  assert.deepEqual(r.tail, ['  Show HN: a thing   312ms  ⚡']);
+});
+
+test('trimPromptFragments drops only trailing blanks and a lone PROMPT_EOL_MARK', () => {
+  assert.deepEqual(trimPromptFragments(['answer', '%', '   ']), ['answer']);
+  assert.deepEqual(trimPromptFragments(['answer', '  %  ']), ['answer']);
+  assert.deepEqual(trimPromptFragments(['answer']), ['answer']); // untouched: same array, no copy
+  assert.deepEqual(trimPromptFragments(['77%', 'done']), ['77%', 'done']); // a real line ending in % is output
+  assert.deepEqual(trimPromptFragments(['%', 'answer']), ['%', 'answer']); // only trailing lines
+  assert.deepEqual(trimPromptFragments([]), []);
+});
+
+test('beforeEndMarker keeps output that shares a frame with the end marker and drops what follows', () => {
+  const chunk = `3\r\n${ESC}]133;D;0;abc${BEL}${ESC}]133;A;abc${BEL}judge@rokan:~$ `;
+  assert.equal(beforeEndMarker(chunk), '3\r\n');
+  assert.equal(beforeEndMarker('no markers here'), 'no markers here');
 });
 
 test('control characters and bidi overrides never reach the DOM through a command or its tail', () => {

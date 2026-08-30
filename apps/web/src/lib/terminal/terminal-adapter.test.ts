@@ -115,7 +115,9 @@ test('regression (Fable pass 2 F1): output sharing a frame with the end marker i
     c.emit('data', `2\r\n3\r\n${ESC}]133;D;0${BEL}${ESC}]133;A${BEL}$ `);
     if (!statusFirst) c.emit('status', st);
     const r = await w;
-    assert.deepEqual(r?.tail, ['echo 1; echo 2; echo 3', '1', '2', '3', '$ '], `statusFirst=${statusFirst}`);
+    // `1`, `2`, `3` share the frame with the end marker and are kept; the `$ ` after it is the next
+    // prompt, and since ticket #14 the capture stops at the marker rather than swallowing it.
+    assert.deepEqual(r?.tail, ['echo 1; echo 2; echo 3', '1', '2', '3'], `statusFirst=${statusFirst}`);
     assert.equal(r?.exit_code, 0);
     a.destroy();
   }

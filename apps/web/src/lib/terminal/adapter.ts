@@ -35,7 +35,7 @@ import { proposals as defaultStore, type ProposalStore, type ProposeOptions } fr
 import type { ResolvedProposal, TerminalAdapter } from '@/lib/webmcp/adapter';
 import { stripAnsi } from '../webmcp/redact.ts';
 import { PromptDetector } from './osc.ts';
-import { runFeed, runFromResolved, type RunSink } from './runfeed.ts';
+import { beforeEndMarker, runFeed, runFromResolved, trimPromptFragments, type RunSink } from './runfeed.ts';
 
 export interface TermLike {
   buffer: {
@@ -140,7 +140,7 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
 
   const tailOf = (f: { tail: string[]; partial: string }) => {
     const lines = f.partial ? [...f.tail, f.partial] : f.tail;
-    return lines.filter((l, i, a) => !(i === a.length - 1 && l.trim() === '')).slice(-TAIL_MAX_LINES);
+    return trimPromptFragments(lines).slice(-TAIL_MAX_LINES);
   };
 
   /**
@@ -212,8 +212,10 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     const f = inflight;
     if (f) {
       // capture output lines (ANSI stripped) for the tail — before the markers are interpreted, so
-      // output sharing a frame with 133;D is in the tail when the proposal finishes
-      appendTail(f, chunk);
+      // output sharing a frame with 133;D is in the tail when the proposal finishes. The capture
+      // stops AT that marker (ticket #14): what the shell prints after it is the next prompt —
+      // zsh's PROMPT_EOL_MARK `%` and the prompt line — not this run's output.
+      if (f.phase !== 'ended') appendTail(f, beforeEndMarker(chunk));
       for (const ev of events) {
         if (inflight !== f) break; // finished inside this loop
         if (ev.kind === 'start' && f.phase === 'sent') {
@@ -230,7 +232,7 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     // Run feed (ticket #4). Runs after the proposal machine so `inflight` already reflects a
     // proposal that ended inside this same frame; the same chunk's tail is captured first, for the
     // same reason it is above.
-    if (human) appendTail(human, chunk);
+    if (human && human.phase !== 'ended') appendTail(human, beforeEndMarker(chunk));
     for (const ev of events) {
       if (ev.kind === 'cwd') {
         lastCwd = ev.cwd;

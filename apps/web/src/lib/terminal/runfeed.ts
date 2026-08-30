@@ -49,6 +49,42 @@ export interface Run {
   rokan?: { ms: number; replayed: boolean; native?: { site: string; tool: string } };
 }
 
+/**
+ * The shell's end marker (OSC 133;D, with or without the bridge's nonce field). zsh's precmd prints
+ * it *before* the next prompt is drawn, so everything after it in the byte stream belongs to that
+ * next prompt: PROMPT_EOL_MARK and the prompt line itself, never the run that just ended.
+ */
+const END_MARKER = '\x1b]133;D';
+
+/**
+ * The part of a PTY chunk that is still the finishing command's own output. Cutting here — rather
+ * than after the whole chunk — is what keeps the next prompt out of the captured tail while still
+ * keeping output that shares a frame with the end marker.
+ */
+export function beforeEndMarker(chunk: string): string {
+  const i = chunk.indexOf(END_MARKER);
+  return i === -1 ? chunk : chunk.slice(0, i);
+}
+
+/** zsh's PROMPT_EOL_MARK, as the capture leaves it: a lone `%` (its CR is stripped, its inverse video too). */
+const EOL_MARK = /^\s*%\s*$/;
+
+/**
+ * Drop what the next prompt left at the end of a captured run. zsh prints PROMPT_EOL_MARK — a
+ * reverse-video `%`, spaces to the right margin, then CR — whenever a command's output does not end
+ * in a newline; `rokan do` answers usually don't. {@link beforeEndMarker} already removes it with
+ * the rest of the prompt when the marker arrives whole; this is the backstop for a marker split
+ * across two data frames, and it drops the blank lines a trailing CR leaves behind.
+ *
+ * Conservative on purpose: only *trailing* lines, and only lines that are nothing but blanks or
+ * that mark. A real last line that merely ends in `%` (`77%`) is output and is kept.
+ */
+export function trimPromptFragments(lines: string[]): string[] {
+  let end = lines.length;
+  while (end > 0 && (lines[end - 1].trim() === '' || EOL_MARK.test(lines[end - 1]))) end--;
+  return end === lines.length ? lines : lines.slice(0, end);
+}
+
 /** Bounded on purpose: a long session must not grow the tab without limit. Oldest out first. */
 export const RUN_FEED_MAX = 200;
 /** A single tail line longer than this is clipped for display (a `cat` of a minified file). */
