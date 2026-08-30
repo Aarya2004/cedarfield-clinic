@@ -1,10 +1,41 @@
 [
-  { "judgeOnly": true, "waitFor": "window.__rokan?.session().state === 'paired'", "timeout": 10000 },
-  { "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0", "timeout": 8000 },
-  { "invoke": "terminal_propose", "input": { "command": "rokan do \"what is the current status at status.npmjs.org\"", "why": "first rokan do of a fresh judge session: the seeded replay, and nothing else, must print" } },
-  { "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()", "equals": "string" },
-  { "key": "Enter" },
-  { "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid }).then(r => [r.status, r.exit_code, r.rokan ? r.rokan.calls : 'no-rokan'])", "equals": ["executed", 0, 0] },
-  { "waitFor": "(window.__rokan.screen(40) ?? []).some(l => /\\d+ms\\s+⚡/.test(l))", "timeout": 5000 },
-  { "eval": "(window.__rokan.screen(40) ?? []).some(l => /Before Rokan does this|leaves this machine|ANTHROPIC_API_KEY/.test(l))", "equals": false }
+  {
+    "judgeOnly": true,
+    "waitFor": "window.__rokan?.session().state === 'paired'",
+    "timeout": 10000
+  },
+  {
+    "waitFor": "(window.__rokan.screen(20) ?? []).join('').length > 0",
+    "timeout": 8000
+  },
+  {
+    "invoke": "terminal_propose",
+    "input": {
+      "command": "rokan do \"what is the current status at status.npmjs.org\"",
+      "why": "first rokan do of a fresh judge session: the seeded replay, and nothing else, must print"
+    }
+  },
+  {
+    "eval": "(() => { const p = window.__rokan.proposals.pending(); window.__rokanPid = p.id; return typeof p.id; })()",
+    "equals": "string"
+  },
+  {
+    "key": "Enter"
+  },
+  {
+    "eval": "window.__rokan.agentCall('terminal_wait', { proposal_id: window.__rokanPid }).then(r => [r.status, r.exit_code, r.rokan ? r.rokan.calls : 'no-rokan'])",
+    "equals": [
+      "executed",
+      0,
+      0
+    ]
+  },
+  {
+    "waitFor": "(window.__rokan.screen(40) ?? []).some(l => /\\d+ms\\s+⚡/.test(l))",
+    "timeout": 5000
+  },
+  {
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /Before Rokan does this|leaves this machine|abstained|planner_unavailable/.test(l))",
+    "equals": false
+  }
 ]

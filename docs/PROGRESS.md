@@ -2,6 +2,16 @@
 
 Last update: **2026-08-29 ~21:00 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
 
+## Build log — Engineer #4 (2026-08-29 ~20:25 local, open-net sandbox LIVE — proofs so far)
+Deployed: image `sha256:506cb8e0…` on **`standard-1`**, fleet `ready`; Worker versions `ae7003af` → sid-first fix
+(`9f10bfd`). Live probes: health ok · header-less `POST /api/session` → **403** · eval secret → **201** · bogus sid →
+**403** · GET → 405 · `count_tokens` → 404 · real sid without the key → 503 "model proxy not configured" (honest).
+Judge suite on the new fleet: **13/15** — `terminal-judge-isolation` PASS on the new image (dummy key, proxy URL,
+no vault, no `sk-ant` in any process env), seeded replay ⚡ still 98–133 ms; the two fails: `open-net` abstains
+(**no key yet — Arav**) and `no-disclosure` tripped on my own screen regex matching the previous case's command
+line in the shared session (fixed: match Rokan's abstain text only). `readonly` passed only because everything
+abstains without the key — **not yet a policy proof**; it is one once the key is in. Graph rebuilt (1 679 nodes).
+
 ## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
 **Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a
 demo.** Shipped on `main` (commits `52080c9 f904528 6c425db a896ac6 3834e84 196e772 d3b67f5`); Rokan `feat/tier0-native`

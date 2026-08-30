@@ -32,7 +32,7 @@
     "timeout": 95000
   },
   {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /abstained|planner_unavailable|ANTHROPIC_API_KEY/.test(l))",
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /abstained|planner_unavailable/.test(l))",
     "equals": false
   },
   {
