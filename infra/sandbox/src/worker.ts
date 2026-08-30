@@ -174,7 +174,9 @@ export default {
       console.log(JSON.stringify({ evt: 'model', sid: sid.slice(0, 8), model: v.model, status, ms: Date.now() - t0, in: usage?.input_tokens, out: usage?.output_tokens, cr: usage?.cache_read_input_tokens, usd_micros: actual }));
       if (isPassthroughStatus(status)) return new Response(upText, { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...h } });
       // Auth/billing/5xx/network: never relay upstream internals (a client must not learn our key's state).
-      return json({ type: 'error', error: { type: 'api_error', message: 'model upstream unavailable' } }, status >= 500 ? 502 : 503, h);
+      // `x-should-retry: false`: the SDK would otherwise retry once per rung — each retry is a charged
+      // reservation and doubles the time to an honest abstain (measured live: 13.6 s with retries).
+      return json({ type: 'error', error: { type: 'api_error', message: 'model upstream unavailable' } }, status >= 500 ? 502 : 503, { ...h, 'x-should-retry': 'false' });
     }
 
     // ---- session -------------------------------------------------------------------------------
