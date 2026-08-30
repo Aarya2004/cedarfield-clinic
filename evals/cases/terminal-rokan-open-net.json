@@ -11,8 +11,8 @@
   {
     "invoke": "terminal_propose",
     "input": {
-      "command": "rokan do \"what is the main heading at httpbin.org/html\"",
-      "why": "an UNSEEDED site: the sandbox must plan for real through the capped model proxy (cold run, ≥1 model call)"
+      "command": "rokan do \"what is the latest version of requests at pypi.org/project/requests\"",
+      "why": "an UNSEEDED target (the package is not in the seed pack): the sandbox must plan for real through the capped model proxy — measured locally: 1 call, ~2 s, verified"
     }
   },
   {
@@ -36,13 +36,13 @@
     "equals": false
   },
   {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /Moby/i.test(l))",
+    "eval": "(window.__rokan.screen(40) ?? []).some(l => /requests \\d+\\.\\d+/.test(l))",
     "equals": true
   },
   {
     "invoke": "terminal_propose",
     "input": {
-      "command": "rokan do \"what is the main heading at httpbin.org/html\"",
+      "command": "rokan do \"what is the latest version of requests at pypi.org/project/requests\"",
       "why": "the same question again: born in the sandbox a minute ago, it must replay at 0 model calls"
     }
   },
