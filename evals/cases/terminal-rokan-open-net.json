@@ -35,11 +35,12 @@
     "equals": true
   },
   {
-    "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => [r.running, r.last_exit_code])",
-    "equals": [
-      false,
-      0
-    ]
+    "waitFor": "window.__rokan.agentCall('terminal_status', {}).then(r => r.running === false)",
+    "timeout": 60000
+  },
+  {
+    "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => r.last_exit_code)",
+    "equals": 0
   },
   {
     "invoke": "terminal_propose",
@@ -58,6 +59,10 @@
   {
     "waitFor": "(window.__rokan.screen(60) ?? []).filter(l => /\\d+ms\\s+⚡/.test(l)).length > window.__rokanZ0",
     "timeout": 30000
+  },
+  {
+    "waitFor": "window.__rokan.agentCall('terminal_status', {}).then(r => r.running === false)",
+    "timeout": 60000
   },
   {
     "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => [r.last_exit_code, r.last_rokan && r.last_rokan.calls])",
