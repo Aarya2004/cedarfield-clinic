@@ -44,6 +44,12 @@ abstains without the key — **not yet a policy proof**; it is one once the key 
   upstream (`4b79893`, wheels rebuilt `7b3ec37`). Eval `open-net` now polls the screen with a 120 s budget (the
   harness caps a single RPC at 15 s). Also caught: a background `pnpm deploy` from the repo root hits pnpm's own
   `deploy` subcommand and silently deploys nothing — always run it from `infra/sandbox`.
+- **OPEN-NET PROVEN LIVE (22:19 local, real Chrome, stranger path):** in the judge sandbox, `rokan do "what is the default
+  port at www.postgresql.org/docs/current/runtime-config-connection.html"` (not in the seed pack) → *"The TCP port the
+  server listens on; 5432 by default…"* **planned · 9 019 ms · exit 0**; the same question again → **⚡ compiled ·
+  783 ms · 0 calls**. Evidence `docs/evidence/stranger/2026-08-29-prod-open-net-cold-then-replay.jpg`. Cold planning
+  is brittle on some layouts (pypi, Statuspage-style status pages — FIELD-NOTES J19, filed as a Rokan planner issue);
+  Wikipedia/docs pages verify first try.
 
 ## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
 **Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a

@@ -9,10 +9,14 @@
     "timeout": 8000
   },
   {
+    "eval": "(() => { window.__rokanN0 = (window.__rokan.screen(60) ?? []).filter(l => /5432/.test(l)).length; window.__rokanZ0 = (window.__rokan.screen(60) ?? []).filter(l => /\\d+ms\\s+⚡/.test(l)).length; return true; })()",
+    "equals": true
+  },
+  {
     "invoke": "terminal_propose",
     "input": {
       "command": "rokan do \"what is the default port at www.postgresql.org/docs/current/runtime-config-connection.html\"",
-      "why": "an UNSEEDED page (postgresql.org/docs/…/runtime-config-connection is not in the seed pack): the sandbox plans for real through the capped model proxy; verified in the local image 2026-08-29 (1 call, verified, \"5432 by default\"). A cold run can take tens of seconds on ½ vCPU, so the harness polls the screen."
+      "why": "an UNSEEDED page (not in the seed pack): the sandbox plans for real through the capped model proxy; verified in the local image and live 2026-08-29 (planned 9 019 ms → replay ⚡ 783 ms). The judge suite shares one shell, so waits count NEW lines only."
     }
   },
   {
@@ -23,22 +27,18 @@
     "key": "Enter"
   },
   {
-    "waitFor": "(window.__rokan.screen(40) ?? []).some(l => /5432|abstained|planner_unavailable|drift_detected/.test(l))",
+    "waitFor": "(window.__rokan.screen(60) ?? []).filter(l => /5432/.test(l)).length > window.__rokanN0 || (window.__rokan.screen(60) ?? []).some(l => /abstained|planner_unavailable|drift_detected/.test(l))",
     "timeout": 120000
   },
   {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /abstained|planner_unavailable|drift_detected/.test(l))",
-    "equals": false
-  },
-  {
-    "eval": "(window.__rokan.screen(40) ?? []).some(l => /5432/.test(l))",
+    "eval": "(window.__rokan.screen(60) ?? []).filter(l => /5432/.test(l)).length > window.__rokanN0",
     "equals": true
   },
   {
-    "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => [r.last_exit_code, r.last_rokan ? r.last_rokan.replayed : 'no-rokan'])",
+    "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => [r.running, r.last_exit_code])",
     "equals": [
-      0,
-      false
+      false,
+      0
     ]
   },
   {
@@ -56,11 +56,14 @@
     "key": "Enter"
   },
   {
-    "waitFor": "(window.__rokan.screen(40) ?? []).filter(l => /\\d+ms\\s+⚡/.test(l)).length >= 1",
+    "waitFor": "(window.__rokan.screen(60) ?? []).filter(l => /\\d+ms\\s+⚡/.test(l)).length > window.__rokanZ0",
     "timeout": 30000
   },
   {
-    "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => r.last_rokan && r.last_rokan.calls)",
-    "equals": 0
+    "eval": "window.__rokan.agentCall('terminal_status', {}).then(r => [r.last_exit_code, r.last_rokan && r.last_rokan.calls])",
+    "equals": [
+      0,
+      0
+    ]
   }
 ]
