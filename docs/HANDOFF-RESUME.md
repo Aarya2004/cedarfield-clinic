@@ -3,6 +3,18 @@
 **Read this + `docs/PROGRESS.md` (top block) + `~/.claude/plans/optimized-mapping-tarjan.md` (the bible) first.**
 Everything below is pushed to `main` (entry repo `github.com/Aarya2004/webmcp-private`) unless noted.
 
+## RESUME POINT (2026-08-29 ~21:00 local) — open-net judge sandbox, deploy in flight
+Plan of record: `~/.claude/plans/bright-squishing-corbato.md` (approved by Arav; every section executed except the
+live proofs). Code is on `main` through `d3b67f5`; Rokan `feat/tier0-native` `2e28c64` (unpushed — Arav's call).
+**Where this stopped:** `pnpm deploy` (image `standard-1` + Chromium + worker proxy) running; then, in order:
+`wrangler containers list` until `active` on the new digest → `curl` proxy probes (bogus sid 403; real sid + tiny
+messages call → 200 with `usage` once the key is in; opus → 400; stream → 400; GET → 405; count_tokens → 404;
+31st call → 429 `x-should-retry:false`) → `node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --trace=/tmp/t`
+(needs `EVAL_SECRET` in `infra/sandbox/.dev.vars`, present) → real-Chrome stranger run on an unseeded site →
+PROGRESS/FIELD-NOTES numbers → `graphify update .`.
+**Needs Arav:** `cd infra/sandbox && printf '%s' '<dedicated key>' | npx wrangler secret put ANTHROPIC_API_KEY`
+(the proxy answers 503 → rokan-do "planner unavailable" until then); `cd apps/web && vercel --prod --yes`.
+
 ## RESOLVED (2026-08-29 ~18:40 local) — the live-judge failure
 `terminal-insert-cancel` on the live judge sandbox was a **one-off container stall, not a timing bug**.
 Measured with the new `--trace=<dir>` flag: 5 live sessions (2 full **12/12**, 2 isolated, 1 probe), 0 failures;

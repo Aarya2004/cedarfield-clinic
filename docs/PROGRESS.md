@@ -1,6 +1,43 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-29 ~18:40 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
+Last update: **2026-08-29 ~21:00 local (Engineer #4, Fable 5 — heads engineering; owns the whole tree)** Branch `main`, all pushed.
+
+## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
+**Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a
+demo.** Shipped on `main` (commits `52080c9 f904528 6c425db a896ac6 3834e84 196e772 d3b67f5`); Rokan `feat/tier0-native`
+`2e28c64`. Deploy of the new image + worker in progress at the time of writing (see next block for live proofs).
+- **Design (reviewed by 2 models + security before code):** no secret in the container — the Worker proxies
+  `POST /api/model/:sid/v1/messages` (one upstream path, ladder-only models, text-only bodies, `max_tokens ≤ 8192`,
+  no stream/tools), key as a Worker secret, **reserve-before-forward** budget in a singleton Gate instance
+  (per sid 30 weighted calls / 10 per min / 1 in flight · per IP 60 per 10 min via the sid→IP map · 600 per day ·
+  **$40 all-time**), 429 + `x-should-retry:false` on a trip. Container gets `ANTHROPIC_BASE_URL` + the literal
+  `ANTHROPIC_API_KEY=judge-sandbox-proxy`. Verified against the real SDK (1.2.0 in rokan-do's venv) with a stub base
+  URL: body keys `{model,max_tokens,messages,system,temperature,output_config}`, no `anthropic-beta`, 9.9 KB.
+- **Image:** Playwright full `chromium` on `standard-1` (½ vCPU, 4 GiB, 8 GB disk). Local smoke: **2 424 MB
+  unpacked** (guard 3 500), bridge hello 1 590 ms, seeded replay ⚡ 917 ms, **headless Chromium boots as uid 1000
+  and loads a page in 2.6 s** (`scripts/browser-probe.py`). Read-only policy baked in: `ROKAN_TASK_CLASSES=
+  read_value,read_list`, `ROKAN_GUARD_ALL_HOSTS=1`, `ROKAN_BROWSER_NO_SANDBOX=1`, `--disable-dev-shm-usage`.
+- **Rokan (my branch):** three env hooks with 43 tests (task-class allowlist; guard-all-hosts; extra Chromium
+  args); versions 0.0.2/0.1.2/0.0.2; **the vendored wheels were pre-Tier-0 under the same version numbers** —
+  rebuilt (`scripts/build-wheels.sh`, guarded by `test/vendor-wheels.test.mjs`).
+- **Worker hardening from the reviews:** `/api/session` needs the app Origin or the eval secret (header-less
+  `curl` / a judge's localhost page could spawn containers before); Gate keyed per IPv6 /64; caps 10/5 with
+  `max_instances` 20; `sleepAfter 35m` + a Gate alarm destroys the sandbox at TTL (the old 10 m hibernated a live
+  session's container); sid logged as 8 chars.
+- **Bridge (contract: commit):** ledger rows redacted at write time (`terminal://ledger` served raw secrets to
+  MCP clients), file 0600; agent role is a derived HMAC credential, not self-declared; OSC 133/7331 carry a
+  per-session nonce (in-band bytes could mint signed rows); `ws` import for Node 20; annotations passed through;
+  PTY→ws backpressure. Unit 11→34, smoke 40→43.
+- **Web (crossed lanes, pinged):** Try-it-now resets after an ended session; pairing card no longer hardcodes a
+  wrong cap; adapter `partial` bounded; forge invoke supersedes + `invoke_failed` row; ledger capped/throttled;
+  prompt fragment stripped before `terminal_wait` reaches the agent; tour line true. 202→210 tests.
+- **Honesty:** the ~200–290× headline was internal-ms vs wall-clock — now **28.9–42.4× wall-clock at 0 calls**
+  (from the committed JSON); 7 fixed tools; 24 cases; egress "demo hosts only" claims removed; DEMO params fixed;
+  drift harness restores its fixture and enforces its pass condition. SECURITY §6–§9 rewritten to what runs.
+- **Evals:** judge-only `terminal-rokan-open-net` (cold run on an unseeded site → replay ⚡), `terminal-rokan-
+  readonly` (write-shaped task refused), isolation case asserts the dummy key + proxy URL + no `sk-ant` in any env.
+- **Blocked on Arav:** `wrangler secret put ANTHROPIC_API_KEY` (classifier blocks credential handling from my
+  shell; a dedicated key with a console spend limit, please); `vercel --prod` for the web changes.
 
 ## Build log — Engineer #4 (2026-08-29 ~20:10 local, drift beat measured)
 **Drift Rokan arm is LIVE and measured (N=2, `6c7f964`, raw `docs/evidence/ab/drift-run-{1,2}.txt`):** naive cached
