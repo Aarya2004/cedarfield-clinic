@@ -44,6 +44,9 @@ export interface ForgeCard {
 
 export type StepKind = 'machine' | 'native' | 'compiled' | 'planned';
 
+/** The two identities a forge approval can have; the card's `origin`, in the words the page uses. */
+export type ForgedBy = 'you' | 'agent';
+
 export interface RunStat {
   t: string;
   invocation_id: string;
@@ -67,6 +70,12 @@ export interface ForgedTool {
   /** false when no WebMCP in this browser — tool tracked, never registered */
   registered: boolean;
   forgedAt: number;
+  /**
+   * Who approved this tool into existence — `you` when the card came from the page, `agent` when it
+   * came from `forge_create` (COMPOSE §3.3). The consumer gives us no richer identity, so this says
+   * the one thing we actually know. Display only; it grants nothing.
+   */
+  forged_by: ForgedBy;
   runs: number;
   stats: RunStat[];
 }
@@ -94,6 +103,8 @@ export interface ForgeListEntry {
   median_ms: number | null;
   last_exit: number | null;
   forged_at: string;
+  /** who approved it: `you` (the card on the page) or `agent` (`forge_create`). */
+  forged_by: ForgedBy;
   /** the provenance kinds of the LAST invocation's steps, in order (COMPOSE §2.2a). */
   provenance: StepKind[];
   /** total model calls the last invocation spent — 0 when every step replayed, else null (unknown). */
@@ -206,6 +217,7 @@ export class ForgeEngine {
           median_ms: finals.length ? median(finals) : null,
           last_exit: last ? last.exit_code : null,
           forged_at: t.forgedAtIso,
+          forged_by: t.forged_by,
           provenance,
           calls_last,
         };
@@ -267,7 +279,7 @@ export class ForgeEngine {
     const hash = await this.deps.hash(merged);
     let t: Internal;
     try {
-      t = await this.register(merged, hash, replacing);
+      t = await this.register(merged, hash, card.origin === 'agent' ? 'agent' : 'you', replacing);
     } catch (e) {
       note('forge.register_failed', { message: e instanceof Error ? e.message : String(e) });
       return { error: 'unsupported', detail: `registerTool failed: ${e instanceof Error ? e.message : String(e)}` };
@@ -297,7 +309,7 @@ export class ForgeEngine {
     return others.some((t) => !t.pinned);
   }
 
-  private async register(spec: ForgeSpec, hash: string, replacing?: Internal): Promise<Internal> {
+  private async register(spec: ForgeSpec, hash: string, forgedBy: ForgedBy, replacing?: Internal): Promise<Internal> {
     if (replacing?.ac) {
       replacing.ac.abort();
       void this.deps.ledger.append('unregistered', { name: spec.name, hash: replacing.hash, reason: 'replaced' });
@@ -312,6 +324,7 @@ export class ForgeEngine {
       registered: false,
       forgedAt: performance.now(),
       forgedAtIso: new Date().toISOString(),
+      forged_by: forgedBy,
       // Stats belong to a content hash (identity). A re-forge that changes the command changes the
       // hash, so its runs/history must NOT carry over (Opus P2); an idempotent re-register (same hash) keeps them.
       runs: replacing && replacing.hash === hash ? replacing.runs : 0,
@@ -578,6 +591,7 @@ function pub(t: Internal): ForgedTool {
     visible: t.visible,
     registered: t.registered,
     forgedAt: t.forgedAt,
+    forged_by: t.forged_by,
     runs: t.runs,
     stats: t.stats,
   };

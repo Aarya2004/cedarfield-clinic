@@ -547,6 +547,16 @@ test('forge_list provenance: a composed tool records machine + native + compiled
   assert.equal(entry.calls_last, null); // step 1 was a first-run (calls unknown), not every step 0-call
 });
 
+test('forged_by: the card origin, and nothing richer — agent via forge_create, you via the page', async () => {
+  const { engine } = make();
+  await engine.approve(card(engine, { ...hn, name: 'from_agent' }, 'agent').card_id);
+  await engine.approve(card(engine, { ...hn, name: 'from_human' }, 'human').card_id);
+  const by = (n: string) => engine.list().tools.find((t) => t.name === n)!.forged_by;
+  assert.equal(by('from_agent'), 'agent');
+  assert.equal(by('from_human'), 'you');
+  assert.equal(engine.tool('from_human')?.forged_by, 'you'); // the same fact on the tool the pane renders
+});
+
 test('invoke: a stale ghost-typed proposal is superseded (its terminal_wait resolves instead of hanging)', async () => {
   const { engine, store } = make();
   await engine.approve(card(engine, hn).card_id);

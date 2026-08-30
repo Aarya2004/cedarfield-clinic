@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { session, type SessionSnapshot } from '@/lib/terminal/session';
 import { getTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
 import { forge, type ForgedTool } from '@/lib/webmcp/forge';
+import { loadKept } from '@/lib/webmcp/kept';
 import { LEDGER_MAX_ROWS, ledger, type LedgerRow } from '@/lib/webmcp/ledger';
 import { FIXED_TOOL_NAMES } from '@/lib/webmcp/schemas';
 import type { RegistrationState } from '@/lib/webmcp/register';
@@ -130,9 +131,24 @@ function Countdown({ until }: { until: string }) {
   );
 }
 
+/**
+ * The hashes this browser has kept, so a row can say it survives a reload. Read from the store, not
+ * inferred: a tool is kept only once the restore path has written it, and until then no row claims
+ * it. Re-read whenever the forged list changes, which is exactly when the store is rewritten.
+ */
+function useKeptHashes(forged: ForgedTool[]): Set<string> {
+  const [hashes, setHashes] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    const store = typeof window === 'undefined' ? null : window.localStorage;
+    setHashes(new Set(loadKept(store).map((k) => k.hash)));
+  }, [forged]);
+  return hashes;
+}
+
 export function ToolsPane({ reg }: { reg: RegistrationState | { kind: 'pending' } }) {
   const forged = useForged();
   const rows = useLedger();
+  const kept = useKeptHashes(forged);
   const [tryOut, setTryOut] = useState<string | null>(null);
   const visible = forged.filter((t) => t.visible).length;
   const registeredThisSession = rows.filter((r) => r.kind === 'registered' || r.kind === 'forged' || r.kind === 'restored').length;
@@ -172,6 +188,11 @@ export function ToolsPane({ reg }: { reg: RegistrationState | { kind: 'pending' 
                       pinned
                     </Chip>
                   )}
+                  {kept.has(t.hash) && (
+                    <Chip tone="muted" title="Kept in this browser: it comes back after a reload, behind the same approval card.">
+                      kept
+                    </Chip>
+                  )}
                 </div>
                 <div className="mono mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted">
                   <span title="sha-256 of the canonical spec, first 12 hex">{t.hash}</span>
@@ -189,6 +210,19 @@ export function ToolsPane({ reg }: { reg: RegistrationState | { kind: 'pending' 
                       <span className={entry.last_exit === 0 ? 'text-ok' : 'text-danger'} title="Exit code of the last run">
                         exit {entry.last_exit}
                       </span>
+                    </>
+                  )}
+                  {/* Only a counted run says a number: null means nobody counted, and stays silent. */}
+                  {entry?.calls_last != null && (
+                    <>
+                      <span>·</span>
+                      <span title="Model calls the last run spent, summed over its steps — measured, not estimated">last: {entry.calls_last} calls</span>
+                    </>
+                  )}
+                  {entry?.forged_by && (
+                    <>
+                      <span>·</span>
+                      <span title={entry.forged_by === 'agent' ? 'Your agent asked for this tool with forge_create; you approved the card.' : 'You forged this tool from the page.'}>forged by {entry.forged_by}</span>
                     </>
                   )}
                 </div>

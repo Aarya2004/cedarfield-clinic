@@ -15,9 +15,10 @@ test('forge.list() gives the view fields the hook exposes, and subscribe fires o
   const t = await engine.approve(card.card_id);
   if ('error' in t) throw new Error(t.error);
   const view = engine.list().tools[0];
-  assert.deepEqual(Object.keys(view).sort(), ['calls_last', 'forged_at', 'hash', 'kind', 'last_exit', 'median_ms', 'name', 'params', 'pinned', 'provenance', 'runs', 'tool', 'visible'].sort());
+  assert.deepEqual(Object.keys(view).sort(), ['calls_last', 'forged_at', 'forged_by', 'hash', 'kind', 'last_exit', 'median_ms', 'name', 'params', 'pinned', 'provenance', 'runs', 'tool', 'visible'].sort());
   assert.equal(view.tool, 'forged_hn_top');
   assert.equal(view.kind, 'read');
+  assert.equal(view.forged_by, 'you'); // the card came from the page, not from forge_create
   const before = ticks;
   engine.pin('hn_top', true);
   engine.unforge('hn_top');
