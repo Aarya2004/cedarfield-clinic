@@ -123,9 +123,10 @@ export default {
       const sid = allowedPath(url.pathname);
       if (!sid) return json({ error: 'not found' }, 404, h);
       if (request.method !== 'POST') return json({ error: 'method not allowed' }, 405, { ...h, allow: 'POST' });
-      if (!env.SID_SECRET || !env.ANTHROPIC_API_KEY) return json({ type: 'error', error: { type: 'api_error', message: 'model proxy not configured' } }, 503, h);
-      const id = await verifySid(env.SID_SECRET, sid, Date.now());
+      // Authenticate before anything else: an unissued sid learns nothing, not even whether the key is configured.
+      const id = env.SID_SECRET ? await verifySid(env.SID_SECRET, sid, Date.now()) : null;
       if (!id) return json({ type: 'error', error: { type: 'authentication_error', message: 'unknown or expired session' } }, 403, h);
+      if (!env.ANTHROPIC_API_KEY) return json({ type: 'error', error: { type: 'api_error', message: 'model proxy not configured' } }, 503, h);
       if (!/^application\/json/i.test(request.headers.get('content-type') ?? '')) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'json required' } }, 415, h);
       const declared = Number(request.headers.get('content-length') ?? 0);
       if (declared > MAX_BODY_BYTES) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'request too large' } }, 413, h);
