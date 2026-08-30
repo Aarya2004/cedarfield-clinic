@@ -199,7 +199,8 @@ export default {
       const maxConcurrent = num(env.MAX_CONCURRENT_PER_IP, 3);
       const d = await gate.allow(sid, PROVISIONAL_MS, perWindow, maxConcurrent, id);
       if (!d.ok) {
-        const msg = d.reason === 'rate' ? `This IP started too many sandboxes in the last 10 minutes; try again in ${d.retry_after_s} s` : `This IP already has its maximum of active sandboxes; try again in ${d.retry_after_s} s`;
+        // No time in the sentence: the page appends "(retry in N s)" from retry_after_s (it read "… in 1144 s (retry in 1144 s)" live).
+        const msg = d.reason === 'rate' ? 'This IP started too many sandboxes in the last 10 minutes' : 'This IP already has its maximum of active sandboxes';
         return json({ error: msg, retry_after_s: d.retry_after_s }, 429, { ...h, 'retry-after': String(d.retry_after_s ?? 60) });
       }
       const t0 = Date.now();
