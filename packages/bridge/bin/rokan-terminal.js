@@ -44,10 +44,12 @@ if (args[0] === 'mcp') {
   };
   const cur = readCurrent();
   const ws = f('ws') ?? cur?.ws;
-  const token = f('token') ?? cur?.token;
+  // `--token` here is the AGENT token (HMAC of the pairing token; see src/agent-token.js) — the
+  // only credential current.json carries. The pairing token would be refused for role "agent".
+  const token = f('token') ?? cur?.agent_token;
   const mlog = (m) => process.stderr.write(`[rokan-terminal mcp] ${m}\n`);
   if (!ws || !token) {
-    mlog(`no running bridge found (${CURRENT_FILE} missing) — start \`npx rokan-terminal\` first, or pass --ws and --token`);
+    mlog(`no running bridge found (${CURRENT_FILE} missing or from an older version) — start \`npx rokan-terminal\` first, or pass --ws and --token <agent token>`);
     process.exit(1);
   }
   try {
@@ -151,10 +153,11 @@ async function waitForDns(host, budgetMs) {
   return false;
 }
 
-// Advertise this bridge to `rokan-terminal mcp` on the same machine (token stays on disk, 0600).
+// Advertise this bridge to `rokan-terminal mcp` on the same machine. ONLY the derived agent token
+// goes on disk (0600): a process that reads this file can relay tool calls, never pair as the tab.
 try {
   mkdirSync(dirname(CURRENT_FILE), { recursive: true, mode: 0o700 });
-  writeFileSync(CURRENT_FILE, JSON.stringify({ ws: `ws://127.0.0.1:${bridge.port}`, token, pid: process.pid, mode, started_at: new Date().toISOString() }), { mode: 0o600 });
+  writeFileSync(CURRENT_FILE, JSON.stringify({ ws: `ws://127.0.0.1:${bridge.port}`, port: bridge.port, agent_token: bridge.agentToken, pid: process.pid, mode, started_at: new Date().toISOString() }), { mode: 0o600 });
   process.on('exit', () => {
     try {
       rmSync(CURRENT_FILE, { force: true });

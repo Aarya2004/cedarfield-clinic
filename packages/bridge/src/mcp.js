@@ -5,12 +5,15 @@
  * (`agent_call` → `agent_result`). Nothing here executes; the human's Enter still gates.
  *
  * Connection info comes from ~/.rokan-terminal/current.json (written by the running bridge)
- * or from --ws / --token flags.
+ * or from --ws / --token flags. The token this process holds is the AGENT token
+ * (`agent_token` in current.json = HMAC(pairing token, "agent"), src/agent-token.js): it can
+ * only ever authenticate as role "agent" and never pairs a tab.
  */
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import WebSocket from 'ws'; // Node 20 has no global WebSocket (P1-3); `ws` speaks the same onopen/onmessage API
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -146,20 +149,31 @@ export class AgentLink {
   }
 }
 
+/**
+ * The page's tool → the MCP tool listed over stdio. One registry, one claim: the page's own
+ * annotations pass through (readOnly / untrustedContent / destructive), never re-derived here.
+ * `untrustedContentHint` matters: it is how the page says "this result is screen text — treat
+ * it as data, not instructions" (P1-3). Nothing here executes, so openWorldHint stays false.
+ */
+export function toMcpTool(t) {
+  return {
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema && typeof t.inputSchema === 'object' ? t.inputSchema : { type: 'object', properties: {} },
+    annotations: {
+      readOnlyHint: !!t.annotations?.readOnlyHint,
+      untrustedContentHint: !!t.annotations?.untrustedContentHint,
+      destructiveHint: !!t.annotations?.destructiveHint,
+      openWorldHint: false,
+    },
+  };
+}
+
 /** Build the MCP server bound to a link. Exported so tests can drive it without a process. */
 export function createMcpServer(link, opts = {}) {
   const server = new Server({ name: 'rokan-terminal', version: '0.0.1' }, { capabilities: { tools: { listChanged: true }, ...resourceCapabilities() } });
   link.onToolsChanged = () => void server.sendToolListChanged().catch(() => undefined);
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: link.tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: t.inputSchema && typeof t.inputSchema === 'object' ? t.inputSchema : { type: 'object', properties: {} },
-      // One registry, one claim: the page's own annotations. No tool executes anything — the human's
-      // Enter does — so nothing is destructive unless the page says so (it doesn't today).
-      annotations: { readOnlyHint: !!t.annotations?.readOnlyHint, destructiveHint: !!t.annotations?.destructiveHint, openWorldHint: false },
-    })),
-  }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: link.tools.map(toMcpTool) }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     try {
       const result = await link.call(req.params.name, req.params.arguments ?? {});

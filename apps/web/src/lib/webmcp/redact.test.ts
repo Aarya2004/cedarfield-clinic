@@ -169,3 +169,12 @@ test('regression (Codex + Fable verify): accounting is honest, key boundaries, p
   const r = one('export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY; echo ok');
   assert.equal(r.lines[0], 'export AWS_SECRET_ACCESS_KEY=[redacted]; echo ok');
 });
+
+test('sandbox sid `<24hex>.<digits>.<16hex>` is the judge-session credential and is redacted (rule mirrored in packages/bridge/src/redact.js)', () => {
+  const sid = 'a1b2c3d4e5f60718293a4b5c.1756512000.0f1e2d3c4b5a6978';
+  const r = one(`wss://rokan-sandbox.example/ws/${sid}`);
+  assert.ok(!r.lines[0].includes(sid), r.lines[0]);
+  assert.ok(r.redactions.some((x) => x.kind === 'sandbox_sid'));
+  // the bare 24-hex sandbox NAME is not a bearer and stays visible
+  assert.equal(one('sandbox a1b2c3d4e5f60718293a4b5c').lines[0], 'sandbox a1b2c3d4e5f60718293a4b5c');
+});

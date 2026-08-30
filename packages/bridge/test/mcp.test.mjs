@@ -11,7 +11,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { startBridge } from '../src/bridge.js';
-import { AgentLink, createMcpServer } from '../src/mcp.js';
+import { AgentLink, createMcpServer, toMcpTool } from '../src/mcp.js';
+import { deriveAgentToken } from '../src/agent-token.js';
 import { TRUST_BOUNDARY, readLedgerRows } from '../src/mcp-resources.js';
 
 const bin = fileURLToPath(new URL('../bin/rokan-terminal.js', import.meta.url));
@@ -29,7 +30,7 @@ test('MCP parity: tools published by the tab are listed over stdio; a call is re
     const f = JSON.parse(m.toString());
     if (f.type === 'hello') {
       tab.send(JSON.stringify({ type: 'agent_tools', tools: [
-        { name: 'terminal_status', description: 'status', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
+        { name: 'terminal_status', description: 'status', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true, untrustedContentHint: true } },
         { name: 'forged_hn_top', description: 'CONSEQUENTIAL: top n', inputSchema: { type: 'object', properties: { n: { type: 'string' } }, required: ['n'] }, annotations: { readOnlyHint: false } },
       ] }));
     }
@@ -42,7 +43,7 @@ test('MCP parity: tools published by the tab are listed over stdio; a call is re
   await new Promise((r) => setTimeout(r, 300));
 
   // the MCP client spawns `rokan-terminal mcp` (stdio) which connects to the bridge as an agent
-  const transport = new StdioClientTransport({ command: process.execPath, args: [bin, 'mcp', '--ws', `ws://127.0.0.1:${port}`, '--token', token], stderr: 'pipe' });
+  const transport = new StdioClientTransport({ command: process.execPath, args: [bin, 'mcp', '--ws', `ws://127.0.0.1:${port}`, '--token', deriveAgentToken(token)], stderr: 'pipe' });
   const client = new Client({ name: 'test', version: '0' });
   await client.connect(transport);
   const list = await client.listTools();
@@ -91,7 +92,7 @@ test('agent role: input frames are refused; a second agent process takes over (t
     tick();
   });
   const a = await open();
-  a.s.send(JSON.stringify({ type: 'auth', token, role: 'agent' }));
+  a.s.send(JSON.stringify({ type: 'auth', token: deriveAgentToken(token), role: 'agent' }));
   const hello = await until(a.frames, (f) => f.type === 'hello');
   assert.equal(hello?.role, 'agent');
   assert.equal(hello?.tab_connected, false);
@@ -102,7 +103,7 @@ test('agent role: input frames are refused; a second agent process takes over (t
   const noTab = await until(a.frames, (f) => f.type === 'agent_result' && f.call_id === 'x1');
   assert.match(noTab?.error ?? '', /no tab/);
   const b = await open();
-  b.s.send(JSON.stringify({ type: 'auth', token, role: 'agent' }));
+  b.s.send(JSON.stringify({ type: 'auth', token: deriveAgentToken(token), role: 'agent' }));
   // newest agent process wins; the first is told `replaced` (Codex CLI needs a new session to see forged tools)
   const helloB = await until(b.frames, (f) => f.type === 'hello');
   assert.ok(helloB, 'second agent must be accepted');
@@ -118,7 +119,7 @@ test('regression (Opus/Fable pass 2 P2): AgentLink reconnects after a bridge res
   const port = 21000 + Math.floor(Math.random() * 20000);
   const ledgerDir = mkdtempSync(join(tmpdir(), 'rokan-mcp-rc-'));
   let bridge = await startBridge({ port, token, ledgerDir, shell: '/bin/zsh' });
-  const link = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token, backoffMs: [100, 100] });
+  const link = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token: deriveAgentToken(token), backoffMs: [100, 100] });
   const lists = [];
   link.onToolsChanged = (t) => lists.push(t.map((x) => x.name));
   await link.connect();
@@ -161,9 +162,9 @@ test('regression (Codex sessions, 2026-08-29): a replaced AgentLink stands down;
   const token = randomBytes(16).toString('hex');
   const port = 21000 + Math.floor(Math.random() * 20000);
   const bridge = await startBridge({ port, token, ledgerDir: mkdtempSync(join(tmpdir(), 'rokan-mcp-rp-')), shell: '/bin/zsh' });
-  const a = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token, backoffMs: [50, 50] });
+  const a = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token: deriveAgentToken(token), backoffMs: [50, 50] });
   await a.connect();
-  const b = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token, backoffMs: [50, 50] });
+  const b = new AgentLink({ ws: `ws://127.0.0.1:${port}`, token: deriveAgentToken(token), backoffMs: [50, 50] });
   await b.connect();
   await new Promise((r) => setTimeout(r, 600)); // long enough for a wrongful reconnect to have happened
   assert.equal(a.socket, null, 'the replaced link must not reconnect');
@@ -201,7 +202,7 @@ test('MCP resources/prompts over the real stdio transport: 3 resources, 3 prompt
   tab.send(JSON.stringify({ type: 'auth', token, cols: 80, rows: 24 }));
   await new Promise((r) => setTimeout(r, 300));
 
-  const transport = new StdioClientTransport({ command: process.execPath, args: [bin, 'mcp', '--ws', `ws://127.0.0.1:${port}`, '--token', token], stderr: 'pipe' });
+  const transport = new StdioClientTransport({ command: process.execPath, args: [bin, 'mcp', '--ws', `ws://127.0.0.1:${port}`, '--token', deriveAgentToken(token)], stderr: 'pipe' });
   const client = new Client({ name: 'test', version: '0' });
   await client.connect(transport);
 
@@ -296,6 +297,40 @@ test('ReadResource terminal://ledger through a real MCP client, scoped to the se
   await assert.rejects(() => client.readResource({ uri: 'nope://x' }), /unknown resource/);
   await assert.rejects(() => client.getPrompt({ name: 'nope', arguments: {} }), /unknown prompt/);
 
+  await client.close();
+  await server.close();
+});
+
+// ---------- P1-3: annotations pass through unchanged, on the wire ----------
+
+test('toMcpTool keeps readOnlyHint / untrustedContentHint / destructiveHint from the page; openWorldHint pinned false', () => {
+  const t = toMcpTool({ name: 'terminal_read_screen', description: 'screen', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true, untrustedContentHint: true } });
+  assert.deepEqual(t.annotations, { readOnlyHint: true, untrustedContentHint: true, destructiveHint: false, openWorldHint: false });
+  const d = toMcpTool({ name: 'x', description: 'x', annotations: { destructiveHint: true } });
+  assert.deepEqual(d.annotations, { readOnlyHint: false, untrustedContentHint: false, destructiveHint: true, openWorldHint: false });
+  assert.deepEqual(d.inputSchema, { type: 'object', properties: {} });
+  assert.deepEqual(toMcpTool({ name: 'y', description: 'y' }).annotations, { readOnlyHint: false, untrustedContentHint: false, destructiveHint: false, openWorldHint: false });
+});
+
+test('tools/list on the wire carries untrustedContentHint (SDK 1.30 client schema strips it on parse, so assert the raw JSON-RPC message)', async () => {
+  const link = {
+    tools: [{ name: 'terminal_read_screen', description: 'screen', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true, untrustedContentHint: true } }],
+    hello: { session_id: 's' },
+    onToolsChanged: () => {},
+    call: async () => { throw new Error('no tab'); },
+  };
+  const server = createMcpServer(link, { ledgerFile: '/nonexistent' });
+  const [clientT, serverT] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'test', version: '0' });
+  await Promise.all([server.connect(serverT), client.connect(clientT)]);
+  const raw = [];
+  const orig = clientT.onmessage;
+  clientT.onmessage = (m, extra) => { raw.push(m); orig?.(m, extra); };
+  const list = await client.listTools();
+  assert.equal(list.tools[0].annotations.readOnlyHint, true);
+  const wire = raw.find((m) => m.result && Array.isArray(m.result.tools));
+  assert.ok(wire, 'tools/list response not captured');
+  assert.deepEqual(wire.result.tools[0].annotations, { readOnlyHint: true, untrustedContentHint: true, destructiveHint: false, openWorldHint: false });
   await client.close();
   await server.close();
 });

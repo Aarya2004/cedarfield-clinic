@@ -5,7 +5,10 @@
  * Client → bridge
  *   {type:"auth", token, cols?, rows?, role?:"human"|"agent"}   must be the first frame, within AUTH_TIMEOUT_MS
  *   (role "agent" = an MCP process on the same machine: it may only send agent_call and receives
- *    agent_tools / agent_result relayed from the human's tab; it never touches the PTY)
+ *    agent_tools / agent_result relayed from the human's tab; it never touches the PTY.
+ *    Frame shape unchanged since v1; the CREDENTIAL differs by role (src/agent-token.js): the tab
+ *    sends the pairing token with no role or role "human"; an agent sends HMAC(token,"agent") with
+ *    role "agent". Each is refused for the other role — role is proven, not declared.)
  *   {type:"agent_tools", tools:[{name, description, inputSchema, annotations}]}   tab → bridge → agent (list changed)
  *   {type:"agent_call", call_id, tool, input}                                     agent → bridge → tab
  *   {type:"agent_result", call_id, result?, error?}                               tab → bridge → agent

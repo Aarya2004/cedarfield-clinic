@@ -4,7 +4,7 @@
  * The session key is written once to ~/.rokan-terminal/keys/<session>.key (0600) so an export
  * can be verified later with `verifyLedger()`.
  */
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { appendFileSync, chmodSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createHmac, randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -35,6 +35,10 @@ export class Ledger {
     mkdirSync(join(dir, 'keys'), { recursive: true, mode: 0o700 });
     this.key = randomBytes(32);
     writeFileSync(join(dir, 'keys', `${session}.key`), this.key.toString('hex'), { mode: 0o600 });
+    // The ledger holds every command line the human ran (redacted, but still theirs): owner-only,
+    // created 0600 and tightened if an older run left it wider (review P0-1).
+    if (existsSync(this.file)) chmodSync(this.file, 0o600);
+    else writeFileSync(this.file, '', { mode: 0o600 });
   }
 
   /** Appends one row and returns it (with sig). `fields` must be JSON-serialisable. */
@@ -44,7 +48,7 @@ export class Ledger {
     delete row.sig;
     const sig = createHmac('sha256', this.key).update(this.prev + canonical(row)).digest('hex');
     const signed = { ...row, sig };
-    appendFileSync(this.file, JSON.stringify(signed) + '\n');
+    appendFileSync(this.file, JSON.stringify(signed) + '\n', { mode: 0o600 });
     this.prev = sig;
     return signed;
   }

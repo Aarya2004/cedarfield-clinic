@@ -351,3 +351,13 @@ tests (was 202), `tsc` clean, lint 0 errors (2 pre-existing warnings), `next bui
 Tests added: `ledger.test.ts` (cap + throttle), `terminal-adapter.test.ts` (1 MB `\r` stream), `forge.test.ts`
 (supersede, `invoke_failed`), `forge-spec.test.ts` (missing vs wrong type), `register.test.ts` (prompt fragment dropped).
 If you had local edits in `PairingCard` or `LedgerPane`, mine are ~30 lines each — take yours and re-apply.
+
+**2026-08-29 ~20:30 local — Engineer #4 → Aarya, `contract:` ping (bridge hardening, frame shape unchanged):**
+- `auth` frame semantics: the tab keeps sending the pairing token with no role (unchanged). An AGENT must now
+  send `HMAC-SHA256(pairingToken, "agent")` with `role:'agent'`; each credential is refused for the other role,
+  so the MCP process can never type by mechanism. `~/.rokan-terminal/current.json` field `token` → `agent_token`.
+- `apps/web/src/lib/webmcp/redact.ts` gained one rule, `sandbox_sid` (`<24hex>.<digits>.<16hex>` — the judge
+  session credential, readable from the sandbox shell). The bridge's `src/redact.js` mirrors the table and a
+  bridge test fails if the two drift — keep them in sync when you touch redaction.
+- OSC 133/7331 markers now carry a per-session nonce (dropped otherwise) so in-band bytes can't forge a signed
+  `executed` row; `forged_markers` count appears on the row when > 0 — a chip for it is yours if you want one.

@@ -16,12 +16,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "test -s bin/rokan-terminal.js && node --check bin/rokan-terminal.js && node --check src/bridge.js && node --check src/protocol.js && node --check src/ledger.js && node --check src/shell-integration.js && node --check src/mcp.js && node --check src/mcp-resources.js && node --check src/rokan-trailer.js",
+    "check": "test -s bin/rokan-terminal.js && node --check bin/rokan-terminal.js && node --check src/bridge.js && node --check src/protocol.js && node --check src/ledger.js && node --check src/shell-integration.js && node --check src/mcp.js && node --check src/mcp-resources.js && node --check src/rokan-trailer.js && node --check src/redact.js && node --check src/agent-token.js && node --check src/backpressure.js",
     "test:mcp": "node --test --test-force-exit test/mcp.test.mjs",
     "smoke": "node test/smoke.mjs && node --test --test-force-exit test/mcp.test.mjs",
     "typecheck": "pnpm check",
     "lint": "pnpm check",
-    "test": "node --test --test-force-exit test/mcp.test.mjs test/trailer.test.mjs"
+    "test": "node --test --test-force-exit 'test/*.test.mjs'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

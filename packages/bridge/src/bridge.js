@@ -3,7 +3,7 @@
  * The PTY receives bytes from exactly one place — `input` frames from the human's browser tab.
  */
 import { createServer } from 'node:http';
-import { timingSafeEqual, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { chmodSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -12,6 +12,9 @@ import { AUTH_TIMEOUT_MS, CLIENT_LEDGER_KINDS, CLOSE, IDLE_TIMEOUT_MS, PROTOCOL_
 import { OscParser, cleanupShellEnv, prepareShellEnv, shellName } from './shell-integration.js';
 import { ROKAN_OUT_MAX, isRokanCommand, parseRokanTrailer } from './rokan-trailer.js';
 import { Ledger } from './ledger.js';
+import { redactField } from './redact.js';
+import { deriveAgentToken, tokenEquals } from './agent-token.js';
+import { Backpressure } from './backpressure.js';
 
 const require = createRequire(import.meta.url);
 
@@ -34,15 +37,18 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
   const startedAtIso = new Date().toISOString();
   const expiresAt = ttlMs ? new Date(Date.now() + ttlMs).toISOString() : null;
   const shellPath = shell || process.env.SHELL || '/bin/zsh';
-  const { env, integration } = prepareShellEnv(shellPath, process.env);
-  const tokenBuf = Buffer.from(token, 'utf8');
+  const { env, integration, nonce } = prepareShellEnv(shellPath, process.env);
+  // Two credentials, one root: the pairing token pairs the tab; HMAC(token,"agent") is what an MCP
+  // process presents (the only value in current.json). Role is proven by which one is shown.
+  const agentToken = deriveAgentToken(token);
   const ledger = new Ledger({ session: sessionId, ...(ledgerDir ? { dir: ledgerDir } : {}) });
 
   const state = { cwd: cwd || process.env.HOME, running: false, last_exit_code: null, last_command_ms: null, last_command: null, last_rokan: null };
   let cmdOut = ''; // raw output of the running command, for the rokan-do trailer (capped)
   let startedAt = null;
   let sawStart = false;
-  let osc = new OscParser();
+  let osc = new OscParser({ nonce });
+  let forgedMarkers = 0; // OSC 133/7331 markers dropped for a bad nonce since the last executed row
   const scrollback = [];
   const SCROLLBACK_MAX = 400 * 1024;
   let scrollbackBytes = 0;
@@ -79,6 +85,13 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
       return false;
     }
   };
+  // Slow tab / tunnel: pause the PTY instead of queueing unbounded bytes on the socket (P1-5).
+  const backpressure = new Backpressure({
+    getClient: () => client,
+    pause: () => safe(() => term.pause()),
+    resume: () => safe(() => term.resume()),
+    log,
+  });
 
   /** Spawn (or respawn after exit) the human's shell. The tab is told either way. */
   let lastSpawnAt = 0;
@@ -90,7 +103,8 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
     lastSpawnAt = Date.now();
     termAlive = true;
     sawStart = false;
-    osc = new OscParser();
+    osc = new OscParser({ nonce });
+    backpressure.reset();
     state.running = false;
     if (reason) ledger.append('shell_restarted', { reason });
     attach(term);
@@ -107,7 +121,13 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
     let endStatus = false;
     for (const piece of data.split(OSC133_SPLIT)) {
       if (!piece) continue;
-      for (const ev of osc.feed(piece)) {
+      const forgedBefore = osc.forged;
+      const events = osc.feed(piece);
+      if (osc.forged !== forgedBefore) {
+        forgedMarkers += osc.forged - forgedBefore;
+        log(`dropped ${osc.forged - forgedBefore} OSC marker(s) with a bad session nonce (forged or foreign shell integration)`);
+      }
+      for (const ev of events) {
       if (ev.kind === 'start') {
         sawStart = true;
         startedAt = performance.now();
@@ -126,17 +146,22 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
         // line is never a replay (Fable pass-3 P1).
         state.last_rokan = isRokanCommand(state.last_command) ? parseRokanTrailer(cmdOut) : null;
         cmdOut = '';
+        // Redacted BEFORE signing: the row's bytes are what `terminal://ledger` serves, so a secret
+        // typed on the command line (`export AWS_SECRET_ACCESS_KEY=…`) is never on disk (P0-1).
+        // Same rules as the tab's redact.ts (src/redact.js mirrors it).
         ledger.append('executed', {
-          command: state.last_command,
+          command: redactField(state.last_command),
           exit_code: ev.code,
           ms: state.last_command_ms,
-          cwd: state.cwd,
+          cwd: redactField(state.cwd),
+          ...(forgedMarkers ? { forged_markers: forgedMarkers } : {}),
           ...(state.last_rokan ? {
             rokan_ms: state.last_rokan.ms,
             rokan_calls: state.last_rokan.replayed ? 0 : null,
             ...(state.last_rokan.native ? { rokan_site: state.last_rokan.native.site, rokan_tool: state.last_rokan.native.tool } : {}),
           } : {}),
         });
+        forgedMarkers = 0;
         endStatus = true; // sent AFTER this data frame so the client sees the end marker (and the last output) first
       } else if (ev.kind === 'cwd') {
         state.cwd = ev.cwd;
@@ -146,6 +171,7 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
     }
     send(client, { type: 'data', data });
     if (endStatus) sendStatus();
+    backpressure.check();
   });
   t.onExit(({ exitCode }) => {
     if (t !== term) return;
@@ -215,12 +241,17 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
       const f = parsed.frame;
       if (!authed) {
         if (f.type !== 'auth') return ws.close(CLOSE.UNAUTHORIZED, 'auth first');
-        const given = Buffer.from(f.token, 'utf8');
-        if (given.length !== tokenBuf.length || !timingSafeEqual(given, tokenBuf)) {
-          send(ws, { type: 'error', code: 'unauthorized', message: 'bad token' });
+        // Role by mechanism (P0-2): the agent credential is HMAC(token,"agent") and is accepted ONLY
+        // with role "agent"; the pairing token pairs only a tab (no role, or role "human"). Both
+        // compares always run so timing does not reveal which credential was tried.
+        const isHuman = tokenEquals(f.token, token);
+        const isAgent = tokenEquals(f.token, agentToken);
+        const wantsAgent = f.role === 'agent';
+        if (!(wantsAgent ? isAgent : isHuman)) {
+          send(ws, { type: 'error', code: 'unauthorized', message: wantsAgent && isHuman ? 'bad token: the pairing token cannot connect as an agent' : 'bad token' });
           return ws.close(CLOSE.UNAUTHORIZED, 'bad token');
         }
-        if (f.role === 'agent') {
+        if (wantsAgent) {
           // MCP relay socket: never the PTY. One at a time — the newest process with the valid token
           // wins (Codex CLI lists MCP tools once per session, so a forged tool needs a NEW session;
           // the old session's relay must not block it — measured 2026-08-29).
@@ -398,5 +429,5 @@ export async function startBridge({ port = 7331, host = '127.0.0.1', token, shel
       onIdle?.();
     }, ttlMs);
   }
-  return { port, host, sessionId, ledgerFile: ledger.file, integration, close: () => { clearTimeout(ttlTimer); close(); }, state, mode, expiresAt };
+  return { port, host, sessionId, agentToken, ledgerFile: ledger.file, integration, close: () => { clearTimeout(ttlTimer); close(); }, state, mode, expiresAt };
 }

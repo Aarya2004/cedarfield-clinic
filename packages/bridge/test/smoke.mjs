@@ -118,6 +118,18 @@ await typeCommand('cd /tmp');
 const cwdStatus = await until(frames, (f) => f.type === 'status' && f.last_command === 'cd /tmp' && f.running === false, 8000);
 check('cwd tracked via OSC 7', /\/tmp$/.test(cwdStatus?.cwd ?? ''), JSON.stringify(cwdStatus?.cwd));
 
+// 2b. P1-4: a program printing OSC 133 / 7331 bytes must not mint an executed row. The forged
+// markers (no nonce) are dropped and counted; the real hooks (with the nonce) still close the command.
+{
+  const forge = "printf '\\e]133;D;0\\a\\e]7331;cmd;Zm9v\\a'; false";
+  const st = await typeCommand(forge);
+  check('forged OSC markers ignored: status still honest (exit 1, real command text)', st?.last_exit_code === 1 && st?.last_command === forge, JSON.stringify(st));
+  const led = readFileSync(join(ledgerDir, 'ledger.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  const rows = led.filter((r) => r.kind === 'executed' && r.command === forge);
+  check('forged OSC markers: ONE executed row, counted as forged_markers:2, exit 1', rows.length === 1 && rows[0].forged_markers === 2 && rows[0].exit_code === 1, JSON.stringify(rows.map((r) => ({ exit: r.exit_code, forged: r.forged_markers }))));
+  check('ledger file is 0600', (fsx.statSync(join(ledgerDir, 'ledger.jsonl')).mode & 0o777) === 0o600);
+}
+
 // 2c. A resize with impossible dimensions must not end the session (judge mode, 2026-08-28: a
 // collapsed pane mid-layout sent rows:1 → close 4400 → the tab showed "link not valid").
 ws.send(JSON.stringify({ type: 'resize', cols: 0, rows: 1 }));
