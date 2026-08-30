@@ -1,0 +1,17 @@
+# judge suite — live https://rokan-sandbox.rokan-sandbox.workers.dev — 2026-08-30 ~04:10 PT — standard-3, image 787f810 (rokan-mcp 0.1.3, 15 s tool window)
+PASS terminal-demo-dryrun.json {"summary":{"steps":49,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list","fo
+PASS terminal-evidence-ghost.json {"summary":{"steps":9,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list","
+PASS terminal-forge-live.json {"summary":{"steps":29,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list","for
+PASS terminal-ghost-ux.json {"summary":{"steps":30,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],"page
+PASS terminal-insert-cancel.json {"summary":{"steps":13,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],
+PASS terminal-judge-isolation.json {"summary":{"steps":7,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"]
+PASS terminal-pair.json {"summary":{"steps":10,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],"pageErro
+PASS terminal-propose-enter.json {"summary":{"steps":19,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],
+PASS terminal-read-screen.json {"summary":{"steps":13,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],"p
+PASS terminal-rokan-no-disclosure.json {"summary":{"steps":8,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_li
+PASS terminal-rokan-open-net.json {"summary":{"steps":16,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"]
+PASS terminal-rokan-readonly.json {"summary":{"steps":9,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],
+PASS terminal-rokan-real.json {"summary":{"steps":8,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],"pag
+PASS terminal-rokan-trailer.json {"summary":{"steps":16,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list"],
+PASS terminal-self-forge.json {"summary":{"steps":37,"failed":0,"tools":["terminal_propose","terminal_read_screen","terminal_status","terminal_wait","terminal_history","forge_create","forge_list","for
+evals (judge sandbox): 0 failed of 15 run
