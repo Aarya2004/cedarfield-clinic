@@ -35,6 +35,7 @@ test('runtime stage carries no compiler, exactly one Playwright chromium install
   assert.match(runtime, /ROKAN_BROWSER_NO_SANDBOX=1/);
   assert.match(runtime, /ROKAN_TASK_CLASSES=read_value,read_list/);
   assert.match(runtime, /ROKAN_GUARD_ALL_HOSTS=1/);
+  assert.match(runtime, /ROKAN_WEBMCP_QUIET_MS=15000/, 'the tool-listen window is widened for the ½-vCPU container (2026-08-30)');
   // Every RUN that installs apt packages must purge the lists IN THE SAME RUN — a purge in a later
   // RUN leaves the lists in an earlier layer and the image still grows (Codex review).
   const runs = runCommands(runtime);

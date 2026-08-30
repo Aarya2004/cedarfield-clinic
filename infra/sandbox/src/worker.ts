@@ -221,6 +221,9 @@ export default {
             ANTHROPIC_API_KEY: DUMMY_API_KEY,
             ROKAN_BROWSER_NO_SANDBOX: '1',
             ROKAN_BROWSER_HEADLESS: 'true',
+        // A heavy storefront on the container registered its WebMCP tools after rokan's 3 s default window
+        // (measured 2026-08-30: allbirds 0 tools live, 10 in the same image on a Mac). 15 s, same as the image ENV.
+        ROKAN_WEBMCP_QUIET_MS: '15000',
             PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright',
           },
         });

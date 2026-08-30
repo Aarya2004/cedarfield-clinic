@@ -65,7 +65,8 @@ WORKDIR /home/judge
 ENV HOME=/home/judge SHELL=/bin/zsh TERM=xterm-256color \
     ROKAN_BROWSER_NO_SANDBOX=1 ROKAN_BROWSER_HEADLESS=true \
     ROKAN_BROWSER_EXTRA_ARGS="--disable-dev-shm-usage --disable-gpu" \
-    ROKAN_TASK_CLASSES=read_value,read_list ROKAN_GUARD_ALL_HOSTS=1
+    ROKAN_TASK_CLASSES=read_value,read_list ROKAN_GUARD_ALL_HOSTS=1 \
+    ROKAN_WEBMCP_QUIET_MS=15000
 # Seeds: the package's own 54 plus the ones exported from the builder's store (rokan-seed-ops.json).
 # The first-run disclosure marker (rokan_mcp.paths.home()/.do-disclosed): the disclosure text describes the
 # builder's own key; here planning goes through the capped proxy and the tour says so on screen instead.
