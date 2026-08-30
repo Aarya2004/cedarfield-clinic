@@ -1,0 +1,36 @@
+sid <8hex> start 20:29:50
+20:29:50 call 1 → 503   
+20:29:51 call 2 → 503   
+20:29:51 call 3 → 503   
+20:29:51 call 4 → 503   
+20:29:51 call 5 → 503   
+20:29:52 call 6 → 503   
+20:29:52 call 7 → 503   
+20:29:52 call 8 → 503   
+20:29:53 call 9 → 503   
+20:29:53 call 10 → 503   
+20:29:53 call 11 → 429 x-should-retry: false retry-after: 10 sandbox model budget: burst
+20:30:55 call 12 → 503   
+20:30:56 call 13 → 503   
+20:30:56 call 14 → 503   
+20:30:56 call 15 → 503   
+20:30:56 call 16 → 503   
+20:30:57 call 17 → 503   
+20:30:57 call 18 → 503   
+20:30:57 call 19 → 503   
+20:30:58 call 20 → 503   
+20:30:58 call 21 → 503   
+20:30:58 call 22 → 429 x-should-retry: false retry-after: 10 sandbox model budget: burst
+20:32:00 call 23 → 503   
+20:32:01 call 24 → 503   
+20:32:01 call 25 → 503   
+20:32:01 call 26 → 503   
+20:32:01 call 27 → 503   
+20:32:02 call 28 → 503   
+20:32:02 call 29 → 503   
+20:32:02 call 30 → 503   
+20:32:03 call 31 → 503   
+20:32:03 call 32 → 503   
+20:32:03 call 33 → 429 x-should-retry: false retry-after: 970 sandbox model budget: sid
+20:32:03 call 34 → 429 x-should-retry: false retry-after: 970 sandbox model budget: sid
+end 20:32:03

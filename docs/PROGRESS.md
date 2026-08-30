@@ -11,6 +11,11 @@ no vault, no `sk-ant` in any process env), seeded replay ⚡ still 98–133 ms; 
 (**no key yet — Arav**) and `no-disclosure` tripped on my own screen regex matching the previous case's command
 line in the shared session (fixed: match Rokan's abstain text only). `readonly` passed only because everything
 abstains without the key — **not yet a policy proof**; it is one once the key is in. Graph rebuilt (1 679 nodes).
+- **Model-proxy caps proven live** (`docs/evidence/sandbox/2026-08-29-model-proxy-cap-trip.txt`, one sid, placeholder
+  key so every call cost $0 upstream): calls charged before forwarding; the 11th and 22nd call within a minute →
+  **429 `burst`** (`retry-after: 10`); the 33rd (30 charged) → **429 `sid`** (`retry-after: 970` = the session's
+  remaining TTL); every trip carries `x-should-retry: false`. Also seen live: the per-IP concurrency cap (5)
+  refusing a 6th sandbox with the honest card copy (`docs/evidence/stranger/2026-08-29-prod-429-concurrent-cap.png`).
 
 ## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
 **Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a
