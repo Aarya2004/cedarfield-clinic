@@ -34,6 +34,16 @@ abstains without the key — **not yet a policy proof**; it is one once the key 
 - **`sleepAfter` fix proven live:** the stranger session sat idle 12+ minutes, then `echo alive-after-idle` answered
   with 17:19 of TTL left (the old `sleepAfter '10m'` hibernated the container mid-session; now `35m` + the Gate
   alarm destroys the sandbox at TTL).
+- **Key in → the proxy works, and the Worker tail showed the real remaining bug** (`evt:model` lines): a cold
+  `rokan do` = haiku 200 (1.4–1.8 s, 3 291 in / 83 out) → Sonnet 5 temperature probe 400 → Sonnet 5 **200 after
+  48 s with exactly 4 000 output tokens** — Sonnet 5 runs adaptive thinking when `thinking` is omitted, thinking
+  tokens count against `max_tokens`, so the plan JSON was truncated and Rokan abstained (and the run cost
+  $0.04). Also my first burst cap (10 weighted/min) tripped inside one cold run (6–10 weighted calls with
+  Sonnet ×3). Fixed: caps sized to real cold runs (`aa4ba55`), a 4xx probe settles to its input cost, the proxy
+  pins `thinking:{type:'disabled'}` on Sonnet 5 when omitted (`de5f39e`), and Rokan's planner does the same
+  upstream (`4b79893`, wheels rebuilt `7b3ec37`). Eval `open-net` now polls the screen with a 120 s budget (the
+  harness caps a single RPC at 15 s). Also caught: a background `pnpm deploy` from the repo root hits pnpm's own
+  `deploy` subcommand and silently deploys nothing — always run it from `infra/sandbox`.
 
 ## Build log — Engineer #4 (2026-08-29 evening, OPEN-NET JUDGE SANDBOX — plan `bright-squishing-corbato`)
 **Goal (Arav): a judge can `rokan do "<anything>"` on any site on the open web inside the sandbox — a product, not a
