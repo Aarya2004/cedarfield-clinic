@@ -140,6 +140,7 @@ export function validateForgeSpec(spec: unknown): ForgeError | null {
 /** Coerce + validate one param value (no quoting; see `substituteLine`). */
 export function coerceParamValue(name: string, raw: unknown): { value: string } | ForgeError {
   let v: string;
+  if (raw === undefined) return { error: 'invalid_param', param: name, detail: 'missing: this param is required' };
   if (typeof raw === 'string') v = raw;
   else if (typeof raw === 'number' && Number.isFinite(raw)) v = String(raw);
   else if (typeof raw === 'boolean') v = String(raw);

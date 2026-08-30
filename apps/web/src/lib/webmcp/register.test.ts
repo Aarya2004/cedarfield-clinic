@@ -7,7 +7,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fixedToolDefs, historyForAgent } from './register.ts';
-import { setGateAShare } from './adapter.ts';
+import { gateAAdapter, setGateAShare, setTerminalAdapter, type TerminalAdapter } from './adapter.ts';
+import { proposals } from './proposals.ts';
 import { OUTPUT_BUDGET_CHARS, clampLastN, type TerminalHistoryResult } from './schemas.ts';
 import { runFeed, type Run } from '../terminal/runfeed.ts';
 
@@ -178,4 +179,23 @@ test('historyForAgent is pure: it does not mutate the store records', () => {
   const before = JSON.stringify(r);
   historyForAgent([r], 20);
   assert.equal(JSON.stringify(r), before);
+});
+
+test('terminal_wait: the trailing prompt fragment never reaches the agent', async () => {
+  const wait = fixedToolDefs().find((d) => d.name === 'terminal_wait')!;
+  const p = proposals.propose('printf "[1]"', 'why');
+  const fake: TerminalAdapter = {
+    ...gateAAdapter,
+    shareScreen: () => true,
+    waitProposal: async () => ({ ...proposals.get(p.id)!, status: 'accepted', exit_code: 0, ms: 3, tail: ['printf "[1]"', '[1]', 'judge@rokan:~ %'] }),
+  };
+  setTerminalAdapter(fake);
+  try {
+    const res = (await wait.execute({ proposal_id: p.id })) as { status: string; tail: string[] };
+    assert.equal(res.status, 'executed');
+    assert.deepEqual(res.tail, ['printf "[1]"', '[1]']);
+  } finally {
+    setTerminalAdapter(gateAAdapter);
+    proposals.resolve(p.id, 'dismissed', 'dismissed_by_human');
+  }
 });

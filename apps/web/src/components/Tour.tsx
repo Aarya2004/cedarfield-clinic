@@ -58,7 +58,7 @@ export function Tour({ judge, onClose }: { judge: boolean; onClose: () => void }
           </li>
         ))}
       </ol>
-      {judge && <p className="mt-2 text-muted">This sandbox lives 30 minutes, runs as a non-root user, and can only reach a few demo hosts.</p>}
+      {judge && <p className="mt-2 text-muted">This sandbox lives 30 minutes, runs as a non-root user with open egress; <code className="mono">rokan do</code> plans with our model key through a capped proxy (read-only tasks) — the text of pages you name goes to Anthropic; nothing runs without your Enter.</p>}
     </aside>
   );
 }

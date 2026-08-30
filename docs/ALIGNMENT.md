@@ -301,3 +301,53 @@ prompt-line fragments (OSC 133 boundary) from the run's recorded output. Screens
 `App.tsx` hero `forgeExample` spec `hn_top` → `status_of` (`rokan do "what is the current status at {{site}}"`, example
 `githubstatus.com`) and the three Hero.tsx frame strings + born-state string. 202/202, lint 0 errors, build clean. Nothing
 else in App.tsx touched; if you had local edits in that block, mine is ~12 lines — take yours and re-apply the spec.
+
+## 2026-08-29 evening — Engineer #4 crossed lanes (review fixes), Aarya please read
+
+Seven surgical fixes from the review round, all in `apps/web` (your lane). Founder asked for them now. 209/209 unit
+tests (was 202), `tsc` clean, lint 0 errors (2 pre-existing warnings), `next build` clean. Nothing in Hero, RunFeed, or
+`kept.ts` was touched. Each item: file · what · why.
+
+1. `src/lib/terminal/session.ts` — `startWith` now clears a client whose state is `ended` / `closed` / `unauthorized`
+   (closes it, nulls it, destroys the adapter, restores `gateAAdapter`) before pairing; the old client's `state` listener
+   is ignored once superseded; the snapshot's hello/lastStatus/reconnects/pairMs reset on a new pairing.
+   Why: "Try it now" after a judge session ended POSTed `/api/session` (burning a slot) and then failed with "bridge host
+   not allowed" because `this.client` was never cleared. No unit test: `session.ts` imports `@/…` at runtime, which the
+   node test runner cannot resolve (every tested module uses relative `.ts` imports).
+2. `src/components/Panes.tsx` (PairingCard) — the "3 per IP per 10 min" literal is gone. Renders
+   `process.env.NEXT_PUBLIC_SANDBOX_CAPS` (format `10/10min,5 concurrent`, shown as "10/10min · 5 concurrent per IP")
+   when set, else "rate-limited per IP; a sandbox lives 30 minutes". "ready in N ms" → "sandbox issued in N ms" (that
+   number is session-issue time, not readiness) plus "· paired in N ms" when `pairMs` exists. **Deploy TODO (Arav):**
+   set `NEXT_PUBLIC_SANDBOX_CAPS` on Vercel to match `infra/sandbox/wrangler.jsonc` (about to be 10 and 5).
+3. `src/lib/terminal/adapter.ts` — `appendTail`: the in-progress `partial` line is capped at `LINE_MAX` (4096, new
+   export); past it the line is flushed as `…(line cut)` and restarted; lines from the split are cut the same way.
+   Why: `partial` was unbounded and re-run through `stripAnsi` on every chunk (O(n²)); a `\r`-only progress bar (pip,
+   curl) grew it forever. Test streams 1 MB of `\r` frames: tail bounded, no exception.
+4. `src/lib/webmcp/forge.ts` `invoke` — (a) supersedes `store.pending()` (`dismissed`, `superseded`) before ghost-typing
+   step 1, the same rule `terminal_propose` already applies, so a stale proposal no longer resurfaces after the
+   invocation with its `terminal_wait` hanging 45 s; (b) a missing/invalid param now appends a ledger row of kind
+   `invoke_failed` {tool, hash, error, param, detail} instead of returning silently. `src/lib/webmcp/forge-spec.ts`
+   `coerceParamValue` says "missing: this param is required" for `undefined` vs "must be a string, finite number or
+   boolean" for a wrong type. `ledger.ts` gains the kind; `Panes.tsx` `summarise` renders it.
+   **Contract note:** `invoke_failed` is NOT in `CLIENT_LEDGER_KINDS` (protocol.ts/.js — shared contract, untouched).
+   `session.ts` filters forwarding by that set, so the row stays page-local and is never countersigned; the bridge would
+   answer an unknown kind with a `bad_frame` error frame, never a disconnect (bridge.js:330), so it is harmless either
+   way. Adding it to both sets needs a `contract:` commit — Arav's call.
+5. `src/lib/webmcp/ledger.ts` — rows capped at `LEDGER_MAX_ROWS` (2000; `new Ledger({ maxRows })` for tests): oldest
+   evicted, `seq` now comes from a counter (was `rows.length + 1`, which would have reused numbers after eviction),
+   `ledger.dropped` + `export().dropped` expose the count, `verifyExport` starts from the first kept row's `prev` when
+   `dropped > 0`. localStorage persist is a trailing throttle (`PERSIST_THROTTLE_MS` = 200): a burst of appends/acks is
+   one write. `Panes.tsx` LedgerPane paints only the last 200 rows with an "N older rows" line (+ evicted count).
+   Caveat: a tab closed inside the 200 ms window loses that window's rows from localStorage (memory + export unaffected).
+6. `src/lib/terminal/artifacts.ts` — `stripShellFrame` is exported; `src/lib/webmcp/register.ts` `terminal_wait` applies
+   it to the tail before `redactForAgent`. Why: the next prompt's fragment (`judge@rokan:~ %`) reached the agent as
+   output. Side effect: leading/trailing blank tail lines are trimmed too (that is what `stripShellFrame` does for the
+   Artifact UI). The right-aligned bare `judge@rokan:~` line from zsh's PROMPT_EOL_MARK (your RunFeed nit) is a different
+   fragment and is not covered.
+7. `src/components/Tour.tsx` — judge line "can only reach a few demo hosts" was false (egress is open). Now: "This sandbox
+   lives 30 minutes, runs as a non-root user with open egress; `rokan do` plans with our model key through a capped proxy
+   (read-only tasks) — the text of pages you name goes to Anthropic; nothing runs without your Enter."
+
+Tests added: `ledger.test.ts` (cap + throttle), `terminal-adapter.test.ts` (1 MB `\r` stream), `forge.test.ts`
+(supersede, `invoke_failed`), `forge-spec.test.ts` (missing vs wrong type), `register.test.ts` (prompt fragment dropped).
+If you had local edits in `PairingCard` or `LedgerPane`, mine are ~30 lines each — take yours and re-apply.

@@ -444,12 +444,20 @@ export class ForgeEngine {
     if (this.activeInv) return { status: 'busy', active_invocation_id: this.activeInv.invocation_id, proposal_ids: this.activeInv.proposal_ids };
     const t0 = performance.now();
     const sub = substituteParams(t.spec.commands, t.spec.params, input);
-    if ('error' in sub) return sub;
+    if ('error' in sub) {
+      // Leave a human-visible trace: a silent early return looked like nothing happened (review 2026-08-29).
+      void this.deps.ledger.append('invoke_failed', { tool: t.tool, hash: t.hash, error: sub.error, param: sub.param ?? null, detail: sub.detail ?? null });
+      return sub;
+    }
     const invocation_id = id('inv');
     const store = this.deps.store;
     const adapter = this.deps.adapter();
     const n = sub.lines.length;
     const ids: string[] = [];
+    // One ghost text at a time (same rule as terminal_propose): a stale proposal would resurface after
+    // the invocation and its terminal_wait would hang for the full timeout.
+    const prev = store.pending();
+    if (prev) store.resolve(prev.id, 'dismissed', 'superseded');
     for (let i = 0; i < n; i++) {
       const why = `${t.tool} · step ${i + 1}/${n}`;
       const opts = { queued: i > 0, invocation_id, step: i, dangerous: sub.dangerous[i] || isDangerousIn(sub.lines[i], adapter.mode) };

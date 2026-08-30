@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  coerceParamValue,
   coerceInput,
   contentHash,
   forgedDescription,
@@ -176,4 +177,14 @@ test('isMutating: 2>&1 is not a write; rm variants are', () => {
   assert.equal(isMutating('pytest -q 2>&1'), false);
   assert.equal(isMutating('ls 2>/dev/null'), false); // stderr redirect is not a write of state
   assert.equal(isMutating('cat x > y'), true);
+});
+
+test('coerceParamValue: a missing value says "missing", a wrong type says what it must be', () => {
+  const missing = coerceParamValue('n', undefined);
+  assert.ok('error' in missing && /missing/.test(missing.detail ?? ''));
+  const wrong = coerceParamValue('n', { x: 1 });
+  assert.ok('error' in wrong && /must be a string/.test(wrong.detail ?? ''));
+  const nul = coerceParamValue('n', null);
+  assert.ok('error' in nul && !/missing/.test(nul.detail ?? ''), 'null is a wrong type, not an omission');
+  assert.deepEqual(coerceParamValue('n', 5), { value: '5' });
 });

@@ -83,7 +83,18 @@ class SessionStore {
 
   /** Pair with an explicit target (judge sandbox response). Refuses hosts outside the allowlist. */
   startWith(p: { ws: string; token: string }): boolean {
-    if (this.client) return false;
+    if (this.client) {
+      const s = this.client.state;
+      if (s !== 'ended' && s !== 'closed' && s !== 'unauthorized') return false;
+      // A finished client must not block the next pairing: "Try it now" after a judge session ended
+      // used to POST /api/session (burning a slot) and then refuse (measured 2026-08-29).
+      const old = this.client;
+      this.client = null;
+      this.adapter?.destroy();
+      this.adapter = null;
+      setTerminalAdapter(gateAAdapter);
+      if (s !== 'closed') old.close(); // releases the socket + timers; its listeners are ignored below
+    }
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && p.ws.startsWith('ws://')) {
       // Browsers block ws:// from an https page (mixed content) and never say why (Fable VERIFY P2).
       note('pairing.mixed_content', { host: safeHost(p.ws) });
@@ -107,6 +118,7 @@ class SessionStore {
     });
     this.client = client;
     client.on('state', (s) => {
+      if (this.client !== client) return; // a superseded client (see startWith) must not touch the ledger or the snapshot
       if (s === 'paired') {
         ledger.setForward((row) => {
           if (CLIENT_LEDGER_KINDS.has(row.kind)) client.forwardLedger(row);
@@ -126,7 +138,7 @@ class SessionStore {
       if (f.code === 'timeout' || f.code === 'unauthorized') clearJudgePairing(typeof sessionStorage === 'undefined' ? null : sessionStorage);
     });
     client.on('hello', (h) => this.set({ hello: h }));
-    this.set({ mode: 'live', state: 'connecting', host });
+    this.set({ mode: 'live', state: 'connecting', host, hello: null, lastStatus: null, reconnectAt: null, reconnects: 0, pairMs: null });
     attachAgentRelay(client);
     client.connect();
     return true;

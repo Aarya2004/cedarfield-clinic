@@ -101,6 +101,9 @@ interface HumanRun {
 let humanSeq = 0;
 
 export const TAIL_MAX_LINES = 200;
+/** Longest in-progress line kept: past this a `\r`-only progress bar is flushed as one cut line. */
+export const LINE_MAX = 4096;
+const LINE_CUT = ' …(line cut)';
 /** No-integration fallback: a command counts as finished after this much output silence. */
 export const FALLBACK_QUIET_MS = 750;
 
@@ -140,13 +143,21 @@ export function createTerminalAdapter(deps: { term: TermLike; client: ClientLike
     return lines.filter((l, i, a) => !(i === a.length - 1 && l.trim() === '')).slice(-TAIL_MAX_LINES);
   };
 
-  /** Append a raw PTY chunk to a capture's tail (ANSI stripped, bounded). */
+  /**
+   * Append a raw PTY chunk to a capture's tail (ANSI stripped, bounded). `partial` is capped at
+   * LINE_MAX: it is re-stripped with every chunk, and a `\r`-only progress bar (pip, curl) never
+   * ends its line — unbounded it grew forever and every chunk cost O(n) (review 2026-08-29).
+   */
   const appendTail = (f: { tail: string[]; partial: string }, chunk: string) => {
     const text = stripAnsi(f.partial + chunk).replace(/\r/g, '');
     const parts = text.split('\n');
     f.partial = parts.pop() ?? '';
     for (const line of parts) {
-      if (f.tail.length < TAIL_MAX_LINES) f.tail.push(line);
+      if (f.tail.length < TAIL_MAX_LINES) f.tail.push(line.length > LINE_MAX ? line.slice(0, LINE_MAX) + LINE_CUT : line);
+    }
+    if (f.partial.length > LINE_MAX) {
+      if (f.tail.length < TAIL_MAX_LINES) f.tail.push(f.partial.slice(0, LINE_MAX) + LINE_CUT);
+      f.partial = '';
     }
   };
 

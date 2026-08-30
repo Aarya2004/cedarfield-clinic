@@ -424,7 +424,7 @@ export function rokanArtifact(run: Run): Detection | null {
  */
 const PROMPT_TAIL = /(?:^|[^\p{L}\p{N}])[$%#❯➜]\s*$/u;
 
-function stripShellFrame(lines: string[]): string[] {
+export function stripShellFrame(lines: string[]): string[] {
   const body = trimBlank(lines);
   return body.length > 1 && PROMPT_TAIL.test(body[body.length - 1]) ? body.slice(0, -1) : body;
 }

@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { session, type SessionSnapshot } from '@/lib/terminal/session';
 import { getTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
 import { forge, type ForgedTool } from '@/lib/webmcp/forge';
-import { ledger, type LedgerRow } from '@/lib/webmcp/ledger';
+import { LEDGER_MAX_ROWS, ledger, type LedgerRow } from '@/lib/webmcp/ledger';
 import { FIXED_TOOL_NAMES } from '@/lib/webmcp/schemas';
 import type { RegistrationState } from '@/lib/webmcp/register';
 import { tryAsAgent } from './ForgeCard';
@@ -224,9 +224,14 @@ export function ToolsPane({ reg }: { reg: RegistrationState | { kind: 'pending' 
   );
 }
 
+/** Rows painted in the rail; the rest is one line ("N older rows") — the export still holds them. */
+const LEDGER_SHOWN = 200;
+
 export function LedgerPane() {
   const rows = useLedger();
   const countersigned = rows.filter((r) => r.bridge_sig).length;
+  const shown = rows.length > LEDGER_SHOWN ? rows.slice(-LEDGER_SHOWN) : rows;
+  const older = rows.length - shown.length;
   const download = () => {
     const blob = new Blob([JSON.stringify(ledger.export(), null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -253,7 +258,7 @@ export function LedgerPane() {
         </p>
       ) : (
         <ol className="mono mt-1 min-h-0 flex-1 space-y-1 overflow-auto text-[11px] leading-4">
-          {[...rows].reverse().map((r) => (
+          {[...shown].reverse().map((r) => (
             <li key={r.seq} className="flex gap-1.5" title={`${r.kind} · ${new Date(r.t).toLocaleTimeString()}`}>
               <span className="w-5 shrink-0 text-right text-muted tabular-nums">{r.seq}</span>
               <span className="min-w-0 break-words">
@@ -269,6 +274,11 @@ export function LedgerPane() {
               </span>
             </li>
           ))}
+          {older > 0 && (
+            <li className="text-muted" data-ledger-older>
+              {older} older rows{ledger.dropped > 0 ? ` · ${ledger.dropped} evicted from memory at the ${LEDGER_MAX_ROWS}-row cap` : ''}
+            </li>
+          )}
         </ol>
       )}
     </section>
@@ -284,6 +294,8 @@ function summarise(r: LedgerRow): string {
       return `${f.tool} ${f.hash} ${f.kind}`;
     case 'invoked':
       return `${f.tool} ×${f.steps} ${f.hash}`;
+    case 'invoke_failed':
+      return `${f.tool} · ${f.param ? `${f.param}: ` : ''}${f.detail ?? f.error}`;
     case 'executed_step':
       return `${f.tool ?? ''} · step ${f.step ?? ''} · exit ${f.exit_code ?? '–'} · ${f.ms ?? '–'} ms`;
     case 'screen_read':
@@ -303,6 +315,15 @@ function summarise(r: LedgerRow): string {
 }
 
 const SANDBOX_URL = process.env.NEXT_PUBLIC_SANDBOX_URL ?? '';
+/**
+ * The Worker enforces the real caps (infra/sandbox/wrangler.jsonc: SESSIONS_PER_IP_PER_10MIN,
+ * MAX_CONCURRENT_PER_IP); this page only repeats what the deploy told it, e.g. "10/10min,5 concurrent".
+ */
+const SANDBOX_CAPS = (process.env.NEXT_PUBLIC_SANDBOX_CAPS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .join(' · ');
 
 export function PairingCard() {
   const s = useSession();
@@ -351,8 +372,12 @@ export function PairingCard() {
           <button data-judge onClick={tryJudge} disabled={s.judge === 'starting'} aria-busy={s.judge === 'starting'} className="btn-ink rounded px-3 py-1 disabled:opacity-40">
             {s.judge === 'starting' ? `starting a sandbox… ${tick} s` : 'Try it now — judge sandbox, nothing to install'}
           </button>
-          <span className="text-muted">A throttled 30-minute Linux container on Cloudflare; 3 per IP per 10 min.</span>
-          {coldMs !== null && <span className="text-muted">ready in {coldMs} ms</span>}
+          <span className="text-muted">{SANDBOX_CAPS ? `A throttled 30-minute Linux container on Cloudflare; ${SANDBOX_CAPS} per IP.` : 'A Linux container on Cloudflare; rate-limited per IP; a sandbox lives 30 minutes.'}</span>
+          {coldMs !== null && (
+            <span className="text-muted">
+              sandbox issued in {coldMs} ms{s.pairMs !== null ? ` · paired in ${s.pairMs} ms` : ''}
+            </span>
+          )}
           {judgeErr && (
             <p className="basis-full text-danger" role="alert">
               Could not start a sandbox: {judgeErr}

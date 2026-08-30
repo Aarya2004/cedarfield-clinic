@@ -1,7 +1,7 @@
 // Run: node --experimental-strip-types --test src/lib/terminal/terminal-adapter.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createTerminalAdapter, type ClientLike, type TermLike } from './adapter.ts';
+import { createTerminalAdapter, LINE_MAX, TAIL_MAX_LINES, type ClientLike, type TermLike } from './adapter.ts';
 import { ProposalStore } from '../webmcp/proposals.ts';
 import type { BridgeStatus } from '../ws/protocol.ts';
 
@@ -303,4 +303,31 @@ test('regression (Codex review): Enter on a ghost before hello is refused and qu
   b.destroy();
   assert.equal(seen.length, 0); // `a` did not resolve it; `b` did — listeners are per adapter
   assert.equal(b.result(q.id)?.measured, false);
+});
+
+test('a 1 MB \\r-only progress stream keeps the tail bounded (LINE_MAX per line, TAIL_MAX_LINES lines)', async () => {
+  const store = new ProposalStore();
+  const c = fakeClient();
+  const a = createTerminalAdapter({ term: fakeTerm([]), client: c, share: () => true, store });
+  const p = store.propose('pip install torch');
+  const w = a.waitProposal(p.id, 5000);
+  assert.equal(a.acceptProposal(p.id), true);
+  c.emit('data', `${ESC}]133;C${BEL}`);
+  // pip/curl style: the bar rewrites one line with \r and never sends \n
+  const frame = '\r' + `${ESC}[32m[=====>        ]${ESC}[0m 42% `.padEnd(255, '#');
+  let sent = 0;
+  const t0 = performance.now();
+  while (sent < 1_000_000) {
+    c.emit('data', frame);
+    sent += frame.length;
+  }
+  const streamMs = performance.now() - t0;
+  c.emit('data', `\r\n${ESC}]133;D;0${BEL}`);
+  c.emit('status', status({ running: false, last_exit_code: 0, last_command_ms: 5, last_command: 'pip install torch' }));
+  const r = await w;
+  assert.equal(r?.exit_code, 0);
+  const tail = r?.tail ?? [];
+  assert.ok(tail.length > 0 && tail.length <= TAIL_MAX_LINES, `${tail.length} tail lines`);
+  for (const line of tail) assert.ok(line.length <= LINE_MAX + 16, `line of ${line.length} chars`);
+  assert.ok(streamMs < 5000, `streaming 1 MB took ${Math.round(streamMs)} ms`);
 });

@@ -53,6 +53,7 @@ import { note } from './fieldnotes.ts';
 // Relative, with the extension, like every other import here: this module is loaded verbatim by
 // `node --experimental-strip-types` in register.test.ts, which cannot resolve the `@/` alias.
 import { runFeed, type Run } from '../terminal/runfeed.ts';
+import { stripShellFrame } from '../terminal/artifacts.ts';
 
 export { WAIT_DEFAULT_MS, FIXED_TOOL_NAMES };
 
@@ -273,7 +274,8 @@ export function fixedToolDefs(): ToolDef[] {
         }
         if (p.status !== 'accepted') return { status: 'still_waiting', waited_ms };
         const shared = a.shareScreen();
-        const [tail] = fitBudget(redactForAgent(shared ? (p.tail ?? []) : []).lines, 200);
+        // The next prompt's fragment (`judge@rokan:~ %`) is shell chrome, not output: drop it before redaction.
+        const [tail] = fitBudget(redactForAgent(shared ? stripShellFrame(p.tail ?? []) : []).lines, 200);
         note('terminal_wait.returned', { status: 'executed', waited_ms, exit_code: p.exit_code ?? undefined });
         return {
           status: 'executed',

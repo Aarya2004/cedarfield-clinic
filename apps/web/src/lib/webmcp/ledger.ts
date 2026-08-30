@@ -9,7 +9,11 @@
  *
  * Every `ms` / `calls` value stored here is measured by the caller that observed it.
  */
-/** Must stay a subset of `CLIENT_LEDGER_KINDS` (ws/protocol.ts): `executed` is bridge-only. */
+/**
+ * Must stay a subset of `CLIENT_LEDGER_KINDS` (ws/protocol.ts): `executed` is bridge-only.
+ * Exception: `invoke_failed` is page-local (not in the contract yet) — session.ts filters forwarding
+ * by `CLIENT_LEDGER_KINDS`, so it is never sent to the bridge and never countersigned.
+ */
 export type LedgerKind =
   | 'proposed'
   | 'dismissed'
@@ -21,6 +25,7 @@ export type LedgerKind =
   | 'forge_rejected'
   | 'forged'
   | 'invoked'
+  | 'invoke_failed'
   | 'restored'
   | 'pinned'
   | 'paired'
@@ -46,9 +51,15 @@ export interface LedgerExport {
   key_hex?: string;
   rows: LedgerRow[];
   countersigned: number;
+  /** oldest rows evicted at `maxRows`; the export's first `prev` is then the last evicted row's sig */
+  dropped: number;
 }
 
 const STORAGE_KEY = 'rokan-terminal.ledger.v1';
+/** Rows kept in memory; older ones are evicted (their sigs stay chained through `prev`). */
+export const LEDGER_MAX_ROWS = 2000;
+/** localStorage writes coalesce to at most one per window (trailing). */
+export const PERSIST_THROTTLE_MS = 200;
 const enc = new TextEncoder();
 
 function hex(buf: ArrayBuffer): string {
@@ -72,11 +83,16 @@ export class Ledger {
   private keyHex: string;
   private rows: LedgerRow[] = [];
   private prev = '';
+  private seq = 0;
+  private _dropped = 0;
+  private readonly maxRows: number;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<Listener>();
   private forward: Forward | null = null;
   private chain: Promise<void> = Promise.resolve();
 
-  constructor() {
+  constructor(opts: { maxRows?: number } = {}) {
+    this.maxRows = opts.maxRows ?? LEDGER_MAX_ROWS;
     const rnd = new Uint8Array(16);
     crypto.getRandomValues(rnd);
     this.session = hex(rnd.buffer).slice(0, 12);
@@ -87,6 +103,11 @@ export class Ledger {
 
   snapshot(): LedgerRow[] {
     return this.rows;
+  }
+
+  /** Rows evicted from memory at the cap (seq numbers stay honest: the first kept row's seq is dropped+1). */
+  get dropped(): number {
+    return this._dropped;
   }
 
   subscribe(fn: Listener): () => void {
@@ -103,7 +124,7 @@ export class Ledger {
   append(kind: LedgerKind, fields: LedgerRow['fields'] = {}): Promise<LedgerRow> {
     let out!: LedgerRow;
     const step = this.chain.then(async () => {
-      const base = { seq: this.rows.length + 1, t: new Date().toISOString(), session: this.session, kind, fields, prev: this.prev };
+      const base = { seq: ++this.seq, t: new Date().toISOString(), session: this.session, kind, fields, prev: this.prev };
       let sig: string;
       try {
         sig = await hmac(this.keyHex, this.prev + canonical(base));
@@ -112,9 +133,10 @@ export class Ledger {
         sig = 'unsigned:' + (e instanceof Error ? e.name : 'error');
       }
       out = { ...base, sig };
-      this.rows = [...this.rows, out];
+      this.rows = this.rows.length >= this.maxRows ? [...this.rows.slice(this.rows.length - this.maxRows + 1), out] : [...this.rows, out];
+      this._dropped = this.seq - this.rows.length;
       this.prev = sig;
-      this.persist();
+      this.schedulePersist();
       try {
         this.forward?.(out);
       } catch {
@@ -133,7 +155,7 @@ export class Ledger {
     if (i === -1 || this.rows[i].bridge_sig) return;
     const next = { ...this.rows[i], bridge_sig: sig, bridge_seq: bridgeSeq };
     this.rows = this.rows.map((r, j) => (j === i ? next : r));
-    this.persist();
+    this.schedulePersist();
     this.listeners.forEach((fn) => fn());
   }
 
@@ -143,7 +165,17 @@ export class Ledger {
       ...(opts.includeKey ? { key_hex: this.keyHex } : {}),
       rows: this.rows,
       countersigned: this.rows.filter((r) => r.bridge_sig).length,
+      dropped: this._dropped,
     };
+  }
+
+  /** Trailing throttle: the first change arms one write PERSIST_THROTTLE_MS later; later ones ride it. */
+  private schedulePersist(): void {
+    if (this.persistTimer) return;
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      this.persist();
+    }, PERSIST_THROTTLE_MS);
   }
 
   private persist(): void {
@@ -158,7 +190,8 @@ export class Ledger {
 /** Re-computes the chain of an export. `{ok:true}` or the first bad seq. */
 export async function verifyExport(x: LedgerExport): Promise<{ ok: boolean; rows: number; firstBad: number | null }> {
   if (!x.key_hex) return { ok: false, rows: 0, firstBad: null };
-  let prev = '';
+  // An export that evicted its head cannot start from '': it starts from the last evicted row's sig.
+  let prev = x.dropped ? (x.rows[0]?.prev ?? '') : '';
   for (const r of x.rows) {
     if (r.prev !== prev) return { ok: false, rows: r.seq - 1, firstBad: r.seq };
     const { sig, ...rest } = r;

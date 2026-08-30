@@ -546,3 +546,35 @@ test('forge_list provenance: a composed tool records machine + native + compiled
   assert.deepEqual(entry.provenance, ['machine', 'native', 'compiled']);
   assert.equal(entry.calls_last, null); // step 1 was a first-run (calls unknown), not every step 0-call
 });
+
+test('invoke: a stale ghost-typed proposal is superseded (its terminal_wait resolves instead of hanging)', async () => {
+  const { engine, store } = make();
+  await engine.approve(card(engine, hn).card_id);
+  const stale = store.propose('ls', 'from terminal_propose');
+  assert.equal(store.pending()?.id, stale.id);
+  const r = engine.invoke('hn_top', { n: 3 });
+  assert.ok(!('error' in r));
+  assert.equal(store.get(stale.id)?.status, 'dismissed');
+  assert.equal(store.get(stale.id)?.reason, 'superseded');
+  assert.equal(store.pending()?.id, (r as { active: string }).active);
+  engine.cancelActive('invocation_cancelled');
+});
+
+test('invoke: a missing / invalid param leaves an invoke_failed ledger row that names the param', async () => {
+  const { engine, ledger } = make();
+  await engine.approve(card(engine, hn).card_id);
+  const missing = engine.invoke('hn_top', {}) as { error: string; param?: string; detail?: string };
+  assert.equal(missing.error, 'invalid_param');
+  assert.equal(missing.param, 'n');
+  assert.match(missing.detail ?? '', /missing/);
+  const wrong = engine.invoke('hn_top', { n: { x: 1 } }) as { error: string; detail?: string };
+  assert.equal(wrong.error, 'invalid_param');
+  assert.match(wrong.detail ?? '', /must be a string/);
+  await tick();
+  const rows = ledger.snapshot().filter((r) => r.kind === 'invoke_failed');
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].fields.tool, 'forged_hn_top');
+  assert.equal(rows[0].fields.param, 'n');
+  assert.match(String(rows[0].fields.detail), /missing/);
+  assert.equal(engine.active(), null, 'nothing was ghost-typed');
+});
