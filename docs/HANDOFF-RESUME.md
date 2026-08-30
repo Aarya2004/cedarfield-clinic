@@ -3,17 +3,20 @@
 **Read this + `docs/PROGRESS.md` (top block) + `~/.claude/plans/optimized-mapping-tarjan.md` (the bible) first.**
 Everything below is pushed to `main` (entry repo `github.com/Aarya2004/webmcp-private`) unless noted.
 
-## RESUME POINT (2026-08-29 ~21:00 local) — open-net judge sandbox, deploy in flight
-Plan of record: `~/.claude/plans/bright-squishing-corbato.md` (approved by Arav; every section executed except the
-live proofs). Code is on `main` through `d3b67f5`; Rokan `feat/tier0-native` `2e28c64` (unpushed — Arav's call).
-**Where this stopped:** `pnpm deploy` (image `standard-1` + Chromium + worker proxy) running; then, in order:
-`wrangler containers list` until `active` on the new digest → `curl` proxy probes (bogus sid 403; real sid + tiny
-messages call → 200 with `usage` once the key is in; opus → 400; stream → 400; GET → 405; count_tokens → 404;
-31st call → 429 `x-should-retry:false`) → `node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --trace=/tmp/t`
-(needs `EVAL_SECRET` in `infra/sandbox/.dev.vars`, present) → real-Chrome stranger run on an unseeded site →
-PROGRESS/FIELD-NOTES numbers → `graphify update .`.
-**Needs Arav:** `cd infra/sandbox && printf '%s' '<dedicated key>' | npx wrangler secret put ANTHROPIC_API_KEY`
-(the proxy answers 503 → rokan-do "planner unavailable" until then); `cd apps/web && vercel --prod --yes`.
+## RESUME POINT (2026-08-29 ~20:45 local) — open-net judge sandbox LIVE; waiting on the real key
+Plan of record: `~/.claude/plans/bright-squishing-corbato.md` (approved; executed through the live proofs that
+don't need the key). Code on `main` through `1d8f7c9`; Rokan `feat/tier0-native` `2e28c64` (unpushed — Arav's call).
+**Live and proven:** image `sha256:506cb8e0…` on `standard-1`, fleet `active`; Worker with sid-first proxy + deduped
+429 copy; judge suite 13/15 (the 2 misses are the key + a since-fixed regex); isolation case green on the new
+image; proxy caps tripped live (burst at the 11th call/min, session at the 33rd — `docs/evidence/sandbox/`);
+per-IP concurrency 429 shown honestly on the card; web redeployed (caps copy, tour line, tools · 7).
+**The Worker's `ANTHROPIC_API_KEY` is currently the literal `<your-key>`** (a paste of my placeholder) → every
+unseeded `rokan do` prints "planner unavailable". Arav: `cd infra/sandbox && grep '^ANTHROPIC_API_KEY=' ~/dev/Rokan/.env | cut -d= -f2- | tr -d '"' | npx wrangler secret put ANTHROPIC_API_KEY`
+(or a dedicated key with a console spend limit — SECURITY §9 promises one).
+**Then, in order:** `node evals/run-all.mjs --judge=https://rokan-sandbox.rokan-sandbox.workers.dev --trace=/tmp/t`
+(expect 15/15: open-net = pypi `requests` cold 1 call → replay ⚡; readonly = refusal) → real-Chrome stranger run on an
+unseeded site, screenshot to `docs/evidence/stranger/` → 11-minute idle check (sleepAfter fix) → PROGRESS numbers →
+Rokan branch push. Per-IP cap note: my own probes hold 5 sessions from this IP for 30 min at a time — wait, don't add.
 
 ## RESOLVED (2026-08-29 ~18:40 local) — the live-judge failure
 `terminal-insert-cancel` on the live judge sandbox was a **one-off container stall, not a timing bug**.
