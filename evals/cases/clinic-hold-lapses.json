@@ -1,24 +1,58 @@
 [
-  { "_doc": [
-    "clinic-hold-lapses — the honesty of the hold itself.",
-    "hold_slot() is the only write an agent can make, and the claim on the page is that it books",
-    "NOTHING: it auto-releases and the slot returns to the board. This case waits out the full",
-    "45-second TTL without touching the keyboard and asserts the slot is open again, that nothing",
-    "was booked, and that clinic_hold_status reports no hold. If a hold ever quietly became a",
-    "booking, this is the case that fails."
-  ] },
-
-  { "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')", "timeout": 25000 },
-  { "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__s = el && el.getAttribute('data-clinic-slot'); return typeof window.__s; })()", "equals": "string" },
-
-  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__s" }, "outputMatches": "held|ttl|seconds" },
-  { "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'", "timeout": 8000 },
-  { "invoke": "clinic_hold_status", "outputMatches": "seconds|ttl|slot" },
-
-  { "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') !== 'held_by_you'", "timeout": 60000 },
-  { "eval": "['open','expired_hold','taken_by_rival'].includes(document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') ?? '')", "equals": true },
-  { "eval": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'", "equals": false },
-  { "eval": "!!document.querySelector('[data-armed=\"true\"]')", "equals": false },
-  { "invoke": "clinic_hold_status", "outputMatches": "\"held\":false|null" },
-  { "shot": "docs/evidence/clinic/hold-lapsed.png" }
+ {
+  "_doc": [
+   "clinic-hold-lapses \u2014 the honesty of the hold itself.",
+   "hold_slot() is the only write an agent can make, and the claim on the page is that it books",
+   "NOTHING: it auto-releases and the slot returns to the board. This case waits out the full",
+   "45-second TTL without touching the keyboard and asserts the slot is open again, that nothing",
+   "was booked, and that clinic_hold_status reports no hold. If a hold ever quietly became a",
+   "booking, this is the case that fails."
+  ]
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 25000
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__s = el && el.getAttribute('data-clinic-slot'); return typeof window.__s; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__s"
+  },
+  "outputMatches": "held|ttl|seconds"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'",
+  "timeout": 8000
+ },
+ {
+  "invoke": "clinic_hold_status",
+  "outputMatches": "seconds|ttl|slot"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') !== 'held_by_you'",
+  "timeout": 60000
+ },
+ {
+  "eval": "['open','expired_hold','taken_by_rival'].includes(document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') ?? '')",
+  "equals": true
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "equals": false
+ },
+ {
+  "eval": "!!document.querySelector('[data-armed=\"true\"]')",
+  "equals": false
+ },
+ {
+  "invoke": "clinic_hold_status",
+  "outputMatches": "\"held\":false|null"
+ },
+ {
+  "shot": "docs/evidence/clinic/hold-lapsed.png"
+ }
 ]

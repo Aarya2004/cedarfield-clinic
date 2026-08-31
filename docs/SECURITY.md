@@ -182,3 +182,33 @@ mismatch re-opens the approval card and never auto-registers. That path is a des
 shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the part not yet wired is the
   App-level write-path (persist on approve/pin) and the RestoreCard UI — this document will describe kept
   tools as shipped only once that wiring lands.
+
+## §10 — The Drop (the submitted product): trust boundaries, stated plainly
+
+- **The consequential act is not in the API.** There is no `confirm_booking` tool; the tool surface cannot
+  express booking (`apps/web/src/lib/drop/clinic-tools.test.ts` asserts the absence by name, in the defs and in the
+  descriptions, and the test fakes throw if any tool reaches `driver.book()` or `driver.confirm()`). Booking runs only from an event the browser itself marked
+  `isTrusted` (`confirm-logic.ts`) — which no tool call, no console `.click()` and no extension can
+  produce. Every synthetic attempt is counted and shown on screen rather than silently dropped.
+- **Residual boundary, honestly:** the page itself is the trust boundary — a malicious script running IN the page
+  could dispatch nothing trusted (the browser owns `isTrusted`), but it could of course call the page's own
+  handlers directly. What the design forecloses is the realistic case: anything holding only the tool
+  surface — an agent, an extension, a script with the URL — cannot book, and its attempts are visible.
+- **Injection surface:** slot inventory, clinicians and wave copy are page-authored; no tool echoes
+  visitor-authored text, so nothing an outsider writes can reach a tool description or a tool result.
+- **Camera:** the gesture path is **off in the submitted build** (`NEXT_PUBLIC_DROP_GESTURE` unset), and the
+  middleware only opens `connect-src` for it when the build asked for it. When it is enabled, frames never
+  leave the page and the runtime loads from `/models/mediapipe/` on our own origin — never a Google CDN —
+  because the weights carry Google's MediaPipe model terms. Those ~42 MB are **provisioned, not committed**
+  (`apps/web/scripts/fetch-gesture-model.sh`, `public/models/` is gitignored), so a clone of this repo has
+  the code and not the weights: enabling the flag without running that script gives a 404 and the keyboard
+  path, which is the correct failure. Keyboard/switch stays primary either way, and the dwell resets on any
+  flicker below the visible threshold so a tremor cannot fire it.
+- **No model, no key, no PII, no server:** the product makes no LLM call of its own and has no backend —
+  the reasoning is the visitor's own agent in their own client, and the demo form is transmitted nowhere.
+  Every number on screen is measured by the code that shows it; the counter counts only trusted events.
+- **Fairness in the demo:** one live hold per visitor; the labelled simulated rival takes three of six slots
+  over the first forty seconds and never the last open one, so someone arriving late can always still book.
+- **Accessibility:** axe-core reports 0 violations on both routes (WCAG 2.0/2.1/2.2 A + AA), gated by
+  `node evals/a11y.mjs`. The camera gesture is off unless flagged, always beside a keyboard path.
+
