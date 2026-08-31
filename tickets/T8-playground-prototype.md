@@ -2,8 +2,8 @@
 id: T8
 title: Playground page — the clickable demo prototype
 type: task
-status: open
-assignee:
+status: in_progress
+assignee: aarya-claude
 blocked-by: [T1, T2, T3, T5, T7]
 ---
 
