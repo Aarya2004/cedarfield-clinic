@@ -1,48 +1,14 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-30 ~08:30 local (Aarya's Claude)** Branch `main`, all pushed.
+Last update: **2026-08-30 ~04:30 PT (Engineer #4, Fable 5)** Branch **`workbench`** (created from main@6af2d52 on Arav's instruction; main = shipped product). Rokan `feat/tier0-native` at `f5fea13`, unpushed (Arav).
 
-## Build log — Aarya's Claude (2026-08-30 ~08:30 local) — submission map #10: six tickets closed (RestoreCard live, video script, copy pass)
-Worked via the wayfinder map (issue #10); web lane + docs only. Final gate re-run by me after every merge:
-typecheck/lint/build clean · web suite **228/228** (215 + 13 restore tests) · headless evals **9/9**.
-- **#12 `b1a3501`** — RestoreCard + the kept **write path**. New `restore.ts` (importable decision logic,
-  13 tests) + `RestoreCard.tsx` in the right rail (null on empty store); `persistKept` wired into the
-  forge subscriber. Three deliberate deviations, all tested: `forgedAt` is `performance.now()` so entries
-  add `timeOrigin` (else every `forged_at` is 1970); the writer retains page-load entries until seen live
-  (else the restore's own first emit wipes the store); a kept spec matching a hard-blocked pattern lands
-  as `needs_confirmation` in Forge, never auto-confirmed. `restored` was already in `CLIENT_LEDGER_KINDS`
-  — rows forward + countersign, **no contract file touched**. Live proof (17-step CDP run): forge 2 →
-  reload → restore → both registered, `restored` rows, **kept badges lit** (closes the #13 caveat below).
-  Shots in `scratch/restore-card-*.png`.
-- **#15** — `docs/VIDEO-SCRIPT.md`: 2:50 script, scoring closes by 1:02, every figure → evidence path.
-  Untraceable numbers excluded (233 ms native-invoke → raw-backed 469 ms). Do NOT film status.openai.com
-  / www.cloudflarestatus.com (measured abstain, J19).
-- **#22** — README + SUBMISSION honesty pass: retired-claim grep zero hits; cut unverifiable "54 findings",
-  "≈5 s cold start", "200+ tests"; `npx rokan-terminal` confirmed NOT on npm (404) — prose uses the
-  `node …/bin` form with a publish TODO; kept/restore copy updated to shipped state after #12 verified.
-- **Flake for the freeze checklist:** `forge-injection.json` step 4 (`approve → null`) failed once on a
-  full eval run, green alone + on re-run; pre-existing path, untouched by these tickets.
-**Remaining on map #10, all human-gated:** #16 Workbench go/no-go (→ #17 step strip), #18 vercel --prod +
-`NEXT_PUBLIC_SANDBOX_CAPS`, #19 ChatGPT Sol/Terra recording, #20 npm publish, #21 record video, #23 file Devpost.
+## State right now (2026-08-30 04:30 PT) — read this first
+- **Live sandbox:** `standard-3` (2 vCPU) + image `787f810` (rokan-mcp 0.1.3, 15 s tool-listen window). **Judge suite 15/15, 0 retries** on this fleet (`docs/evidence/sandbox/2026-08-30-judge-suite-15-of-15-standard-3.txt`). Tier 0 native from the judge shell: Allbirds 10 tools / 5.5–8.2 s, `search_catalog` ok 226 ms tool time (`docs/evidence/probe/`). On standard-1 it listed 0 tools — CPU, not egress.
+- **In progress (background):** deploy of the 0.0.3 image (`rokan-do native list/invoke`, first-line attribution) → in-sandbox CLI smoke → suite again.
+- **Workbench decision:** no pivot; absorb (`docs/WORKBENCH-PLAN.md`, `docs/SELF-EVAL-WORKBENCH.md` §8). **Hostile independent eval** (`docs/reviews/2026-08-30-hostile-eval-workbench.md`): A canvas ≈ 3.5 / top-10 ~6 %; B absorbed ≈ 6.5 / ~29 %; C as-is ≈ 6.6 / ~26 %; recommends **B−**: cut D3 (step strip), keep D2, and spend the hours on the four zero-items below.
+- **Zero-items that decide the submission (all Arav-gated or tooling-blocked):** (1) **video** — none exists; ffmpeg broken on the Mac; (2) **repo is private** — SUBMISSION links it; make public + rename; (3) **ChatGPT desktop run** (Sol/Terra) — never done; (4) caps revert to the judging row before freeze (`wrangler.jsonc`); (5) re-lead the pitch on drift, demote the n=3 42.4× headline.
+- Honesty fixes landed this session: 12-tool "Chrome guidance" citation; FORGE-PLAN §17.1 "works in ChatGPT desktop, measured"; README `npx`; two live-invoke evidence files that held only the `list` line (one fixed, one marked partial until the 0.0.3 run).
 
-## Build log — Aarya's Claude (2026-08-30 ~07:45 local) — UI tickets #11 / #13 / #14, all green
-Web lane only (`apps/web/**`); no registered tool changed (`agentTools()` lists in `evals/cases/*.json`
-untouched, `history-tool.json` still 7). `pnpm typecheck && lint && build` clean, web suite **215/215**
-(was 211 — +1 `forged_by`, +3 prompt-fragment regressions), headless evals **9/9**.
-- **#11 `150455e`** — the native provenance chip. `rokan_calls === 0` is also true for a native answer,
-  so ledger rows and run-feed rows labelled every native step `compiled`. Both now read `rokan_site`
-  first per C's 17:30 contract; `Run.rokan` gained the `native {site, tool}` the adapter already passed
-  through untyped. Only fields a row carries reach the chip.
-- **#13 `a4ab584`** — forged rows say `forged by you` / `forged by agent` (new `forged_by` on
-  `ForgedTool` + the `forge_list` entry, from the card's origin — the only identity the consumer gives
-  us), `last: 0 calls` from `calls_last` (silent when `null`), and a quiet `kept` badge read from
-  `rokan.kept.v1`. **The badge cannot light up yet**: nothing calls `persistKept`, so the write path is
-  still the RestoreCard item. `provenance[]` is in the entry but not yet drawn in the row.
-- **#14 `167c5b2`** — a run's captured output now stops at OSC 133;D. zsh prints PROMPT_EOL_MARK
-  (`%`, spaces, CR) and the next prompt *after* precmd has emitted the end marker, and the feed was
-  appending the whole frame: an expanded `rokan do` run ended in a stray `%` and `judge@rokan:~`.
-  `beforeEndMarker` cuts there (output sharing the frame is still kept), `trimPromptFragments` is the
-  backstop for a marker split across frames. Agent path (`stripShellFrame`) was already covered.
 
 ## Build log — Engineer #4 (2026-08-29 ~20:25 local, open-net sandbox LIVE — proofs so far)
 Deployed: image `sha256:506cb8e0…` on **`standard-3`** (2 vCPU — standard-1's ½ vCPU listed 0 store tools live, 2026-08-30), fleet `ready`; Worker versions `ae7003af` → sid-first fix
