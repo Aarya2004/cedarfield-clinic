@@ -384,3 +384,53 @@ demo shots). It now takes the LAST `;` field; legacy `cmd;<base64>` still works.
 - **Branch `workbench` exists** (from `main@6af2d52`, 2026-08-30 ~02:30 PT, Arav's instruction): every Workbench-shaped
   change in this repo goes there; `main` stays the shipped product and the freeze target. Merge forward only
   under the Mon 22:00 PT kill rule in `docs/WORKBENCH-PLAN.md`.
+
+## 2026-08-30 ~18:30 PT — Engineer #4 → Aarya: THE PIVOT CANDIDATE (read this before anything else)
+
+**The idea in one line:** a booking page where slots drop and vanish; the visitor's agent — commanded by voice —
+watches, compares, and HOLDS a slot the instant it appears (90 s TTL, via our WebMCP tools); but **booking is
+not a tool** — the only thing that books is one act from the human: one key, one switch, or one held gesture at
+the camera. "Your agent can hold it. Only you can take it."
+
+**Who it's for / impact:** people for whom every interaction costs 10–30× (switch, voice, tremor users) — the
+web taxes them on ordinary tasks and excludes them outright from timed ones (no AT can win a race). We collapse
+the tax (page counts it live: "manual 42 interactions → agent mode 2 presses") and abolish the race (waitlist
+cascade: when a hold lapses the next person gets their own full window — nobody races, bots become pointless).
+
+**Why this and not Workbench/terminal/forms:** ~14 candidates were hostile-evaluated over the last 24 h
+(`docs/research/`, `docs/reviews/` — read `2026-08-30-timed-drop-verdict.md` first). Canvas = Cardea built it;
+forms = SimplePDF built it; terminal = judges file it "dev tool." The drop won 26/40 vs the field because two
+pieces are unclaimed in 766 in-window repos: **confirm-is-not-a-tool** (the API cannot express booking — the
+agent watches the TTL burn and structurally cannot finish; the tool list itself retracts `hold_slot` for
+everyone else via `toolchange`) and **visible contention** (Netlify's Mabel's Table has holds but never shows
+you LOSING; we show the race lost, then the held lane where losing stops).
+
+**The five rungs of the pitch:** tax collapsed → race abolished → capability shared ("pass the tool": a
+caregiver mints `book_moms_usual`, sends a link, mom's agent runs it, only HER press books it) → pattern
+published (drop-in snippet + a WebMCP spec issue: the spec's Accessibility section is literally empty) →
+the closing line: on the agentic web, pages declare what agents can structure and which acts are human-only.
+
+**Voice AND gesture:** voice commands everything through ChatGPT (95 % of the experience); the consequential
+act arrives on a channel the agent cannot speak on — key/switch primary (WCAG; voice users confirm via their
+own OS voice-control pressing Enter), camera gesture as the showcase enhancement (MediaPipe, in-page,
+agent-unspoofable). "Command by voice, consent by body."
+
+**Your lane (if Arav locks):** the whole UI — slot board + drop waves + TTL bar + the confirm surface
+(DOM-native, ARIA live region, huge target, keyboard/switch first; NO canvas rendering anywhere) + manual mode
+(real, because the interaction counter must be honest) + the gesture module behind a flag (lazy-load
+@mediapipe/tasks-vision, self-hosted models, visible threshold slider). My lane: the Durable Object state
+machine (slots/holds/TTL/waitlist), the tool contract (one `contract:` commit before you start), forge/ledger
+reuse, evals, deploy. Branch `drop` from main; **main = shipped Rokan, untouched — it is the fallback.**
+
+**Honesty rails (non-negotiable):** simulated rival labelled; fictional inventory labelled (sponsor norm —
+Mabel's is fictional); the four-part line in the first 10 s (*your own agent, your own account, no resale, the
+human performs the consequential act*); every number on screen measured by the code that shows it; camera
+denied ≠ hidden ("camera unavailable here — keyboard mode"); README names Mabel's Table and states the
+inversion before any judge does.
+
+**Schedule:** lock tonight → me: DO + contract tonight; you: UI Mon; **kill rule Mon 22:00 PT** — core loop
+(drop → agent holds → human key-confirms → booked; agent blocked from confirm; race visibly lost without a
+hold) green on the deployed URL in ChatGPT desktop, or we revert to shipping Rokan as-is. Freeze Tue 12:00.
+**Pending from you two:** the NAME (humans pick it — Devpost's own guidance), and Arav's 60 s on
+`https://rokan-sandbox.rokan-sandbox.workers.dev/probe/camera` in ChatGPT desktop (tests getUserMedia +
+MediaPipe there). Full plan: `docs/DROP-PLAN.md`.
