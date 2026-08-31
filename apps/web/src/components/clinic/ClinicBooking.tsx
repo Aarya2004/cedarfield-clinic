@@ -45,6 +45,7 @@ import { createMockDriver } from '../../lib/drop/mock-driver.ts';
 import { formatClock } from '../../lib/drop/time.ts';
 import type { DropDriver } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
+import { ClinicTools } from '../drop/ClinicTools.tsx';
 import { Band, ClinicBanner, Masthead } from './ClinicFrame.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
@@ -359,7 +360,7 @@ export function ClinicBooking() {
           ) : null}
         </div>
 
-        {/* CLINIC_TOOLS_MOUNT */}
+        <ClinicTools driver={driver} session={session} />
 
         <Band label="Honestly">
           <p className="cl-prose">
