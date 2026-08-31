@@ -57,6 +57,28 @@ This file is the single source of truth for what is green, what is blocking, and
 - [ ] The video's numbers pinned to the receipt the page itself shows (needs one manual browser run)
 - [ ] Optional if time: the waitlist cascade, so a lapsed hold offers the next person their own window
 
+## UX proof sweep (2026-08-31, against production — the "prove it to yourself" pass)
+
+Driven, photographed and asserted on the live origin, both widths:
+- **Full desktop journey** (board → detail → form → errors → held → released → rival → booked):
+  36 steps, 0 failed, 0 page errors. The GOV.UK-style error summary, the per-field messages and the
+  focus handling are genuinely well built.
+- **Full phone journey** (390×844: detail → form → dock armed → booked → receipt): 28 steps, 0
+  failed, no overflow at any state. The dark dock with the ⏎ keycap, "45 SECONDS LEFT" and
+  "0 SYNTHETIC PRESSES BLOCKED" is the best single screen in the product
+  (`docs/evidence/clinic/phone-dock-armed.png`).
+- **The receipt** close-up: honest empty by-hand lane ("Not measured yet — book one appointment
+  yourself and this fills in"), agent lane "1 · 1 key · your agent … could not press the key", and
+  the counting rules cited on the page itself.
+- **Wave rollover proven live**: booking → grace holds the board ("nothing … cleared out from under
+  you") → next wave lands (≥4 open) → the booked slot leaves the board, the receipt survives.
+  13 steps, 0 failed, ~2.5 min real time.
+- **Design decision reviewed and endorsed, not changed:** Esc does NOT release a hold. The dock is
+  not a modal; an accidental Esc silently discarding a hard-won hold is a worse failure than
+  tabbing twice to "Give it back". Recorded here so nobody "fixes" it later.
+- Native form controls render light inside the light page (`color-scheme: light` scoped on
+  `.clinic` — Aarya had already handled the dark-shell leak).
+
 ## Rails that must not slip
 Fictional inventory and the simulated rival stay labelled on screen. Every number on screen is measured by
 the code that shows it. The accessibility framing is an *additional operable path*, never a conformance
