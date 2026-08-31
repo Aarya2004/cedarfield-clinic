@@ -28,6 +28,20 @@ thing that books an appointment is one act from the person the appointment is fo
 one switch press, or one held gesture.** Nothing an agent can call, and nothing a script can fake,
 reaches that step.
 
+## How to test it — 60 seconds, no login, nothing to install
+
+1. Open the live URL in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or **Chrome 152+** with
+   `chrome://flags/#enable-webmcp-testing`, then click **Book an appointment** (`/clinic/book`).
+2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): five `clinic_*` tools —
+   and no booking tool among them.
+3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a 45-second bar and
+   the dock at the bottom arms.
+4. Ask it to *"just book it."* It will explain that it can't, and why.
+5. **Press Enter.** Booked — and the receipt shows what the same task costs by hand versus the one
+   press it cost you.
+
+Everything the description claims is also re-runnable from the repo in two commands (below).
+
 ## The problem, and who has it
 
 Every task on the web costs a number of interactions. For a mouse user that number is invisible. For

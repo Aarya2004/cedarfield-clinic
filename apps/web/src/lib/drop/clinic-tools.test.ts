@@ -459,3 +459,42 @@ test('no booking tool exists — not in the names, not in the defs, not in any d
     );
   }
 });
+
+// ── Chrome's character budgets, asserted (secure-tools guidance the README cites) ────────────────
+// 500 chars per tool description · 150 per param description · 30 per name · 1.5K per output.
+// These are recommendations, not platform limits — but the README says we respect them, so the
+// suite must, or the claim is prose. Output is measured on a REAL driven board (wave landed,
+// hold live), not an empty fixture, because a busy board is when the payloads are biggest.
+
+test('every tool honours the Chrome budgets: name ≤ 30, description ≤ 500, params ≤ 150', () => {
+  const defs = clinicToolDefs(frozenSource([], []));
+  for (const d of defs) {
+    assert.ok(d.name.length <= 30, `${d.name} name ${d.name.length} > 30`);
+    assert.ok(d.description.length <= 500, `${d.name} description ${d.description.length} > 500`);
+    const props = (d.inputSchema.properties ?? {}) as Record<string, { description?: string }>;
+    for (const [pname, p] of Object.entries(props)) {
+      if (p.description) {
+        assert.ok(p.description.length <= 150, `${d.name}.${pname} param description ${p.description.length} > 150`);
+      }
+    }
+  }
+});
+
+test('worst-case tool outputs stay under 1.5K on a full, live board', async () => {
+  const driver = createMockDriver({ seed: 11, scenario: 'hold-and-book' });
+  driver.advance(1); // land the wave: six slots, the busiest honest board this demo produces
+  const { source } = makeSource(driver);
+  const defs = clinicToolDefs(source);
+  const byName = new Map(defs.map((d) => [d.name, d]));
+
+  // hold one so hold-bearing payloads (status, hold result) carry their largest shape
+  const holdOut = await byName.get('clinic_hold_slot')!.execute({ slot_id: 'slot-1' });
+  assert.ok(holdOut.content[0].text.length <= 1500, `hold_slot output ${holdOut.content[0].text.length} > 1500`);
+
+  for (const d of defs) {
+    if (d.name === 'clinic_hold_slot') continue; // measured above with its success payload
+    const out = await d.execute(d.name === 'clinic_release_hold' ? {} : undefined);
+    const len = out.content[0].text.length;
+    assert.ok(len <= 1500, `${d.name} output ${len} > 1500 on a live board`);
+  }
+});
