@@ -21,7 +21,11 @@ const LIVE = 'var(--drop-live, #d97706)';
 export interface DropCountdownProps {
   /** When the next wave lands. */
   dropAt: Date | number;
-  /** Now, in epoch ms, from the parent's clock. Passed in so this component never reads one. */
+  /**
+   * Now, from the parent's clock, in the same units as `dropAt` — epoch ms with a real backend,
+   * or the mock driver's ms-since-start (`driver.now()` with `driver.waveAt()`). Passed in, never
+   * read here, so the whole screen counts against one clock.
+   */
   now: number;
   /** The eyebrow while waiting. Default "Next drop". */
   label?: string;
