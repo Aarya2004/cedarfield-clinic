@@ -445,7 +445,7 @@ test('no booking tool exists — not in the names, not in the defs, not in any d
   const names = defs.map((d) => d.name);
   assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the registered defs are exactly the declared five');
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
-    assert.ok(!names.includes(forbidden), `${forbidden} must never be on this page's tool surface`);
+    assert.ok(!(names as string[]).includes(forbidden), `${forbidden} must never be on this page tool surface`);
     assert.ok(
       !(CLINIC_TOOL_NAMES as readonly string[]).includes(forbidden),
       `${forbidden} must never be declared`,
