@@ -182,3 +182,26 @@ mismatch re-opens the approval card and never auto-registers. That path is a des
 shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the part not yet wired is the
   App-level write-path (persist on approve/pin) and the RestoreCard UI — this document will describe kept
   tools as shipped only once that wiring lands.
+
+## §10 — THE DROP (branch `drop`): trust boundaries, stated plainly
+
+- **The consequential act is not in the API.** There is no `confirm_booking` tool; the tool surface cannot
+  express booking (`apps/web/src/lib/drop/schemas.test.ts` asserts the absence; `register.ts`'s RoomClient
+  interface has no confirm method). Booking requires a single-use confirm token that the DropRoom mints only
+  in response to a page-reported trusted input (keydown/switch, or a completed gesture dwell) on the
+  authenticated WebSocket; tokens expire in 5 s and are spent once (`confirm.ts`, fail-closed on late tokens
+  and lapsed holds).
+- **Residual boundary, honestly:** the page itself is the trust boundary — a malicious script running IN the
+  page could synthesize the trusted-input report. Same class as Rokan's Enter. What the design does prevent:
+  any actor holding only the tool surface or the fetch endpoints (an agent, a script with the URL, a replayed
+  request) cannot book.
+- **Injection surface:** slot inventory, services and wave copy are page-authored. Visitor-authored text
+  (future "my usual" labels) passes `redact.ts` before the ledger and any tool that echoes it must set
+  `untrustedContentHint: true`. Today no drop tool echoes visitor text.
+- **Camera:** gesture frames never leave the page; MediaPipe `.task` models are self-hosted (Google's hosted
+  path phones home per its ToS); the module is off until the user enables it, keyboard/switch remains primary,
+  and the dwell resets on any flicker below the visible threshold (motor tremor cannot fire it).
+- **No model, no key, no PII:** the Drop worker never calls an LLM, stores no names, asks no auth; the page
+  runs on measured numbers only (hold server ms, TTL, the interaction-tax counters from real input events).
+- **Caps:** one live hold per visitor · waitlist ≤ 3 · per-IP room joins rate-limited · rival bot never takes
+  the last open slot of a wave and never holds more than one.

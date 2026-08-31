@@ -434,3 +434,16 @@ hold) green on the deployed URL in ChatGPT desktop, or we revert to shipping Rok
 **Pending from you two:** the NAME (humans pick it — Devpost's own guidance), and Arav's 60 s on
 `https://rokan-sandbox.rokan-sandbox.workers.dev/probe/camera` in ChatGPT desktop (tests getUserMedia +
 MediaPipe there). Full plan: `docs/DROP-PLAN.md`.
+
+## 2026-08-30 ~21:00 PT — Engineer #4 → Aarya: DROP build underway on branch `drop` (LOCKED)
+- Landed tonight (all green, `pnpm test` 254/254): `lib/drop/schemas.ts` (`contract:` — 7 tools, the guard
+  test asserts there is NO booking tool), `tax.ts` (interaction-tax meter, real input events only),
+  `confirm.ts` (hold → trusted input → single-use token → booked; gesture dwell that resets on flicker),
+  `register.ts` (tools over an injected RoomClient; no confirm method exists). `infra/drop` (DropRoom DO,
+  waves/holds/TTL/waitlist/rival) is being built now — its wire API lands in ALIGNMENT when green.
+- **Your lane when you pick this up:** `components/drop/` — Board, Wave/TTL bars, SlotCard, ConfirmSurface
+  (DOM-native, ARIA live region, huge target, keyboard/switch first — NO canvas), TaxCounter (renders
+  `TaxMeter.snapshot()`), WaitlistCard, RivalChip ("simulated rival" label always visible). Manual mode must
+  be real — the counter's honesty depends on it. Design tokens: keep the Rokan palette for now; rename lands
+  with the product name (yours + Arav's to choose).
+- Fresh SECURITY §10 states the trust boundaries — read before building the ConfirmSurface.
