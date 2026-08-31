@@ -1,0 +1,33 @@
+SPEC-V2 deployment verification — run by Arav from the repo root, 2026-08-31 evening,
+immediately after `vercel --prod --yes`. 18/18 checks against the live origin.
+
+$ node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app
+✔ GET / — 200
+✔ GET /clinic — 200
+✔ GET /clinic/book — 200
+✔ clinic-thesis.json — 40 steps, 0 failed
+✔ clinic-voice-tour.json — 10 steps, 0 failed
+✔ clinic-cancel.json — 20 steps, 0 failed
+✔ clinic-move.json — 21 steps, 0 failed
+✔ clinic-agent-edges.json — 18 steps, 0 failed
+✔ clinic-responsive.json — 8 steps, 0 failed
+✔ clinic-rival-race.json — 9 steps, 0 failed
+✔ clinic-hold-lapses.json — 10 steps, 0 failed
+✔ clinic-receipt.json — 10 steps, 0 failed
+✔ clinic-landing-frontdoor.json — 4 steps, 0 failed
+✔ clinic-landing-phone.json — 8 steps, 0 failed
+✔ / — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
+✔ /clinic — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
+✔ /clinic/book — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
+
+a11y: clean
+✔ axe on the deployed origin
+
+DEPLOYED AND VERIFIED — https://rokan-terminal.vercel.app
+
+What this proves against production, not a local build: the nine tools register in a real
+browser; no booking/cancel/move tool is on the surface (nine negative assertions); a synthetic
+press is refused and counted while a trusted press books; the agent's search misses name the
+constraint that eliminated everything; a prepared cancel is performed only by a trusted Enter;
+a prepared move freezes its target and swaps atomically on one press; holds lapse clean; the
+receipt reads -:1; axe finds nothing on any route.
