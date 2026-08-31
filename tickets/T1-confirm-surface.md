@@ -24,6 +24,12 @@ Props: `{ secondsLeft, slotLabel, onConfirm, disabled?, gestureSlot? }`. Behavio
 - `gestureSlot` renders an optional child (T6's module plugs in here later); absent = keyboard only.
 - Disabled state (no hold active) explains itself.
 
+Audio cues (opt-in): two subtle sound cues — hold armed, and the 10s TTL mark. OFF by default with
+a visible toggle (unsolicited audio is itself an a11y complaint); Web Audio API oscillator/envelope
+in `lib/drop/audio-cues.ts` (no audio asset files, no autoplay before a user gesture — browser
+policy requires one anyway), volume modest, never blocks or delays the confirm path, respects
+`prefers-reduced-motion`-style choice via the same persisted toggle. `data-audio-cues` state hook.
+
 Logic that decides trusted/announce/urgency goes in `lib/drop/confirm-logic.ts` (relative imports,
 unit-tested). Invoke the frontend-design skill before styling. This component must be beautiful —
 it is on camera for the demo's climax.
