@@ -6,7 +6,7 @@
  * ║  lock, then move whatever survives into a `contract:` commit.                                 ║
  * ╚══════════════════════════════════════════════════════════════════════════════════════════════╝
  *
- * The five WebMCP tools of the Cedarfield Clinic booking page (SPEC-V1 §3). Registered top-level,
+ * The nine WebMCP tools of the Cedarfield Clinic booking page (SPEC-V1 §3, SPEC-V2 §2). Registered top-level,
  * imperatively, feature-detected, under ONE AbortController — the idiom of lib/webmcp/register.ts.
  *
  * ── THE THESIS, IN WHAT IS ABSENT ───────────────────────────────────────────────────────────────
@@ -40,12 +40,16 @@ import { OUTPUT_BUDGET_CHARS } from '../webmcp/schemas.ts';
 
 // ── names ───────────────────────────────────────────────────────────────────────────────────────
 
-/** The five, in registration order. Five, against a self-imposed cap of twelve. */
+/** The nine, in registration order. Nine, against a self-imposed cap of twelve. */
 export const CLINIC_TOOL_NAMES = [
   'clinic_list_drops',
+  'clinic_find_slots',
+  'clinic_clinicians',
   'clinic_hold_slot',
   'clinic_hold_status',
   'clinic_release_hold',
+  'clinic_prepare_cancel',
+  'clinic_prepare_move',
   'clinic_explain_confirm',
 ] as const;
 
@@ -59,7 +63,13 @@ export type ClinicToolName = (typeof CLINIC_TOOL_NAMES)[number];
 export const HOLD_CHOREOGRAPHY =
   'The slot is held. Tell your human: one keypress on the page books it — you cannot.';
 
-/** The answer `clinic_explain_confirm` gives, and the reason the other four stop where they do. */
+export const CANCEL_CHOREOGRAPHY =
+  'The dock is armed to CANCEL. Tell your human: one keypress on the page cancels it — you cannot.';
+
+export const MOVE_CHOREOGRAPHY =
+  'The dock is armed to MOVE. Tell your human: one keypress on the page moves the booking — you cannot.';
+
+/** The answer `clinic_explain_confirm` gives, and the reason the other tools stop where they do. */
 export const NO_BOOKING_TOOL_REASON =
   'This page deliberately publishes no booking or confirmation tool. Booking is gated on a ' +
   "browser-trusted event — a real key press or click from the person at the keyboard — which no " +
@@ -95,6 +105,14 @@ export interface ClinicToolsOptions {
   settlePollMs?: number;
   /** Feature detection seam, for tests. Defaults to `document/navigator.modelContext`. */
   modelContext?: () => ModelContext | null;
+  /**
+   * SPEC-V2 arming seams. `clinic_prepare_cancel` / `clinic_prepare_move` ARM the dock for a
+   * human act; the page injects these so the tools never touch `driver.cancel` / `driver.move`
+   * (the unit fakes throw if one tries). Absent — the bench, an unwired page — the tools answer
+   * `dock_not_wired` honestly instead of pretending.
+   */
+  onPrepareCancel?: (slotId: string) => boolean;
+  onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
 }
 
 const DEFAULT_SETTLE_TIMEOUT_MS = 1_200;
@@ -325,6 +343,64 @@ export const holdSlotSchema = {
  * Build the five. `source` is called on every invocation, so the tools always read the live board.
  * Pure function of its arguments: nothing is registered until `registerClinicTools`.
  */
+/** "9", "9:00", "9:00 AM", "4 pm" → minutes since midnight; null when unparseable. */
+export function parseClockText(raw: unknown): number | null {
+  if (typeof raw !== 'string') return null;
+  const m = raw.trim().toLowerCase().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2] ?? 0);
+  if (h > 23 || min > 59) return null;
+  if (m[3] === 'pm' && h < 12) h += 12;
+  if (m[3] === 'am' && h === 12) h = 0;
+  // A bare small hour on a clinic board means daytime: "4" is 4 PM, not 4 AM.
+  if (!m[3] && h >= 1 && h <= 6) h += 12;
+  return h * 60 + min;
+}
+
+function slotMinutes(time: string): number | null {
+  return parseClockText(time);
+}
+
+export const findSlotsSchema = {
+  type: 'object',
+  properties: {
+    clinician: { type: 'string', description: 'Clinician name or part of one, e.g. "Boone" or "Dr. Boone".' },
+    kind: { type: 'string', description: 'Appointment kind or part of one: "New patient", "Follow-up", "Consult".' },
+    after: { type: 'string', description: 'Earliest acceptable start, e.g. "9:00 AM" or "9".' },
+    before: { type: 'string', description: 'Latest acceptable start, e.g. "11:30 AM".' },
+  },
+  additionalProperties: false,
+} as const;
+
+export const prepareMoveSchema = {
+  type: 'object',
+  properties: {
+    new_slot_id: { type: 'string', description: 'The open slot to move the booking to, from clinic_find_slots or clinic_list_drops.' },
+  },
+  required: ['new_slot_id'],
+  additionalProperties: false,
+} as const;
+
+export const FIND_SLOTS_DESCRIPTION =
+  'Search the live board by clinician, kind, and/or time window (after/before). Answers with the ' +
+  'matching open slots, and when nothing matches, names which constraint eliminated everything so ' +
+  'you can relax the right one. Includes seconds until the next release. Read-only.';
+
+export const CLINICIANS_DESCRIPTION =
+  'Who is on today\'s board: each clinician with their open slot times and appointment kinds. ' +
+  'Use it to answer "what doctors are there?" before searching or holding. Read-only.';
+
+export const PREPARE_CANCEL_DESCRIPTION =
+  'Arm the page for the person to CANCEL their booked appointment. Cancels nothing itself: the ' +
+  'dock shows "press to cancel" and only a key, switch or held gesture from the person performs ' +
+  'it. Refused when nothing is booked.';
+
+export const PREPARE_MOVE_DESCRIPTION =
+  'Arm the page for the person to MOVE their booking to another slot. Holds the target slot so it ' +
+  'cannot be taken while they decide, then the dock shows "press to move". Moves nothing itself — ' +
+  'one press from the person performs the swap atomically. Refused without a booking or an open target.';
+
 export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOptions = {}): ClinicToolDef[] {
   const timeoutMs = options.settleTimeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS;
   const pollMs = options.settlePollMs ?? DEFAULT_SETTLE_POLL_MS;
@@ -338,6 +414,103 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       annotations: { readOnlyHint: true },
       async execute() {
         return asToolResult(listDrops(source()));
+      },
+    },
+    {
+      name: 'clinic_find_slots',
+      title: 'Search slots by clinician, kind, or time',
+      description: FIND_SLOTS_DESCRIPTION,
+      inputSchema: findSlotsSchema,
+      annotations: { readOnlyHint: true },
+      async execute(raw) {
+        const input = coerceInput(raw);
+        const view = source();
+        const wantClin = typeof input.clinician === 'string' ? input.clinician.trim().toLowerCase() : '';
+        const wantKind = typeof input.kind === 'string' ? input.kind.trim().toLowerCase() : '';
+        const after = parseClockText(input.after);
+        const before = parseClockText(input.before);
+        if (typeof input.after === 'string' && input.after.trim() !== '' && after === null) {
+          return asToolResult({
+            ok: false,
+            error: 'bad_time',
+            detail: `Could not read "${String(input.after).slice(0, 40)}" as a time. Say it like "9:00 AM".`,
+          } satisfies ErrorResult);
+        }
+        if (typeof input.before === 'string' && input.before.trim() !== '' && before === null) {
+          return asToolResult({
+            ok: false,
+            error: 'bad_time',
+            detail: `Could not read "${String(input.before).slice(0, 40)}" as a time. Say it like "11:30 AM".`,
+          } satisfies ErrorResult);
+        }
+        const open = view.session.slots.filter((s) => s.state === 'open');
+        // Apply each filter separately so a miss can name the constraint that eliminated everything.
+        const byClin = wantClin ? open.filter((s) => s.clinician.toLowerCase().includes(wantClin)) : open;
+        const byKind = wantKind ? byClin.filter((s) => s.kind.toLowerCase().includes(wantKind)) : byClin;
+        const matches = byKind.filter((s) => {
+          const t = slotMinutes(s.timeLabel);
+          if (t === null) return after === null && before === null;
+          if (after !== null && t < after) return false;
+          if (before !== null && t > before) return false;
+          return true;
+        });
+        const nextWaveAt = view.nextWaveAt ?? null;
+        const nextWave = nextWaveAt === null ? null : Math.max(0, round1((nextWaveAt - view.session.now) / 1000));
+        if (matches.length === 0) {
+          const eliminated_by = wantClin && byClin.length === 0
+            ? 'clinician'
+            : wantKind && byKind.length === 0
+              ? 'kind'
+              : after !== null || before !== null
+                ? 'time_window'
+                : 'no_open_slots';
+          return asToolResult({
+            ok: true,
+            matches: [],
+            eliminated_by,
+            detail: eliminated_by === 'no_open_slots'
+              ? 'Nothing is open right now. The next wave may bring more.'
+              : `Open slots exist, but none match your ${eliminated_by.replace('_', ' ')}. Relax that one.`,
+            open_slot_ids: openIds(view.session.slots),
+            next_wave_seconds: nextWave,
+            booking: 'human_only' as const,
+          });
+        }
+        return asToolResult({
+          ok: true,
+          matches: matches.map(toAgentSlot),
+          next_wave_seconds: nextWave,
+          your_hold: holdSummary(view),
+          booking: 'human_only' as const,
+        });
+      },
+    },
+    {
+      name: 'clinic_clinicians',
+      title: "Who is on today's board",
+      description: CLINICIANS_DESCRIPTION,
+      inputSchema: NO_INPUT_SCHEMA,
+      annotations: { readOnlyHint: true },
+      async execute() {
+        const view = source();
+        const byName = new Map<string, { open_times: string[]; kinds: Set<string> }>();
+        for (const s of view.session.slots) {
+          const row = byName.get(s.clinician) ?? { open_times: [], kinds: new Set<string>() };
+          row.kinds.add(s.kind);
+          if (s.state === 'open') row.open_times.push(s.timeLabel);
+          byName.set(s.clinician, row);
+        }
+        return asToolResult({
+          ok: true,
+          clinic: CLINIC_NAME,
+          demo: true,
+          clinicians: [...byName.entries()].map(([name, row]) => ({
+            name,
+            open_times: row.open_times,
+            kinds: [...row.kinds],
+          })),
+          booking: 'human_only' as const,
+        });
       },
     },
     {
@@ -457,6 +630,111 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       },
     },
     {
+      name: 'clinic_prepare_cancel',
+      title: 'Arm the page to cancel (never cancels)',
+      description: PREPARE_CANCEL_DESCRIPTION,
+      inputSchema: NO_INPUT_SCHEMA,
+      annotations: { readOnlyHint: false },
+      async execute() {
+        const view = source();
+        const booked = view.session.slots.find((s) => s.state === 'booked_yours');
+        if (!booked) {
+          return asToolResult({
+            ok: false,
+            error: 'nothing_booked',
+            detail: 'Your human has no booked appointment on this board, so there is nothing to cancel.',
+            open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        // Never `driver.cancel` — that verb is the human's. The page's dock is armed instead.
+        if (!options.onPrepareCancel || !options.onPrepareCancel(booked.id)) {
+          return asToolResult({
+            ok: false,
+            error: 'dock_not_wired',
+            detail: 'This page cannot arm the cancel dock right now. Ask your human to cancel on the page.',
+          } satisfies ErrorResult);
+        }
+        return asToolResult({
+          ok: true,
+          armed: 'cancel' as const,
+          slot: toAgentSlot(booked),
+          cancelling: 'human_only' as const,
+          next_step: CANCEL_CHOREOGRAPHY,
+        });
+      },
+    },
+    {
+      name: 'clinic_prepare_move',
+      title: 'Arm the page to move a booking (never moves)',
+      description: PREPARE_MOVE_DESCRIPTION,
+      inputSchema: prepareMoveSchema,
+      annotations: { readOnlyHint: false },
+      async execute(raw) {
+        const input = coerceInput(raw);
+        const toId = typeof input.new_slot_id === 'string' ? input.new_slot_id.trim() : '';
+        const view = source();
+        const booked = view.session.slots.find((s) => s.state === 'booked_yours');
+        if (!booked) {
+          return asToolResult({
+            ok: false,
+            error: 'nothing_booked',
+            detail: 'Your human has no booked appointment to move. clinic_hold_slot holds a new one instead.',
+            open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        if (!toId) {
+          return asToolResult({
+            ok: false,
+            error: 'new_slot_id_required',
+            detail: 'Pass the id of an open slot from clinic_find_slots or clinic_list_drops.',
+            open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        const target = view.session.slots.find((s) => s.id === toId);
+        if (!target) {
+          return asToolResult({
+            ok: false,
+            error: 'unknown_slot',
+            detail: `This drop has no slot "${toId}".`,
+            open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        if (target.id === booked.id) {
+          return asToolResult({
+            ok: false,
+            error: 'same_slot',
+            detail: 'That is the slot your human already has.',
+            open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        if (target.state !== 'open' && target.state !== 'held_by_you') {
+          return asToolResult({
+            ok: false,
+            error: 'slot_unavailable',
+            detail: `Slot "${toId}" is ${target.state}, not open.`,
+            slot_state: target.state,
+            open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        // Never `driver.move` — the swap itself is the human's. The dock is armed with the target.
+        if (!options.onPrepareMove || !options.onPrepareMove(booked.id, target.id)) {
+          return asToolResult({
+            ok: false,
+            error: 'dock_not_wired',
+            detail: 'This page cannot arm the move dock right now. Ask your human to rebook on the page.',
+          } satisfies ErrorResult);
+        }
+        return asToolResult({
+          ok: true,
+          armed: 'move' as const,
+          from_slot: toAgentSlot(booked),
+          to_slot: toAgentSlot(target),
+          moving: 'human_only' as const,
+          next_step: MOVE_CHOREOGRAPHY,
+        });
+      },
+    },
+    {
       name: 'clinic_explain_confirm',
       title: 'Why there is no booking tool',
       description: EXPLAIN_CONFIRM_DESCRIPTION,
@@ -470,6 +748,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           reason: NO_BOOKING_TOOL_REASON,
           tools_that_exist: [...CLINIC_TOOL_NAMES],
           tool_that_books: null,
+          human_only_acts: ['book', 'cancel', 'move'],
           what_to_tell_your_human: HOLD_CHOREOGRAPHY,
           your_hold: holdSummary(view),
         });
@@ -486,8 +765,8 @@ export type ClinicRegistrationState =
   | { kind: 'error'; message: string };
 
 /**
- * Register the five with `document.modelContext` (or the `navigator` alias) under ONE
- * AbortController; the returned function aborts it, which unregisters all five. Feature-detected:
+ * Register the nine with `document.modelContext` (or the `navigator` alias) under ONE
+ * AbortController; the returned function aborts it, which unregisters all nine. Feature-detected:
  * with no modelContext this is a no-op that reports `unsupported` — the page must work identically
  * in a browser that has never heard of WebMCP.
  */

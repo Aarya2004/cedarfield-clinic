@@ -114,6 +114,12 @@ function fold(state: Fold, event: DropEvent): Fold {
     case 'booked':
       return { slots: withState(state.slots, event.slotId, 'booked_yours'), held: null, log };
 
+    // SPEC-V2: the human cancelled, or a move reopened its origin slot. The slot goes straight
+    // back to open. `held` is untouched: a cancel involves no hold, and a move's own `booked`
+    // event (emitted first) already cleared the one it absorbed.
+    case 'cancelled':
+      return { ...state, slots: withState(state.slots, event.slotId, 'open'), log };
+
     default:
       return state;
   }
@@ -192,6 +198,8 @@ export function firstComeDriver(driver: DropDriver): DropDriver {
     book: (slotId) => driver.book(slotId),
     release: (slotId) => driver.release(slotId),
     confirm: (slotId) => driver.book(slotId),
+    cancel: (slotId) => driver.cancel(slotId),
+    move: (from, to) => driver.move(from, to),
   };
 }
 

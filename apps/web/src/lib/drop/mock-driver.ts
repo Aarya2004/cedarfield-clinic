@@ -269,6 +269,36 @@ export class MockDropDriver implements DropDriver {
     this.emit({ type: 'booked', slotId, at: this.time });
   }
 
+  /**
+   * Cancel the visitor's booking (SPEC-V2). Human verb — never a tool; the dock's trusted press
+   * is the only caller. Anything that is not your booking is ignored, not faked.
+   */
+  cancel(slotId: string): void {
+    const slot = this.find(slotId);
+    if (!slot || slot.state !== 'booked_yours') return;
+    slot.state = 'open';
+    this.emit({ type: 'cancelled', slotId, at: this.time });
+  }
+
+  /**
+   * Move the visitor's booking to another slot, atomically (SPEC-V2): `to` becomes yours, `from`
+   * returns to open. One call by design — cancel-then-rebook is a race the visitor loses. `to`
+   * may be open or already held by you (prepare_move holds it first so it cannot be sniped while
+   * the person reads the dock).
+   */
+  move(fromSlotId: string, toSlotId: string): void {
+    const from = this.find(fromSlotId);
+    const to = this.find(toSlotId);
+    if (!from || from.state !== 'booked_yours') return;
+    if (!to || (to.state !== 'open' && to.state !== 'held_by_you') || fromSlotId === toSlotId) return;
+    if (this.hold_?.slotId === toSlotId) this.hold_ = null; // the prepared hold becomes the booking
+    if (this.hold_ && this.hold_.slotId !== toSlotId) this.release(this.hold_.slotId);
+    to.state = 'booked_yours';
+    from.state = 'open';
+    this.emit({ type: 'booked', slotId: toSlotId, at: this.time });
+    this.emit({ type: 'cancelled', slotId: fromSlotId, at: this.time });
+  }
+
   /** Give a held slot back. It returns to open; the board resyncs via `drop_wave` (see header). */
   release(slotId: string): void {
     const slot = this.find(slotId);

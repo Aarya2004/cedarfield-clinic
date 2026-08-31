@@ -84,6 +84,14 @@ const BOOKING_GRACE_MS = 25_000;
 
 const NO_COUNT: CounterSnapshot = { total: 0, breakdown: emptyBreakdown() };
 
+/** How long a prepared cancel stays armed before the page quietly stands down. */
+const PENDING_ACT_TTL_SECONDS = 45;
+
+/** SPEC-V2 §3: what clinic_prepare_cancel / clinic_prepare_move arm. One at a time, human-fired. */
+type PendingAct =
+  | { kind: 'cancel'; slotId: string; timeLabel: string; detail: string; armedAt: number }
+  | { kind: 'move'; fromId: string; toId: string; timeLabel: string; detail: string; armedAt: number };
+
 export function ClinicBooking() {
   // ── the wave ───────────────────────────────────────────────────────────────────────────────────
   const mountedAt = useRef<number>(Date.now());
@@ -169,6 +177,87 @@ export function ClinicBooking() {
     });
   }, [bookedSlotId, flow.slots, flow.slotsLost]);
 
+  // ── SPEC-V2: the prepared act ─────────────────────────────────────────────────────────────────
+  // clinic_prepare_cancel / clinic_prepare_move arm ONE pending act; a trusted press performs it.
+  // A cancel arm carries its own clock; a move arm lives exactly as long as the hold it placed on
+  // the target slot — hold gone, arm gone. Either way the agent armed it and only a person fires it.
+  const [pendingAct, setPendingAct] = useState<PendingAct | null>(null);
+
+  const prepareCancel = useCallback(
+    (slotId: string): boolean => {
+      const slot = driver.snapshot().slots.find((s) => s.id === slotId);
+      if (!slot || slot.state !== 'booked_yours') return false;
+      setPendingAct({ kind: 'cancel', slotId, timeLabel: slot.timeLabel, detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now() });
+      return true;
+    },
+    [driver],
+  );
+
+  const prepareMove = useCallback(
+    (fromId: string, toId: string): boolean => {
+      const slots = driver.snapshot().slots;
+      const from = slots.find((s) => s.id === fromId);
+      const to = slots.find((s) => s.id === toId);
+      if (!from || from.state !== 'booked_yours') return false;
+      if (!to || (to.state !== 'open' && to.state !== 'held_by_you') || fromId === toId) return false;
+      // Freeze the target while the person decides — hold is the agent's verb, so this is allowed.
+      driver.hold(toId);
+      setPendingAct({
+        kind: 'move',
+        fromId,
+        toId,
+        timeLabel: `${from.timeLabel} → ${to.timeLabel}`,
+        detail: `${to.clinician} · ${to.kind}`,
+        armedAt: Date.now(),
+      });
+      return true;
+    },
+    [driver],
+  );
+
+  // A cancel arm expires on its own clock; the page re-renders every frame, so render-time math.
+  const pendingSecondsLeft =
+    pendingAct === null
+      ? 0
+      : pendingAct.kind === 'move'
+        ? session.secondsLeft
+        : Math.max(0, PENDING_ACT_TTL_SECONDS - (Date.now() - pendingAct.armedAt) / 1000);
+
+  useEffect(() => {
+    if (pendingAct === null) return;
+    // A move arm dies with its target hold (expired, released, or absorbed by the move itself);
+    // a cancel arm dies when its own clock runs out; both die when the slot stops being cancellable.
+    if (pendingAct.kind === 'move' && session.held?.slotId !== pendingAct.toId) setPendingAct(null);
+    else if (pendingAct.kind === 'cancel' && pendingSecondsLeft <= 0) setPendingAct(null);
+    else {
+      const anchor = pendingAct.kind === 'cancel' ? pendingAct.slotId : pendingAct.fromId;
+      if (session.slots.find((s) => s.id === anchor)?.state !== 'booked_yours') setPendingAct(null);
+    }
+  }, [pendingAct, pendingSecondsLeft, session.held, session.slots]);
+
+  // A new wave is a new driver and a new board: nothing prepared against the old one survives.
+  useEffect(() => setPendingAct(null), [driver]);
+
+  /** The trusted press. The ONLY call sites of driver.cancel / driver.move in the product. */
+  const confirmPendingAct = useCallback(() => {
+    if (pendingAct === null) return;
+    if (pendingAct.kind === 'cancel') {
+      driver.cancel(pendingAct.slotId);
+    } else {
+      driver.move(pendingAct.fromId, pendingAct.toId);
+      // The move produced a booking; hold the board for the same grace a booking gets.
+      setLastBookedAt(Date.now() - mountedAt.current);
+    }
+    setPendingAct(null);
+  }, [pendingAct, driver]);
+
+  const dismissPendingAct = useCallback(() => {
+    if (pendingAct?.kind === 'move' && session.held?.slotId === pendingAct.toId) {
+      session.release(pendingAct.toId); // give the frozen target back
+    }
+    setPendingAct(null);
+  }, [pendingAct, session]);
+
   // ── acts ───────────────────────────────────────────────────────────────────────────────────────
 
   /**
@@ -217,6 +306,7 @@ export function ClinicBooking() {
   // ── the next release ───────────────────────────────────────────────────────────────────────────
   const busy =
     session.held !== null ||
+    pendingAct !== null ||
     flow.step !== 'board' ||
     (lastBookedAt !== null && elapsed - lastBookedAt < BOOKING_GRACE_MS);
 
@@ -347,8 +437,24 @@ export function ClinicBooking() {
 
           {/* The dock lives inside the measured region on purpose: pressing Enter to book is a real
               interaction in the booking area and belongs in the by-hand number too. */}
-          {session.held !== null && session.secondsLeft > 0 && heldSlot ? (
+          {pendingAct !== null && pendingSecondsLeft > 0 ? (
             <ConfirmDock
+              // Keyed apart from the hold dock: switching book→cancel/move must be a fresh dock —
+              // fresh announcement, fresh untrusted counter, fresh agent-lane measurement.
+              key={`act-${pendingAct.kind}`}
+              act={pendingAct.kind}
+              secondsLeft={pendingSecondsLeft}
+              ttlSeconds={pendingAct.kind === 'move' ? (session.held?.ttlSeconds ?? HOLD_TTL_SECONDS) : PENDING_ACT_TTL_SECONDS}
+              slotLabel={pendingAct.timeLabel}
+              slotDetail={pendingAct.detail}
+              origin="agent"
+              onConfirm={confirmPendingAct}
+              onRelease={dismissPendingAct}
+              measuredRef={attachDock}
+            />
+          ) : session.held !== null && session.secondsLeft > 0 && heldSlot ? (
+            <ConfirmDock
+              key="hold-dock"
               secondsLeft={session.secondsLeft}
               ttlSeconds={session.held.ttlSeconds}
               slotLabel={heldSlot.timeLabel}
@@ -368,7 +474,13 @@ export function ClinicBooking() {
             Unwired until 2026-08-31: the page showed the human a live countdown while
             clinic_list_drops told the agent null — the agent was blinder than the person for no
             reason (self-review against SPEC-V1 §3). */}
-        <ClinicTools driver={driver} session={session} nextWaveAt={nextRelease === null ? null : session.now + nextRelease} />
+        <ClinicTools
+          driver={driver}
+          session={session}
+          nextWaveAt={nextRelease === null ? null : session.now + nextRelease}
+          onPrepareCancel={prepareCancel}
+          onPrepareMove={prepareMove}
+        />
 
         <Band label="Honestly">
           <p className="cl-prose">
@@ -380,7 +492,7 @@ export function ClinicBooking() {
         </Band>
       </main>
 
-      {session.held !== null ? <div className="cl-dock-spacer" aria-hidden="true" /> : null}
+      {session.held !== null || pendingAct !== null ? <div className="cl-dock-spacer" aria-hidden="true" /> : null}
     </div>
   );
 }

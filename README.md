@@ -58,16 +58,27 @@ page's own receipt shows both numbers live. Case: `evals/cases/clinic-manual-tax
 
 ## What makes this WebMCP, specifically
 
-**The tool that is missing is the design.** Five tools are registered on `/clinic/book`; none of
-them books anything, and that is not an omission we could patch later — it is the contract.
+**The tool that is missing is the design.** Nine tools are registered on `/clinic/book`; none of
+them books, cancels, or moves anything, and that is not an omission we could patch later — it is
+the contract. Ask your agent out loud — *"what doctors are there?"*, *"anything after nine?"*,
+*"cancel my appointment"* — and it can answer, search, hold, and **arm** the page. The act itself
+is always one trusted press from you.
 
 | Tool | `readOnlyHint` | What it does |
 |---|---|---|
 | `clinic_list_drops` | ✅ | The next wave and the open slots |
+| `clinic_find_slots` | ✅ | Search by clinician, kind, time window — a miss names the constraint that killed it |
+| `clinic_clinicians` | ✅ | Who is on the board, with their open times and kinds |
 | `clinic_hold_slot` | ❌ | Holds one slot for 45 s for **this** visitor. Books nothing, auto-releases |
 | `clinic_hold_status` | ✅ | Seconds left, and what the person must do |
 | `clinic_release_hold` | ❌ | Gives the hold back early (a write — it mutates the board) |
+| `clinic_prepare_cancel` | ❌ | **Arms** the dock to cancel your booking. Cancels nothing — your key does |
+| `clinic_prepare_move` | ❌ | Freezes the target slot and **arms** the dock. One trusted press swaps atomically |
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists — written for the agent to read aloud |
+
+Cancelling and moving are, if anything, *worse* to automate than booking — they destroy something
+the person fought for. So they follow the same law: the agent prepares, the page shows exactly what
+one press will do, and only a browser-trusted press does it.
 
 Booking is gated on a **browser-trusted event**. A tool call cannot produce one; a `.click()` from
 the console or an extension cannot produce one. The page counts every synthetic attempt in the
@@ -87,19 +98,22 @@ agent real capability (hold, watch, compare, queue) while making the consequenti
 
 ```bash
 pnpm install
-cd apps/web && pnpm typecheck && pnpm lint && pnpm test    # 418 unit tests
-cd .. && node evals/run-all.mjs --only=clinic              # 8 live browser cases, real tool calls
+cd apps/web && pnpm typecheck && pnpm lint && pnpm test    # 432 unit tests
+cd .. && node evals/run-all.mjs --only=clinic              # 13 live browser cases, real tool calls
 node evals/a11y.mjs                                        # axe-core on both routes
 ```
 
 | Proof | Where |
 |---|---|
-| 5 tools registered; **no** booking tool (5 negative assertions) | `evals/cases/clinic-thesis.json` |
+| 9 tools registered; **no** booking/cancel/move tool (9 negative assertions) | `evals/cases/clinic-thesis.json` |
 | A synthetic press is **blocked**; a trusted press **books** — same page, same run | same case |
 | The agent path costs the person **1** interaction | same case |
 | A hold lapses after 45 s: slot returns, **nothing booked** | `clinic-hold-lapses.json` |
 | The rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
 | Booking by hand costs ≥ 30 asserted / **36 measured** interactions | `clinic-manual-tax.json` |
+| Cancel is armed by the agent, performed only by a trusted press — synthetic press blocked, counted | `clinic-cancel.json` |
+| Move swaps atomically on one press; at no instant are two slots booked | `clinic-move.json` |
+| The voice surface: search misses name the killing constraint, readable aloud | `clinic-voice-tour.json` |
 | **0 axe violations**, WCAG 2.0/2.1/2.2 A + AA, all three routes | `node evals/a11y.mjs` |
 
 Traces and screenshots for every one of these are committed under `docs/evidence/clinic/`.
@@ -138,7 +152,7 @@ apps/web
   app/clinic/book       the product: board · dock · manual flow · counter
   components/clinic     the calm-clinic surface (typographic, token-driven, no canvas)
   components/drop       ConfirmDock/Surface · TtlBar · SlotBoard · ClinicTools (the mount)
-  lib/drop              clinic-tools (the five tools) · confirm-logic (the trusted-event gate)
+  lib/drop              clinic-tools (the nine tools) · confirm-logic (the trusted-event gate)
                         mock-driver (seeded waves + rival) · interaction-counter · gesture-logic
 evals                   run-all.mjs · a11y.mjs · harness/webmcp-cdp.mjs · cases/clinic-*.json
 docs/evidence/clinic    traces + screenshots for every claim above

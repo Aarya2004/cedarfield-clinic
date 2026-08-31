@@ -283,3 +283,48 @@ test('book(A) on the very slot you hold books it and clears the hold (no self-re
   assert.equal(snap.slots.find((s) => s.id === a)?.state, 'booked_yours');
   assert.equal(snap.hold, null);
 });
+
+// ── SPEC-V2: cancel and move, the same discipline as book ────────────────────────────────────────
+
+test('cancel returns your booking to open and emits cancelled; anything else is ignored', () => {
+  const driver = createMockDriver({ seed: 7, scenario: 'hold-and-book' });
+  const events: DropEvent[] = [];
+  driver.subscribe((e) => events.push(e));
+  const a = driver.snapshot().slots.find((s) => s.state === 'open')!.id;
+  driver.cancel(a); // not booked yet — ignored, not faked
+  assert.equal(driver.snapshot().slots.find((s) => s.id === a)?.state, 'open');
+  driver.book(a);
+  driver.cancel(a);
+  const snap = driver.snapshot();
+  assert.equal(snap.slots.find((s) => s.id === a)?.state, 'open');
+  assert.equal(events.filter((e) => e.type === 'cancelled').length, 1);
+  assert.equal(snap.slots.filter((s) => s.state === 'booked_yours').length, 0);
+});
+
+test('move is atomic: to becomes yours, from opens, one booking ever, prepared hold absorbed', () => {
+  const driver = createMockDriver({ seed: 7, scenario: 'hold-and-book' });
+  const open = driver.snapshot().slots.filter((s) => s.state === 'open');
+  const [a, b] = [open[0].id, open[1].id];
+  driver.book(a);
+  driver.hold(b); // prepare_move holds the target first so it cannot be sniped
+  driver.move(a, b);
+  const snap = driver.snapshot();
+  assert.equal(snap.slots.find((s) => s.id === b)?.state, 'booked_yours');
+  assert.equal(snap.slots.find((s) => s.id === a)?.state, 'open');
+  assert.equal(snap.hold, null, 'the prepared hold became the booking');
+  assert.equal(snap.slots.filter((s) => s.state === 'booked_yours').length, 1, 'never two bookings');
+});
+
+test('move refuses: no booking, gone target, or moving onto itself — board untouched', () => {
+  const driver = createMockDriver({ seed: 7, scenario: 'hold-and-book' });
+  const open = driver.snapshot().slots.filter((s) => s.state === 'open');
+  const [a, b] = [open[0].id, open[1].id];
+  driver.move(a, b); // nothing booked
+  assert.equal(driver.snapshot().slots.filter((s) => s.state === 'booked_yours').length, 0);
+  driver.book(a);
+  driver.move(a, a); // onto itself
+  assert.equal(driver.snapshot().slots.find((s) => s.id === a)?.state, 'booked_yours');
+  const before = JSON.stringify(driver.snapshot().slots);
+  driver.move(a, 'slot-nope');
+  assert.equal(JSON.stringify(driver.snapshot().slots), before, 'unknown target changes nothing');
+});

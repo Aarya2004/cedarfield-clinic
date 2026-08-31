@@ -37,6 +37,46 @@
  },
  {
   "expect": {
+   "tool": "clinic_find_slots"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_clinicians"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_prepare_cancel"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_prepare_move"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_cancel_booking"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_move_booking"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_cancel"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "cancel_booking"
+  }
+ },
+ {
+  "expect": {
    "noTool": "clinic_book_slot"
   }
  },
@@ -62,7 +102,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "5"
+  "equals": "9"
  },
  {
   "invoke": "clinic_explain_confirm",

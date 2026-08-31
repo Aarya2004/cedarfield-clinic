@@ -1,7 +1,7 @@
 // Run: node --experimental-strip-types --test src/lib/drop/clinic-tools.test.ts
 //
 // PROVISIONAL SCHEMA — Arav red-lines before lock. Two things here are load-bearing beyond the
-// usual: (1) exactly five tools reach the model context, and (2) NOT ONE of them is named anything
+// usual: (1) exactly nine tools reach the model context, and (2) NOT ONE of them is named anything
 // like book or confirm. (2) is the product thesis expressed as an assertion — if a booking tool
 // ever appears, this file fails before any demo does.
 //
@@ -18,6 +18,9 @@ import type { ModelContext, ModelContextTool, RegisterToolOptions } from '../web
 import {
   CLINIC_TOOL_NAMES,
   HOLD_CHOREOGRAPHY,
+  CANCEL_CHOREOGRAPHY,
+  MOVE_CHOREOGRAPHY,
+  parseClockText,
   clinicToolDefs,
   registerClinicTools,
   type ClinicToolsView,
@@ -82,6 +85,12 @@ function makeSource(driver: MockDropDriver): { source: ClinicToolsSource; holds:
     book: () => {
       throw new Error('a clinic tool called driver.book() — booking is the human path only');
     },
+    cancel: () => {
+      throw new Error('a clinic tool called driver.cancel() — cancelling is the human path only');
+    },
+    move: () => {
+      throw new Error('a clinic tool called driver.move() — moving is the human path only');
+    },
   };
   const source = (): ClinicToolsView => {
     const snap = driver.snapshot();
@@ -110,6 +119,8 @@ function frozenSource(slots: Slot[], calls: string[]): ClinicToolsSource {
     release: (id) => calls.push(`release:${id}`),
     confirm: (id) => calls.push(`confirm:${id}`),
     book: (id) => calls.push(`book:${id}`),
+    cancel: (id) => calls.push(`cancel:${id}`),
+    move: (a, b) => calls.push(`move:${a}->${b}`),
   };
   return () => ({
     driver,
@@ -151,7 +162,7 @@ test('THE THESIS: no registered tool offers to book or confirm anything', async 
   try {
     await registerClinicTools(ready().source, () => {});
     const names = live();
-    assert.equal(names.length, 5);
+    assert.equal(names.length, 9);
     for (const name of names) {
       assert.ok(!/book/i.test(name), `${name} must not contain "book" — only the human books`);
       // The VERB is the thing under test: `clinic_explain_confirm` explains, it does not confirm.
@@ -184,18 +195,22 @@ test('THE THESIS: no tool path ever calls driver.confirm()', async () => {
 
 // ── registration ────────────────────────────────────────────────────────────────────────────────
 
-test('exactly five tools register, in a stable order, with stable names', async () => {
+test('exactly nine tools register, in a stable order, with stable names', async () => {
   const { mc, regs, live } = fakeMc();
   const restore = withModelContext(mc);
   try {
     const states: unknown[] = [];
     await registerClinicTools(ready().source, (s) => states.push(s));
-    assert.equal(regs.length, 5);
+    assert.equal(regs.length, 9);
     assert.deepEqual(live(), [
       'clinic_list_drops',
+      'clinic_find_slots',
+      'clinic_clinicians',
       'clinic_hold_slot',
       'clinic_hold_status',
       'clinic_release_hold',
+      'clinic_prepare_cancel',
+      'clinic_prepare_move',
       'clinic_explain_confirm',
     ]);
     assert.deepEqual(live(), [...CLINIC_TOOL_NAMES]);
@@ -228,12 +243,19 @@ test('every registered tool carries a description and an input schema; annotatio
   }
 });
 
-test('schemas are stable: only clinic_hold_slot takes input, and it requires slot_id', () => {
+test('schemas are stable: exactly three tools take input, everything else is a bare object', () => {
   const { defs, get } = defsFor(ready().source);
   const hold = get('clinic_hold_slot').inputSchema as { required: string[]; properties: Record<string, { type: string }> };
   assert.deepEqual(hold.required, ['slot_id']);
   assert.equal(hold.properties.slot_id.type, 'string');
-  for (const def of defs.filter((d) => d.name !== 'clinic_hold_slot')) {
+  const move = get('clinic_prepare_move').inputSchema as { required: string[]; properties: Record<string, { type: string }> };
+  assert.deepEqual(move.required, ['new_slot_id']);
+  assert.equal(move.properties.new_slot_id.type, 'string');
+  const find = get('clinic_find_slots').inputSchema as { required?: string[]; properties: Record<string, { type: string }> };
+  assert.equal(find.required, undefined, 'every clinic_find_slots filter is optional — an empty query is a listing');
+  assert.deepEqual(Object.keys(find.properties).sort(), ['after', 'before', 'clinician', 'kind']);
+  const WITH_INPUT = ['clinic_hold_slot', 'clinic_prepare_move', 'clinic_find_slots'];
+  for (const def of defs.filter((d) => !WITH_INPUT.includes(d.name))) {
     assert.deepEqual(def.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
   }
 });
@@ -243,7 +265,7 @@ test('abort unregisters all five (the returned dispose is the AbortController)',
   const restore = withModelContext(mc);
   try {
     const dispose = await registerClinicTools(ready().source, () => {});
-    assert.equal(live().length, 5);
+    assert.equal(live().length, 9);
     dispose();
     assert.deepEqual(live(), []);
   } finally {
@@ -438,12 +460,19 @@ const FORBIDDEN_TOOL_NAMES = [
   'clinic_book',
   'book_slot',
   'confirm_booking',
+  // SPEC-V2: cancel and move are HUMAN verbs too. The prepare_* tools only arm the dock.
+  'clinic_cancel_booking',
+  'clinic_cancel',
+  'clinic_move_booking',
+  'clinic_reschedule',
+  'cancel_booking',
+  'move_booking',
 ];
 
 test('no booking tool exists — not in the names, not in the defs, not in any description', () => {
   const defs = clinicToolDefs(frozenSource([], []));
   const names = defs.map((d) => d.name);
-  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the registered defs are exactly the declared five');
+  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the registered defs are exactly the declared nine');
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
     assert.ok(!(names as string[]).includes(forbidden), `${forbidden} must never be on this page tool surface`);
     assert.ok(
@@ -497,4 +526,133 @@ test('worst-case tool outputs stay under 1.5K on a full, live board', async () =
     const len = out.content[0].text.length;
     assert.ok(len <= 1500, `${d.name} output ${len} > 1500 on a live board`);
   }
+});
+
+// ── SPEC-V2: the voice surface — find, clinicians, and the two prepare tools ─────────────────────
+
+test('parseClockText reads what a person would say', () => {
+  assert.equal(parseClockText('9:00 AM'), 9 * 60);
+  assert.equal(parseClockText('9'), 9 * 60);
+  assert.equal(parseClockText('11:30 am'), 11 * 60 + 30);
+  assert.equal(parseClockText('4 PM'), 16 * 60);
+  assert.equal(parseClockText('4'), 16 * 60, 'a bare small hour on a clinic board is afternoon');
+  assert.equal(parseClockText('12 am'), 0);
+  assert.equal(parseClockText('12:15 pm'), 12 * 60 + 15);
+  assert.equal(parseClockText('half past nine'), null);
+  assert.equal(parseClockText('25:00'), null);
+  assert.equal(parseClockText(7), null);
+});
+
+test('clinic_find_slots filters by clinician, kind and window — and names the killing constraint', async () => {
+  const { source } = ready();
+  const { get } = defsFor(source);
+  const all = await callJson(get('clinic_find_slots'), {});
+  assert.equal(all.ok, true);
+  const matches = all.matches as Array<{ id: string; clinician: string; time: string }>;
+  assert.ok(matches.length > 0, 'an open board matches an empty query');
+  const clin = matches[0].clinician;
+  const byClin = await callJson(get('clinic_find_slots'), { clinician: clin.split(' ').pop() });
+  assert.ok((byClin.matches as unknown[]).length >= 1);
+  for (const m of byClin.matches as Array<{ clinician: string }>) assert.equal(m.clinician, clin);
+  // A window that excludes everything names time_window, not a bare empty list.
+  const none = await callJson(get('clinic_find_slots'), { after: '11 PM' });
+  assert.equal(none.ok, true);
+  assert.deepEqual(none.matches, []);
+  assert.equal(none.eliminated_by, 'time_window');
+  assert.ok(Array.isArray(none.open_slot_ids), 'the refusal still hands over the live ids');
+  // A clinician nobody has names clinician.
+  const noClin = await callJson(get('clinic_find_slots'), { clinician: 'Dr. Nobody' });
+  assert.equal(noClin.eliminated_by, 'clinician');
+  // Unreadable time is refused loudly, not silently unfiltered.
+  const bad = await callJson(get('clinic_find_slots'), { after: 'half past nine' });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.error, 'bad_time');
+});
+
+test('clinic_clinicians groups the board by person, open times only', async () => {
+  const { driver, source } = ready();
+  const { get } = defsFor(source);
+  const out = await callJson(get('clinic_clinicians'));
+  assert.equal(out.ok, true);
+  const rows = out.clinicians as Array<{ name: string; open_times: string[]; kinds: string[] }>;
+  assert.ok(rows.length >= 1);
+  const openCount = driver.snapshot().slots.filter((s) => s.state === 'open').length;
+  assert.equal(rows.reduce((n, r) => n + r.open_times.length, 0), openCount, 'every open slot is listed under exactly one clinician');
+  for (const r of rows) assert.ok(r.kinds.length >= 1);
+});
+
+test('clinic_prepare_cancel: refuses without a booking; arms via the callback; NEVER driver.cancel', async () => {
+  const { driver, source } = ready();
+  const armed: string[] = [];
+  const defs = clinicToolDefs(source, { ...FAST, onPrepareCancel: (id) => (armed.push(id), true) });
+  const prep = defs.find((d) => d.name === 'clinic_prepare_cancel')!;
+  const nothing = await callJson(prep);
+  assert.equal(nothing.ok, false);
+  assert.equal(nothing.error, 'nothing_booked');
+  assert.deepEqual(armed, []);
+  // Book one AS THE HUMAN (directly on the driver — the test is the person here).
+  const open = driver.snapshot().slots.find((s) => s.state === 'open')!;
+  driver.hold(open.id);
+  driver.book(open.id);
+  const ok = await callJson(prep);
+  assert.equal(ok.ok, true);
+  assert.equal(ok.armed, 'cancel');
+  assert.equal((ok.slot as { id: string }).id, open.id);
+  assert.equal(ok.next_step, CANCEL_CHOREOGRAPHY);
+  assert.deepEqual(armed, [open.id], 'the page was armed, once, with the booked slot');
+  assert.equal(driver.snapshot().slots.find((s) => s.id === open.id)!.state, 'booked_yours', 'the tool cancelled NOTHING');
+});
+
+test('clinic_prepare_cancel without the page seam answers dock_not_wired', async () => {
+  const { driver, source } = ready();
+  const open = driver.snapshot().slots.find((s) => s.state === 'open')!;
+  driver.hold(open.id);
+  driver.book(open.id);
+  const { get } = defsFor(source); // no onPrepareCancel
+  const out = await callJson(get('clinic_prepare_cancel'));
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'dock_not_wired');
+});
+
+test('clinic_prepare_move: every refusal is specific, arming never touches driver.move', async () => {
+  const { driver, source } = ready();
+  const armed: Array<[string, string]> = [];
+  const defs = clinicToolDefs(source, { ...FAST, onPrepareMove: (a, b) => (armed.push([a, b]), true) });
+  const prep = defs.find((d) => d.name === 'clinic_prepare_move')!;
+  const noBooking = await callJson(prep, { new_slot_id: 'slot-1' });
+  assert.equal(noBooking.error, 'nothing_booked');
+  const slots = driver.snapshot().slots.filter((s) => s.state === 'open');
+  driver.hold(slots[0].id);
+  driver.book(slots[0].id);
+  assert.equal((await callJson(prep, {})).error, 'new_slot_id_required');
+  assert.equal((await callJson(prep, { new_slot_id: 'slot-999' })).error, 'unknown_slot');
+  assert.equal((await callJson(prep, { new_slot_id: slots[0].id })).error, 'same_slot');
+  assert.deepEqual(armed, [], 'no refusal armed anything');
+  const target = driver.snapshot().slots.find((s) => s.state === 'open')!;
+  const ok = await callJson(prep, { new_slot_id: target.id });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.armed, 'move');
+  assert.equal((ok.from_slot as { id: string }).id, slots[0].id);
+  assert.equal((ok.to_slot as { id: string }).id, target.id);
+  assert.equal(ok.next_step, MOVE_CHOREOGRAPHY);
+  assert.deepEqual(armed, [[slots[0].id, target.id]]);
+  // The board is untouched: still booked where it was, target still open.
+  const snap = driver.snapshot();
+  assert.equal(snap.slots.find((s) => s.id === slots[0].id)!.state, 'booked_yours');
+  assert.equal(snap.slots.find((s) => s.id === target.id)!.state, 'open');
+});
+
+test('clinic_prepare_move onto a rival-taken slot is refused with the state', async () => {
+  const { driver, source } = ready();
+  const open = driver.snapshot().slots.filter((s) => s.state === 'open');
+  driver.hold(open[0].id);
+  driver.book(open[0].id);
+  driver.advance(2000); // the rival takes its first slot at 1500ms
+  const taken = driver.snapshot().slots.find((s) => s.state === 'taken_by_rival');
+  assert.ok(taken, 'the rival took one');
+  const { get } = defsFor(source);
+  const out = await callJson(get('clinic_prepare_move'), { new_slot_id: taken!.id });
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'slot_unavailable');
+  assert.equal(out.slot_state, 'taken_by_rival');
 });

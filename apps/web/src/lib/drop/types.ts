@@ -23,7 +23,8 @@ export type DropEvent =
   | { type: 'hold_started'; slotId: string; ttlSeconds: number; at: number }
   | { type: 'hold_tick'; slotId: string; secondsLeft: number; at: number }
   | { type: 'hold_expired'; slotId: string; at: number }
-  | { type: 'booked'; slotId: string; at: number };
+  | { type: 'booked'; slotId: string; at: number }
+  | { type: 'cancelled'; slotId: string; at: number };
 
 // The adapter seam: the mock driver implements this; a real backend maps into the same shapes.
 //
@@ -49,4 +50,12 @@ export interface DropDriver {
   book(slotId: string): void;
   confirm(slotId: string): void;
   release(slotId: string): void;
+  /**
+   * SPEC-V2 (2026-08-31): cancel and move are HUMAN verbs like book/confirm — worse to automate
+   * than booking, because they destroy something the person fought for. Tools may *arm* the dock
+   * for them (clinic_prepare_cancel / clinic_prepare_move); only a trusted press calls these.
+   */
+  cancel(slotId: string): void;
+  /** Atomic: `to` becomes yours, `from` returns to open. One call — a cancel-then-rebook round trip is a race. */
+  move(fromSlotId: string, toSlotId: string): void;
 }

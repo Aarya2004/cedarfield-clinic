@@ -1,0 +1,112 @@
+[
+ {
+  "_doc": "SPEC-V2: moving a booking is one human press, never a cancel-then-rebook race. prepare_move freezes the target with a hold; the trusted Enter swaps atomically; at no instant are two slots booked."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "_doc": "Book the first open slot as the human."
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__from = el && el.getAttribute('data-clinic-slot'); return typeof window.__from; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__from"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-armed] button, button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__from + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "eval": "(() => { const el = [...document.querySelectorAll('[data-slot-state=\"open\"]')].find(e => e.getAttribute('data-clinic-slot') !== window.__from); window.__to = el && el.getAttribute('data-clinic-slot'); return typeof window.__to; })()",
+  "equals": "string"
+ },
+ {
+  "_doc": "Moving onto the slot you already have is refused with same_slot."
+ },
+ {
+  "invoke": "clinic_prepare_move",
+  "inputFrom": {
+   "new_slot_id": "window.__from"
+  },
+  "outputMatches": "false[\\s\\S]*same_slot"
+ },
+ {
+  "_doc": "Arm the real move. The target is FROZEN (held) so nobody can take it while the person decides; the booking has not moved."
+ },
+ {
+  "invoke": "clinic_prepare_move",
+  "inputFrom": {
+   "new_slot_id": "window.__to"
+  },
+  "outputMatches": "armed.{0,2}:.{0,2}move[\\s\\S]*human_only"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-act]')?.getAttribute('data-clinic-act') === 'move'",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__from + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "booked_yours"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__to + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "held_by_you"
+ },
+ {
+  "shot": "docs/evidence/clinic/move-armed.png"
+ },
+ {
+  "_doc": "One trusted Enter performs the swap atomically: target booked, origin back to open."
+ },
+ {
+  "focus": "[data-clinic-act=\"move\"] button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__to + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__from + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "open"
+ },
+ {
+  "eval": "[...document.querySelectorAll('[data-slot-state=\"booked_yours\"]')].length",
+  "equals": 1
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-act]') === null",
+  "equals": true
+ },
+ {
+  "shot": "docs/evidence/clinic/moved.png"
+ }
+]

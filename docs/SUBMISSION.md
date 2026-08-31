@@ -32,8 +32,8 @@ reaches that step.
 
 1. Open the live URL in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or **Chrome 152+** with
    `chrome://flags/#enable-webmcp-testing`, then click **Book an appointment** (`/clinic/book`).
-2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): five `clinic_*` tools —
-   and no booking tool among them.
+2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): nine `clinic_*` tools —
+   and no booking, cancel, or move tool among them.
 3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a 45-second bar and
    the dock at the bottom arms.
 4. Ask it to *"just book it."* It will explain that it can't, and why.
@@ -74,12 +74,16 @@ Neither party can complete the task alone, and that is the design rather than a 
 
 ## Why WebMCP, specifically
 
-Five tools are registered on `/clinic/book` with `document.modelContext.registerTool()`:
-`clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`,
-`clinic_explain_confirm`. Two of them write — `clinic_hold_slot` and `clinic_release_hold` — and
-everything they write is reversible and self-expiring.
+Nine tools are registered on `/clinic/book` with `document.modelContext.registerTool()`:
+`clinic_list_drops`, `clinic_find_slots`, `clinic_clinicians`, `clinic_hold_slot`,
+`clinic_hold_status`, `clinic_release_hold`, `clinic_prepare_cancel`, `clinic_prepare_move`,
+`clinic_explain_confirm`. The writes — hold, release, and the two prepare tools — are all
+reversible and self-expiring; `clinic_prepare_cancel` / `clinic_prepare_move` **arm** the page's
+dock and perform nothing: the cancel or the move happens only on a browser-trusted press, through
+the same gate as booking. A search that matches nothing names the constraint that eliminated
+everything, so an agent on a voice call can say which filter to relax.
 
-**The sixth tool is the design.** There is no booking tool, and there cannot be one: booking is
+**The tenth tool is the design.** There is no booking tool — and no cancel or move tool: booking is
 gated on a browser-trusted event, which no tool call, no console `.click()` and no extension can
 produce. Every synthetic attempt is counted and shown on screen instead of being silently dropped.
 
@@ -102,15 +106,17 @@ Verification is a first-class part of the repo, not a claim in a README:
 
 | Proof | Case |
 |---|---|
-| Five tools registered; **no** booking tool (five negative assertions) | `evals/cases/clinic-thesis.json` |
+| Nine tools registered; **no** booking/cancel/move tool (nine negative assertions) | `evals/cases/clinic-thesis.json` |
 | A synthetic press is **blocked**; a browser-trusted press **books** — same page, same run | same case |
 | The agent path costs the person **1** interaction | same case |
 | A hold lapses after 45 s: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |
 | A rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
 | Booking by hand costs ≥ 30 asserted / **36 measured** interactions | `clinic-manual-tax.json` |
+| Cancel/move are armed by the agent, performed only by a trusted press; a move swaps atomically | `clinic-cancel.json`, `clinic-move.json` |
+| The voice surface: searches, clinician listing, refusals readable aloud | `clinic-voice-tour.json` |
 | **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on all three routes | `node evals/a11y.mjs` |
 
-Plus 418 unit tests. Traces and screenshots for every row are committed under
+Plus 432 unit tests. Traces and screenshots for every row are committed under
 `docs/evidence/clinic/`. Everything above re-runs from a clean clone in two commands.
 
 ## What we are not claiming

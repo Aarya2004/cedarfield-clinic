@@ -299,6 +299,8 @@ test('the flow drives off any DropDriver — a five-line stub is enough', () => 
     confirm: (slotId) => confirmed.push(slotId),
     book: (slotId) => confirmed.push(slotId),
     release: () => {},
+    cancel: () => {},
+    move: () => {},
   };
 
   let state = initialManualFlowState();

@@ -39,7 +39,16 @@ import {
 import { displaySeconds, fractionLeft } from '../../lib/drop/time.ts';
 import type { HoldOrigin } from './hold-origin.ts';
 
+/** SPEC-V2: which consequential act one trusted press performs. The dock never performs two. */
+export type DockAct = 'book' | 'cancel' | 'move';
+
 export interface ConfirmDockProps {
+  /**
+   * The act this dock is armed for. Defaults to 'book' (the hold flow). 'cancel' and 'move' arrive
+   * only via clinic_prepare_cancel / clinic_prepare_move — the agent arms them, the person performs
+   * them, and the trusted-event gate is the same one in all three cases.
+   */
+  act?: DockAct;
   /** Seconds remaining on the hold. The parent mounts the dock only while this is above zero. */
   secondsLeft: number;
   /** The hold's full length, for the retreating rule. */
@@ -58,7 +67,32 @@ export interface ConfirmDockProps {
   gestureSlot?: React.ReactNode;
 }
 
+const ACT_COPY: Record<DockAct, { eyebrowAgent: string; eyebrowYou: string; line: string; key: string; region: string }> = {
+  book: {
+    eyebrowAgent: 'Held by your agent · you book it',
+    eyebrowYou: 'Held for you · you book it',
+    line: 'Book',
+    key: 'Press Enter to book',
+    region: 'Confirm your appointment',
+  },
+  cancel: {
+    eyebrowAgent: 'Your agent prepared this cancel · you decide',
+    eyebrowYou: 'Ready to cancel · you decide',
+    line: 'Cancel',
+    key: 'Press Enter to cancel',
+    region: 'Confirm the cancellation',
+  },
+  move: {
+    eyebrowAgent: 'Your agent prepared this move · you decide',
+    eyebrowYou: 'Ready to move · you decide',
+    line: 'Move',
+    key: 'Press Enter to move',
+    region: 'Confirm the move',
+  },
+};
+
 export function ConfirmDock({
+  act = 'book',
   secondsLeft,
   ttlSeconds,
   slotLabel,
@@ -94,7 +128,7 @@ export function ConfirmDock({
     const prev = prevRef.current;
     prevRef.current = next;
 
-    const said = announcementFor(next, prev);
+    const said = announcementFor(next, prev, act);
     if (said) setLive(said);
 
     if (audioOn) {
@@ -111,7 +145,7 @@ export function ConfirmDock({
         (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
       if (!typing) capRef.current?.focus();
     }
-  }, [armed, secondsLeft, slotLabel, audioOn, player]);
+  }, [armed, secondsLeft, slotLabel, audioOn, player, act]);
 
   const attempt = useCallback(
     (a: { isTrusted: boolean | undefined; source: 'key' | 'pointer'; key?: string; repeat?: boolean }) => {
@@ -128,15 +162,17 @@ export function ConfirmDock({
     [armed, confirmed, onConfirm, secondsLeft],
   );
 
-  const blocked = blockedAnnouncement(untrusted);
+  const blocked = blockedAnnouncement(untrusted, act);
+  const copy = ACT_COPY[act];
   const fraction = fractionLeft(ttlSeconds, secondsLeft);
 
   return (
     <div
       className="cl-dock"
       role="region"
-      aria-label="Confirm your appointment"
+      aria-label={copy.region}
       data-clinic-dock
+      data-clinic-act={act}
       data-armed={armed ? 'true' : 'false'}
       data-origin={origin}
       data-urgency={urgency}
@@ -160,15 +196,19 @@ export function ConfirmDock({
               line with the seconds in it; repeating that here, six inches from a numeral the size
               of a fist, would be the page saying the same thing twice. */}
           <p className="cl-dock__eyebrow" data-clinic-dock-eyebrow>
-            {origin === 'agent' ? 'Held by your agent · you book it' : 'Held for you · you book it'}
+            {origin === 'agent' ? copy.eyebrowAgent : copy.eyebrowYou}
           </p>
           <p className="cl-dock__line">
-            Book {slotLabel} <span style={{ opacity: 0.62 }}>· {slotDetail}</span>
+            {copy.line} {slotLabel} <span style={{ opacity: 0.62 }}>· {slotDetail}</span>
           </p>
           <p className="cl-dock__note">
-            {origin === 'agent'
-              ? 'Your agent took this hold and cannot take the next step. Only a keypress the browser marks as trusted books it.'
-              : 'The hold is yours for now. Only a keypress the browser marks as trusted books it.'}
+            {act === 'book'
+              ? origin === 'agent'
+                ? 'Your agent took this hold and cannot take the next step. Only a keypress the browser marks as trusted books it.'
+                : 'The hold is yours for now. Only a keypress the browser marks as trusted books it.'
+              : act === 'cancel'
+                ? 'Your agent armed this and cannot press the key. Only a keypress the browser marks as trusted cancels it — or ignore it and nothing changes.'
+                : 'Your agent armed this and cannot press the key. One trusted keypress swaps the appointments atomically — or ignore it and nothing changes.'}
           </p>
         </div>
 
@@ -206,7 +246,7 @@ export function ConfirmDock({
             <span className="cl-key__glyph" aria-hidden="true">
               ⏎
             </span>
-            Press Enter to book
+            {copy.key}
           </button>
 
           <div className="cl-dock__minor">
@@ -232,7 +272,7 @@ export function ConfirmDock({
 
           {onRelease ? (
             <button type="button" className="cl-dock__toggle" data-clinic-release onClick={onRelease}>
-              Give it back
+              {act === 'book' ? 'Give it back' : 'Never mind'}
             </button>
           ) : null}
 

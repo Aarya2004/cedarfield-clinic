@@ -87,32 +87,36 @@ export function secondsPhrase(n: number): string {
  * What (if anything) the assertive live region should say for this transition. `null` on every
  * tick that is not the arm, a mark, or the expiry — so the region stays silent between events.
  */
-export function announcementFor(next: ConfirmSurfaceState, prev: ConfirmSurfaceState | null): string | null {
+export function announcementFor(next: ConfirmSurfaceState, prev: ConfirmSurfaceState | null, verb: 'book' | 'cancel' | 'move' = 'book'): string | null {
   const justArmed = next.armed && (prev === null || !prev.armed);
+  const headline = verb === 'book' ? `Slot held: ${next.slotLabel}` : `Ready to ${verb}: ${next.slotLabel}`;
   if (justArmed) {
-    return `Slot held: ${next.slotLabel}. ${secondsPhrase(next.secondsLeft)}. Press Enter to book.`;
+    return `${headline}. ${secondsPhrase(next.secondsLeft)}. Press Enter to ${verb}.`;
   }
   if (!next.armed) {
     // Only the hold running out is worth interrupting for; a hold that was released or booked
     // elsewhere in the UI announces itself there.
-    if (prev !== null && prev.armed && next.secondsLeft <= 0) return 'Hold expired. The slot went back to the list.';
+    if (prev !== null && prev.armed && next.secondsLeft <= 0) {
+      return verb === 'book' ? 'Hold expired. The slot went back to the list.' : `Time ran out. Nothing was ${verb === 'move' ? 'moved' : 'cancelled'}.`;
+    }
     return null;
   }
   if (prev === null || !prev.armed) return null;
   for (const mark of ANNOUNCE_MARKS) {
     if (crossedMark(prev.secondsLeft, next.secondsLeft, mark)) {
-      return `${secondsPhrase(mark)} left. Press Enter to book.`;
+      return `${secondsPhrase(mark)} left. Press Enter to ${verb}.`;
     }
   }
   return null;
 }
 
 /** The polite counterpart: what the blocked-attempt region says. Never assertive — it is not urgent. */
-export function blockedAnnouncement(count: number): string | null {
+export function blockedAnnouncement(count: number, verb: 'book' | 'cancel' | 'move' = 'book'): string | null {
   if (count <= 0) return null;
+  const does = verb === 'book' ? 'books' : verb === 'cancel' ? 'cancels' : 'moves';
   return count === 1
-    ? '1 synthetic press blocked. Only a real keypress books this slot.'
-    : `${count} synthetic presses blocked. Only a real keypress books this slot.`;
+    ? `1 synthetic press blocked. Only a real keypress ${does} this slot.`
+    : `${count} synthetic presses blocked. Only a real keypress ${does} this slot.`;
 }
 
 // ---------------------------------------------------------------------------

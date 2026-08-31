@@ -1,0 +1,98 @@
+[
+ {
+  "_doc": "SPEC-V2: cancelling is a human act. The agent can only ARM the dock; the trusted press performs it. A synthetic click on the armed cancel dock is counted and blocked, same gate as booking."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "_doc": "Book one first \u2014 as the human: hold via tool, then a trusted Enter on the dock."
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-armed] button, button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "_doc": "Now the agent arms the cancel. The tool cancels NOTHING: the slot stays booked."
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "armed.{0,2}:.{0,2}cancel[\\s\\S]*human_only"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-act]')?.getAttribute('data-clinic-act') === 'cancel'",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "booked_yours"
+ },
+ {
+  "_doc": "A synthetic click on the armed cancel dock is blocked and counted \u2014 same gate as booking."
+ },
+ {
+  "eval": "(() => { const b = document.querySelector('[data-clinic-act=\"cancel\"] button[data-clinic-confirm]'); if (!b) return 'no-button'; b.click(); return 'clicked'; })()",
+  "equals": "clicked"
+ },
+ {
+  "sleep": 400
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "booked_yours"
+ },
+ {
+  "eval": "Number(document.querySelector('[data-clinic-act=\"cancel\"] [data-untrusted-attempts]')?.getAttribute('data-untrusted-attempts') ?? 0) >= 1",
+  "equals": true
+ },
+ {
+  "shot": "docs/evidence/clinic/cancel-armed.png"
+ },
+ {
+  "_doc": "The human's Enter cancels it; the slot goes back to open."
+ },
+ {
+  "focus": "[data-clinic-act=\"cancel\"] button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'open'",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-act]') === null",
+  "equals": true
+ }
+]

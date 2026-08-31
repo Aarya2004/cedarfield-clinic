@@ -3,7 +3,7 @@
  * The one command to run the moment the site is deployed.
  *
  * Everything the repo asserts locally, re-asserted against the real origin a judge will open: the
- * routes answer, the five tools register in a real browser, no booking tool is on the surface, a
+ * routes answer, the nine tools register in a real browser, no booking/cancel/move tool is on the surface, a
  * synthetic press is refused, a trusted press books, and axe finds nothing on any route. It exits
  * non-zero if any of that is untrue, so "deployed" and "verified" stop being separate claims.
  *
@@ -45,6 +45,9 @@ for (const path of ['/', '/clinic', '/clinic/book']) {
 // ── 2. the product's own cases, against the deployed origin ────────────────────────────────────
 const cases = [
   ['clinic-thesis.json', '/clinic/book'],
+  ['clinic-voice-tour.json', '/clinic/book'],
+  ['clinic-cancel.json', '/clinic/book'],
+  ['clinic-move.json', '/clinic/book'],
   ['clinic-agent-edges.json', '/clinic/book'],
   ['clinic-responsive.json', '/clinic/book'],
   ['clinic-rival-race.json', '/clinic/book'],

@@ -1,0 +1,69 @@
+[
+ {
+  "_doc": "SPEC-V2: the voice surface. 'What doctors are there?' \u2192 clinic_clinicians. 'Anything after nine with Dr X?' \u2192 clinic_find_slots. Every refusal is a sentence an agent can read aloud."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "invoke": "clinic_clinicians",
+  "outputMatches": "clinicians[\\s\\S]*open_times[\\s\\S]*kinds"
+ },
+ {
+  "_doc": "An open-ended search matches the whole open board."
+ },
+ {
+  "invoke": "clinic_find_slots",
+  "outputMatches": "matches[\\s\\S]*next_wave_seconds"
+ },
+ {
+  "_doc": "A window that excludes everything names the killing constraint \u2014 the agent can say WHICH filter to relax."
+ },
+ {
+  "invoke": "clinic_find_slots",
+  "inputFrom": {
+   "after": "'11 PM'"
+  },
+  "outputMatches": "eliminated_by[\\s\\S]*time_window"
+ },
+ {
+  "_doc": "A clinician nobody has is named as the constraint, and the live ids still come back."
+ },
+ {
+  "invoke": "clinic_find_slots",
+  "inputFrom": {
+   "clinician": "'Dr. Nobody'"
+  },
+  "outputMatches": "eliminated_by[\\s\\S]*clinician[\\s\\S]*open_slot_ids"
+ },
+ {
+  "_doc": "Gibberish time is refused loudly with how to say it, never silently unfiltered."
+ },
+ {
+  "invoke": "clinic_find_slots",
+  "inputFrom": {
+   "after": "'half past nine'"
+  },
+  "outputMatches": "false[\\s\\S]*bad_time"
+ },
+ {
+  "_doc": "prepare_cancel with nothing booked refuses with a reason \u2014 no dock appears."
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "false[\\s\\S]*nothing_booked"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-act]') === null",
+  "equals": true
+ }
+]

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ClinicTools — the five WebMCP tools of the booking page, mounted (SPEC-V1 §3).
+ * ClinicTools — the nine WebMCP tools of the booking page, mounted (SPEC-V1 §3, SPEC-V2 §2).
  *
  * PROVISIONAL SCHEMA — Arav red-lines before lock. The tools themselves live in
  * `lib/drop/clinic-tools.ts`; this file is only the mount point and a two-line status indicator.
@@ -13,9 +13,9 @@
  *     <ClinicTools driver={driver} session={session} />
  *
  * Mount it once, anywhere inside /clinic/book — it renders one small line of text and nothing else,
- * so it is safe in a footer, a status rail, or beside the counter. On mount it registers the five
+ * so it is safe in a footer, a status rail, or beside the counter. On mount it registers the nine
  * tools with `document.modelContext`; on unmount it aborts the one AbortController, which
- * unregisters all five. It owns no state and changes no board state: every tool reads and writes
+ * unregisters all nine. It owns no state and changes no board state: every tool reads and writes
  * through the `driver` and `session` you pass, which are the same objects the UI renders from.
  *
  * Optional `nextWaveAt`: the clock ms of the next drop wave, in `session.now`'s units, if the page
@@ -23,7 +23,8 @@
  * not invent numbers.
  *
  * ── WHAT IT DELIBERATELY CANNOT DO ──────────────────────────────────────────────────────────────
- * There is no booking tool among the five, and this component never calls `driver.confirm()`.
+ * There is no booking, cancelling or moving tool among the nine; this component never calls
+ * `driver.confirm()`, `driver.cancel()` or `driver.move()` — the prepare_* tools only ARM the dock.
  * Booking stays where it belongs: the human's own key press, on the page, gated on a trusted event.
  *
  * The indicator is intentionally quiet — one muted mono line, `data-clinic-tools` on it for the
@@ -48,6 +49,13 @@ export interface ClinicToolsProps {
   session: DropSession;
   /** Clock ms of the next wave, if known. Omitted ⇒ the tools report `next_wave_seconds: null`. */
   nextWaveAt?: number | null;
+  /**
+   * SPEC-V2 arming seams. `clinic_prepare_cancel` / `clinic_prepare_move` call these to arm the
+   * dock for a HUMAN act; return false to refuse (the tool then answers honestly). Omitted ⇒ the
+   * two prepare tools answer `dock_not_wired`. Neither callback may cancel or move anything itself.
+   */
+  onPrepareCancel?: (slotId: string) => boolean;
+  onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
 }
 
 // Same fallbacks as the rest of the drop skin (components/drop/drop-tokens.css), so this line is
@@ -67,25 +75,32 @@ function label(state: ClinicRegistrationState): string {
   }
 }
 
-export function ClinicTools({ driver, session, nextWaveAt = null }: ClinicToolsProps) {
+export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCancel, onPrepareMove }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'unsupported' });
 
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
   const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt });
+  const seams = useRef({ onPrepareCancel, onPrepareMove });
   useEffect(() => {
     view.current = { driver, session, nextWaveAt };
+    seams.current = { onPrepareCancel, onPrepareMove };
   });
 
   useEffect(() => {
     // Registration is async; if the effect is torn down before it resolves (StrictMode's
-    // double-invoke, or a fast navigation), dispose on arrival rather than leak five tools.
+    // double-invoke, or a fast navigation), dispose on arrival rather than leak nine tools.
     let disposed = false;
     let dispose: (() => void) | null = null;
     void registerClinicTools(
       () => view.current,
       (s) => {
         if (!disposed) setState(s);
+      },
+      {
+        // Live seams: registration happens once, the page's callbacks change every render.
+        onPrepareCancel: (slotId) => seams.current.onPrepareCancel?.(slotId) ?? false,
+        onPrepareMove: (fromId, toId) => seams.current.onPrepareMove?.(fromId, toId) ?? false,
       },
     ).then((d) => {
       if (disposed) d();
