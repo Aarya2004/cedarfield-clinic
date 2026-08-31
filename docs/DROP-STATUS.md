@@ -11,7 +11,7 @@ This file is the single source of truth for what is green, what is blocking, and
 | Routes | **`/` is the product** (clinic landing) · `/clinic` same landing · `/clinic/book` the product · `/terminal` Rokan, kept and still evalled |
 | WebMCP tools | five on `/clinic/book`: `clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`, `clinic_explain_confirm` |
 | **The invariant** | **no booking tool exists** — asserted by unit test (by name, in the defs, in the descriptions), by five negative assertions in a live browser, and by test fakes that throw if a tool reaches `book()`/`confirm()` |
-| **Eval suite** | **17/17 cases pass, 0 failed** — 8 clinic + 9 legacy Rokan |
+| **Eval suite** | **19/19 cases pass locally, 0 failed** — 10 clinic + 9 legacy; the kept terminal also re-proven with a real PTY bridge (11/11, 4 judge-only skips) |
 | `clinic-thesis` | 33 steps: tools listed → `clinic_hold_slot` holds → dock arms → **synthetic click blocked** → **trusted Enter books** → `hold_status` says `human_only`. Measured: **1** human input |
 | `clinic-manual-tax` | the same booking by keyboard: **36 measured** trusted inputs (case asserts ≥ 30) and the form is still not valid |
 | `clinic-hold-lapses` | full 45 s TTL with no keypress → slot returns, **nothing booked**, dock disarmed |
@@ -26,9 +26,10 @@ This file is the single source of truth for what is green, what is blocking, and
 
 1. ~~**Deploy.**~~ **DONE 2026-08-31.** Live at **https://rokan-terminal.vercel.app** and verified
    end to end against production: `node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app`
-   → **all 13 checks green** (routes 200 · five tools register in a real browser · no booking tool ·
-   synthetic press refused · trusted press books · hold lapses clean · agent edge cases · responsive ·
-   front door is the product · axe clean on all three routes). Evidence:
+   → 14 of 15 checks green; the one red is the gate catching real drift: production predates the
+   `nextWaveAt` wiring, so `clinic_list_drops` there still tells the agent `null` while the page
+   shows a live countdown. **One redeploy clears it**: `cd apps/web && vercel --prod --yes`, then
+   `node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app`. Evidence:
    `docs/evidence/clinic/2026-08-31-deployed-verification.txt`.
 2. **Repo is PRIVATE.** Devpost requires public source with an OSS licence (LICENSE is Apache-2.0
    already). Flip it, and rename — `webmcp-private` is the first thing a judge reads.

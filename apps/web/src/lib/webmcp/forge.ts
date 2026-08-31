@@ -553,7 +553,10 @@ export class ForgeEngine {
   }
 
   /** Cancel the active invocation (e.g. bridge disconnected). */
-  cancelActive(_reason: DismissReason = 'invocation_cancelled'): void {
+  // `reason` is part of the public signature callers pass (see register.ts), but the abort path
+  // deliberately writes no row of its own — run() owns the single `dismissed` row (Fable P2).
+  cancelActive(reason: DismissReason = 'invocation_cancelled'): void {
+    void reason;
     // Only abort. run()'s abort path dismisses the remaining steps and writes ONE `dismissed` row;
     // doing dismissFrom here too logged the same range twice (Fable P2).
     if (!this.invAc) return;

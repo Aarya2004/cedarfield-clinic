@@ -49,7 +49,9 @@ const cases = [
   ['clinic-responsive.json', '/clinic/book'],
   ['clinic-rival-race.json', '/clinic/book'],
   ['clinic-hold-lapses.json', '/clinic/book'],
+  ['clinic-receipt.json', '/clinic/book'],
   ['clinic-landing-frontdoor.json', '/'],
+  ['clinic-landing-phone.json', '/clinic'],
 ];
 for (const [file, path] of cases) {
   // `_doc` headers are prose (the harness skips them too) and `shot` steps write into the repo's

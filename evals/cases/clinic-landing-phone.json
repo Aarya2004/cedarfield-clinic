@@ -1,0 +1,45 @@
+[
+ {
+  "_doc": [
+   "clinic-landing-phone \u2014 the landing at 390px with its countdown actually ticking (SPEC-V1 \u00a77.3).",
+   "Two samples of the clock a second apart must differ, so 'countdown live' is asserted, not a",
+   "still image; and nothing may overflow the phone viewport on the page a judge reads first."
+  ]
+ },
+ {
+  "viewport": {
+   "width": 390,
+   "height": 844
+  }
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-clinic-route=\"landing\"]')",
+  "timeout": 25000
+ },
+ {
+  "eval": "document.documentElement.scrollWidth - window.innerWidth <= 1",
+  "equals": true
+ },
+ {
+  "eval": "[...document.querySelectorAll('*')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 1).length",
+  "equals": 0
+ },
+ {
+  "waitFor": "(document.querySelector('[data-clinic-clock]')?.getAttribute('data-clinic-clock') ?? 'pending') !== 'pending'",
+  "timeout": 15000
+ },
+ {
+  "eval": "(() => { window.__clk = document.querySelector('[data-clinic-clock]')?.getAttribute('data-clinic-clock'); return typeof window.__clk; })()",
+  "equals": "string"
+ },
+ {
+  "sleep": 1600
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-clock]')?.getAttribute('data-clinic-clock') !== window.__clk",
+  "equals": true
+ },
+ {
+  "shot": "docs/evidence/clinic/phone-landing.png"
+ }
+]

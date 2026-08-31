@@ -529,7 +529,7 @@ test('restore rolls back and returns an error when registerTool rejects — no p
 });
 
 test('forge_list provenance: a composed tool records machine + native + compiled step kinds', async () => {
-  const { engine, store, adapter, exits } = make();
+  const { engine, store, exits } = make();
   const spec: ForgeSpec = { ...hn, name: 'deal_hunt', commands: ['pytest -q', 'rokan do "x at a.com"', 'rokan do "status of b.com"'], params: [], kind: 'read' };
   const c = card(engine, spec);
   await engine.approve(c.card_id, undefined, {});

@@ -1,0 +1,55 @@
+[
+ {
+  "_doc": [
+   "clinic-receipt \u2014 the collapse, on the page's own receipt (SPEC-V1 \u00a77.2).",
+   "After an agent-held booking, the side-by-side receipt renders the agent lane's count from the",
+   "page's trusted-event counter. Headless, the by-hand lane stays '-' (Chrome's date picker blocks",
+   "CDP entry \u2014 see clinic-manual-tax), so this asserts the agent half exactly: one trusted input.",
+   "The hand-vs-agent pair on one screen is the human demo's beat; each half is proven separately."
+  ]
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 25000
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__r = el && el.getAttribute('data-clinic-slot'); return typeof window.__r; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__r"
+  },
+  "outputMatches": "held.{0,2}:true|ttl"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-armed] button"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__r + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-clinic-receipt]')",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-receipt]')?.getAttribute('data-clinic-receipt')",
+  "equals": "-:1"
+ },
+ {
+  "eval": "(document.querySelector('[data-lane=\"agent\"]')?.textContent ?? '').includes('1')",
+  "equals": true
+ },
+ {
+  "shot": "docs/evidence/clinic/receipt-agent-lane.png"
+ }
+]

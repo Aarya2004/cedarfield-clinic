@@ -70,7 +70,7 @@
  },
  {
   "invoke": "clinic_list_drops",
-  "outputMatches": "slot"
+  "outputMatches": "slot[\\s\\S]*next_wave_seconds.{0,2}:[0-9]"
  },
  {
   "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",

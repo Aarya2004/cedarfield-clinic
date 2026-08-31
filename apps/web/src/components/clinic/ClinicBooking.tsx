@@ -361,7 +361,14 @@ export function ClinicBooking() {
           ) : null}
         </div>
 
-        <ClinicTools driver={driver} session={session} />
+        {/* nextWaveAt travels in session.now (driver-clock) units — the tool computes seconds
+            from it. `nextRelease` is wall-ms from now, and the driver clock ticks 1:1 with wall
+            time while running, so now + nextRelease is the wave's driver-clock timestamp. Null
+            while a booking holds the board (the release really is postponed — never invented).
+            Unwired until 2026-08-31: the page showed the human a live countdown while
+            clinic_list_drops told the agent null — the agent was blinder than the person for no
+            reason (self-review against SPEC-V1 §3). */}
+        <ClinicTools driver={driver} session={session} nextWaveAt={nextRelease === null ? null : session.now + nextRelease} />
 
         <Band label="Honestly">
           <p className="cl-prose">
