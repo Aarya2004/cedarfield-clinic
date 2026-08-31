@@ -227,7 +227,10 @@ for (const f of cases) {
   if (first.judgeOnly && !judgeUrl) { console.log(`SKIP ${f} (judge-only; builder shell legitimately has a key)`); skipped++; continue; }
   executed++;
   const extraQuery = typeof first.query === 'string' ? `&${first.query}` : '';
-  const url = `http://localhost:${WEB_PORT}/?test=1${extraQuery}${withBridge || judgeUrl ? pairingHash : ''}`;
+  // `clinic-*` cases drive the Drop product's own route instead of Rokan's terminal at `/`.
+  // They need no bridge and no pairing hash — the page is the whole product (SPEC-V1 §7.2).
+  const routePath = f.startsWith('clinic-') ? '/clinic/book' : '/';
+  const url = `http://localhost:${WEB_PORT}${routePath}?test=1${extraQuery}${withBridge || judgeUrl ? pairingHash : ''}`;
   // Judge runs own the committed evidence (docs/evidence/demo/*.png); every other mode shoots to scratch.
   // Judge runs own the committed evidence, so they must shoot to the case's declared path — set the
   // redirect to '' rather than omitting it, or an exported ROKAN_EVAL_SHOT_DIR in the operator's
