@@ -1,165 +1,122 @@
-# SUBMISSION.md — Devpost description (paste-ready; draft 2026-08-30, final on Sep 2 with the video link)
+# SUBMISSION.md — Devpost description (paste-ready)
 
-> Everything below the rule is the Devpost text, ready to paste. HTML comments are notes to us and
-> must be stripped before pasting. Every number traces to the ledger in `docs/VIDEO-SCRIPT.md` §5.
+> Everything below the rule is the Devpost text. HTML comments are notes to us and must be stripped
+> before pasting. Every number below is produced by a committed eval case; none is estimated.
 
-**Project name:** Rokan Terminal
-**Tagline:** Do it once. Now it's a tool. Now every agent can call it.
-**Live URL:** https://rokan-terminal.vercel.app (open in ChatGPT desktop on GPT-5.6 Sol/Terra, or Chrome 149+ with `chrome://flags/#enable-webmcp-testing`)
-<!-- TODO(Sep 2): the alias is live but Vercel has no git auto-deploy on this project — run
-     `cd apps/web && vercel --prod --yes` and confirm the header reads "Site tools · 7" before submitting. -->
-**Repo:** https://github.com/Aarya2004/webmcp-private (Apache-2.0)
-**Video:** _TODO — unlisted YouTube URL, < 3:00. Shoot per `docs/VIDEO-SCRIPT.md`, paste here and in `README.md`._
+**Project name:** _TODO — the two founders pick it; "The Drop" is the working title._
+**Tagline:** Your agent can hold it. Only you can take it.
+**Live URL:** `https://<deploy>/clinic`
+<!-- TODO(before submit): Vercel has no git auto-deploy on this project. Run
+     `cd apps/web && vercel --prod --yes`, then open /clinic/book in ChatGPT desktop and confirm
+     the Site-tools arrow lists five clinic_* tools before pasting the URL here and in README.md. -->
+**Repo:** `https://github.com/<owner>/<repo>` (Apache-2.0)
+<!-- TODO(before submit): the repo is PRIVATE. Devpost requires public source. Flip it, and rename
+     it — "webmcp-private" is the first thing a judge reads. -->
+**Video:** _TODO — unlisted YouTube, < 3:00, with audio._
 
 ---
 
-## The one-line thesis
+## What it is
 
-The future of the open web is every site callable by agents. **Sites that ship WebMCP get called
-natively. Sites that don't get compiled by the people and agents who use them — and the compiled
-version is retired when native arrives.** And what you and your agent compose across sites and your
-own machine becomes a new tool of your own, in the web's format, callable by any agent, run only with
-your approval.
+A clinic releases cancelled appointments in waves. They are gone in seconds.
 
-Rokan Terminal is that idea with a substrate you can press Enter on: a terminal you and your agent
-share, where a thing you did once becomes a live WebMCP tool. **Compile once; every replay after that
-runs with the model out of the loop** — measured at 0 model calls and 28.9×–42.4× faster end to end
-than two vanilla coding agents answering the same live question.
+On this page your agent does the fast, expensive part — watch the drop, compare, **hold** a slot the
+instant it appears — and then it stops, because **the page publishes no booking tool**. The only
+thing that books an appointment is one act from the person the appointment is for: **one key press,
+one switch press, or one held gesture.** Nothing an agent can call, and nothing a script can fake,
+reaches that step.
 
-## Why WebMCP fits (and what we did with it)
+## The problem, and who has it
 
-A terminal already has a human on one side. WebMCP is the first standard that puts the agent on the
-*same page*, in the *same session* — not in a sandbox on someone else's machine. So the page's tools
-become the trust boundary, made explicit:
+Every task on the web costs a number of interactions. For a mouse user that number is invisible. For
+someone using a switch, voice control, or a head pointer, each interaction costs seconds and real
+physical effort — so an ordinary booking form is a long, tiring project, and a **timed** release is
+not merely hard but structurally impossible: no assistive technology wins a race against a pointer.
+Assistive technology has spent forty years making the gesture easier to perform. It has never made
+the gesture unnecessary.
 
-- **Tools are born at runtime.** `forge_create` opens a card; when the human approves it, the page
-  calls `document.modelContext.registerTool()` for `forged_<name>` with its own `AbortSignal`, and the
-  agent's tool list changes while the page is open (`toolchange`). A judge can watch a tool appear in
-  ChatGPT's Site tools list — or in DevTools → Application → WebMCP — seconds after the human did
-  something once. Seven fixed tools plus up to five forged (7 + 5 = 12; the cap is **our own
-  discipline** against picker noise, not vendor guidance — no vendor documents one), each with
-  `readOnlyHint` / `untrustedContentHint` derived from a human-approved `kind`, writes prefixed
-  `CONSEQUENTIAL:`, `additionalProperties:false` schemas with examples, outputs ≤ 1.5 K chars.
-  <!-- TODO: ChatGPT-desktop footage of Site tools 7 → 8 is unmeasured as of 2026-08-30 (blocked on a
-  teammate's machine). Until it exists, claim the registration in Chrome's WebMCP panel only. -->
-- **Tools act, resources inform, prompts orchestrate — and only tools are WebMCP.** The browser WebMCP
-  standard is tools-only, so the page exposes nothing else and claims nothing else. Our **MCP stdio
-  relay** additionally serves three resources and three prompts; that surface exists on the relay
-  alone. `terminal://history` and `forge://tools` are read live by relaying to the page tools
-  `terminal_history` / `forge_list`, so Share-screen gating and redaction apply unchanged;
-  `terminal://ledger` serves the bridge's HMAC-chained JSONL byte-identical to what was signed. The
-  prompts (`debug-last-failure`, `forge-from-history`, `session-report`) are instruction templates that
-  execute nothing. All read-only.
-- **Native first, compiled only where there is nothing to call.** Before it ever plans against the DOM,
-  our engine lists a site's **own** WebMCP tools over the CDP `WebMCP` domain and calls them. Measured:
-  `allbirds.com` declares **10** native tools; we invoke `search_catalog` directly in **469 ms** of tool
-  time (1 300 ms wall) at **0 model calls**, with a real catalog result and no re-registration
-  (`docs/evidence/probe/2026-08-30-native-invoke-local-image.jsonl`). Read-only by construction: a
-  native tool auto-fires only when it is provably a read; anything consequential still goes through
-  ghost-type and a human Enter (`docs/SECURITY.md` §8).
-- **Second protocol, same tools.** `node packages/bridge/bin/rokan-terminal.js mcp` serves the identical
-  tool list over MCP stdio to Claude Code / Cursor / Codex CLI — measured with Codex CLI as the agent:
-  it proposed, forged a tool, and called that tool from a *new* session, each step gated by the human's
-  Enter (FIELD-NOTES C1–C6). The page stays the single source of truth; the MCP process can never type.
-  One library, two protocols.
-  <!-- TODO: `npx rokan-terminal` is not published (npm 404, checked 2026-08-30). Either publish before
-  Sep 2 and switch these to `npx rokan-terminal mcp`, or leave the `node …/bin` form everywhere. -->
-- **Nothing a tool does executes.** `terminal_propose` and every `forged_*` tool ghost-type; the human's
-  Enter runs the command. That threads a consumer's per-call safety review honestly: the tools are
-  inert by construction, not by description.
-- **Measured, not claimed.** `docs/FIELD-NOTES.md` records what Chrome 152's WebMCP actually does (no
-  `{signal}` passed to `execute`, `executeTool` wants a JSON string, `toolsRemoved` on abort, decorations
-  need `allowProposedApi`) — found by our own headless harness driving the CDP `WebMCP` domain with no
-  consumer in the loop. **24 cases** (9 on the prompt line, 15 on a real PTY, 4 of those judge-only —
-  9/9 and 11/11 green in builder mode, and **15/15 with 0 retries in 96 s** against the live judge
-  container: `docs/evidence/sandbox/2026-08-29-judge-suite-15-of-15.txt`), run on every commit.
+A declared tool does. `hold_slot(id)` contains no drag and no race. That is the specific thing
+WebMCP changes for this person, and it is why the agent here is allowed to do everything **except**
+the one act that should never be automated.
 
-## The better experience
+Measured on the page itself, by a counter that only counts events the browser marks trusted:
 
-For the human: a co-pilot that *proposes* instead of acting, reads only what you share (secrets
-redacted before anything leaves the tab), and turns the commands you repeat into tools. For the agent:
-typed tools instead of guessing at a screen, `terminal_wait` to block on the human instead of polling,
-and real exit codes measured by the shell.
+| | interactions the person spends |
+|---|---|
+| Booking by hand, keyboard only | **≥ 36**, and the form is not finished yet |
+| Booking with your agent | **1** |
 
-Every row in the ledger and the run feed carries **provenance**: `machine` (your shell, your Enter),
-`⚙ native` (the site's own WebMCP tool, named), `⚡ compiled` (a replayed operation — retired when the
-site ships native tools), `planned` (the model planned this run; the next replays it), and `refused`
-(the page drifted and we refused rather than guess). Tools rows say **who forged it** — you or the
-agent — and what its last run cost. Tools you keep survive a reload: they
-are stored per-viewer with their content hash and **restored only through the same approval card**, so
-a hash mismatch re-opens that card and never auto-registers.
+## What humans and agents accomplish together here
 
-## What humans and agents accomplish together that was difficult or impossible before
+Neither party can complete the task alone, and that is the design rather than a limitation.
 
-The agent gets hands on a real shell without ever getting execution. The human gets to *teach by
-doing*: anything done once can be forged into a tool the agent calls next time — including `rokan do`,
-our browsing engine, which acts behind the user's own logins and replays its learned operations at zero
-model calls (the ledger row shows `calls:0 ⚡`, parsed from the engine's own result line). Neither side
-could grow that library alone, and the library is portable: it is WebMCP. A tool you compose today is
-callable tomorrow from ChatGPT, Codex CLI and Claude Code, against the same content hash.
+- **The agent** watches a drop nobody can watch continuously, compares six slots faster than they can
+  be read, holds one the instant it appears, keeps the clock, and explains the state out loud.
+- **The person** does the one thing that must stay theirs: they decide, with a single act small
+  enough to be available to almost anyone — a key, a switch, or a held gesture.
+- **The page** enforces the split so neither has to trust the other's word for it.
 
-## Potential impact — the number, measured (not claimed)
+## Why WebMCP, specifically
 
-The audience is every developer whose agent redoes the web from scratch each session and whose learned
-workflows do not survive a reload or transfer between vendors. The claim is falsifiable and we measured
-it live (`docs/measurements/2026-08-29-ab.md`, harness in `evals/ab/`): same questions, headless, three
-arms — Rokan, Codex CLI, Claude Code.
+Five tools are registered on `/clinic/book` with `document.modelContext.registerTool()`:
+`clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`,
+`clinic_explain_confirm`. `clinic_hold_slot` is the only one that writes anything, and what it
+writes is reversible and self-expiring.
 
-Every arm is timed the same way — **wall clock around the whole process** — so the multipliers are
-wall-vs-wall. Rokan's own internal clock is shown beside it, never in place of it.
+**The sixth tool is the design.** There is no booking tool, and there cannot be one: booking is
+gated on a browser-trusted event, which no tool call, no console `.click()` and no extension can
+produce. Every synthetic attempt is counted and shown on screen instead of being silently dropped.
 
-| task (live web) | Rokan warm ×5 (internal / **wall**) | Codex CLI ×3 (wall) | Claude Code ×3 (wall) | Rokan advantage (wall) |
-| --- | --- | --- | --- | --- |
-| "is status.python.org all systems operational" | **0 model calls** · 79 ms / **546 ms** | 1 turn · 23 164 ms | 3 turns · 15 780 ms | **42.4× / 28.9×** |
-| "how much are Wool Runners at allbirds.com" (builder mode) | **0 model calls** · 1 451 ms / **2 983 ms** | 1 turn · 10 059 ms | 22 turns · 77 421 ms | **3.3× / 25.9×** |
-
-The point is not "our web fetch beats theirs." It is that **the agents re-enter the model on every run
-and Rokan does not** — a compiled operation replays with the model out of the loop. On the compiled task
-that is **28.9×–42.4× faster in wall clock at zero model calls** (23 164 ÷ 546 = 42.4; 15 780 ÷ 546 =
-28.9, truncated), and the agent pays that cost again every single time. N = 5 warm / N = 3 agents;
-small, so we report min/max in `docs/measurements/2026-08-29-ab.md` and never round up.
-
-It also works on pages nobody seeded. In the judge sandbox, an unseeded PostgreSQL docs page answers on
-the first run at `planned · 9 019 ms` (one model call) and replays at `⚡ compiled · 783 ms · 0 calls`
-(`docs/evidence/stranger/2026-08-29-prod-open-net-cold-then-replay.jpg`).
-
-Honest distinctions we also state on camera: the compiled replay is **browserless**; the native replay
-re-drives a live browser to call the site's own WebMCP tool, which is why it costs 2 983 ms; and against
-Codex on that native task the margin is only **3.3×** — we say so rather than lean on it.
-
-The other half is trust. When a page changes, a cached scrape a coding agent wrote keeps running and
-**returns a confident wrong number** — we reproduce this live: after a storefront "redesign" the stale
-selector reads `$75` (a shipping line) as the price when the truth is `$140`. Rokan's `recheck` replays
-every learned operation with planning forbidden and **retires the one that no longer verifies** —
-verified, or refused. Measured live, twice (`docs/evidence/ab/drift-run-{1,2}.txt`): Rokan compiles v1
-in one model call (`Wander Boot $98`, verified, 2 483 ms); after the redesign `recheck` marks the
-operation **DEAD · drift_detected** and retires it, and the re-ask **refuses** — it does not return `$98`,
-and it does not guess `$140` either. Refusal, not recovery — and that is the claim we make. A tool that
-lies quietly is worse than no tool; ours refuses out loud.
+That is the honest answer to "could you do this without WebMCP?" — no. A REST endpoint would let
+anything holding the URL book the slot. A page's own tool surface is the only place you can hand an
+agent real capability while making the consequential act *inexpressible* in the API it is given. The
+fifth tool exists so the agent can explain that boundary in its own words when a user asks it to
+just book the thing.
 
 ## Implementation
 
-Next.js 15 on Vercel; xterm.js 6 with ghost text drawn as an overlay (never through the PTY parser); a
-Node bridge (`node-pty` + WebSocket + Cloudflare quick tunnel + 128-bit pairing token in the URL
-fragment, stripped after parse) with zsh shell integration (OSC 133/7) so `running`, exit codes and
-durations are **measured, not inferred** (bash/sh without integration resolve honestly as
-`measured:false`). Judge mode is the same bridge inside a Cloudflare Sandbox container: non-root,
-HMAC-signed session ids, ephemeral disk, **no API key or secret in the container** — the model proxy
-lives in the Worker with a reserve-before-forward budget — plus headless Chromium so a stranger can
-drive any site on the open web there; per-IP rate limits and a 30-minute TTL, caps table in
-`docs/SECURITY.md` §9. An append-only ledger HMAC-chained in the tab and countersigned by the bridge; a
-single redaction choke point; forged tools carry a content hash, and a changed hash requires a new
-approval — the "bind tool identity" mitigation from arXiv 2606.06387. Every finding from the adversarial
-review passes logged in `docs/PROGRESS.md` (two independent model reviewers plus Codex as a third) was
-fixed with a regression test in the same commit.
+Next.js 15 (App Router, TS strict) on Vercel. The board is a seeded in-page driver — no accounts, no
+database, no backend, **and no model call of our own anywhere in the product**: the reasoning is the
+visitor's own agent, in their own client. One `DropDriver` seam is the single place a real clinic
+backend would plug in; `hold()` is the agent's verb and the only one ever registered, while `book()`
+and `confirm()` are the human's and are unreachable from any tool — the unit-test fakes throw if a
+tool so much as reaches for them.
 
-WebMCP tool descriptions are hints to a cooperative agent, never a security boundary. **Our boundary is
-the keyboard.**
+Verification is a first-class part of the repo, not a claim in a README:
 
-## Facts to keep straight
+| Proof | Case |
+|---|---|
+| Five tools registered; **no** booking tool (five negative assertions) | `evals/cases/clinic-thesis.json` |
+| A synthetic press is **blocked**; a browser-trusted press **books** — same page, same run | same case |
+| The agent path costs the person **1** interaction | same case |
+| A hold lapses after 45 s: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |
+| A rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
+| Booking by hand costs **≥ 36** interactions | `clinic-manual-tax.json` |
+| **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on both routes | `node evals/a11y.mjs` |
 
-WebMCP is authored by Microsoft + Google in the W3C WebML CG; Alex Nahas (MCP-B) is credited for
-implementation experience; Shopify is an origin-trial participant. We do not claim "the strongest
-reading of criterion #1" — we show registrations happening and let the judge decide. Two limits we
-state plainly: ChatGPT desktop's Site-tools refresh on a runtime registration is **unverified** by us
-(measured in Chrome 152 only), and the drift beat ends in a refusal, not a recovery.
+Plus 418 unit tests. Traces and screenshots for every row are committed under
+`docs/evidence/clinic/`. Everything above re-runs from a clean clone in two commands.
+
+## What we are not claiming
+
+- **The inventory is fictional and the page says so on every screen.** Nothing real is booked, no
+  payment is taken, nothing is signed in. The rival is a seeded simulation, labelled as one wherever
+  it appears.
+- **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
+  keyboard-accessible page — never "the accessible version". W3C's APA group is explicit that an
+  agent route does not discharge a page's own obligations, and we agree with them.
+- **Keyboard and switch are the primary confirm.** The camera gesture is a progressive enhancement,
+  off in the submitted build, always beside a keyboard alternative, with a visible threshold and a
+  dwell that resets on any flicker so a tremor cannot fire it (WCAG 2.5.4).
+- **We did not invent the hold.** Netlify's own WebMCP demo, *Mabel's Table*, has agents place
+  five-minute holds on restaurant tables. The inversion is ours: there the agent also confirms; here
+  it cannot, the race is visible rather than implied, and the page counts what the task costs you
+  either way.
+- Not a scalper tool: **your own agent, your own booking, no resale, and only a human books.**
+
+## What is next
+
+A real clinic backend behind the same `DropDriver` seam; the waitlist cascade, so that when a hold
+lapses the next person receives their own full window and nobody has to race at all; and a
+standards note to the WebMCP CG, whose accessibility section is currently an empty stub, proposing
+consequential acts as human-only affordances that a tool surface deliberately cannot express.
