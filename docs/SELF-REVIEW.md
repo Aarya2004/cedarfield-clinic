@@ -1,5 +1,9 @@
 # SELF-REVIEW — the entry against its own plans (read-only audit, 2026-08-28 ~19:30 PT, HEAD `254ad30`)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 Method: every doc listed in the brief was read in full; the code the plans name was read to confirm or
 refute. No build, server, browser, Docker or eval was run — every number below is quoted from a
 measurement someone else recorded (FIELD-NOTES row, PROGRESS line, a VERIFY report) or is a static fact

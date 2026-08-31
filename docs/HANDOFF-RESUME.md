@@ -1,5 +1,9 @@
 # HANDOFF — resume point (2026-08-29 ~18:40 local, Engineer #4 / Fable)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 **Read this + `docs/PROGRESS.md` (top block) + `~/.claude/plans/optimized-mapping-tarjan.md` (the bible) first.**
 Everything below is pushed to `main` (entry repo `github.com/Aarya2004/webmcp-private`) unless noted.
 

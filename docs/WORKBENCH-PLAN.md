@@ -1,5 +1,9 @@
 # Workbench, absorbed — cross-site native composition inside the shipped product (build plan)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 Decision record: `docs/SELF-EVAL-WORKBENCH.md` (§8 = the executor-(a) re-score) · evidence:
 `docs/research/2026-08-30-workbench-prior-art.md`, `docs/evidence/probe/`. Repos: `~/dev/webmcp-private`
 (entry) and `~/dev/Rokan` `feat/tier0-native` (engine; only wheels move over). Written 2026-08-30 ~01:30 PT

@@ -1,5 +1,9 @@
 # FORGE-PLAN — complete specification and build plan (approved by Arav 2026-08-28 03:30 PT)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 Status: plan for approval. Scope discipline = Handset (PLAN §11): everything below is required for
 the hero shot in §8 or for a scored criterion; nothing else. Every external fact cites where it was
 verified. "Measured" = produced by our code on this machine (FIELD-NOTES). "Unverified" = must be

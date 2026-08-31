@@ -1,5 +1,9 @@
 # DEMO.md — the 2:40 video and the live-judge script (PLAN §8, forge-first order per §0.9)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 ## Pre-stage checklist (tick every line before recording; the April 23 rule)
 - [ ] `pnpm gate` green on the commit being demoed; commit hash written here: `________`
 - [ ] Vercel **production** alias opens in ChatGPT desktop (GPT-5.6 Sol/Terra) → Site tools arrow shows **7** (the seven fixed tools in `apps/web/src/lib/webmcp/schemas.ts` `FIXED_TOOL_NAMES`; FIELD-NOTES T3's "6" predates `terminal_history`)

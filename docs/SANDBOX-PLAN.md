@@ -1,5 +1,9 @@
 # SANDBOX-PLAN — judge mode: a stranger opens the live URL and gets a real, throttled terminal
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 Status: written 2026-08-28 11:50 PT by C after TERMINAL-PLAN went green (headless + headed). Same
 discipline: Handset-scoped, every external fact verified today (Cloudflare docs + the installed
 `sandbox-stable` skill + npm/Docker Hub), test every baby step, measured numbers only.

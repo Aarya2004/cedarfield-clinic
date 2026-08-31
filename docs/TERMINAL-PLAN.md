@@ -1,5 +1,9 @@
 # TERMINAL-PLAN — the vehicle: live terminal, ghost text, real adapter, card UX (Rokan Terminal)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 Status: written 2026-08-28 06:10 PT by C after the Forge plan's prompt-line half went green
 (`docs/FORGE-PLAN.md` §7.6; evidence `docs/evidence/gate-c/`). Same discipline: Handset-scoped,
 every external fact verified (xterm 6.0.0 typings read from `node_modules` on this machine), test

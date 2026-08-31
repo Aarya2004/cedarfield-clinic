@@ -155,6 +155,13 @@ unreachable from any tool.
 residual (the page itself is the trust boundary; what the design forecloses is anything holding
 only the tool surface or the endpoints).
 
+## Where everything else is
+
+`docs/README.md` is the index: what is current, and what describes *Rokan Terminal* — the pre-pivot
+entry that still runs at `/terminal` and is still tested, but is **not** this submission. Every
+pre-pivot document carries a banner saying so, so nothing in this repo can be mistaken for a claim
+about the product being judged.
+
 ## Licence
 
 Apache-2.0 — see `LICENSE`.

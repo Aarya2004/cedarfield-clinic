@@ -1,5 +1,9 @@
 # HANDOFF — Rokan Terminal (rewritten 2026-08-29 by Fable 5, "Engineer #3")
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 > **2026-08-29 ~03:00 PT (Engineer #4): §1 below is superseded by `docs/COMPOSE-PLAN.md`** — the
 > final layer (compose the web, keep it as a tool; Tier 0 consume-else-compile; kept tools; D1/D2
 > structural demos; production bar §1.1; schedule + kill rules §9). PLAN §0.10 records the decision.

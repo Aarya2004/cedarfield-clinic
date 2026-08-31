@@ -1,5 +1,9 @@
 # COMPOSE-PLAN — "compose the web, keep it as a tool" (the final layer; approved for build by Arav 2026-08-29 ~03:00 PT)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 > Written by Engineer #4 (Fable 5) after seven research lanes on 2026-08-29 (judges, sponsor
 > visions, WebMCP origins, developer demands, terminals-as-agent-surfaces, the live field, and an
 > adversarial "is this a solution without a problem" pass) plus Rokan `IDEA-LEDGER §S` (the original

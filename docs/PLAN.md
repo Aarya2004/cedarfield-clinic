@@ -1,5 +1,9 @@
 # Rokan Terminal — WebMCP Challenge execution plan
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 > **This is a hackathon entry** (OpenAI WebMCP Challenge, Devpost, 10 days, $35K, top-10, 7 judges).
 > **Status: PROPOSED. Nothing built. Arav + Aarya both say "go" before any code.**
 > Written 2026-08-28 night. Deadline **2026-09-03 13:00 PT** (Devpost rules; ignore

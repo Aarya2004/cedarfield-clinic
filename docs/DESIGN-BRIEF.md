@@ -1,5 +1,9 @@
 # DESIGN BRIEF — terminal-first workspace (wayfinder map #1, tickets #2–#9)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 Subject: a forge for tools — a terminal where approved work becomes permanent, agent-callable
 tools. The page's single job: let a human and an agent work one terminal together and *watch
 tools get born*. Audience: developers + seven hackathon judges skimming fast.

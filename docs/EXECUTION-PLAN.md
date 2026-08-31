@@ -1,5 +1,9 @@
 # Execution plan — "Compose the web, keep it as a tool" (COMPOSE-PLAN build)
 
+> **Historical — pre-pivot.** This document describes *Rokan Terminal*, which now lives at
+> `/terminal` and is not the submitted product. The submission is **The Drop** — start at
+> [`docs/README.md`](README.md).
+
 Full spec, evidence and etiquette: `docs/COMPOSE-PLAN.md` (pushed, `6ede64f`). This file is the
 build order with exact touch points. Repos: `~/dev/webmcp-private` (entry) and `~/dev/Rokan`
 (engine; only wheels move over).
