@@ -7,7 +7,7 @@
  *
  * Chrome budget recommendations respected (developer.chrome.com/docs/ai/webmcp/secure-tools):
  * name ≤ 30 chars · description ≤ 500 · param descriptions ≤ 150 · outputs aimed under 1.5 K
- * (watch_slots caps at 12 slots + `more`).
+ * (watch_slots caps at WATCH_SLOTS_MAX slots + `more`).
  */
 
 export const DROP_TOOL_NAMES = [
