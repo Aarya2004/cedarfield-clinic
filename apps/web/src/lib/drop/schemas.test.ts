@@ -23,7 +23,7 @@ import {
 test('booking is not a tool: no forbidden name on the surface, ever', () => {
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
     assert.ok(
-      !DROP_TOOL_NAMES.some((n) => n === forbidden),
+      !(DROP_TOOL_NAMES as readonly string[]).includes(forbidden),
       `the tool surface must never contain ${forbidden} — the absence is the product`,
     );
   }
