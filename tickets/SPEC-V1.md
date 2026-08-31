@@ -16,9 +16,9 @@ no resale · only a human books.
 
 ## 2. Site map
 
-- `/` — landing: thesis headline, next-drop countdown (live), three-step how-it-works
+- `/clinic` — landing (Rokan's `/` stays intact on this branch): thesis headline, next-drop countdown (live), three-step how-it-works
   (agent holds → TTL burns → your one press books), the honesty/a11y statement, CTA → `/book`.
-- `/book` — the product: live slot board + drop countdown, the confirm dock (armed only during your
+- `/clinic/book` — the product: live slot board + drop countdown, the confirm dock (armed only during your
   hold), manual booking flow (clicking a slot books by hand — the page is simply a bookable clinic),
   quiet always-on interaction counter, and after an agent-held booking the side-by-side receipt
   (by hand N vs with your agent 1). Both routes `force-dynamic` (CSP nonce — bench finding #5).
