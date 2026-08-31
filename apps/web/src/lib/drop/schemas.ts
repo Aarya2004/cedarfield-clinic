@@ -27,8 +27,8 @@ export const FORBIDDEN_TOOL_NAMES = ['confirm_booking', 'book_slot', 'confirm', 
 export const SERVICES = ['clinic', 'dmv', 'permit'] as const;
 export type Service = (typeof SERVICES)[number];
 
-/** watch_slots output is capped so one response stays under the 1.5 K recommendation. */
-export const WATCH_SLOTS_MAX = 12;
+/** watch_slots caps at 10 slots + `more`: 12 measured 1 583 chars worst-case, 10 measures ≤ 1 340. */
+export const WATCH_SLOTS_MAX = 10;
 
 const serviceParam = {
   type: 'string',
