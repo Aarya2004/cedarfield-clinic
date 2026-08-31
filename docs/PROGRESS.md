@@ -1,6 +1,37 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-30 ~08:30 local (Aarya's Claude)** Branch `main`, all pushed.
+Last update: **2026-08-31 evening (Engineer #4)** Branch `main`.
+
+## Build log — Engineer #4 (2026-08-31 evening) — SPEC-V2: the voice surface, 9 tools, cancel/move stay human
+Arav's directive: make the agent genuinely conversational (voice: "what doctors are there?",
+"anything after nine?", "cancel my appointment") while every consequential act stays one trusted
+press. Spec in `tickets/SPEC-V2.md`; built bottom-up, each layer gated before the next.
+- **Driver** — `DropDriver` gains `cancel(slotId)` / `move(from,to)` (atomic swap; a cancel-then-
+  rebook round trip is a race) + the `cancelled` event. Mock implements both; move absorbs a
+  prepared hold on the target; 3 new driver tests.
+- **Tools 5 → 9** — `clinic_find_slots` (clinician/kind/after/before; an empty result names the
+  constraint that eliminated everything — `eliminated_by` — so a voice agent can say which filter
+  to relax; times parsed as spoken: "9", "4 PM", "11:30 am"), `clinic_clinicians`,
+  `clinic_prepare_cancel`, `clinic_prepare_move`. The prepare tools only ARM the dock through
+  page-injected seams (`ClinicToolsOptions.onPrepareCancel/onPrepareMove`); the unit fakes THROW if
+  any tool reaches `driver.cancel`/`move`. `prepare_move` freezes the target with a hold and
+  answers with the target's post-freeze state; `prepare_cancel` refuses `hold_in_progress` while a
+  hold is live (the book dock keeps priority). FORBIDDEN grew (clinic_cancel_booking, …).
+- **Page** — `ClinicBooking` pendingAct state machine (arm → expiry/supersede/dismiss → trusted
+  press performs; the ONLY call sites of driver.cancel/move in the product); `ConfirmDock` act
+  modes (book/cancel/move) with keyed remounts + verb-aware announcements; cancel of a manually-
+  booked slot also resets the flow card. **Fold bug caught by the new eval, not by units:** the
+  session fold didn't know `cancelled`, so the UI never reopened a cancelled slot — fixed in
+  `useDropSession.fold`.
+- **Evals 10 → 13 clinic** — `clinic-voice-tour` (searches + readable refusals), `clinic-cancel`
+  (arm → synthetic click BLOCKED and counted → trusted Enter cancels), `clinic-move` (target frozen
+  → one press swaps atomically → never two bookings). `clinic-thesis` now 42 steps, tool count 9,
+  9 negative assertions.
+- **Gate** — 433/433 unit tests · 13/13 clinic evals · axe 0×3 routes · typecheck/lint/build clean.
+- **Docs same-commit** — README + SUBMISSION tables (9 tools, new proof rows), DROP-STATUS.
+- **NEEDS ARAV:** redeploy (`cd apps/web && vercel --prod --yes`), then from repo root
+  `node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app` (now 18 checks — red
+  against prod until the redeploy). VIDEO-SCRIPT still says "five tools" — video deferred by Arav.
 
 ## Build log — Aarya's Claude (2026-08-30 ~08:30 local) — submission map #10: six tickets closed (RestoreCard live, video script, copy pass)
 Worked via the wayfinder map (issue #10); web lane + docs only. Final gate re-run by me after every merge:

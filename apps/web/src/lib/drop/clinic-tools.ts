@@ -646,6 +646,13 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             open_slot_ids: openIds(view.session.slots),
           } satisfies ErrorResult);
         }
+        if (view.session.held !== null) {
+          return asToolResult({
+            ok: false,
+            error: 'hold_in_progress',
+            detail: 'You are holding a slot right now — the page shows your human the booking dock, not a cancel dock. Release the hold (clinic_release_hold) or let them decide it first.',
+          } satisfies ErrorResult);
+        }
         // Never `driver.cancel` — that verb is the human's. The page's dock is armed instead.
         if (!options.onPrepareCancel || !options.onPrepareCancel(booked.id)) {
           return asToolResult({
@@ -716,7 +723,8 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             open_slot_ids: openIds(view.session.slots),
           } satisfies ErrorResult);
         }
-        // Never `driver.move` — the swap itself is the human's. The dock is armed with the target.
+        // Never `driver.move` — the swap itself is the human's. The dock is armed with the target,
+        // and the page freezes it with a hold (the agent's verb) so nobody takes it mid-decision.
         if (!options.onPrepareMove || !options.onPrepareMove(booked.id, target.id)) {
           return asToolResult({
             ok: false,
@@ -724,11 +732,16 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             detail: 'This page cannot arm the move dock right now. Ask your human to rebook on the page.',
           } satisfies ErrorResult);
         }
+        // The freeze lands through React state; answer with the target as it IS, not as it was.
+        await settle(source, (v) => v.session.held?.slotId === target.id, timeoutMs, pollMs);
+        const after = source();
+        const targetNow = after.session.slots.find((s) => s.id === target.id) ?? target;
         return asToolResult({
           ok: true,
           armed: 'move' as const,
           from_slot: toAgentSlot(booked),
-          to_slot: toAgentSlot(target),
+          to_slot: toAgentSlot(targetNow),
+          target_frozen: after.session.held?.slotId === target.id,
           moving: 'human_only' as const,
           next_step: MOVE_CHOREOGRAPHY,
         });

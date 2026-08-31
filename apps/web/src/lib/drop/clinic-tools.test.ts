@@ -656,3 +656,17 @@ test('clinic_prepare_move onto a rival-taken slot is refused with the state', as
   assert.equal(out.error, 'slot_unavailable');
   assert.equal(out.slot_state, 'taken_by_rival');
 });
+
+test('clinic_prepare_cancel refuses while a hold is live — the book dock keeps priority', async () => {
+  const { driver, source } = ready();
+  const armed: string[] = [];
+  const defs = clinicToolDefs(source, { ...FAST, onPrepareCancel: (id) => (armed.push(id), true) });
+  const open = driver.snapshot().slots.filter((s) => s.state === 'open');
+  driver.hold(open[0].id);
+  driver.book(open[0].id);
+  driver.hold(open[1].id); // the agent is mid-way through holding something new
+  const out = await callJson(defs.find((d) => d.name === 'clinic_prepare_cancel')!);
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'hold_in_progress');
+  assert.deepEqual(armed, [], 'nothing was armed behind the live hold');
+});

@@ -7,12 +7,12 @@ This file is the single source of truth for what is green, what is blocking, and
 
 | Thing | State |
 |---|---|
-| `apps/web` gate | typecheck clean · **418/418 unit tests** · lint 0 errors · production build clean |
+| `apps/web` gate | typecheck clean · **433/433 unit tests** · lint 0 errors · production build clean |
 | Routes | **`/` is the product** (clinic landing) · `/clinic` same landing · `/clinic/book` the product · `/terminal` Rokan, kept and still evalled |
-| WebMCP tools | five on `/clinic/book`: `clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`, `clinic_explain_confirm` |
-| **The invariant** | **no booking tool exists** — asserted by unit test (by name, in the defs, in the descriptions), by five negative assertions in a live browser, and by test fakes that throw if a tool reaches `book()`/`confirm()` |
-| **Eval suite** | **19/19 cases pass locally, 0 failed** — 10 clinic + 9 legacy; the kept terminal also re-proven with a real PTY bridge (11/11, 4 judge-only skips) |
-| `clinic-thesis` | 33 steps: tools listed → `clinic_hold_slot` holds → dock arms → **synthetic click blocked** → **trusted Enter books** → `hold_status` says `human_only`. Measured: **1** human input |
+| WebMCP tools | **nine** on `/clinic/book` (SPEC-V2, 2026-08-31): list, **find_slots**, **clinicians**, hold, status, release, **prepare_cancel**, **prepare_move**, explain_confirm. The prepare tools only ARM the dock — cancel/move are performed by a trusted press through the same gate as booking; a move swaps atomically with the target frozen |
+| **The invariant** | **no booking tool exists** — asserted by unit test (by name, in the defs, in the descriptions), by nine negative assertions in a live browser, and by test fakes that throw if a tool reaches `book()`/`confirm()`/`cancel()`/`move()` |
+| **Eval suite** | **22/22 cases pass locally, 0 failed** — 13 clinic (incl. `clinic-voice-tour`, `clinic-cancel`, `clinic-move`) + 9 legacy; the kept terminal also re-proven with a real PTY bridge (11/11, 4 judge-only skips) |
+| `clinic-thesis` | 42 steps: tools listed → `clinic_hold_slot` holds → dock arms → **synthetic click blocked** → **trusted Enter books** → `hold_status` says `human_only`. Measured: **1** human input |
 | `clinic-manual-tax` | the same booking by keyboard: **36 measured** trusted inputs (case asserts ≥ 30) and the form is still not valid |
 | `clinic-hold-lapses` | full 45 s TTL with no keypress → slot returns, **nothing booked**, dock disarmed |
 | `clinic-rival-race` | the rival takes a slot mid-read; holding a gone slot is **refused with a reason** |
@@ -31,6 +31,10 @@ This file is the single source of truth for what is green, what is blocking, and
    clock ticking on a phone · axe clean ×3 · and the agent is now told the live countdown —
    `next_wave_seconds` asserted numeric). Evidence:
    `docs/evidence/clinic/2026-08-31-deployed-verification.txt`.
+   **REOPENED by SPEC-V2 (2026-08-31 evening):** prod predates the nine-tool surface — the verifier
+   now runs **18 checks** including `clinic-voice-tour` / `clinic-cancel` / `clinic-move` and will be
+   red against the live origin until Arav redeploys (`cd apps/web && vercel --prod --yes`), then from
+   the repo root: `node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app`.
 2. **Repo is PRIVATE.** Devpost requires public source with an OSS licence (LICENSE is Apache-2.0
    already). Flip it, and rename — `webmcp-private` is the first thing a judge reads.
 3. **The origin still says `rokan-terminal`.** The submitted product is a clinic booking page; the

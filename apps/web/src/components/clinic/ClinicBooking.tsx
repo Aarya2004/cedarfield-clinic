@@ -229,6 +229,9 @@ export function ClinicBooking() {
     // a cancel arm dies when its own clock runs out; both die when the slot stops being cancellable.
     if (pendingAct.kind === 'move' && session.held?.slotId !== pendingAct.toId) setPendingAct(null);
     else if (pendingAct.kind === 'cancel' && pendingSecondsLeft <= 0) setPendingAct(null);
+    // A hold arriving AFTER a cancel was armed is a newer intent (the agent moved on to booking
+    // something); the cancel arm stands down rather than hiding a burning hold behind its dock.
+    else if (pendingAct.kind === 'cancel' && session.held !== null) setPendingAct(null);
     else {
       const anchor = pendingAct.kind === 'cancel' ? pendingAct.slotId : pendingAct.fromId;
       if (session.slots.find((s) => s.id === anchor)?.state !== 'booked_yours') setPendingAct(null);
@@ -243,13 +246,16 @@ export function ClinicBooking() {
     if (pendingAct === null) return;
     if (pendingAct.kind === 'cancel') {
       driver.cancel(pendingAct.slotId);
+      // A manually-booked slot leaves the flow sitting on its "booked" card; cancelling that slot
+      // must take the card with it, or the page would show a booking the board no longer has.
+      if (flow.bookedSlotId === pendingAct.slotId) dispatch({ type: 'restart' });
     } else {
       driver.move(pendingAct.fromId, pendingAct.toId);
       // The move produced a booking; hold the board for the same grace a booking gets.
       setLastBookedAt(Date.now() - mountedAt.current);
     }
     setPendingAct(null);
-  }, [pendingAct, driver]);
+  }, [pendingAct, driver, flow.bookedSlotId]);
 
   const dismissPendingAct = useCallback(() => {
     if (pendingAct?.kind === 'move' && session.held?.slotId === pendingAct.toId) {
@@ -317,9 +323,10 @@ export function ClinicBooking() {
 
   /**
    * The agent seam, for the eval harness and for anyone reading the page with dev tools open. It
-   * mirrors the tools this page publishes and NOTHING ELSE: list, hold, status, release. There is
-   * deliberately no `book` here for the same reason there is no booking tool — the only thing that
-   * turns a hold into an appointment is a keypress the browser marked as trusted.
+   * mirrors the AGENT-VERB subset of what this page publishes and NOTHING ELSE: list, hold,
+   * status, release. There is deliberately no `book`, `cancel` or `move` here for the same reason
+   * there are no such tools — the only thing that performs a consequential act is a keypress the
+   * browser marked as trusted (the prepare_* tools go through the real tool surface, not this seam).
    */
   useEffect(() => {
     const w = window as unknown as { __CEDARFIELD_AGENT__?: unknown };
