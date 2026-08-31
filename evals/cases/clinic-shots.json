@@ -1,0 +1,15 @@
+[
+  { "_doc": ["Evidence shots for the video script and the Devpost gallery. Not an assertion case: it drives the real page and photographs the four beats the film needs."] },
+  { "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')", "timeout": 25000 },
+  { "shot": "docs/evidence/clinic/beat1-board.png" },
+  { "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__s = el && el.getAttribute('data-clinic-slot'); return typeof window.__s; })()", "equals": "string" },
+  { "waitFor": "!!document.querySelector('[data-slot-state=\"taken_by_rival\"]')", "timeout": 45000 },
+  { "shot": "docs/evidence/clinic/beat2-rival-took-one.png" },
+  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__s" }, "outputMatches": "held|ttl" },
+  { "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'", "timeout": 8000 },
+  { "shot": "docs/evidence/clinic/beat3-held-armed.png" },
+  { "focus": "[data-armed] button" },
+  { "key": "Enter" },
+  { "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'", "timeout": 8000 },
+  { "shot": "docs/evidence/clinic/beat4-booked.png" }
+]
