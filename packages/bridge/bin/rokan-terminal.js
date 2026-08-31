@@ -133,7 +133,11 @@ if (has('no-tunnel')) {
 }
 
 function printLink(wsUrl) {
-  const link = `${app}/#ws=${encodeURIComponent(wsUrl)}&t=${token}`;
+  // The terminal client lives at /terminal since 2026-08-31 (the front door became the clinic).
+  // `#ws=` is parsed only by the terminal's session code, so a link to the bare origin lands on a
+  // page that never reads it and pairing silently never starts (adversarial review, finding 3).
+  const appPath = app.replace(/\/+$/, '');
+  const link = `${appPath}${appPath.endsWith('/terminal') ? '' : '/terminal'}#ws=${encodeURIComponent(wsUrl)}&t=${token}`;
   process.stdout.write(`\nOpen this in ChatGPT desktop or Chrome:\n\n  ${link}\n\nOne tab at a time. Ctrl-C twice to stop.\n\n`);
 }
 

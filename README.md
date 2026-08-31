@@ -47,7 +47,7 @@ Measured on this page, in the harness, against the page's own counter:
 
 | | interactions the person spends |
 |---|---|
-| Booking by hand, keyboard only | **≥ 36** — and the form is not finished yet<sup>1</sup> |
+| Booking by hand, keyboard only | **36 measured** (the case asserts a ≥ 30 floor) — and the form is not finished yet<sup>1</sup> |
 | Booking with your agent | **1** — the keypress that books it |
 
 <sup>1</sup> A floor, not the total: Chrome's native date picker does not accept segment entry over
@@ -66,7 +66,7 @@ them books anything, and that is not an omission we could patch later — it is 
 | `clinic_list_drops` | ✅ | The next wave and the open slots |
 | `clinic_hold_slot` | ❌ | Holds one slot for 45 s for **this** visitor. Books nothing, auto-releases |
 | `clinic_hold_status` | ✅ | Seconds left, and what the person must do |
-| `clinic_release_hold` | ✅ | Gives the hold back early |
+| `clinic_release_hold` | ❌ | Gives the hold back early (a write — it mutates the board) |
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists — written for the agent to read aloud |
 
 Booking is gated on a **browser-trusted event**. A tool call cannot produce one; a `.click()` from
@@ -99,7 +99,7 @@ node evals/a11y.mjs                                        # axe-core on both ro
 | The agent path costs the person **1** interaction | same case |
 | A hold lapses after 45 s: slot returns, **nothing booked** | `clinic-hold-lapses.json` |
 | The rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
-| Booking by hand costs **≥ 36** interactions | `clinic-manual-tax.json` |
+| Booking by hand costs ≥ 30 asserted / **36 measured** interactions | `clinic-manual-tax.json` |
 | **0 axe violations**, WCAG 2.0/2.1/2.2 A + AA, all three routes | `node evals/a11y.mjs` |
 
 Traces and screenshots for every one of these are committed under `docs/evidence/clinic/`.

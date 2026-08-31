@@ -2,7 +2,7 @@
    ▲ Next.js 15.5.24
 
    Creating an optimized production build ...
- ✓ Compiled successfully in 1043ms
+ ✓ Compiled successfully in 1189ms
    Linting and checking validity of types ...
 
 ./src/lib/webmcp/forge.test.ts
@@ -19,11 +19,12 @@ info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/d
    Collecting build traces ...
 
 Route (app)                                 Size  First Load JS
-┌ ƒ /                                    1.25 kB         103 kB
+┌ ƒ /                                    1.34 kB         107 kB
 ├ ○ /_not-found                            991 B         103 kB
 ├ ƒ /clinic                              1.34 kB         107 kB
 ├ ƒ /clinic/book                         13.3 kB         126 kB
-└ ƒ /drop-spike                            17 kB         126 kB
+├ ƒ /drop-spike                            17 kB         126 kB
+└ ƒ /terminal                            1.25 kB         103 kB
 + First Load JS shared by all             102 kB
   ├ chunks/112-f2a1824eed5ca30f.js       45.8 kB
   ├ chunks/7e3aeeaa-b72d937b1b77f902.js  54.2 kB
@@ -35,6 +36,7 @@ Route (app)                                 Size  First Load JS
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 
+✔ / — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
 ✔ /clinic — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
 ✔ /clinic/book — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
 

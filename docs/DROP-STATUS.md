@@ -11,9 +11,9 @@ This file is the single source of truth for what is green, what is blocking, and
 | Routes | **`/` is the product** (clinic landing) · `/clinic` same landing · `/clinic/book` the product · `/terminal` Rokan, kept and still evalled |
 | WebMCP tools | five on `/clinic/book`: `clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`, `clinic_explain_confirm` |
 | **The invariant** | **no booking tool exists** — asserted by unit test (by name, in the defs, in the descriptions), by five negative assertions in a live browser, and by test fakes that throw if a tool reaches `book()`/`confirm()` |
-| **Eval suite** | **14/14 cases pass, 0 failed** — 5 clinic + 9 legacy Rokan |
+| **Eval suite** | **17/17 cases pass, 0 failed** — 8 clinic + 9 legacy Rokan |
 | `clinic-thesis` | 33 steps: tools listed → `clinic_hold_slot` holds → dock arms → **synthetic click blocked** → **trusted Enter books** → `hold_status` says `human_only`. Measured: **1** human input |
-| `clinic-manual-tax` | the same booking by keyboard: **36 trusted inputs and the form is still not valid** (a floor — see the case header) |
+| `clinic-manual-tax` | the same booking by keyboard: **36 measured** trusted inputs (case asserts ≥ 30) and the form is still not valid |
 | `clinic-hold-lapses` | full 45 s TTL with no keypress → slot returns, **nothing booked**, dock disarmed |
 | `clinic-rival-race` | the rival takes a slot mid-read; holding a gone slot is **refused with a reason** |
 | `clinic-landing-frontdoor` | `/` carries the product and no terminal |
@@ -26,9 +26,10 @@ This file is the single source of truth for what is green, what is blocking, and
 
 1. ~~**Deploy.**~~ **DONE 2026-08-31.** Live at **https://rokan-terminal.vercel.app** and verified
    end to end against production: `node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app`
-   → **11/11 green** (routes 200 · five tools register in a real browser · no booking tool · synthetic
-   press refused · trusted press books · hold lapses clean · front door is the product · axe clean on
-   all three routes). Evidence: `docs/evidence/clinic/2026-08-31-deployed-verification.txt`.
+   → **all 13 checks green** (routes 200 · five tools register in a real browser · no booking tool ·
+   synthetic press refused · trusted press books · hold lapses clean · agent edge cases · responsive ·
+   front door is the product · axe clean on all three routes). Evidence:
+   `docs/evidence/clinic/2026-08-31-deployed-verification.txt`.
 2. **Repo is PRIVATE.** Devpost requires public source with an OSS licence (LICENSE is Apache-2.0
    already). Flip it, and rename — `webmcp-private` is the first thing a judge reads.
 3. **The origin still says `rokan-terminal`.** The submitted product is a clinic booking page; the
@@ -51,7 +52,7 @@ This file is the single source of truth for what is green, what is blocking, and
 - [x] SECURITY §10 on main, corrected to the shipped product
 - [x] Accessibility gate (`evals/a11y.mjs`) — committed, and the three violations it found are fixed
 - [x] The front door: `/` is the product; Rokan kept at `/terminal`
-- [x] **Deployed-URL run** — 11/11 green against production, evidence committed
+- [x] **Deployed-URL run** — all 13 checks green against production, evidence committed
 - [ ] The video's numbers pinned to the receipt the page itself shows (needs one manual browser run)
 - [ ] Optional if time: the waitlist cascade, so a lapsed hold offers the next person their own window
 

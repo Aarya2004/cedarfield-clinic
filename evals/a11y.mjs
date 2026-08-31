@@ -12,7 +12,7 @@
  * cannot fail the first audit anyone runs on it. (2026-08-31: it found three on the first pass —
  * no `<main>`, no `<h1>`, thirteen nodes outside any landmark. Fixed in ClinicFrame/Landing/Booking.)
  *
- *   node evals/a11y.mjs                                    # builds + serves apps/web, audits both routes
+ *   node evals/a11y.mjs                                    # builds + serves apps/web, audits /, /clinic, /clinic/book
  *   node evals/a11y.mjs --url=https://…                    # audits a deployed origin instead
  *   node evals/a11y.mjs --routes=/clinic,/clinic/book      # pick the routes
  *   node evals/a11y.mjs --tags=wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa   # narrow the rule set
@@ -29,7 +29,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(join(root, 'apps/web/package.json'));
 const flag = (n, d) => process.argv.find((a) => a.startsWith(`--${n}=`))?.slice(n.length + 3) ?? d;
 
-const routes = flag('routes', '/clinic,/clinic/book').split(',').filter(Boolean);
+const routes = flag('routes', '/,/clinic,/clinic/book').split(',').filter(Boolean);
 // Default rule set: the WCAG tags a judge (or an audit tool) would actually cite. `best-practice`
 // rules are advisory and deliberately out — we gate on the standard, not on taste.
 const tags = flag('tags', 'wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22a,wcag22aa').split(',');

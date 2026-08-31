@@ -249,6 +249,12 @@ export class MockDropDriver implements DropDriver {
     const slot = this.find(slotId);
     if (!slot) return;
     if (slot.state !== 'open' && slot.state !== 'held_by_you') return;
+    // One live hold per visitor is an invariant, not a preference (SECURITY §10). Booking B while
+    // the agent holds A must give A back — otherwise the hold survives with no dock, no countdown
+    // and three tools disagreeing about it (adversarial review 2026-08-31, finding 2: the board
+    // showed "Held — yours" on a slot the visitor could no longer act on, hold_status said
+    // held:false, and release_hold said nothing_held, all at once).
+    if (this.hold_ && this.hold_.slotId !== slotId) this.release(this.hold_.slotId);
     if (this.hold_?.slotId === slotId) this.hold_ = null; // queued ticks become no-ops
     slot.state = 'booked_yours';
     this.emit({ type: 'booked', slotId, at: this.time });
@@ -388,8 +394,10 @@ export class MockDropDriver implements DropDriver {
         return;
       }
       case 'sweep': {
+        // Only a slot still sitting in `expired_hold` gets swept. (`hold()`/`book()` never accept
+        // that state, so "re-claim before the sweep" is not a path today — the guard is here for
+        // when a wave resets the slot to `open` before the sweep fires.)
         const slot = this.find(task.slotId!);
-        // Only an unclaimed lapsed hold gets swept — if you re-held or re-booked it, it is yours.
         if (!slot || slot.state !== 'expired_hold') return;
         this.takeByRival(slot.id);
         return;

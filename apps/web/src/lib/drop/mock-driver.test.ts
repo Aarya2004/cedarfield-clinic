@@ -249,3 +249,37 @@ test('emitted slots are copies — a consumer cannot mutate the board', () => {
   wave.slots[0].state = 'booked_yours';
   assert.equal(d.snapshot().slots[0].state, 'open');
 });
+
+test('book(B) while holding A releases A — one live hold per visitor survives a manual booking', () => {
+  // Adversarial review 2026-08-31, finding 2: without the release, the hold on A was stranded —
+  // still painted "Held — yours" on the board, invisible to hold_status, unreleasable by the agent.
+  const driver = createMockDriver({ seed: 7, scenario: 'hold-and-book' });
+  const events: DropEvent[] = [];
+  driver.subscribe((e) => events.push(e));
+  const [a, b] = driver
+    .snapshot()
+    .slots.filter((s) => s.state === 'open')
+    .map((s) => s.id);
+  driver.hold(a);
+  assert.equal(driver.snapshot().slots.find((s) => s.id === a)?.state, 'held_by_you');
+  driver.book(b);
+  const snap = driver.snapshot();
+  assert.equal(snap.slots.find((s) => s.id === b)?.state, 'booked_yours');
+  assert.equal(snap.slots.find((s) => s.id === a)?.state, 'open', 'the held slot is given back');
+  assert.equal(snap.hold, null, 'no stranded hold');
+  assert.equal(
+    snap.slots.filter((s) => s.state === 'held_by_you').length,
+    0,
+    'one-live-hold invariant holds after a manual booking',
+  );
+});
+
+test('book(A) on the very slot you hold books it and clears the hold (no self-release round trip)', () => {
+  const driver = createMockDriver({ seed: 7, scenario: 'hold-and-book' });
+  const a = driver.snapshot().slots.find((s) => s.state === 'open')!.id;
+  driver.hold(a);
+  driver.book(a);
+  const snap = driver.snapshot();
+  assert.equal(snap.slots.find((s) => s.id === a)?.state, 'booked_yours');
+  assert.equal(snap.hold, null);
+});

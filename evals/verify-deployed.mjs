@@ -52,6 +52,9 @@ const cases = [
   ['clinic-landing-frontdoor.json', '/'],
 ];
 for (const [file, path] of cases) {
+  // `_doc` headers are prose (the harness skips them too) and `shot` steps write into the repo's
+  // committed evidence, which a verification run must never do. NB: the harness reads `allowErrors`
+  // from steps[0] — if a case ever sets it on its `_doc` header, hoist it before filtering.
   const steps = JSON.parse(readFileSync(join(root, 'evals/cases', file), 'utf8')).filter((s) => !s._doc && !s.shot);
   const tmp = join(work, file);
   writeFileSync(tmp, JSON.stringify(steps));

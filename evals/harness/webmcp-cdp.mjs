@@ -212,6 +212,15 @@ for (const step of steps) {
       const ok = step.expect.tool ? tools.has(step.expect.tool) : step.expect.noTool ? !tools.has(step.expect.noTool) : false;
       if (!ok) await fail();
       out({ step: 'expect', expect: step.expect, ok, tools: [...tools.keys()] });
+    } else if (step._doc) {
+      // Case-file documentation: not executed, not counted (see `executed` below).
+      out({ step: 'doc' });
+    } else {
+      // A step nothing above recognised — a typo like `waitfor` or `evel` used to run as a no-op
+      // and count as a pass, making a mistyped assertion indistinguishable from a passing one
+      // (adversarial review 2026-08-31, finding 6). Unknown means failed, loudly.
+      out({ step: 'unknown', keys: Object.keys(step) });
+      await fail();
     }
   } catch (e) {
     failed++;
@@ -233,6 +242,9 @@ if (pageErrors.length && !allowErrors) {
   failed++;
   out({ step: 'pageErrors', ok: false, count: pageErrors.length, errors: pageErrors.slice(0, 5), hint: 'set "allowErrors": true on the first step of this case to accept them' });
 }
-out({ summary: { steps: steps.length, failed, tools: [...tools.keys()], pageErrors: pageErrors.slice(0, 5), ...(allowErrors ? { allowErrors: true } : {}) } });
+// `steps` counts what ran, not what the file contains: `_doc` entries are prose, and counting
+// them padded every documented case's step total by one.
+const executedSteps = steps.filter((s) => !s._doc).length;
+out({ summary: { steps: executedSteps, failed, tools: [...tools.keys()], pageErrors: pageErrors.slice(0, 5), ...(allowErrors ? { allowErrors: true } : {}) } });
 ws.close(); reap();
 process.exit(failed ? 1 : 0);

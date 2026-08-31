@@ -6,10 +6,10 @@
 **Project name:** _TODO — the two founders pick it; "The Drop" is the working title._
 **Tagline:** Your agent can hold it. Only you can take it.
 **Live URL:** https://rokan-terminal.vercel.app (the front door is the product; the booking page is `/clinic/book`)
-<!-- Deployed and verified 2026-08-31: node evals/verify-deployed.mjs --url=… → 11/11 green
+<!-- Deployed and verified 2026-08-31: node evals/verify-deployed.mjs --url=… — all checks green
      (routes, five tools, no booking tool, synthetic press refused, trusted press books, hold
-     lapses clean, front door is the product, axe clean ×3). Evidence:
-     docs/evidence/clinic/2026-08-31-deployed-verification.txt
+     lapses clean, agent edge cases, responsive, front door is the product, axe clean ×3).
+     Evidence: docs/evidence/clinic/2026-08-31-deployed-verification.txt
      TODO: the origin still carries the pre-pivot project name — see DROP-STATUS. -->
 **Repo:** `https://github.com/<owner>/<repo>` (Apache-2.0)
 <!-- TODO(before submit): the repo is PRIVATE. Devpost requires public source. Flip it, and rename
@@ -45,7 +45,7 @@ Measured on the page itself, by a counter that only counts events the browser ma
 
 | | interactions the person spends |
 |---|---|
-| Booking by hand, keyboard only | **≥ 36**, and the form is not finished yet |
+| Booking by hand, keyboard only | **36 measured** (≥ 30 asserted), and the form is not finished yet |
 | Booking with your agent | **1** |
 
 ## What humans and agents accomplish together here
@@ -62,8 +62,8 @@ Neither party can complete the task alone, and that is the design rather than a 
 
 Five tools are registered on `/clinic/book` with `document.modelContext.registerTool()`:
 `clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`,
-`clinic_explain_confirm`. `clinic_hold_slot` is the only one that writes anything, and what it
-writes is reversible and self-expiring.
+`clinic_explain_confirm`. Two of them write — `clinic_hold_slot` and `clinic_release_hold` — and
+everything they write is reversible and self-expiring.
 
 **The sixth tool is the design.** There is no booking tool, and there cannot be one: booking is
 gated on a browser-trusted event, which no tool call, no console `.click()` and no extension can
@@ -93,7 +93,7 @@ Verification is a first-class part of the repo, not a claim in a README:
 | The agent path costs the person **1** interaction | same case |
 | A hold lapses after 45 s: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |
 | A rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
-| Booking by hand costs **≥ 36** interactions | `clinic-manual-tax.json` |
+| Booking by hand costs ≥ 30 asserted / **36 measured** interactions | `clinic-manual-tax.json` |
 | **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on all three routes | `node evals/a11y.mjs` |
 
 Plus 418 unit tests. Traces and screenshots for every row are committed under

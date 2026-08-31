@@ -3,10 +3,10 @@
   "_doc": [
    "clinic-hold-lapses \u2014 the honesty of the hold itself.",
    "hold_slot() is the only write an agent can make, and the claim on the page is that it books",
-   "NOTHING: it auto-releases and the slot returns to the board. This case waits out the full",
-   "45-second TTL without touching the keyboard and asserts the slot is open again, that nothing",
-   "was booked, and that clinic_hold_status reports no hold. If a hold ever quietly became a",
-   "booking, this is the case that fails."
+   "NOTHING: it auto-releases when the 45-second TTL lapses. This case waits out the full TTL with",
+   "no keyboard input and asserts the slot LEFT the visitor's hands (back to open, or taken in the",
+   "meantime \u2014 either is honest; 'still held' or 'booked' would be the lie), that nothing anywhere",
+   "was booked, that the dock disarmed, and that clinic_hold_status reports no live hold."
   ]
  },
  {
@@ -50,7 +50,7 @@
  },
  {
   "invoke": "clinic_hold_status",
-  "outputMatches": "\"held\":false|null"
+  "outputMatches": "held.{0,2}:false"
  },
  {
   "shot": "docs/evidence/clinic/hold-lapsed.png"

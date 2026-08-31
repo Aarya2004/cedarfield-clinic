@@ -209,6 +209,6 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   Every number on screen is measured by the code that shows it; the counter counts only trusted events.
 - **Fairness in the demo:** one live hold per visitor; the labelled simulated rival takes three of six slots
   over the first forty seconds and never the last open one, so someone arriving late can always still book.
-- **Accessibility:** axe-core reports 0 violations on both routes (WCAG 2.0/2.1/2.2 A + AA), gated by
+- **Accessibility:** axe-core reports 0 violations on all three routes (WCAG 2.0/2.1/2.2 A + AA), gated by
   `node evals/a11y.mjs`. The camera gesture is off unless flagged, always beside a keyboard path.
 
