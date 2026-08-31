@@ -1,0 +1,696 @@
+/* =============================================================================
+ * The bench — the skin of the drop spike playground (T8).
+ *
+ * The components this page composes are two different materials: a light clinic day sheet (the
+ * board, the manual flow) and a warm dark mechanical instrument (the confirm surface). The page
+ * itself is neither. It is the RACK THEY ARE MOUNTED ON: cool anodised graphite, hairline panel
+ * divisions, mono channel labels, one scope-green running light. Nothing on the bench competes
+ * with the specimens bolted to it — the bench is grey, the sheet is paper, the keycap is the only
+ * lit object.
+ *
+ * Every colour below is declared on `.bench`, never on `:root`, so this file cannot leak into the
+ * Rokan app. Ratios are WCAG 2.1, computed from these exact hex values.
+ * ============================================================================= */
+
+.bench {
+  --bench: #23282b; /* the rack: cool graphite, deliberately not the app's warm iron */
+  --bench-panel: #2b3134;
+  --bench-rail: #3a4247;
+  --bench-ink: #eaefec; /* 12.9:1 on --bench */
+  --bench-dim: #98a29e; /* 5.6:1 on --bench */
+  --bench-live: #64d2a4; /* 8.0:1 on --bench — the running light and the playhead */
+  --bench-warn: #f0a648; /* 7.3:1 on --bench */
+  --bench-clay: #e08b6c; /* 5.8:1 on --bench — the rival, matched to the sheet's clay */
+  --bench-yours: #7fb6ee; /* 7.4:1 on --bench — your claim, matched to the sheet's blue */
+
+  min-height: 100dvh;
+  padding: clamp(0.9rem, 2.2vw, 2rem);
+  background: var(--bench);
+  color: var(--bench-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The bench's own voice: engraved channel labels. Used for every control and every caption. */
+.bench-label {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bench-dim);
+}
+
+/* =============================================================================
+ * Masthead
+ * ========================================================================== */
+
+.bench__masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem 1.5rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--bench-rail);
+}
+
+.bench__title {
+  margin: 0;
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: clamp(0.85rem, 0.7rem + 0.5vw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.bench__subtitle {
+  margin: 0.25rem 0 0;
+  max-width: 48ch;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--bench-dim);
+}
+
+/* The standing disclaimer. It is a fact about this page, so it is typeset as a fact, not a badge. */
+.bench__claim {
+  max-width: 34ch;
+  margin: 0;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--bench-warn);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--bench-dim);
+}
+
+.bench__claim b {
+  color: var(--bench-ink);
+  font-weight: 600;
+}
+
+/* =============================================================================
+ * Transport — the controls, and the trace they drive
+ * ========================================================================== */
+
+.bench__transport {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem 0 1rem;
+  border-bottom: 1px solid var(--bench-rail);
+}
+
+.transport__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.9rem;
+  min-width: 0;
+}
+
+.transport__group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.bench-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--bench-rail);
+  border-radius: 2px;
+  background: var(--bench-panel);
+  color: var(--bench-ink);
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 120ms linear, background-color 120ms linear;
+}
+
+.bench-button:hover:not(:disabled) {
+  border-color: var(--bench-dim);
+  background: #333a3e;
+}
+
+.bench-button:disabled {
+  color: var(--bench-dim);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.bench-button[aria-pressed='true'] {
+  border-color: var(--bench-live);
+  color: var(--bench-ink);
+}
+
+.bench-select,
+.bench-number {
+  min-height: 2.1rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--bench-rail);
+  border-radius: 2px;
+  background: var(--bench-panel);
+  color: var(--bench-ink);
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+}
+
+/* A select is sized by its longest option unless told otherwise, and the scenario labels are
+   sentences. Without this the transport row sets the page's minimum width and a phone scrolls
+   sideways. */
+.bench-select {
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+.bench-number {
+  width: 4.5rem;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.transport__clock {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.transport__t {
+  font-size: 1.05rem;
+  color: var(--bench-ink);
+}
+
+.transport__lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bench-dim);
+}
+
+.transport__lamp::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bench-rail);
+}
+
+.transport__lamp[data-running='true'] {
+  color: var(--bench-live);
+}
+
+.transport__lamp[data-running='true']::before {
+  background: var(--bench-live);
+  box-shadow: 0 0 7px var(--bench-live);
+}
+
+/* ---- the trace: the driver's real event log against its own seeded clock ------------------- */
+
+.trace {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.trace__track {
+  position: relative;
+  height: 30px;
+  border: 1px solid var(--bench-rail);
+  border-radius: 2px;
+  background: linear-gradient(var(--bench-panel), var(--bench-panel)) padding-box;
+  overflow: hidden;
+}
+
+/* Second gridlines, so the tick pattern can be read as timing and not just as decoration. */
+.trace__grid {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--bench-rail) 0 1px,
+    transparent 1px var(--trace-second, 3.33%)
+  );
+  opacity: 0.5;
+}
+
+.trace__mark {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--bench-dim);
+}
+
+.trace__mark[data-kind='drop_wave'] {
+  background: var(--bench-ink);
+  width: 3px;
+}
+
+.trace__mark[data-kind='slot_taken'] {
+  background: var(--bench-clay);
+}
+
+.trace__mark[data-kind='hold_started'] {
+  background: var(--bench-yours);
+  width: 3px;
+}
+
+/* The heartbeat under a live hold — hairlines, so twenty of them read as a pulse, not as events. */
+.trace__mark[data-kind='hold_tick'] {
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: var(--bench-yours);
+  opacity: 0.55;
+}
+
+.trace__mark[data-kind='hold_expired'] {
+  background: #f16a5f;
+  width: 3px;
+}
+
+.trace__mark[data-kind='booked'] {
+  background: var(--bench-live);
+  width: 4px;
+}
+
+.trace__head {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--bench-live);
+  box-shadow: 0 0 6px var(--bench-live);
+}
+
+.trace__scale {
+  position: relative;
+  height: 0.95rem;
+}
+
+.trace__scale span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 0.6rem;
+  color: var(--bench-dim);
+}
+
+/* The end labels sit inside the track rather than hanging off it — a half-label of overhang is a
+   horizontal scrollbar on a phone. */
+.trace__scale span:first-child {
+  transform: none;
+}
+
+.trace__scale span:last-child {
+  transform: translateX(-100%);
+}
+
+.trace__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+}
+
+.trace__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.trace__legend i {
+  width: 9px;
+  height: 3px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* =============================================================================
+ * Body — the rail and the stage
+ * ========================================================================== */
+
+.bench__body {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.6rem);
+  padding-top: 1.1rem;
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .bench__body {
+    grid-template-columns: minmax(15rem, 18.5rem) minmax(0, 1fr);
+  }
+}
+
+.rail {
+  display: grid;
+  gap: 1.4rem;
+  align-content: start;
+}
+
+.rail__group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+/* ---- the acts ------------------------------------------------------------------------------ */
+
+.act {
+  display: grid;
+  grid-template-columns: 2.1rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0 0.6rem;
+  width: 100%;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--bench-rail);
+  border-left-width: 3px;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--bench-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms linear, background-color 120ms linear;
+}
+
+.act:hover {
+  background: var(--bench-panel);
+}
+
+.act[aria-current='true'] {
+  border-left-color: var(--bench-live);
+  background: var(--bench-panel);
+}
+
+.act__n {
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--bench-dim);
+}
+
+.act[aria-current='true'] .act__n {
+  color: var(--bench-live);
+}
+
+/* The one serif on the bench. Three act titles, and nowhere else: the human voice on a machine. */
+.act__title {
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+
+.act__blurb {
+  grid-column: 2;
+  margin: 0.2rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--bench-dim);
+}
+
+/* ---- the ledger: the contrast, kept on screen ---------------------------------------------- */
+
+.ledger {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--bench-rail);
+  border-radius: 2px;
+  background: var(--bench-panel);
+}
+
+.ledger__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--bench-rail);
+}
+
+.ledger__row:last-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ledger__what {
+  font-size: 0.85rem;
+}
+
+.ledger__where {
+  display: block;
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--bench-dim);
+}
+
+.ledger__n {
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 1.5rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger__n[data-measured='false'] {
+  font-size: 0.8rem;
+  color: var(--bench-dim);
+}
+
+.ledger__row[data-lane='agent'] .ledger__n[data-measured='true'] {
+  color: var(--bench-live);
+}
+
+.ledger__row[data-lane='hand'] .ledger__n[data-measured='true'] {
+  color: var(--bench-clay);
+}
+
+.ledger__note {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--bench-dim);
+}
+
+.rail__notes {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--bench-dim);
+}
+
+/* =============================================================================
+ * The stage — where the specimens are mounted
+ * ========================================================================== */
+
+.stage {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.stage-pane {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+/* The board wants the whole bench; a form does not. Measure-width and centred, so the empty space
+   beside the manual lane reads as a decision rather than as a layout that ran out. */
+.stage-pane[data-bench-pane='manual'] {
+  justify-items: center;
+}
+
+.stage-pane[data-bench-pane='manual'] > * {
+  width: min(100%, 44rem);
+}
+
+/* The countdown paints with the app's tokens too; on the bench they are already dark-shell values,
+   so only the rails and the live colour are re-pointed onto the bench palette. */
+.countdown-mount {
+  max-width: 28rem;
+  --line: var(--bench-rail);
+  --ink: var(--bench-ink);
+  --muted: var(--bench-dim);
+  --drop-live: var(--bench-live);
+}
+
+/* The running tally on the bench. drop-tokens.css declares --drop-ink/--drop-muted for paper. */
+.tally-on-bench {
+  --drop-ink: var(--bench-ink);
+  --drop-muted: var(--bench-dim);
+}
+
+/*
+ * The light scope. TtlBar and DropCountdown paint with the APP's tokens (--ink / --muted / --line),
+ * which are tuned for the dark Rokan shell — near-white ink, invisible on a paper card. Re-pointing
+ * them here is what lets those two components sit inside the day sheet unchanged.
+ * Ratios are against --drop-card #fcfdfb and --drop-yours-wash #e2ecf7.
+ */
+.stage--sheet {
+  --ink: #14171a; /* 17.6:1 on the card · 15.1:1 on the held wash */
+  --muted: #555c62; /* 6.7:1 on the card · 5.7:1 on the held wash */
+  --line: #c7ccc8;
+  --drop-live: #b45309; /* the countdown's live rail, on paper */
+  padding: clamp(0.7rem, 1.6vw, 1.1rem);
+  border: 1px solid var(--bench-rail);
+  border-radius: 2px;
+  background: var(--drop-bg, #e6e9e6);
+  color: var(--ink);
+}
+
+.stage__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ---- the agent's turn, stated honestly ------------------------------------------------------ */
+
+.sim {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px dashed var(--bench-rail);
+  border-radius: 2px;
+  background: var(--bench-panel);
+}
+
+.sim__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sim__button {
+  min-height: 2.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--bench-yours);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--bench-yours);
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background-color 120ms linear, color 120ms linear;
+}
+
+.sim__button:hover:not(:disabled) {
+  background: var(--bench-yours);
+  color: #10161c;
+}
+
+.sim__button:disabled {
+  border-color: var(--bench-rail);
+  color: var(--bench-dim);
+  cursor: not-allowed;
+}
+
+.sim__caption {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--bench-dim);
+}
+
+.sim__caption b {
+  color: var(--bench-ink);
+  font-weight: 600;
+}
+
+/* ---- the instrument -------------------------------------------------------------------------
+ * drop-tokens.css declares --drop-ink / --drop-muted at :root for PAPER (#14171a on #fcfdfb).
+ * The confirm surface reads those same names for its dark keycap, where #14171a lands at 1.2:1.
+ * Re-declaring the dark family here is what keeps the cap legible. Per T1's contrast note the
+ * urgency inks are deliberately NOT overridden — the component's own measured-on-dark fallbacks
+ * (#7fe0ac / #f0a648 / #ff8f84) are the correct values and stay in force.
+ */
+.instrument {
+  --drop-stage: #1e1a14;
+  --drop-cap: #2b261d;
+  --drop-cap-edge: #3d372b;
+  --drop-lip: #0a0806;
+  --drop-ink: #f2ede2; /* 12.9:1 on the cap */
+  --drop-muted: #a49a88; /* 5.4:1 on the cap */
+  --drop-focus: #f0a648;
+}
+
+.measured {
+  display: block;
+}
+
+.measured__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 0.8rem;
+  padding-bottom: 0.4rem;
+}
+
+/* ---- the receipt panel, on the bench --------------------------------------------------------- */
+
+.receipt {
+  --drop-card: transparent;
+  --drop-ink: var(--bench-ink);
+  --drop-muted: var(--bench-dim);
+  --drop-rule: var(--bench-rail);
+  padding: 0.2rem 0.9rem 0.8rem;
+  border: 1px solid var(--bench-rail);
+  border-radius: 2px;
+  background: var(--bench-panel);
+}
+
+.bench__foot {
+  margin-top: 1.4rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--bench-rail);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--bench-dim);
+}
+
+.bench__foot code {
+  font-family: var(--font-mono), ui-monospace, Menlo, monospace;
+  color: var(--bench-ink);
+}
+
+.bench-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bench-button,
+  .act,
+  .sim__button {
+    transition: none;
+  }
+}
