@@ -55,7 +55,7 @@ export function CounterBadge({ count, mode, variant = 'tally', breakdown, classN
         data-drop-count={count}
         role="status"
         aria-live="polite"
-        className={`w-full max-w-sm ${className}`}
+        className={`w-full ${className}`}
         style={{ background: PAPER, borderTop: `1px solid ${INK}`, color: INK }}
       >
         <p
