@@ -2,7 +2,7 @@
 id: T6
 title: MediaPipe gesture module (flagged progressive enhancement)
 type: task
-status: in_progress
+status: closed
 assignee: aarya-claude
 blocked-by: []
 ---
@@ -27,3 +27,6 @@ enhancement that upgrades in place when `getUserMedia` resolves).
   recognizer events, mocked recognizer); real-camera check is a manual step documented in the
   component README, incl. the open question: getUserMedia in ChatGPT desktop is UNVERIFIED — this
   module must degrade invisibly there.
+
+## Resolution (2026-08-30)
+Commit c845a1a. 22 tests (dwell/flicker/cancel/fire-once). @mediapipe/tasks-vision@1.0.1 pinned; model+wasm (42MB) NOT committed — sha256-pinned fetch script (scripts/fetch-gesture-model.sh) + gitignore. Headless: no-camera path 20/20 (honest visible line, keyboard still books, ZERO Google-origin requests), fake-camera 10/10 (pipeline 2230ms cold, hand-free feed books nothing). RATIFIED by orchestrator: (1) middleware camera/wasm headers exist ONLY under NEXT_PUBLIC_DROP_GESTURE=1 (verified in src/middleware.ts:24; flag-off headers byte-identical); (2) connect-src stays closed — MediaPipe telemetry to odml.pa.googleapis.com is refused by CSP and the recognizer works anyway; never widen it. OPEN: real-palm recognition + ChatGPT-desktop getUserMedia are the two manual human checks (GESTURE.md); gesture stays out of the demo script until done.

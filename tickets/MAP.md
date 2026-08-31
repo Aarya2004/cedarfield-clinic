@@ -25,6 +25,11 @@ contract file. Honest numbers: the counter measures, never scripts. NEVER push t
 
 ## Decisions so far
 
+ALL 8 TICKETS CLOSED 2026-08-30 — destination reached: full clickable Drop Bench at /drop-spike,
+378/378 tests, build clean, headless-proven, pushed to origin/drop-ui-spike. Resolutions live in each
+ticket file; T8's resolution carries the 5 transplant findings for Arav (headline: the real contract
+needs one-call book(slotId)). Remaining = human checks: real-palm dwell, ChatGPT-desktop camera probe.
+
 Charter decisions (chat, 2026-08-30 evening, pre-map):
 - Pre-lock scope = the green list only: pure UI, props-driven, zero dependency on Arav's DO state
   machine or tool contract (both undecided until lock).
