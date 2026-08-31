@@ -2,7 +2,7 @@
 id: T4
 title: Interaction counter + measurement spec
 type: task
-status: in_progress
+status: closed
 assignee: aarya-claude
 blocked-by: []
 ---
@@ -23,3 +23,6 @@ The honesty-critical module: `lib/drop/interaction-counter.ts` + a small `Counte
 3. `CounterBadge` — `{ count, mode: 'manual' | 'agent' }`: quiet running tally that becomes the
    receipt line at task end ("manual mode: 41 interactions"). Never a hardcoded number anywhere —
    grep-proof: the strings "42" / "21×" must not appear in this code.
+
+## Resolution (2026-08-30)
+Commit aae2572. 24 tests + live Chromium drive: receipt 73 == hand-count 73 (9 clicks/62 keys/1 scroll/1 tab); 12-event wheel burst = 1; 100 synthetic events = 0 (isTrusted proven live). COUNTING.md written first: pointerdown not click, keydown minus modifiers/repeat, wheel coalesced 350ms, tabs split out; manual number is a floor, judgement calls named. Verified independently: targeted 49/49 (w/ T5), banned-string grep clean in T4/T5 files.
