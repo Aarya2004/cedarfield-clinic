@@ -237,6 +237,23 @@ export class MockDropDriver implements DropDriver {
     this.schedule({ at: this.time + ttlSeconds * 1000, kind: 'hold_expire', holdId: id, slotId });
   }
 
+  /**
+   * The human's one act on the first-come path: take an open slot and book it in a single call
+   * (contract ratified 2026-08-31 — T8 finding #1). A slot you are already holding books too, so
+   * one verb covers "I clicked an open slot" and "my agent held it for me". Anything else —
+   * another visitor's hold, the rival's slot, an already-booked slot — is ignored, not faked.
+   *
+   * Never registered as a WebMCP tool, and never reachable except from a trusted input event.
+   */
+  book(slotId: string): void {
+    const slot = this.find(slotId);
+    if (!slot) return;
+    if (slot.state !== 'open' && slot.state !== 'held_by_you') return;
+    if (this.hold_?.slotId === slotId) this.hold_ = null; // queued ticks become no-ops
+    slot.state = 'booked_yours';
+    this.emit({ type: 'booked', slotId, at: this.time });
+  }
+
   /** Book the slot you are holding. Ignored for anything you are not currently holding. */
   confirm(slotId: string): void {
     const slot = this.find(slotId);

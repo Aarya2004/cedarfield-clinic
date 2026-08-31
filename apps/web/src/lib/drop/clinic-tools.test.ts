@@ -79,6 +79,9 @@ function makeSource(driver: MockDropDriver): { source: ClinicToolsSource; holds:
     confirm: () => {
       throw new Error('a clinic tool called driver.confirm() — booking is the human path only');
     },
+    book: () => {
+      throw new Error('a clinic tool called driver.book() — booking is the human path only');
+    },
   };
   const source = (): ClinicToolsView => {
     const snap = driver.snapshot();
@@ -106,6 +109,7 @@ function frozenSource(slots: Slot[], calls: string[]): ClinicToolsSource {
     hold: (id) => calls.push(`hold:${id}`),
     release: (id) => calls.push(`release:${id}`),
     confirm: (id) => calls.push(`confirm:${id}`),
+    book: (id) => calls.push(`book:${id}`),
   };
   return () => ({
     driver,
@@ -422,4 +426,36 @@ test('a driver that ignores hold(): hold_not_confirmed, never a fabricated hold'
   assert.equal(out.ok, false);
   assert.equal(out.error, 'hold_not_confirmed');
   assert.equal(out.slot_state, 'open');
+});
+
+// ── The invariant, asserted by name ───────────────────────────────────────────────────────────────
+// The product is defined as much by the tool that is absent as by the five that are present. If a
+// late commit ever adds a booking verb to the surface, this is the test that fails first.
+const FORBIDDEN_TOOL_NAMES = [
+  'clinic_book_slot',
+  'clinic_confirm',
+  'clinic_confirm_booking',
+  'clinic_book',
+  'book_slot',
+  'confirm_booking',
+];
+
+test('no booking tool exists — not in the names, not in the defs, not in any description', () => {
+  const defs = clinicToolDefs(frozenSource([], []));
+  const names = defs.map((d) => d.name);
+  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the registered defs are exactly the declared five');
+  for (const forbidden of FORBIDDEN_TOOL_NAMES) {
+    assert.ok(!names.includes(forbidden), `${forbidden} must never be on this page's tool surface`);
+    assert.ok(
+      !(CLINIC_TOOL_NAMES as readonly string[]).includes(forbidden),
+      `${forbidden} must never be declared`,
+    );
+  }
+  // and nothing may advertise a booking capability the page does not grant an agent
+  for (const d of defs) {
+    assert.ok(
+      !/\byou (can|may) (now )?book\b/i.test(d.description),
+      `${d.name} must not tell an agent it can book`,
+    );
+  }
 });

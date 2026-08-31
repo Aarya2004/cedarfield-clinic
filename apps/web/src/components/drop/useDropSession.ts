@@ -174,30 +174,24 @@ export function useDropSession(driver: DropDriver, options: DropSessionOptions):
 }
 
 /**
- * ⚑ THE ONE PLACE THE CONTRACT DID NOT FIT A REAL SCREEN — flagged for the lock.
+ * ⚑ CLOSED 2026-08-31 — kept as a compatibility shim, no longer the mechanism.
  *
- * A first-come booking site holds nothing for you: you fill the form and the slot is yours at
- * submit, or it is already gone. `DropDriver` has no verb for that. `confirm(slotId)` books a slot
- * you are ALREADY holding, and T7 deliberately ignores it otherwise ("calls that do not make sense
- * are ignored, not faked") — so `ManualBookingFlow` wired straight to the mock can never complete a
- * booking. It sits on "Sending your booking…" forever. Found by driving this page, not by any unit
- * test on either side, because both sides are individually correct.
+ * The gap this flagged (a first-come site holds nothing for you: `confirm(slotId)` books only a
+ * slot you already hold, so `ManualBookingFlow` wired straight to the mock sat on "Sending your
+ * booking…" forever) is now settled in the contract itself: `DropDriver.book(slotId)` takes and
+ * books an open slot in ONE call — see `lib/drop/types.ts`. Callers should use `driver.book(...)`.
  *
- * The stopgap below is take-then-book in one call, which is only safe because the mock driver is
- * synchronous. The real contract should settle it properly: either add `book(slotId)` beside
- * `confirm(heldSlotId)`, or let `confirm` accept an open slot and answer with `booked` or
- * `slot_taken`. Whichever it is, it needs to be ONE call — a round trip between take and book is a
- * race the user loses.
+ * This wrapper survives only so any code still calling `confirm()` on an open slot keeps working;
+ * it now delegates to `book`, which is atomic, instead of the take-then-book stopgap (that pair was
+ * safe only because the mock driver is synchronous — a real backend would race between the calls).
  */
 export function firstComeDriver(driver: DropDriver): DropDriver {
   return {
     subscribe: (cb) => driver.subscribe(cb),
     hold: (slotId) => driver.hold(slotId),
+    book: (slotId) => driver.book(slotId),
     release: (slotId) => driver.release(slotId),
-    confirm: (slotId) => {
-      driver.hold(slotId);
-      driver.confirm(slotId);
-    },
+    confirm: (slotId) => driver.book(slotId),
   };
 }
 

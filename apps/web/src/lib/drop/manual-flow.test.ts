@@ -297,6 +297,7 @@ test('the flow drives off any DropDriver — a five-line stub is enough', () => 
     subscribe: (cb) => (listeners.add(cb), () => listeners.delete(cb)),
     hold: () => {},
     confirm: (slotId) => confirmed.push(slotId),
+    book: (slotId) => confirmed.push(slotId),
     release: () => {},
   };
 

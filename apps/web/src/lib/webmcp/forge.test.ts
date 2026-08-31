@@ -61,7 +61,15 @@ const hn: ForgeSpec = {
   kind: 'read',
 };
 
-const tick = () => new Promise((r) => setTimeout(r, 5));
+/**
+ * Let the engine's async promotion settle. A single 5 ms sleep raced the macrotask chain under CPU
+ * load (reproduced 2026-08-31 with the machine busy: this file's `invoke: substitution…` test failed
+ * roughly one run in four). Yielding a few bounded turns is deterministic where one sleep was not —
+ * a green suite that flakes under load is worse than no gate, and the demo machine records video.
+ */
+const tick = async (turns = 4) => {
+  for (let i = 0; i < turns; i++) await new Promise((r) => setTimeout(r, 5));
+};
 
 function card(engine: ForgeEngine, spec: ForgeSpec, origin: 'agent' | 'human' = 'agent') {
   const c = engine.openCard(spec, { origin });
