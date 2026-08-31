@@ -46,6 +46,7 @@ import { formatClock } from '../../lib/drop/time.ts';
 import type { DropDriver } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
+import { GestureConfirm } from '../drop/GestureConfirm.tsx';
 import { Band, ClinicBanner, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
@@ -83,6 +84,14 @@ const WAVE_OVERRIDES = {
 const BOOKING_GRACE_MS = 25_000;
 
 const NO_COUNT: CounterSnapshot = { total: 0, breakdown: emptyBreakdown() };
+
+/**
+ * T6's camera dwell, same flag as the bench. Off in the submitted build; when on, the SAME held
+ * gesture that books also cancels and moves — one human act for every consequential verb, always
+ * beside a keyboard alternative (WCAG 2.5.4). GestureConfirm degrades to 'unavailable' when the
+ * script-provisioned weights are absent, so the flag alone can never break a page.
+ */
+const GESTURE_ENABLED = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
 
 /** How long a prepared cancel stays armed before the page quietly stands down. */
 const PENDING_ACT_TTL_SECONDS = 45;
@@ -458,6 +467,9 @@ export function ClinicBooking() {
               onConfirm={confirmPendingAct}
               onRelease={dismissPendingAct}
               measuredRef={attachDock}
+              gestureSlot={
+                GESTURE_ENABLED ? <GestureConfirm onConfirm={confirmPendingAct} armed={pendingSecondsLeft > 0} /> : undefined
+              }
             />
           ) : session.held !== null && session.secondsLeft > 0 && heldSlot ? (
             <ConfirmDock
@@ -470,6 +482,11 @@ export function ClinicBooking() {
               onConfirm={confirmHold}
               onRelease={() => session.release(session.held!.slotId)}
               measuredRef={attachDock}
+              gestureSlot={
+                GESTURE_ENABLED ? (
+                  <GestureConfirm onConfirm={confirmHold} armed={session.held !== null && session.secondsLeft > 0} />
+                ) : undefined
+              }
             />
           ) : null}
         </div>
