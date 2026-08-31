@@ -3,18 +3,24 @@
 Product locked. Aarya built the surface; I own the contract, the proofs, and the submission spine.
 This file is the single source of truth for what is green, what is blocking, and who owns each item.
 
-## Green right now (verified on this machine, main @ 420db61)
+## Green right now (verified end to end on this machine, main @ HEAD)
 
 | Thing | State |
 |---|---|
-| `apps/web` gate | `typecheck` clean · **418/418 tests** · lint 0 errors (2 warnings) |
-| Product routes | `/clinic` (landing) · `/clinic/book` (the product) — build clean |
-| WebMCP tools | five registered on `/clinic/book`: `clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`, `clinic_explain_confirm` |
-| **The invariant** | **no booking tool exists** — asserted by unit test (by name, in the defs, in the descriptions) and by five negative assertions in the live eval |
-| `clinic-thesis` eval | **33 steps, 0 failed, 0 page errors**: tools listed → `clinic_hold_slot` holds → board flips to `held_by_you` → dock arms → **synthetic click blocked** (untrusted counter increments, slot stays held) → **CDP-trusted Enter books it** → `clinic_hold_status` answers `booking: human_only`. Measured: **1** trusted human input on the agent path |
-| `clinic-manual-tax` eval | the same booking by keyboard: **36 trusted inputs and the form is still not valid** (a floor, not the total — see the case header) |
-| Contract | `DropDriver.book()` ratified — closes T8 finding #1; `hold()` is the only verb ever registered, `book()`/`confirm()` are human-only and unreachable from any tool |
-| Evidence | `docs/evidence/clinic/` — trace JSONL + `held-armed.png`, `booked.png`, `manual-form.png` |
+| `apps/web` gate | typecheck clean · **418/418 unit tests** · lint 0 errors · production build clean |
+| Routes | **`/` is the product** (clinic landing) · `/clinic` same landing · `/clinic/book` the product · `/terminal` Rokan, kept and still evalled |
+| WebMCP tools | five on `/clinic/book`: `clinic_list_drops`, `clinic_hold_slot`, `clinic_hold_status`, `clinic_release_hold`, `clinic_explain_confirm` |
+| **The invariant** | **no booking tool exists** — asserted by unit test (by name, in the defs, in the descriptions), by five negative assertions in a live browser, and by test fakes that throw if a tool reaches `book()`/`confirm()` |
+| **Eval suite** | **14/14 cases pass, 0 failed** — 5 clinic + 9 legacy Rokan |
+| `clinic-thesis` | 33 steps: tools listed → `clinic_hold_slot` holds → dock arms → **synthetic click blocked** → **trusted Enter books** → `hold_status` says `human_only`. Measured: **1** human input |
+| `clinic-manual-tax` | the same booking by keyboard: **36 trusted inputs and the form is still not valid** (a floor — see the case header) |
+| `clinic-hold-lapses` | full 45 s TTL with no keypress → slot returns, **nothing booked**, dock disarmed |
+| `clinic-rival-race` | the rival takes a slot mid-read; holding a gone slot is **refused with a reason** |
+| `clinic-landing-frontdoor` | `/` carries the product and no terminal |
+| **Accessibility** | **0 axe violations** on `/`, `/clinic`, `/clinic/book` across WCAG 2.0/2.1/2.2 A + AA — gated by `node evals/a11y.mjs` (it found 3 on the first run; fixed) |
+| Contract | `DropDriver.book()` ratified — T8 finding #1 closed; `hold()` is the only registered verb |
+| Judge-facing text | `README.md` and `docs/SUBMISSION.md` rewritten for the product; `SECURITY.md` §10 states the trust boundaries incl. the residual one |
+| Evidence | `docs/evidence/clinic/` — traces + screenshots for every claim above |
 
 ## Blocking — only Arav / Aarya can clear these
 
@@ -30,11 +36,14 @@ This file is the single source of truth for what is green, what is blocking, and
 
 ## Mine, next, in order
 
-- [ ] README rewritten for the product (judges may score from it alone) + the 60-second judge script
-- [ ] `docs/SUBMISSION.md` rewritten: the four criteria, the honest numbers, prior art named (Mabel's Table)
-- [ ] SECURITY §10 ported to main (trust boundaries: what a tool can and cannot reach)
-- [ ] Deployed-URL run of both clinic evals once Vercel is live
-- [ ] A third eval: the hold lapses and the slot returns (the TTL honesty beat)
+- [x] README rewritten for the product + the 60-second judge script
+- [x] `docs/SUBMISSION.md` rewritten; prior art (Mabel's Table) named before a judge names it
+- [x] SECURITY §10 on main, corrected to the shipped product
+- [x] Accessibility gate (`evals/a11y.mjs`) — committed, and the three violations it found are fixed
+- [x] The front door: `/` is the product; Rokan kept at `/terminal`
+- [ ] **Deployed-URL run** of the clinic evals + `node evals/a11y.mjs --url=…` (blocked on the deploy)
+- [ ] The video's numbers pinned to the receipt the page itself shows (needs one manual browser run)
+- [ ] Optional if time: the waitlist cascade, so a lapsed hold offers the next person their own window
 
 ## Rails that must not slip
 Fictional inventory and the simulated rival stay labelled on screen. Every number on screen is measured by

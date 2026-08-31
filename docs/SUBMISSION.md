@@ -92,7 +92,7 @@ Verification is a first-class part of the repo, not a claim in a README:
 | A hold lapses after 45 s: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |
 | A rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
 | Booking by hand costs **≥ 36** interactions | `clinic-manual-tax.json` |
-| **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on both routes | `node evals/a11y.mjs` |
+| **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on all three routes | `node evals/a11y.mjs` |
 
 Plus 418 unit tests. Traces and screenshots for every row are committed under
 `docs/evidence/clinic/`. Everything above re-runs from a clean clone in two commands.

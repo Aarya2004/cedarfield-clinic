@@ -101,7 +101,7 @@ node evals/a11y.mjs                                        # axe-core on both ro
 | A hold lapses after 45 s: slot returns, **nothing booked** | `clinic-hold-lapses.json` |
 | The rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
 | Booking by hand costs **≥ 36** interactions | `clinic-manual-tax.json` |
-| **0 axe violations**, WCAG 2.0/2.1/2.2 A + AA, both routes | `node evals/a11y.mjs` |
+| **0 axe violations**, WCAG 2.0/2.1/2.2 A + AA, all three routes | `node evals/a11y.mjs` |
 
 Traces and screenshots for every one of these are committed under `docs/evidence/clinic/`.
 
