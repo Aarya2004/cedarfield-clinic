@@ -2,7 +2,7 @@
 id: T7
 title: Mock drop driver (rival sim + hold/expire clock)
 type: task
-status: in_progress
+status: closed
 assignee: aarya-claude
 blocked-by: []
 ---
@@ -23,3 +23,6 @@ tonight. Deterministic, seedable, event-emitting:
 - Scenario presets for the playground + video: `scenario('lose')` (all slots gone in ~8s),
   `scenario('hold-and-book')`, `scenario('expire')`. Unit-tested: determinism per seed, expiry
   ordering, no slot taken twice.
+
+## Resolution (2026-08-30)
+Commit 09e2cf9. 19 tests. Seeded deterministic driver (advance(20000) ≡ 200×advance(100), byte-identical logs); rival never double-takes or steals a held slot. types.ts untouched; two seam gaps flagged for Arav (no hold_released event — release() resyncs via drop_wave; `at` is driver-clock not epoch). Verified independently: targeted suite + lose scenario (wave@0, 6 takes ending 7006ms).

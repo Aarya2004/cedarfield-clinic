@@ -2,7 +2,7 @@
 id: T2
 title: TTL bar + drop countdown
 type: task
-status: in_progress
+status: closed
 assignee: aarya-claude
 blocked-by: []
 ---
@@ -21,3 +21,6 @@ Two small time components, props-driven, zero external state:
 Time math in `lib/drop/time.ts` (unit-tested: formatting, threshold edges, negative clamp).
 No timers inside the components — parent passes time down (mock driver T7 owns the clock), so
 components stay deterministic and testable.
+
+## Resolution (2026-08-30)
+Commit e3bbe25. 10 tests. Pure components, parent-owned clock, scaleX fill w/ reduce-motion guard, milestone-only announcements, display ceils (0:00 only when truly gone). Verified independently: targeted suite green.
