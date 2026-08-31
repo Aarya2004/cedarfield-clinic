@@ -1,0 +1,24 @@
+[
+  { "_doc": [
+    "clinic-rival-race — act one of the demo, asserted rather than narrated.",
+    "The page's rival is a seeded simulation, labelled as one on screen. This case proves the race",
+    "is real: a slot the visitor was looking at is taken by someone else while they read, the board",
+    "says who took it, and the page never pretends the slot is still available. It also proves the",
+    "honest counterpart — an agent that tries to hold a slot the rival already took is refused with",
+    "a reason, not silently ignored."
+  ] },
+
+  { "waitFor": "document.querySelectorAll('[data-slot-state=\"open\"]').length >= 2", "timeout": 25000 },
+  { "eval": "(() => { const n = document.querySelectorAll('[data-slot-state=\"open\"]').length; window.__open0 = n; return n >= 2; })()", "equals": true },
+
+  { "waitFor": "!!document.querySelector('[data-slot-state=\"taken_by_rival\"]')", "timeout": 45000 },
+  { "eval": "(() => { const el = document.querySelector('[data-slot-state=\"taken_by_rival\"]'); window.__gone = el && el.getAttribute('data-clinic-slot'); return typeof window.__gone; })()", "equals": "string" },
+  { "eval": "document.querySelectorAll('[data-slot-state=\"open\"]').length < window.__open0", "equals": true },
+  { "shot": "docs/evidence/clinic/rival-took-it.png" },
+
+  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__gone" }, "outputMatches": "false|taken|gone|not open|unavailable" },
+  { "eval": "document.querySelector('[data-clinic-slot=\"' + window.__gone + '\"]')?.getAttribute('data-slot-state')", "equals": "taken_by_rival" },
+  { "eval": "!!document.querySelector('[data-armed=\"true\"]')", "equals": false },
+
+  { "invoke": "clinic_list_drops", "outputMatches": "slot" }
+]
