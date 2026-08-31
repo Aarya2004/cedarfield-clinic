@@ -2,8 +2,8 @@
 id: T1
 title: Confirm surface — the one human act
 type: task
-status: open
-assignee:
+status: in_progress
+assignee: aarya-claude
 blocked-by: []
 ---
 

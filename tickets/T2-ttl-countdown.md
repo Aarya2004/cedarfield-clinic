@@ -2,8 +2,8 @@
 id: T2
 title: TTL bar + drop countdown
 type: task
-status: open
-assignee:
+status: in_progress
+assignee: aarya-claude
 blocked-by: []
 ---
 

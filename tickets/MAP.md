@@ -1,7 +1,7 @@
 # Map: Drop UI spike — pre-lock green-list components (local tracker)
 
 > LOCAL TRACKER. This map and its tickets live on branch `worktree-drop-ui-spike` and are NEVER pushed
-> until the lock lands — the GitHub repo is public and this is an unlocked pivot candidate.
+> Aarya override 2026-08-30: branch pushes to remote `drop-ui-spike` (Arav already pushed the pivot publicly on workbench).
 > Tickets are files in `tickets/T*.md`; status/assignee/blocked-by in each file's frontmatter.
 > Frontier = `status: open`, empty `assignee`, all `blocked-by` tickets `closed`.
 

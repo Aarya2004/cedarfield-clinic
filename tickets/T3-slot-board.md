@@ -2,8 +2,8 @@
 id: T3
 title: Slot board + slot card states
 type: task
-status: open
-assignee:
+status: in_progress
+assignee: aarya-claude
 blocked-by: []
 ---
 

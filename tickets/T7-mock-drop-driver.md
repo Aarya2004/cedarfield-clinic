@@ -2,8 +2,8 @@
 id: T7
 title: Mock drop driver (rival sim + hold/expire clock)
 type: task
-status: open
-assignee:
+status: in_progress
+assignee: aarya-claude
 blocked-by: []
 ---
 
