@@ -19,6 +19,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmSurface } from './ConfirmSurface.tsx';
 import { CounterBadge } from './CounterBadge.tsx';
+import { GestureConfirm } from './GestureConfirm.tsx';
 import { DropCountdown } from './DropCountdown.tsx';
 import { ManualBookingFlow, type ManualReceipt } from './ManualBookingFlow.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
@@ -54,6 +55,13 @@ const WAVE_SLOT_COUNT = 8;
 
 /** The trace window. Long enough for the slowest scenario (expire: 12s TTL + a 1.6s sweep). */
 const TRACE_SPAN_MS = 30000;
+
+/**
+ * T6's camera dwell, off unless the build asked for it. Read once at module scope: Next inlines
+ * `NEXT_PUBLIC_*` at build time, so with the flag unset the whole gesture module — including its
+ * dynamic import of 200KB of MediaPipe JS — is unreachable from this page.
+ */
+const GESTURE_ENABLED = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
 
 const NO_SLOTS: Slot[] = [];
 
@@ -227,6 +235,11 @@ export function DropBench() {
     },
     [config.scenario, config.seed],
   );
+
+  /** One booking callback, shared by the keycap and (when flagged on) T6's camera dwell. */
+  const confirmHeld = useCallback(() => {
+    if (held !== null) session.confirm(held.slotId);
+  }, [held, session]);
 
   const simulateHold = useCallback(() => {
     if (openSlot === undefined) return;
@@ -461,9 +474,12 @@ export function DropBench() {
                         : `${heldSlot.timeLabel} with ${heldSlot.clinician}`
                     }
                     disabled={held === null}
-                    onConfirm={() => {
-                      if (held !== null) session.confirm(held.slotId);
-                    }}
+                    onConfirm={confirmHeld}
+                    gestureSlot={
+                      GESTURE_ENABLED ? (
+                        <GestureConfirm onConfirm={confirmHeld} armed={held !== null && session.secondsLeft > 0} />
+                      ) : undefined
+                    }
                   />
                 </div>
               </div>
