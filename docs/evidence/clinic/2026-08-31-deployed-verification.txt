@@ -1,0 +1,15 @@
+✔ GET / — 200
+✔ GET /clinic — 200
+✔ GET /clinic/book — 200
+✔ clinic-thesis.json — 31 steps, 0 failed
+✔ clinic-rival-race.json — 9 steps, 0 failed
+✔ clinic-hold-lapses.json — 10 steps, 0 failed
+✔ clinic-landing-frontdoor.json — 4 steps, 0 failed
+✔ / — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
+✔ /clinic — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
+✔ /clinic/book — 0 violations (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22a, wcag22aa)
+
+a11y: clean
+✔ axe on the deployed origin
+
+DEPLOYED AND VERIFIED — https://rokan-terminal.vercel.app

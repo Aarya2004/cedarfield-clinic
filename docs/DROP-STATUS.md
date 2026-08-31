@@ -24,15 +24,25 @@ This file is the single source of truth for what is green, what is blocking, and
 
 ## Blocking — only Arav / Aarya can clear these
 
-1. **Deploy.** `rokan-terminal.vercel.app/clinic` is **404**; prod still serves Rokan. No git auto-deploy on
-   this project → `cd apps/web && vercel --prod --yes`. **Everything below waits on this.**
-2. **Repo is PRIVATE.** Devpost requires a public repo with an OSS licence (LICENSE exists, Apache-2.0).
-   Also worth renaming — `webmcp-private` is the first thing a judge reads.
-3. **The name.** "Cedarfield Clinic" is Aarya's placeholder for the *fictional clinic*; the **product** has no
-   name. Humans pick it (Devpost's own guidance says not to let AI name it). One string swap in the copy.
-4. **ChatGPT desktop verification** (after deploy). Two questions only that hour answers: does Sol/Terra
-   list the five tools on `/clinic/book`, and does a tool call + a real keypress complete a booking there?
-5. **Video** (< 3 min, audio, YouTube). ffmpeg was broken on the demo Mac — fix before recording.
+1. ~~**Deploy.**~~ **DONE 2026-08-31.** Live at **https://rokan-terminal.vercel.app** and verified
+   end to end against production: `node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app`
+   → **11/11 green** (routes 200 · five tools register in a real browser · no booking tool · synthetic
+   press refused · trusted press books · hold lapses clean · front door is the product · axe clean on
+   all three routes). Evidence: `docs/evidence/clinic/2026-08-31-deployed-verification.txt`.
+2. **Repo is PRIVATE.** Devpost requires public source with an OSS licence (LICENSE is Apache-2.0
+   already). Flip it, and rename — `webmcp-private` is the first thing a judge reads.
+3. **The origin still says `rokan-terminal`.** The submitted product is a clinic booking page; the
+   URL on the Devpost card will read like a different project. Cheapest fix is a Vercel domain alias
+   (Project → Settings → Domains → add e.g. `the-drop.vercel.app`) — the deployment does not need
+   rebuilding, and the verifier re-runs against the new origin in one command.
+4. **The name.** The fictional clinic is "Cedarfield Clinic"; the *product* has no name. Humans pick
+   it (Devpost's own guidance). It is a string swap in `ClinicFrame.tsx` plus the two doc headers.
+5. **ChatGPT desktop verification.** The five tools are proven to register in Chrome against the live
+   origin. Sol/Terra is still unmeasured, and it is the client the challenge names: open
+   `https://rokan-terminal.vercel.app/clinic/book`, check the Site-tools arrow lists five `clinic_*`
+   tools, say *"hold me the earliest appointment"*, then press Enter.
+6. **Video** (< 3 min, audio, YouTube). Script is shot-by-shot in `docs/VIDEO-SCRIPT.md`; ffmpeg on
+   the demo Mac needs fixing first.
 
 ## Mine, next, in order
 
@@ -41,7 +51,7 @@ This file is the single source of truth for what is green, what is blocking, and
 - [x] SECURITY §10 on main, corrected to the shipped product
 - [x] Accessibility gate (`evals/a11y.mjs`) — committed, and the three violations it found are fixed
 - [x] The front door: `/` is the product; Rokan kept at `/terminal`
-- [ ] **Deployed-URL run** of the clinic evals + `node evals/a11y.mjs --url=…` (blocked on the deploy)
+- [x] **Deployed-URL run** — 11/11 green against production, evidence committed
 - [ ] The video's numbers pinned to the receipt the page itself shows (needs one manual browser run)
 - [ ] Optional if time: the waitlist cascade, so a lapsed hold offers the next person their own window
 

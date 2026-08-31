@@ -5,10 +5,12 @@
 
 **Project name:** _TODO — the two founders pick it; "The Drop" is the working title._
 **Tagline:** Your agent can hold it. Only you can take it.
-**Live URL:** `https://<deploy>` (the front door is the product; the booking page is `/clinic/book`)
-<!-- TODO(before submit): Vercel has no git auto-deploy on this project. Run
-     `cd apps/web && vercel --prod --yes`, then open /clinic/book in ChatGPT desktop and confirm
-     the Site-tools arrow lists five clinic_* tools before pasting the URL here and in README.md. -->
+**Live URL:** https://rokan-terminal.vercel.app (the front door is the product; the booking page is `/clinic/book`)
+<!-- Deployed and verified 2026-08-31: node evals/verify-deployed.mjs --url=… → 11/11 green
+     (routes, five tools, no booking tool, synthetic press refused, trusted press books, hold
+     lapses clean, front door is the product, axe clean ×3). Evidence:
+     docs/evidence/clinic/2026-08-31-deployed-verification.txt
+     TODO: the origin still carries the pre-pivot project name — see DROP-STATUS. -->
 **Repo:** `https://github.com/<owner>/<repo>` (Apache-2.0)
 <!-- TODO(before submit): the repo is PRIVATE. Devpost requires public source. Flip it, and rename
      it — "webmcp-private" is the first thing a judge reads. -->

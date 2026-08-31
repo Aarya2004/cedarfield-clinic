@@ -10,9 +10,8 @@ appears — and then it stops, because **there is no booking tool**. The only th
 appointment is one act from the person the appointment is for: **one key, one switch press, or one
 held gesture.** Nothing an agent can call, and nothing a script can fake, reaches that step.
 
-**Live:** `https://<deploy>` — the front door is the product. Open it in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or in
+**Live:** **https://rokan-terminal.vercel.app** — the front door is the product. Open it in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or in
 **Chrome 152+** with `chrome://flags/#enable-webmcp-testing`.
-<!-- TODO(before submit): paste the deployed origin here and in docs/SUBMISSION.md. -->
 **Video:** _TODO — unlisted YouTube, ≤ 3:00._ · Entry for the **OpenAI WebMCP Challenge**. Apache-2.0.
 
 ---
