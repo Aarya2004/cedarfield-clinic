@@ -1,0 +1,97 @@
+[
+ {
+  "_doc": [
+   "clinic-manual-tax \u2014 what the SAME booking costs a keyboard/switch user by hand.",
+   "Every input here is a browser-trusted event dispatched through CDP; the page's own counter",
+   "(interaction-counter.ts) counts only trusted events, so this number is measured, never scripted.",
+   "It stops at the review step and asserts >= 30: Chrome's native date picker does not accept",
+   "segment entry through CDP dispatchKeyEvent (a real keyboard fills it fine), so the run cannot",
+   "complete the booking headlessly. The number is therefore a FLOOR, not the total \u2014 the complete",
+   "hand-vs-agent comparison is the page's own receipt, shown live in the product.",
+   "Compare with clinic-thesis.json, where the agent path costs the person 1 trusted input."
+  ]
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 25000
+ },
+ {
+  "eval": "(() => { window.__t0 = Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter') ?? -1); return window.__t0 >= 0; })()",
+  "equals": true
+ },
+ {
+  "focus": "[data-clinic-action=\"open-slot\"]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-flow]')?.getAttribute('data-clinic-flow') === 'detail'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-clinic-action=\"start-details\"]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-clinic-field=\"fullName\"]')",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-clinic-field=\"fullName\"]"
+ },
+ {
+  "type": "Ada Okonkwo"
+ },
+ {
+  "focus": "[data-clinic-field=\"dateOfBirth\"]"
+ },
+ {
+  "key": "Home"
+ },
+ {
+  "type": "04"
+ },
+ {
+  "type": "02"
+ },
+ {
+  "type": "1971"
+ },
+ {
+  "focus": "[data-clinic-field=\"reason\"]"
+ },
+ {
+  "type": "New"
+ },
+ {
+  "focus": "[data-clinic-field=\"phone\"]"
+ },
+ {
+  "type": "6135550147"
+ },
+ {
+  "focus": "[data-clinic-action=\"to-review\"]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "sleep": 400
+ },
+ {
+  "eval": "JSON.stringify({errs:[...document.querySelectorAll('[data-invalid=\"true\"]')].map(e=>e.getAttribute('data-clinic-field')||e.id), vals:[...document.querySelectorAll('[data-clinic-field]')].map(e=>e.getAttribute('data-clinic-field')+'='+JSON.stringify(e.value)), flow:document.querySelector('[data-clinic-flow]')?.getAttribute('data-clinic-flow')})"
+ },
+ {
+  "shot": "docs/evidence/clinic/manual-form.png"
+ },
+ {
+  "eval": "(() => { const n = Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter') ?? -1); window.__hand = n - window.__t0; return window.__hand; })()"
+ },
+ {
+  "eval": "window.__hand >= 30",
+  "equals": true
+ }
+]
