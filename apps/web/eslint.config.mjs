@@ -14,6 +14,9 @@ const eslintConfig = [
   {
     ignores: [
       "node_modules/**",
+      // Static assets, never source. The MediaPipe wasm loaders (T6) are 8000-line emscripten
+      // output that trips every rule in the config and is not ours to fix.
+      "public/**",
       ".next/**",
       "out/**",
       "build/**",

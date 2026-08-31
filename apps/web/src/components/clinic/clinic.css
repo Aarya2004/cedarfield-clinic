@@ -1,0 +1,1249 @@
+/* =============================================================================
+ * Cedarfield Clinic — presentation. Reads only the tokens in `clinic-tokens.css`.
+ *
+ * ONE GRID RUNS BOTH ROUTES. Every horizontal band is `[label gutter] [body]`, divided by a
+ * full-bleed hairline. The gutter is not decoration and it is not a step number: it answers the
+ * only question either page is about — WHOSE IS THIS? On the landing it names the actor in each
+ * step (your agent · the clock · you), and the last one is the only cedar word above the fold. On
+ * the booking sheet it names the state of each appointment (open · held — your agent · taken).
+ * The rhyme is deliberate: by the time a visitor reaches the board they already read that column.
+ *
+ * WHERE THE BOLDNESS IS SPENT: the held row. When a slot is held for you it swells to the largest
+ * object on the page, its time is reset at display scale in cedar, and the hairline beneath the
+ * numeral retracts left-to-right as the hold burns. That retreating rule IS the TTL bar — the
+ * countdown is set in type rather than drawn beside it. Everything else on the page stays flat.
+ * ============================================================================= */
+
+/* --- page frame ---------------------------------------------------------- */
+
+.cl-shell {
+  max-width: var(--clinic-max);
+  margin: 0 auto;
+  padding: 0 var(--clinic-pad) 6rem;
+}
+
+.cl-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  align-items: baseline;
+  padding: 0.6rem var(--clinic-pad);
+  border-bottom: 1px solid var(--clinic-rule);
+  background: var(--clinic-gone-sheet);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--clinic-muted);
+}
+
+.cl-banner b {
+  color: var(--clinic-ink);
+  font-weight: 600;
+}
+
+.cl-masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding: 1.4rem 0 1.1rem;
+}
+
+.cl-wordmark {
+  display: block;
+  margin: 0;
+  font-family: var(--clinic-serif);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 1;
+}
+
+.cl-wordmark span {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: var(--clinic-sans);
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+.cl-masthead__aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.25rem;
+}
+
+/* --- the band grid ------------------------------------------------------- */
+
+.cl-band {
+  display: grid;
+  grid-template-columns: var(--clinic-gutter) minmax(0, 1fr);
+  gap: 0 clamp(1rem, 0.4rem + 2vw, 2.5rem);
+  padding: var(--clinic-band-gap) 0;
+  border-top: 1px solid var(--clinic-rule);
+}
+
+.cl-band--flush {
+  padding-top: 1.1rem;
+}
+
+.cl-band--open {
+  border-top: 0;
+}
+
+.cl-band--full > .cl-band__body {
+  grid-column: 1 / -1;
+}
+
+.cl-band--wide .cl-band__body .cl-prose {
+  max-width: none;
+}
+
+/* The outer margin. Below 1100px the aside falls under the body and stays in the same order it is
+   read: label, prose, specimen. */
+@media (min-width: 1100px) {
+  .cl-band--aside {
+    grid-template-columns: var(--clinic-gutter) minmax(0, 1fr) minmax(0, 21rem);
+  }
+}
+
+@media (max-width: 1099px) {
+  .cl-band__aside {
+    grid-column: 2;
+    margin-top: 1.75rem;
+  }
+
+  .cl-band--full .cl-band__aside,
+  .cl-band--aside .cl-band__aside {
+    max-width: var(--clinic-measure);
+  }
+}
+
+/* --- the tool manifest --------------------------------------------------- */
+
+.cl-manifest {
+  padding: 1.1rem 1.2rem 1.25rem;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 2px;
+  background: var(--clinic-sheet);
+}
+
+.cl-manifest__title {
+  margin: 0;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+.cl-manifest__list {
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--clinic-mono);
+  font-size: 0.8125rem;
+  line-height: 2;
+  color: var(--clinic-ink);
+  overflow-wrap: anywhere;
+}
+
+.cl-manifest__list s {
+  color: var(--clinic-gone);
+  text-decoration-thickness: 1px;
+}
+
+.cl-manifest[data-clinic-manifest='absent'] .cl-manifest__list {
+  font-size: 0.9375rem;
+}
+
+.cl-manifest__note {
+  margin: 0.9rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--clinic-rule);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--clinic-muted);
+}
+
+/* The gutter word. Sticky at the top of its band so a long body keeps its label in view. */
+.cl-band__label {
+  align-self: start;
+  margin: 0;
+  padding-top: 0.35rem;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+  text-wrap: balance;
+}
+
+/* "you" is the only cedar word in the landing's gutter — the argument, in the margin. */
+.cl-band__label[data-actor='you'] {
+  color: var(--clinic-yours);
+}
+
+/* Two classes on purpose. Every block below sets `margin: 0` from its own single-class rule, and a
+   single-class rule declared later in the file would win the tie and collapse the band's rhythm. */
+.cl-band > .cl-band__body > * + * {
+  margin-top: 1.15rem;
+}
+
+.cl-band > .cl-band__body > .cl-lead + * {
+  margin-top: 1.4rem;
+}
+
+.cl-band > .cl-band__body > .cl-clock + * {
+  margin-top: 1.75rem;
+}
+
+.cl-band > .cl-band__body > * + .cl-trust {
+  margin-top: 1.9rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--clinic-rule);
+}
+
+.cl-prose {
+  max-width: var(--clinic-measure);
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.62;
+  color: var(--clinic-muted);
+}
+
+.cl-prose strong {
+  color: var(--clinic-ink);
+  font-weight: 600;
+}
+
+.cl-lead {
+  max-width: 24ch;
+  margin: 0;
+  font-family: var(--clinic-serif);
+  font-size: var(--clinic-display);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--clinic-ink);
+  text-wrap: balance;
+}
+
+/* --- the thesis ---------------------------------------------------------- */
+
+.cl-thesis {
+  max-width: 18ch;
+  margin: clamp(1.5rem, 1rem + 3vw, 3.5rem) 0 0;
+  font-family: var(--clinic-serif);
+  font-size: var(--clinic-thesis);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+
+.cl-thesis em {
+  font-style: normal;
+  color: var(--clinic-yours);
+}
+
+.cl-thesis__tail {
+  max-width: 46ch;
+  margin: clamp(1.25rem, 0.9rem + 1.5vw, 2rem) 0 0;
+  font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.3125rem);
+  line-height: 1.5;
+  color: var(--clinic-muted);
+}
+
+/* The one coloured clause on the landing. Cedar means yours — including in a sentence. */
+.cl-thesis__tail em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--clinic-yours);
+}
+
+/* The load-in: three rises, once, 70ms apart. Cut entirely under reduced motion. */
+.cl-rise {
+  animation: cl-rise 620ms var(--clinic-ease) both;
+}
+
+.cl-rise[data-step='2'] {
+  animation-delay: 70ms;
+}
+
+.cl-rise[data-step='3'] {
+  animation-delay: 140ms;
+}
+
+@keyframes cl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- the wave clock ------------------------------------------------------ */
+
+.cl-clock {
+  display: block;
+  margin: 0;
+}
+
+.cl-clock__value {
+  font-size: clamp(3.4rem, 1.6rem + 7.5vw, 7.5rem);
+  font-weight: 600;
+  line-height: 0.86;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--clinic-ink);
+}
+
+.cl-clock__unit {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+/* --- links and buttons --------------------------------------------------- */
+
+.cl-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 3.25rem;
+  padding: 0 1.5rem;
+  border: 1px solid var(--clinic-yours);
+  border-radius: 2px;
+  background: var(--clinic-yours);
+  color: var(--clinic-yours-ink);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--clinic-quick) var(--clinic-ease);
+}
+
+.cl-cta:hover {
+  background: #0e3f2c;
+}
+
+.cl-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--clinic-rule-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--clinic-ink);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color var(--clinic-quick) var(--clinic-ease),
+    background var(--clinic-quick) var(--clinic-ease);
+}
+
+.cl-quiet:hover {
+  border-color: var(--clinic-ink);
+  background: var(--clinic-sheet);
+}
+
+.cl-link {
+  color: var(--clinic-ink);
+  text-decoration-color: var(--clinic-rule-strong);
+  text-underline-offset: 0.25em;
+}
+
+.cl-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.clinic :focus-visible {
+  outline: 3px solid var(--clinic-yours);
+  outline-offset: 2px;
+}
+
+/* --- the quiet counter --------------------------------------------------- */
+
+.cl-counter {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-family: var(--clinic-mono);
+  font-size: 0.8125rem;
+  color: var(--clinic-muted);
+}
+
+.cl-counter b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--clinic-ink);
+}
+
+/* --- the appointment sheet ----------------------------------------------- */
+
+.cl-sheet {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cl-row {
+  border-top: 1px solid var(--clinic-rule);
+  /* A hold that arrives scrolls its row into view; the dock must not be what it scrolls under. */
+  scroll-margin-block: 5rem 14rem;
+}
+
+.cl-row:first-child {
+  border-top: 0;
+}
+
+/* Both the button and the static div render the same box, so a taken row does not reflow. */
+.cl-row__inner {
+  display: grid;
+  grid-template-columns: var(--clinic-gutter) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 clamp(1rem, 0.4rem + 2vw, 2.5rem);
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 1rem 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.cl-row__inner {
+  cursor: pointer;
+  transition: background var(--clinic-quick) var(--clinic-ease);
+}
+
+button.cl-row__inner:hover {
+  background: var(--clinic-sheet);
+}
+
+.cl-row__state {
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+.cl-row__main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.cl-row__time {
+  position: relative;
+  display: inline-block;
+  font-size: var(--clinic-time);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  transition:
+    font-size var(--clinic-swell) var(--clinic-ease),
+    color var(--clinic-settle) var(--clinic-ease);
+}
+
+.cl-row__strike {
+  position: absolute;
+  left: -0.03em;
+  right: -0.03em;
+  top: 52%;
+  height: 0.055em;
+  background: currentColor;
+  border-radius: 1px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--clinic-settle) var(--clinic-ease);
+  pointer-events: none;
+}
+
+.cl-row__who {
+  display: block;
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--clinic-muted);
+}
+
+.cl-row__action {
+  justify-self: end;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--clinic-ink);
+  white-space: nowrap;
+}
+
+button.cl-row__inner:hover .cl-row__action {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.cl-row__tag {
+  justify-self: end;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--clinic-rule-strong);
+  border-radius: 2px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clinic-gone);
+  white-space: nowrap;
+}
+
+/* --- row states ---------------------------------------------------------- */
+
+.cl-row[data-slot-state='taken_by_rival'],
+.cl-row[data-slot-state='expired_hold'] {
+  color: var(--clinic-gone);
+}
+
+.cl-row[data-slot-state='taken_by_rival'] .cl-row__time,
+.cl-row[data-slot-state='expired_hold'] .cl-row__time {
+  color: var(--clinic-gone);
+}
+
+.cl-row[data-slot-state='taken_by_rival'] .cl-row__strike,
+.cl-row[data-slot-state='expired_hold'] .cl-row__strike {
+  transform: scaleX(1);
+}
+
+.cl-row[data-slot-state='held_by_other'] .cl-row__time {
+  color: var(--clinic-gone);
+}
+
+/* THE SIGNATURE. Your hold owns the sheet: the row swells, the time doubles, and it is the only
+   cedar object on the page. */
+.cl-row[data-slot-state='held_by_you'] {
+  background: var(--clinic-yours-wash);
+  border-top-color: var(--clinic-yours);
+  box-shadow: inset 4px 0 0 0 var(--clinic-yours);
+}
+
+.cl-row[data-slot-state='held_by_you'] .cl-row__inner {
+  min-height: 9.5rem;
+  padding-left: 1.1rem;
+  padding-right: 1.1rem;
+  transition: min-height var(--clinic-swell) var(--clinic-ease);
+}
+
+.cl-row[data-slot-state='held_by_you'] .cl-row__state {
+  color: var(--clinic-yours);
+}
+
+.cl-row[data-slot-state='held_by_you'] .cl-row__time {
+  font-size: var(--clinic-time-held);
+  color: var(--clinic-yours);
+}
+
+.cl-row[data-slot-state='booked_yours'] {
+  background: var(--clinic-yours);
+  color: var(--clinic-yours-ink);
+  box-shadow: inset 4px 0 0 0 var(--clinic-yours);
+}
+
+.cl-row[data-slot-state='booked_yours'] .cl-row__state,
+.cl-row[data-slot-state='booked_yours'] .cl-row__who,
+.cl-row[data-slot-state='booked_yours'] .cl-row__time {
+  color: var(--clinic-yours-ink);
+}
+
+.cl-row[data-slot-state='booked_yours'] .cl-row__inner {
+  padding-left: 1.1rem;
+  padding-right: 1.1rem;
+}
+
+/* The hold's clock, set as the rule beneath the numeral. scaleX is written per frame from
+   fractionLeft() — no CSS transition, or the rule would lag the number it belongs to. */
+.cl-ttl {
+  display: block;
+  height: 3px;
+  margin-top: 0.75rem;
+  background: var(--clinic-yours);
+  transform: scaleX(var(--cl-fraction, 1));
+  transform-origin: left center;
+}
+
+/* `align-self: stretch` is load-bearing: the row's main column is a flex column with
+   `align-items: flex-start`, which shrinks an empty block to zero width — the rule vanished. */
+.cl-ttl__track {
+  display: block;
+  align-self: stretch;
+  width: 100%;
+  overflow: hidden;
+  max-width: 26rem;
+  margin-top: 0.1rem;
+  background: color-mix(in srgb, var(--clinic-yours) 18%, transparent);
+}
+
+/* --- the agent strip ----------------------------------------------------- */
+
+.cl-agent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.9rem;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--clinic-yours);
+  border-radius: 2px;
+  background: var(--clinic-yours-wash);
+  color: var(--clinic-yours);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.cl-agent span {
+  font-weight: 400;
+  color: var(--clinic-ink);
+}
+
+/* --- the manual flow ----------------------------------------------------- */
+
+.cl-panel {
+  /* A form is read at the same measure as prose; stretching the panel to the full band would put a
+     34rem column of fields in the corner of a 68rem card. */
+  max-width: 46rem;
+  padding: clamp(1.1rem, 0.6rem + 2vw, 2rem);
+  border: 1px solid var(--clinic-rule);
+  border-radius: 2px;
+  background: var(--clinic-sheet);
+}
+
+.cl-chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--clinic-rule);
+}
+
+.cl-chosen__time {
+  font-size: var(--clinic-time);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-chosen__who {
+  font-size: 0.9375rem;
+  color: var(--clinic-muted);
+}
+
+.cl-fields {
+  display: grid;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+  max-width: var(--clinic-measure);
+}
+
+.cl-field label {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.cl-field__hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--clinic-muted);
+}
+
+.cl-field__error {
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--clinic-alert);
+}
+
+.cl-field input,
+.cl-field select,
+.cl-field textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  min-height: 3rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--clinic-rule-strong);
+  border-radius: 2px;
+  background: var(--clinic-sheet);
+  color: var(--clinic-ink);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.cl-field textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.cl-field[data-invalid='true'] input,
+.cl-field[data-invalid='true'] select,
+.cl-field[data-invalid='true'] textarea {
+  border-color: var(--clinic-alert);
+  box-shadow: inset 3px 0 0 0 var(--clinic-alert);
+}
+
+.cl-summary {
+  padding: 1rem 1.1rem;
+  border: 2px solid var(--clinic-alert);
+  border-radius: 2px;
+  color: var(--clinic-ink);
+}
+
+.cl-summary h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cl-summary ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.cl-summary a {
+  color: var(--clinic-alert);
+}
+
+.cl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.cl-answers {
+  margin: 1.5rem 0 0;
+  max-width: var(--clinic-measure);
+}
+
+.cl-answer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--clinic-rule);
+}
+
+.cl-answer dt {
+  grid-column: 1;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+.cl-answer dd {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.cl-answer__blank {
+  color: var(--clinic-muted);
+}
+
+.cl-answer button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--clinic-rule-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--clinic-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.cl-answer button:hover {
+  border-color: var(--clinic-ink);
+}
+
+.cl-lost {
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.25rem;
+  border-left: 4px solid var(--clinic-alert);
+  background: var(--clinic-gone-sheet);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.cl-lost b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the receipt --------------------------------------------------------- */
+
+.cl-receipt {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 2px;
+  background: var(--clinic-sheet);
+}
+
+.cl-receipt__col {
+  padding: 1.35rem 1.4rem 1.5rem;
+  border-left: 1px solid var(--clinic-rule);
+}
+
+.cl-receipt__col:first-child {
+  border-left: 0;
+}
+
+.cl-receipt__label {
+  margin: 0;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+.cl-receipt__n {
+  display: block;
+  margin: 0.6rem 0 0;
+  font-family: var(--clinic-mono);
+  font-size: clamp(3rem, 1.8rem + 4.5vw, 5.5rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-receipt__col[data-lane='agent'] .cl-receipt__n {
+  color: var(--clinic-yours);
+}
+
+.cl-receipt__unit {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--clinic-muted);
+}
+
+.cl-receipt__note {
+  margin: 0.85rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--clinic-muted);
+}
+
+.cl-receipt__breakdown {
+  margin: 0.85rem 0 0;
+  font-family: var(--clinic-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--clinic-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A blank, drawn as a blank. Showing a placeholder digit for a lane nobody has run would be the
+   one dishonest pixel on the page. */
+.cl-receipt__empty {
+  display: block;
+  width: 3rem;
+  height: 3px;
+  margin: 2.4rem 0 2.2rem;
+  background: var(--clinic-rule-strong);
+}
+
+/* --- the confirm dock ---------------------------------------------------- */
+
+.cl-dock {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  background: var(--clinic-dock-bg);
+  color: var(--clinic-dock-ink);
+  border-top: 1px solid var(--clinic-dock-edge);
+  box-shadow: 0 -12px 40px rgba(10, 16, 20, 0.28);
+  animation: cl-dock-in var(--clinic-settle) var(--clinic-ease) both;
+}
+
+@keyframes cl-dock-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* The dock's own clock: the same retreating rule as the sheet, run edge to edge across the page. */
+.cl-dock__ttl {
+  display: block;
+  height: 3px;
+  background: var(--clinic-dock-yours);
+  transform: scaleX(var(--cl-fraction, 1));
+  transform-origin: left center;
+}
+
+.cl-dock[data-urgency='attention'] .cl-dock__ttl {
+  background: var(--clinic-dock-attention);
+}
+
+.cl-dock[data-urgency='critical'] .cl-dock__ttl {
+  background: var(--clinic-dock-alert);
+}
+
+.cl-dock__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem clamp(1rem, 0.4rem + 2vw, 2.5rem);
+  max-width: var(--clinic-max);
+  margin: 0 auto;
+  padding: 0.9rem var(--clinic-pad) 1.05rem;
+}
+
+.cl-dock__main {
+  flex: 1 1 18rem;
+  max-width: 40rem;
+  min-width: 0;
+}
+
+.cl-dock__eyebrow {
+  margin: 0;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clinic-dock-yours);
+}
+
+.cl-dock[data-urgency='attention'] .cl-dock__eyebrow {
+  color: var(--clinic-dock-attention);
+}
+
+.cl-dock[data-urgency='critical'] .cl-dock__eyebrow {
+  color: var(--clinic-dock-alert);
+}
+
+.cl-dock__line {
+  margin: 0.45rem 0 0;
+  font-family: var(--clinic-serif);
+  font-size: clamp(1.5rem, 1rem + 2vw, 2.4rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.012em;
+  color: var(--clinic-dock-ink);
+  text-wrap: balance;
+}
+
+.cl-dock__note {
+  margin: 0.5rem 0 0;
+  max-width: 46ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--clinic-dock-muted);
+}
+
+.cl-dock__clock {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.cl-dock__seconds {
+  display: block;
+  font-family: var(--clinic-mono);
+  font-size: clamp(2.75rem, 1.6rem + 4vw, 4.25rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--clinic-dock-yours);
+}
+
+.cl-dock[data-urgency='attention'] .cl-dock__seconds {
+  color: var(--clinic-dock-attention);
+}
+
+.cl-dock[data-urgency='critical'] .cl-dock__seconds {
+  color: var(--clinic-dock-alert);
+}
+
+.cl-dock__unit {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clinic-dock-muted);
+}
+
+/* The keycap, kept small on purpose. The bench made the cap the hero and the page read as a demo
+   rig; here the sentence is the hero and the cap is the evidence that a body has to do this. */
+.cl-key {
+  --lift: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 3.5rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--clinic-dock-edge);
+  border-radius: 8px;
+  background: var(--clinic-dock-raise);
+  color: var(--clinic-dock-ink);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transform: translateY(0);
+  box-shadow:
+    inset 0 1px 0 0 rgba(238, 242, 239, 0.09),
+    0 var(--lift) 0 0 #070b0d;
+  transition:
+    transform 90ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 90ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.cl-key[data-pressed='true'] {
+  transform: translateY(var(--lift));
+  box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.55);
+}
+
+.cl-key:focus-visible {
+  outline: 3px solid var(--clinic-dock-attention);
+  outline-offset: 3px;
+}
+
+.cl-key__glyph {
+  font-family: var(--clinic-mono);
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--clinic-dock-yours);
+}
+
+/* `max-width: 100%` is load-bearing at 390px: a `flex: 0 0 auto` column sizes to max-content and
+   would otherwise push its own controls past the viewport instead of letting `.cl-dock__minor`
+   wrap them. */
+.cl-dock__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cl-dock__minor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  max-width: 100%;
+}
+
+.cl-dock__toggle {
+  min-height: 2.25rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--clinic-dock-edge);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--clinic-dock-muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.cl-dock__toggle:hover,
+.cl-dock__toggle[aria-pressed='true'] {
+  color: var(--clinic-dock-ink);
+  border-color: var(--clinic-dock-muted);
+}
+
+.cl-dock__blocked {
+  margin: 0;
+  font-family: var(--clinic-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clinic-dock-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-dock__blocked[data-hot='true'] {
+  color: var(--clinic-dock-alert);
+}
+
+/* Space the page keeps free so the dock never covers the last row of the sheet. */
+.cl-dock-spacer {
+  height: 13rem;
+}
+
+/* --- utilities ----------------------------------------------------------- */
+
+.cl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cl-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+  color: var(--clinic-ink);
+}
+
+.cl-trust li + li::before {
+  content: '·';
+  margin-right: 0.85rem;
+  color: var(--clinic-rule-strong);
+}
+
+.cl-note {
+  margin: 0;
+  max-width: var(--clinic-measure);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--clinic-muted);
+}
+
+/* --- narrow ---------------------------------------------------------------
+ * The gutter stops being a column and becomes a line above the body. Nothing else changes: the
+ * label still answers "whose?", it just sits on top of the answer instead of beside it. */
+@media (max-width: 760px) {
+  .cl-band,
+  .cl-row__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cl-band__label {
+    padding-top: 0;
+    padding-bottom: 0.75rem;
+  }
+
+  .cl-row__inner {
+    gap: 0.5rem 0;
+    padding: 1.1rem 0;
+  }
+
+  .cl-row__action,
+  .cl-row__tag {
+    justify-self: start;
+  }
+
+  .cl-clock__value {
+    line-height: 0.9;
+  }
+}
+
+/* On a phone the dock is competing with the board for a small screen, so it gives back everything
+   that is not the sentence, the seconds and the key. Nothing is removed — only set smaller. */
+@media (max-width: 560px) {
+  .cl-dock__inner {
+    gap: 0.7rem 1rem;
+  }
+
+  .cl-dock__clock {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    text-align: left;
+  }
+
+  .cl-dock__line {
+    font-size: 1.3rem;
+  }
+
+  .cl-dock__seconds {
+    font-size: 2.4rem;
+  }
+
+  .cl-dock__unit {
+    margin-top: 0;
+  }
+
+  .cl-dock__note {
+    font-size: 0.75rem;
+  }
+
+  .cl-dock-spacer {
+    height: 17rem;
+  }
+}
+
+/* --- reduced motion -------------------------------------------------------
+ * Everything decorative stops. The two things that survive are the retreating TTL rules, because
+ * they are the countdown itself — removing them would remove information, not motion. */
+@media (prefers-reduced-motion: reduce) {
+  .cl-rise,
+  .cl-dock {
+    animation: none;
+  }
+
+  .cl-row__inner,
+  .cl-row__time,
+  .cl-row__strike,
+  .cl-key,
+  .cl-cta,
+  .cl-quiet {
+    transition: none;
+  }
+
+  .cl-key[data-pressed='true'] {
+    transform: none;
+  }
+}

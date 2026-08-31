@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# MediaPipe gesture assets (ticket T6) — 42MB of wasm + model weights, provisioned by
+# scripts/fetch-gesture-model.sh. The weights are under the MediaPipe model ToS, not Apache-2.0,
+# so they are fetched per-deployment rather than redistributed in this repo.
+/public/models/

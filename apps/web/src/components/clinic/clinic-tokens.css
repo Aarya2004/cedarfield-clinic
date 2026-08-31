@@ -1,0 +1,122 @@
+/* =============================================================================
+ * Cedarfield Clinic — the token family. SPEC-V1 §5 (calm clinic, typographic drama).
+ *
+ * SCOPED, NOT GLOBAL. Everything below is declared on `.clinic`, never on `:root`. The app shell
+ * ships a dark theme on <html> and defines --ink / --bg / --muted for it; a clinic route that
+ * inherited those would render near-white text on paper. Bench findings #2 and #3 were exactly
+ * that failure in miniature (a dark keycap reading --drop-ink off a paper :root, 1.2:1), so this
+ * file takes the opposite vow: the clinic paints from --clinic-* only, the dock carries its own
+ * --clinic-dock-* ink family because it is the one dark object on a light page, and the --drop-*
+ * names the reused logic modules reference (lib/drop/urgency.ts returns
+ * `var(--drop-calm, …)` and friends) are re-pointed here so a transplanted helper lands in this
+ * palette instead of the bench's.
+ *
+ * THE COLOUR RULE, in one line: cedar means yours. Nothing else on the page is ever cedar.
+ * A slot the rival took is not red and not clay — it is grey, struck through, and labelled. Losses
+ * are absences of colour, so the one appointment that is yours is the only coloured thing on the
+ * sheet and the eye finds it from across a room. The single exception is the last ten seconds of a
+ * hold, where --clinic-alert appears inside the dock and nowhere else: that is a safety signal, not
+ * decoration, and it is the reason the dock has its own ink family.
+ *
+ * THE TYPE RULE, in one line: mono means measured. Geist Mono is reserved for numbers this page
+ * counted with its own instrument (lib/drop/interaction-counter.ts) and for the seconds burning on
+ * a hold. Appointment times are set in the sans at display size with tabular figures — a timetable,
+ * not a terminal. The bench set times in mono and read as a dev rig because of it.
+ *
+ * Contrast ratios in the comments are WCAG 2.1 computed from these exact hex values.
+ * ============================================================================= */
+
+.clinic {
+  /* --- paper ---------------------------------------------------------------
+   * A cool, faintly green-grey sheet rather than the warm cream every "editorial" page uses.
+   * Cedarfield's own material: a clinic day sheet under fluorescent light. */
+  --clinic-paper: #f3f5f2;
+  --clinic-sheet: #ffffff; /* the plate a row or a panel sits on */
+  --clinic-ink: #14181b; /* 16.28:1 on --clinic-paper · 17.32:1 on --clinic-sheet */
+  --clinic-muted: #59616a; /* 6.02:1 on --clinic-paper · 6.40:1 on --clinic-sheet */
+  --clinic-rule: #d5dad4; /* hairlines only, never text */
+  --clinic-rule-strong: #b3bab2;
+
+  /* --- yours (the only accent) ---------------------------------------------
+   * Cedar. Deep enough to carry small text on paper, dark enough that white sits on it. */
+  --clinic-yours: #14553b; /* 8.03:1 on --clinic-paper · 8.54:1 on --clinic-sheet */
+  --clinic-yours-ink: #ffffff; /* 8.54:1 on --clinic-yours */
+  --clinic-yours-wash: #e4eee8; /* --clinic-ink 14.71:1 · --clinic-yours 7.26:1 · --clinic-muted 5.44:1 */
+
+  /* --- gone: taken, expired, over ------------------------------------------
+   * Hueless by design (see the colour rule above). */
+  --clinic-gone: #6d757c; /* 4.55:1 on --clinic-paper — labels and struck times only */
+  --clinic-gone-sheet: #eceeeb;
+
+  /* --- alert: the last ten seconds, and a blocked press --------------------- */
+  --clinic-alert: #a4230f; /* 7.02:1 on --clinic-paper */
+
+  /* --- the dock: the one dark object, with its own complete ink family ------
+   * Never reads --clinic-ink or the app's --ink. Bench findings #2 / #3. */
+  --clinic-dock-bg: #10161a;
+  --clinic-dock-raise: #1b242a; /* the keycap face */
+  --clinic-dock-edge: #2c383f;
+  --clinic-dock-ink: #eef2ef; /* 15.72:1 on --clinic-dock-bg */
+  --clinic-dock-muted: #9aa5a0; /* 6.83:1 on --clinic-dock-bg */
+  --clinic-dock-yours: #6fd39c; /* 9.73:1 on --clinic-dock-bg — cedar's light twin */
+  --clinic-dock-attention: #f0a648; /* 8.75:1 on --clinic-dock-bg */
+  --clinic-dock-alert: #ff8a7a; /* 7.79:1 on --clinic-dock-bg */
+
+  /* --- the --drop-* names the reused logic modules resolve against ----------
+   * lib/drop/urgency.ts hands components `var(--drop-calm, #4a7c59)` and the like. Re-pointed so
+   * a helper transplanted from the bench paints in cedar, not in the bench's greens. The urgency
+   * ladder is intentionally cedar → amber → red: it STARTS at "yours" and escalates, so the colour
+   * change reads as time leaving rather than as a second, unrelated status system. */
+  --drop-calm: var(--clinic-dock-yours);
+  --drop-attention: var(--clinic-dock-attention);
+  --drop-critical: var(--clinic-dock-alert);
+  --drop-ink: var(--clinic-ink);
+  --drop-muted: var(--clinic-muted);
+
+  /* --- measure and rhythm --------------------------------------------------
+   * One grid runs both routes: a label gutter that answers "whose?" / "what is this?", and a body
+   * column. The rhyme between the landing's three steps and the booking sheet's rows is the point. */
+  --clinic-gutter: 9.5rem;
+  --clinic-band-gap: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+  --clinic-pad: clamp(1.15rem, 0.5rem + 3vw, 3.25rem);
+  --clinic-measure: 34rem;
+  --clinic-max: 76rem;
+
+  /* --- type ----------------------------------------------------------------
+   * Three faces, all already loaded by the app shell — no new webfont, no new dependency.
+   *   serif  Instrument Serif  · the thesis and the one-sentence steps, at real display size
+   *   sans   Geist Sans        · everything a person reads, and every appointment time
+   *   mono   Geist Mono        · measured numbers only (see the type rule) */
+  --clinic-serif: var(--font-serif), ui-serif, Georgia, 'Times New Roman', serif;
+  --clinic-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --clinic-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --clinic-thesis: clamp(2.5rem, 1.1rem + 5.4vw, 5.25rem);
+  --clinic-display: clamp(1.6rem, 1.05rem + 2.3vw, 2.6rem);
+  --clinic-time: clamp(2.1rem, 1.3rem + 3.2vw, 3.25rem);
+  --clinic-time-held: clamp(2.9rem, 1.5rem + 5.4vw, 5rem);
+  --clinic-label: 0.6875rem;
+
+  /* --- motion --------------------------------------------------------------
+   * One easing, three durations. Nothing repeats, nothing exceeds 3 Hz, and the only thing that
+   * animates continuously is the rule under a held time — which is data, not decoration. */
+  --clinic-ease: cubic-bezier(0.2, 0.72, 0.15, 1);
+  --clinic-quick: 140ms;
+  --clinic-settle: 280ms;
+  --clinic-swell: 420ms;
+
+  background: var(--clinic-paper);
+  color: var(--clinic-ink);
+  font-family: var(--clinic-sans);
+  min-height: 100dvh;
+  /* The app shell paints <body> from the dark theme; a clinic route owns the whole viewport. */
+  color-scheme: light;
+  accent-color: var(--clinic-yours);
+}
+
+/* The shell's dark <body> would otherwise show through the scroll overshoot and behind the fixed
+   dock. Scoped with :has so nothing outside a clinic route is touched. */
+body:has(> .clinic),
+body:has(.clinic) {
+  background: #f3f5f2;
+}

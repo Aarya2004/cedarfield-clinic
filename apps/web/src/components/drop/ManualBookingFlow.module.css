@@ -1,0 +1,511 @@
+/* =============================================================================
+ * The manual booking flow — a clinic day sheet, not a dashboard.
+ *
+ * Every colour is `var(--drop-*, <fallback>)`, and the fallbacks are the defaults declared in
+ * drop-tokens.css, so this flow renders correctly whether or not that stylesheet is loaded and
+ * reskins with it when it is.
+ *
+ * The look is deliberately plain and competent: hairline rules, near-square corners, a mono column
+ * of times, no shadows, no gradients, nothing that moves. The argument this screen exists to make
+ * only works if the manual site is a GOOD one, so it is styled like a public health service's
+ * booking page that someone took care over — because a strawman would prove nothing.
+ *
+ * The one place this design spends anything is the cost meter: the tally ruled into the header, and
+ * the receipt's breakdown table at the end. That is the thing to remember.
+ * ============================================================================= */
+
+.flow {
+  --rule: var(--drop-rule, #c7ccc8);
+  --ink: var(--drop-ink, #14171a);
+  --muted: var(--drop-muted, #555c62);
+  --card: var(--drop-card, #fcfdfb);
+  --gone: var(--drop-gone, #666d72);
+  --gone-card: var(--drop-gone-card, #eceeec);
+  --focus: var(--drop-yours, #12508f);
+  --alarm: var(--drop-critical, #b91c1c);
+  --claimed: var(--drop-rival, #9c3a1e);
+  --mono: var(--drop-font-mono, var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace);
+  --sans: var(--drop-font-sans, var(--font-sans), ui-sans-serif, system-ui, sans-serif);
+  --radius: var(--drop-radius, 3px);
+
+  max-width: 34rem;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.45;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  container-type: inline-size;
+}
+
+/* ---------------------------------------------------------------- header: name, step, tally */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  padding: 0.9rem 1.1rem 0.7rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.clinic {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0.15rem 0 0;
+}
+
+.title:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.progress {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0.35rem 0 0;
+}
+
+/* ---------------------------------------------------------------- the measured region */
+
+/* Everything the counter watches sits inside this element and nothing else does — the header,
+   including the tally itself, is outside it (COUNTING.md, "Scope"). */
+.measured {
+  padding: 0.9rem 1.1rem 1.1rem;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 0.8rem;
+}
+
+/* ---------------------------------------------------------------- the loss notice */
+
+.lost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  border-left: 4px solid var(--claimed);
+  background: var(--drop-rival-wash, #f4e5df);
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.92rem;
+}
+
+.lost p {
+  margin: 0;
+  flex: 1 1 14rem;
+}
+
+.lostTime {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- the board, as a day sheet */
+
+.sheet {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.row {
+  border-bottom: 1px solid var(--rule);
+}
+
+.rowButton {
+  display: grid;
+  grid-template-columns: 8.5ch 1fr auto;
+  align-items: baseline;
+  gap: 0.2rem 0.9rem;
+  width: 100%;
+  padding: 0.7rem 0.2rem;
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowButton:hover .who {
+  text-decoration: underline;
+}
+
+.rowButton:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -1px;
+}
+
+.rowGone {
+  display: grid;
+  grid-template-columns: 8.5ch 1fr auto;
+  align-items: baseline;
+  gap: 0.2rem 0.9rem;
+  padding: 0.7rem 0.2rem;
+  color: var(--gone);
+  background: var(--gone-card);
+}
+
+.time {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.timeGone {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.who {
+  min-width: 0;
+}
+
+.kind {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.rowGone .kind {
+  color: inherit;
+}
+
+.status {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.statusGone {
+  color: var(--claimed);
+}
+
+.empty {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  padding: 1.6rem 1rem;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- the chosen slot */
+
+.chosen {
+  border-left: 4px solid var(--ink);
+  padding: 0.55rem 0 0.55rem 0.8rem;
+  margin: 0 0 1rem;
+}
+
+.chosenTime {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  display: block;
+}
+
+.chosenWho {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------- the form */
+
+.fields {
+  display: grid;
+  gap: 1.05rem;
+  margin: 0 0 1.2rem;
+  border: 0;
+  padding: 0;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+/* GOV.UK's pattern, because it is tested and it works: an errored field wears a bar, not a colour. */
+.fieldError {
+  border-left: 4px solid var(--alarm);
+  padding-left: 0.7rem;
+  margin-left: -0.7rem;
+}
+
+.label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.error {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--alarm);
+  margin: 0;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.6rem;
+  min-height: 2.75rem; /* a 44px target, on a phone too */
+}
+
+.textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.input[aria-invalid='true'],
+.select[aria-invalid='true'],
+.textarea[aria-invalid='true'] {
+  border: 2px solid var(--alarm);
+}
+
+/* ---------------------------------------------------------------- the error summary */
+
+.summary {
+  border: 2px solid var(--alarm);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+  margin: 0 0 1.1rem;
+}
+
+.summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.summaryTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--alarm);
+  margin: 0 0 0.4rem;
+}
+
+.summaryList {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  list-style: disc; /* restated: the Tailwind preflight strips list markers globally */
+}
+
+.summaryList a {
+  color: var(--alarm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------- review */
+
+.answers {
+  margin: 0 0 1.2rem;
+  border-top: 1px solid var(--rule);
+}
+
+.answer {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr auto;
+  align-items: baseline;
+  gap: 0.2rem 0.8rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.answer dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.answer dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.answerBlank {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------- actions */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-top: 0.2rem;
+}
+
+.primary {
+  font: inherit;
+  font-weight: 600;
+  color: var(--card);
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 0.6rem 1.1rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.primary:hover {
+  background: var(--focus);
+  border-color: var(--focus);
+}
+
+.primary:disabled {
+  background: var(--gone);
+  border-color: var(--gone);
+  cursor: not-allowed;
+}
+
+.secondary,
+.change {
+  font: inherit;
+  color: var(--focus);
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  padding: 0.3rem 0.1rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.change {
+  font-size: 0.85rem;
+  justify-self: end;
+}
+
+.primary:focus-visible,
+.secondary:focus-visible,
+.change:focus-visible,
+.summaryList a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- booking / booked */
+
+.waiting {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--muted);
+  padding: 1.2rem 0;
+}
+
+.confirmed {
+  border-left: 4px solid var(--focus);
+  background: var(--drop-yours-wash, #e2ecf7);
+  padding: 0.8rem 0.9rem;
+  margin: 0 0 1.2rem;
+}
+
+.confirmedTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+}
+
+.confirmedBody {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.receiptNote {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 0.9rem 0 1rem;
+}
+
+/* Visually hidden, still announced. Local so the flow carries its own accessibility floor. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------- narrow widths */
+
+@container (max-width: 27rem) {
+  .rowButton,
+  .rowGone {
+    grid-template-columns: 8.5ch 1fr;
+  }
+
+  .status {
+    grid-column: 2;
+  }
+
+  .answer {
+    grid-template-columns: 1fr auto;
+  }
+
+  .answer dt {
+    grid-column: 1 / -1;
+  }
+}
