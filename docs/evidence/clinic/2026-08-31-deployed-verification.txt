@@ -2,6 +2,8 @@
 ✔ GET /clinic — 200
 ✔ GET /clinic/book — 200
 ✔ clinic-thesis.json — 31 steps, 0 failed
+✔ clinic-agent-edges.json — 18 steps, 0 failed
+✔ clinic-responsive.json — 8 steps, 0 failed
 ✔ clinic-rival-race.json — 9 steps, 0 failed
 ✔ clinic-hold-lapses.json — 10 steps, 0 failed
 ✔ clinic-landing-frontdoor.json — 4 steps, 0 failed

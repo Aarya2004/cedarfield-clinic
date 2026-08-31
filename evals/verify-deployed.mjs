@@ -45,6 +45,8 @@ for (const path of ['/', '/clinic', '/clinic/book']) {
 // ── 2. the product's own cases, against the deployed origin ────────────────────────────────────
 const cases = [
   ['clinic-thesis.json', '/clinic/book'],
+  ['clinic-agent-edges.json', '/clinic/book'],
+  ['clinic-responsive.json', '/clinic/book'],
   ['clinic-rival-race.json', '/clinic/book'],
   ['clinic-hold-lapses.json', '/clinic/book'],
   ['clinic-landing-frontdoor.json', '/'],

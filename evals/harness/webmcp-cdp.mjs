@@ -65,6 +65,8 @@ await new Promise((resolve, reject) => {
   ws.onerror = (e) => { clearTimeout(t); reject(new Error(`CDP WebSocket error: ${e?.message ?? 'unknown'}`)); };
 });
 let id = 0; const pending = new Map();
+/** Set by a `viewport` step; makes `shot` photograph the size the case actually asserted at. */
+let viewport = null;
 const tools = new Map(); const responded = []; const pageErrors = [];
 ws.onmessage = (ev) => {
   const m = JSON.parse(ev.data);
@@ -105,8 +107,13 @@ for (const step of steps) {
   const t0 = performance.now();
   try {
     if (typeof step.shot === 'string') {
-      // per-beat screenshot (evidence for the demo dry-run); full page at 1280 wide
-      await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+      // Per-beat screenshot (evidence for the demo dry-run); 1280 wide by default so every shot in
+      // the committed set is comparable. A `viewport` step earlier in the case wins: without that,
+      // a case that asserted at 390 px produced a 1280 px photograph of it, which is evidence of
+      // the wrong thing (caught 2026-08-31 by the responsive case).
+      if (!viewport) {
+        await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+      }
       await sleep(150);
       const r = await send('Page.captureScreenshot', { format: 'png' });
       // ROKAN_EVAL_SHOT_DIR redirects every shot's basename into one directory. run-all sets it for
@@ -119,6 +126,15 @@ for (const step of steps) {
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, Buffer.from(r.result.data, 'base64'));
       out({ step: 'shot', file, ms: Math.round(performance.now() - t0) });
+    } else if (step.viewport) {
+      viewport = step.viewport;
+      // Drive the page at a real device size. Added 2026-08-31 so the responsive claim ("clean at
+      // 390px") is asserted rather than eyeballed: `shot` already overrides device metrics, so
+      // without this every screenshot and every measurement was taken at one width.
+      const { width, height = 844, dpr = 2, mobile = width < 500 } = step.viewport;
+      await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: dpr, mobile });
+      await sleep(step.settle ?? 350);
+      out({ step: 'viewport', width, height, dpr, mobile, ms: Math.round(performance.now() - t0) });
     } else if (typeof step.query === 'string') {
       out({ step: 'query', query: step.query }); // consumed by run-all.mjs (page URL params)
     } else if (step.list) {

@@ -1,0 +1,20 @@
+[
+  { "_doc": [
+    "clinic-responsive — the product must be usable on the width most people actually browse at.",
+    "Asserted, not eyeballed: no horizontal overflow and no element hanging off the right edge at",
+    "390 x 844 (iPhone-class) or at 1280 desktop, on both the front door and the booking page.",
+    "The confirm dock is the one that matters — if it overflows, the one act a person can perform",
+    "is the thing that falls off the screen."
+  ] },
+
+  { "viewport": { "width": 390, "height": 844 } },
+  { "waitFor": "!!document.querySelector('[data-slot-state]')", "timeout": 25000 },
+  { "eval": "document.documentElement.scrollWidth - window.innerWidth <= 1", "equals": true },
+  { "eval": "[...document.querySelectorAll('*')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 1).length", "equals": 0 },
+  { "eval": "(() => { const b = document.querySelector('[data-armed] button, [data-clinic-action=\"open-slot\"]'); if (!b) return 'missing'; const r = b.getBoundingClientRect(); return r.width >= 44 && r.height >= 24 ? 'ok' : `${Math.round(r.width)}x${Math.round(r.height)}`; })()", "equals": "ok" },
+  { "shot": "docs/evidence/clinic/phone-book.png" },
+
+  { "viewport": { "width": 1280, "height": 900, "dpr": 1 } },
+  { "waitFor": "!!document.querySelector('[data-slot-state]')", "timeout": 10000 },
+  { "eval": "document.documentElement.scrollWidth - window.innerWidth <= 1", "equals": true }
+]

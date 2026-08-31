@@ -1,0 +1,36 @@
+[
+  { "_doc": [
+    "clinic-agent-edges — what a real agent does that a happy path never covers.",
+    "An agent lists slots, thinks, and then acts on stale information; it retries; it releases things",
+    "it does not hold; it tries to hold a second slot while holding one. None of that may corrupt the",
+    "board, and none of it may end in a booking. Every refusal must carry a reason an agent can read",
+    "back to its human — silence is the failure mode that makes an agent invent an explanation."
+  ] },
+
+  { "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')", "timeout": 25000 },
+
+  { "invoke": "clinic_hold_slot", "input": { "slot_id": "slot-does-not-exist" }, "outputMatches": "false|unknown|not|no such|gone" },
+  { "eval": "!!document.querySelector('[data-armed=\"true\"]')", "equals": false },
+
+  { "invoke": "clinic_release_hold", "input": {}, "outputMatches": "false|no hold|none|not holding|nothing" },
+
+  { "eval": "(() => { const els=[...document.querySelectorAll('[data-slot-state=\"open\"]')]; window.__a = els[0]?.getAttribute('data-clinic-slot'); window.__b = els[1]?.getAttribute('data-clinic-slot'); return !!(window.__a && window.__b && window.__a !== window.__b); })()", "equals": true },
+
+  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__a" }, "outputMatches": "held|ttl|true" },
+  { "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'", "timeout": 8000 },
+
+  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__a" }, "outputMatches": "held|already|true|ttl" },
+  { "eval": "document.querySelectorAll('[data-slot-state=\"held_by_you\"]').length", "equals": 1 },
+
+  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__b" } },
+  { "eval": "document.querySelectorAll('[data-slot-state=\"held_by_you\"]').length <= 1", "equals": true },
+  { "eval": "document.querySelectorAll('[data-slot-state=\"booked_yours\"]').length", "equals": 0 },
+
+  { "invoke": "clinic_hold_status", "outputMatches": "slot|seconds|held" },
+  { "eval": "!!document.querySelector('[data-armed=\"true\"]')", "equals": true },
+
+  { "invoke": "clinic_release_hold", "input": {}, "outputMatches": "true|released|ok" },
+  { "waitFor": "document.querySelectorAll('[data-slot-state=\"held_by_you\"]').length === 0", "timeout": 8000 },
+  { "eval": "!!document.querySelector('[data-armed=\"true\"]')", "equals": false },
+  { "eval": "document.querySelectorAll('[data-slot-state=\"booked_yours\"]').length", "equals": 0 }
+]
