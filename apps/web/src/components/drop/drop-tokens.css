@@ -1,0 +1,448 @@
+/* =============================================================================
+ * Drop skin — the default value of every --drop-* custom property, in one place.
+ *
+ * Brand-agnostic on purpose: the product name has not landed, so nothing below is any existing
+ * product's palette. To reskin, redefine the `:root` block on any ancestor (the playground, a theme
+ * wrapper, the real app shell). Components read every colour as `var(--drop-x, <fallback>)`, so the
+ * board still renders correctly if this stylesheet never loads at all.
+ *
+ * Two rules carry the whole board, and they are learnable in one glance:
+ *   HUE SAYS WHOSE.      no hue = nobody's · blue = yours · clay = someone else's.
+ *   WEIGHT SAYS SETTLED. outline = a live claim · solid fill or a strike = the claim is closed.
+ * So: open is ink on paper; held_by_you is a blue outline; booked_yours is the board's only solid
+ * plate — the win is the negative of everything around it; held_by_other is a clay rail on a
+ * drained plate; taken_by_rival is that plate with the time struck through, the clay rail left
+ * standing so you can still read *who* took it from across the room; expired_hold is struck but
+ * hueless and dashed, because nobody got it — it just ran out.
+ * Nothing depends on hue alone: every state is also carried by the rail, the status word, the
+ * strike, the chip and `data-slot-state`.
+ *
+ * Contrast ratios below are computed from these exact hex values (WCAG 2.1 relative luminance).
+ * ============================================================================= */
+
+:root {
+  /* --- ground -------------------------------------------------------------- */
+  --drop-bg: #e6e9e6; /* the day sheet the plates sit on */
+  --drop-card: #fcfdfb; /* a slot plate */
+  --drop-ink: #14171a; /* 17.63:1 on --drop-card · 14.70:1 on --drop-bg */
+  --drop-muted: #555c62; /* 6.65:1 on --drop-card · 5.55:1 on --drop-bg */
+  --drop-rule: #c7ccc8; /* hairlines only, never text */
+
+  /* --- your claim ---------------------------------------------------------- */
+  --drop-yours: #12508f; /* 8.01:1 on --drop-card · 6.68:1 on --drop-bg */
+  --drop-yours-wash: #e2ecf7; /* --drop-ink 15.06:1 · --drop-yours 6.84:1 · --drop-muted 5.68:1 */
+
+  /* --- another party's claim ----------------------------------------------- */
+  --drop-rival: #9c3a1e; /* 6.78:1 on --drop-card · 5.65:1 on --drop-bg */
+  --drop-rival-wash: #f4e5df; /* --drop-ink 14.67:1 · --drop-rival 5.64:1 · --drop-muted 5.53:1 */
+
+  /* --- over: expired, taken, gone ------------------------------------------ */
+  --drop-gone-card: #eceeec; /* a drained plate */
+  --drop-gone: #666d72; /* 4.51:1 on --drop-gone-card · 5.15:1 on --drop-card */
+
+  /* --- countdown urgency ---------------------------------------------------
+   * These three mirror the fallbacks already declared in lib/drop/urgency.ts so the TTL bar (T2),
+   * the confirm surface (T1) and this board agree on one scale. Change them in both places, or the
+   * brand pass will drift the bar away from the card it sits in. */
+  --drop-calm: #4a7c59;
+  --drop-attention: #d97706;
+  --drop-critical: #b91c1c; /* 6.34:1 on --drop-card */
+
+  /* --- form ----------------------------------------------------------------
+   * A clinic day sheet, not a dashboard: near-square corners, hairline rules, no shadows except
+   * the one ring that marks a live hold. */
+  --drop-radius: 3px;
+  --drop-rail: 8px; /* the state stripe down each plate's left edge */
+  --drop-gap: 0.75rem;
+
+  /* --- type ----------------------------------------------------------------
+   * Mono is the DISPLAY face here, not a code affectation: the times are a column of data and they
+   * must align and be read at video distance. Sans carries the humans and the labels. */
+  --drop-font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --drop-font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --drop-time-size: clamp(1.9rem, 1.2rem + 2.4vw, 2.85rem); /* the hero of the card */
+  --drop-status-size: clamp(0.85rem, 0.75rem + 0.35vw, 1.05rem); /* must survive video compression */
+
+  /* --- motion --------------------------------------------------------------
+   * The claim beat is one sweep and one settle: no repetition, nothing above 3 Hz anywhere. */
+  --drop-claim-ms: 420ms;
+  --drop-strike-ms: 260ms;
+  --drop-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+/* =============================================================================
+ * Board
+ * ========================================================================== */
+
+.drop-board {
+  background: var(--drop-bg, #e6e9e6);
+  color: var(--drop-ink, #14171a);
+  font-family: var(--drop-font-sans);
+  padding: clamp(0.9rem, 2vw, 1.5rem);
+  border-radius: var(--drop-radius, 3px);
+  container-type: inline-size;
+}
+
+.drop-board__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--drop-ink, #14171a);
+  margin-bottom: var(--drop-gap, 0.75rem);
+}
+
+.drop-board__wave {
+  font-family: var(--drop-font-mono);
+  font-size: clamp(0.8rem, 0.7rem + 0.35vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* The tally is the board's honest scoreboard: every number is counted from the slots prop. */
+.drop-board__tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-family: var(--drop-font-mono);
+  font-size: clamp(0.75rem, 0.68rem + 0.25vw, 0.9rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--drop-muted, #555c62);
+}
+
+.drop-board__tally b {
+  color: var(--drop-ink, #14171a);
+  font-weight: 600;
+}
+
+.drop-board__tally [data-tally='yours'] b {
+  color: var(--drop-yours, #12508f);
+}
+
+.drop-board__tally [data-tally='gone'] b {
+  color: var(--drop-rival, #9c3a1e);
+}
+
+.drop-board__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: var(--drop-gap, 0.75rem);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.drop-board__empty {
+  font-family: var(--drop-font-mono);
+  font-size: 0.9rem;
+  color: var(--drop-muted, #555c62);
+  border: 1px dashed var(--drop-rule, #c7ccc8);
+  border-radius: var(--drop-radius, 3px);
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+/* Visually hidden, still read aloud. Local rather than borrowed so the board carries its own
+   accessibility floor wherever it is transplanted. */
+.drop-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =============================================================================
+ * Slot plate
+ * ========================================================================== */
+
+.drop-card {
+  position: relative;
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.85rem 0.7rem calc(var(--drop-rail, 8px) + 0.85rem);
+  background: var(--drop-card, #fcfdfb);
+  color: var(--drop-ink, #14171a);
+  border: 1px solid var(--drop-rule, #c7ccc8);
+  border-radius: var(--drop-radius, 3px);
+  transition:
+    background-color 200ms var(--drop-ease),
+    border-color 200ms var(--drop-ease),
+    color 200ms var(--drop-ease);
+}
+
+/* The rail is the thing a judge reads first from across a room: a wall of stripes, one of which
+   just changed colour. It is an ::before so the card stays one box for layout. */
+.drop-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--drop-rail, 8px);
+  border-radius: var(--drop-radius, 3px) 0 0 var(--drop-radius, 3px);
+  background: var(--drop-state, var(--drop-ink, #14171a));
+}
+
+.drop-card__kind {
+  font-family: var(--drop-font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--drop-muted, #555c62);
+}
+
+.drop-card__time {
+  position: relative;
+  display: inline-block;
+  align-self: start;
+  font-family: var(--drop-font-mono);
+  font-size: var(--drop-time-size);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The strike bar. Sits at rest (scaleX 0) on every card; only the ended states draw it. */
+.drop-card__strike {
+  position: absolute;
+  left: -0.04em;
+  right: -0.04em;
+  top: 52%;
+  height: 0.09em;
+  border-radius: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.drop-card__who {
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.drop-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin-top: 0.15rem;
+  min-height: 1.5rem;
+}
+
+.drop-card__status {
+  font-family: var(--drop-font-mono);
+  font-size: var(--drop-status-size);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--drop-state, var(--drop-muted, #555c62));
+}
+
+/* The honest chip: it says out loud that the rival is a scripted demo actor. */
+.drop-card__chip {
+  font-family: var(--drop-font-mono);
+  font-size: 0.74rem; /* the honesty label has to be readable in the recording, not just on screen */
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+/* Where the TTL bar (T2) is handed the floor. Full width so the bar can span the plate. */
+.drop-card__ttl {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.drop-card__action {
+  font-family: var(--drop-font-mono);
+  font-size: var(--drop-status-size);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.7rem;
+  border-radius: 2px;
+  border: 1px solid var(--drop-ink, #14171a);
+  background: transparent;
+  color: var(--drop-ink, #14171a);
+  cursor: pointer;
+  transition: background-color 140ms var(--drop-ease), color 140ms var(--drop-ease);
+}
+
+.drop-card__action:hover {
+  background: var(--drop-ink, #14171a);
+  color: var(--drop-card, #fcfdfb);
+}
+
+.drop-card__action:focus-visible {
+  outline: 3px solid var(--drop-yours, #12508f);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+ * States. Each sets --drop-state (rail + status word) and, where it matters, the plate itself.
+ * ========================================================================== */
+
+.drop-card[data-slot-state='open'] {
+  --drop-state: var(--drop-ink, #14171a);
+}
+
+.drop-card[data-slot-state='held_by_you'] {
+  --drop-state: var(--drop-yours, #12508f);
+  border-color: var(--drop-yours, #12508f);
+  background: var(--drop-yours-wash, #e2ecf7);
+  box-shadow: 0 0 0 3px var(--drop-yours-wash, #e2ecf7);
+  /* One slow breath — 0.42 Hz, an order of magnitude under the 3 Hz seizure threshold. */
+  animation: drop-breathe 2.4s ease-in-out infinite;
+}
+
+/* Someone else's live claim: their clay on a drained plate, but no strike — it is not over. */
+.drop-card[data-slot-state='held_by_other'] {
+  --drop-state: var(--drop-rival, #9c3a1e); /* 5.93:1 on --drop-gone-card */
+  background: var(--drop-gone-card, #eceeec);
+  color: var(--drop-gone, #666d72);
+  border-color: var(--drop-rule, #c7ccc8);
+}
+
+/* The win: the only solid plate on the board, and the only inverted rail. Everything around it is
+   paper, so this one card is what the eye lands on. */
+.drop-card[data-slot-state='booked_yours'] {
+  --drop-state: var(--drop-card, #fcfdfb);
+  --drop-rail: 6px;
+  background: var(--drop-yours, #12508f);
+  color: var(--drop-card, #fcfdfb); /* 8.01:1 on --drop-yours */
+  border-color: var(--drop-yours, #12508f);
+}
+
+.drop-card[data-slot-state='booked_yours'] .drop-card__kind,
+.drop-card[data-slot-state='booked_yours'] .drop-card__who,
+.drop-card[data-slot-state='booked_yours'] .drop-card__status {
+  color: inherit;
+}
+
+/* The loss. The plate drains but the rail keeps the claimant's clay, so "who took it" survives
+   at video distance long after the animation is over. */
+.drop-card[data-slot-state='taken_by_rival'] {
+  --drop-state: var(--drop-rival, #9c3a1e);
+  --drop-flood: var(--drop-rival, #9c3a1e);
+  background: var(--drop-gone-card, #eceeec);
+  color: var(--drop-gone, #666d72);
+  border-color: var(--drop-rule, #c7ccc8);
+}
+
+/* Nobody's loss but the clock's: hueless rail, dashed edge, struck time. The status word stays
+   red because a lapsed hold is the one thing here the human could have prevented. */
+.drop-card[data-slot-state='expired_hold'] {
+  --drop-state: var(--drop-gone, #666d72);
+  --drop-flood: var(--drop-critical, #b91c1c);
+  background: var(--drop-gone-card, #eceeec);
+  color: var(--drop-gone, #666d72);
+  border: 1px dashed var(--drop-gone, #666d72);
+}
+
+.drop-card[data-slot-state='expired_hold'] .drop-card__status {
+  color: var(--drop-critical, #b91c1c); /* 5.55:1 on --drop-gone-card */
+}
+
+.drop-card[data-slot-state='taken_by_rival'] .drop-card__kind,
+.drop-card[data-slot-state='taken_by_rival'] .drop-card__who,
+.drop-card[data-slot-state='expired_hold'] .drop-card__kind,
+.drop-card[data-slot-state='expired_hold'] .drop-card__who,
+.drop-card[data-slot-state='held_by_other'] .drop-card__kind,
+.drop-card[data-slot-state='held_by_other'] .drop-card__who {
+  color: inherit;
+}
+
+/* Ended states wear the strike permanently. */
+.drop-card[data-slot-state='taken_by_rival'] .drop-card__strike,
+.drop-card[data-slot-state='expired_hold'] .drop-card__strike {
+  transform: scaleX(1);
+}
+
+/* =============================================================================
+ * The claim beat — the one place this design spends its boldness.
+ *
+ * A slot is lost in under a second of video: the plate floods with the claimant's clay, the time
+ * is struck left-to-right, then everything drains to grey with the clay rail left standing.
+ * One sweep, one settle, no repeat.
+ * ========================================================================== */
+
+.drop-card.is-claiming {
+  animation: drop-claim var(--drop-claim-ms, 420ms) var(--drop-ease) both;
+}
+
+.drop-card.is-claiming .drop-card__kind,
+.drop-card.is-claiming .drop-card__who,
+.drop-card.is-claiming .drop-card__status,
+.drop-card.is-claiming .drop-card__chip {
+  color: inherit;
+}
+
+.drop-card.is-claiming::before {
+  background: currentColor;
+}
+
+.drop-card.is-claiming .drop-card__strike {
+  animation: drop-strike var(--drop-strike-ms, 260ms) var(--drop-ease) both;
+}
+
+@keyframes drop-claim {
+  0% {
+    background: var(--drop-card, #fcfdfb);
+    color: var(--drop-ink, #14171a);
+    transform: scale(1);
+  }
+  /* The flood colour is whoever just closed the claim — see --drop-flood on each ended state. */
+  25% {
+    background: var(--drop-flood, var(--drop-rival, #9c3a1e));
+    color: var(--drop-card, #fcfdfb);
+    transform: scale(1.02);
+  }
+  100% {
+    background: var(--drop-gone-card, #eceeec);
+    color: var(--drop-gone, #666d72);
+    transform: scale(1);
+  }
+}
+
+@keyframes drop-strike {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes drop-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--drop-yours-wash, #e2ecf7);
+  }
+  50% {
+    box-shadow: 0 0 0 7px var(--drop-yours-wash, #e2ecf7);
+  }
+}
+
+/* The quality floor: the beat is decoration on top of a state change the attribute already made.
+   Removing it loses nothing — the strike, the rail and the status word are all still there. */
+@media (prefers-reduced-motion: reduce) {
+  .drop-card,
+  .drop-card.is-claiming,
+  .drop-card.is-claiming .drop-card__strike,
+  .drop-card[data-slot-state='held_by_you'] {
+    animation: none;
+    transition: none;
+  }
+}
