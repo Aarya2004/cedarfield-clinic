@@ -18,7 +18,7 @@ import {
   holdSlotSchema,
   releaseHoldSchema,
   joinWaitlistSchema,
-} from './schemas';
+} from './schemas.ts';
 
 test('booking is not a tool: no forbidden name on the surface, ever', () => {
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
