@@ -2,7 +2,7 @@
 id: T1
 title: Confirm surface — the one human act
 type: task
-status: in_progress
+status: closed
 assignee: aarya-claude
 blocked-by: []
 ---
@@ -33,3 +33,6 @@ policy requires one anyway), volume modest, never blocks or delays the confirm p
 Logic that decides trusted/announce/urgency goes in `lib/drop/confirm-logic.ts` (relative imports,
 unit-tested). Invoke the frontend-design skill before styling. This component must be beautiful —
 it is on camera for the demo's climax.
+
+## Resolution (2026-08-30)
+Commit c15bcff. 38 tests. Mechanical-keycap confirm: isTrusted gate (synthetic presses blocked + counted in data-untrusted-attempts, measured not scripted), Enter/Space single-shot w/ repeat filter, milestone announcements, opt-in two-tone audio (persisted, no AudioContext until enabled). Additive URGENCY_INK map for contrast (#b91c1c only 2.45:1 on cap) — themes overriding --drop-critical must also override --drop-critical-ink. Verified independently: targeted 38/38, isTrusted present in both gate layers.
