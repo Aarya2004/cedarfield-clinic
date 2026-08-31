@@ -2,7 +2,7 @@
 id: T3
 title: Slot board + slot card states
 type: task
-status: in_progress
+status: closed
 assignee: aarya-claude
 blocked-by: []
 ---
@@ -23,3 +23,6 @@ lands — no Rokan palette hardcoding. State transitions announced via one polit
 board ("9:20 slot taken", "9:40 held — yours"), throttled. Every card: `data-slot-id`,
 `data-slot-state`. frontend-design skill first; the lost-race beat (state flips under contention)
 must be legible in under 3 seconds of video.
+
+## Resolution (2026-08-30)
+Commit af23095. 12 tests. Six-state board: hue=whose, weight=settled; lost-race beat = clay flood + strike sweep + drain w/ persistent rival rail (~0.5s, reduced-motion snaps to identical settled card); one polite live region, ~900ms cadence. ttlSlot?: ReactNode seam (no TtlBar import). COUPLING NOTE: drop-tokens.css --drop-* values must stay in sync with urgency.ts fallbacks — brand pass changes BOTH. Verified independently: targeted 12/12, data hooks + tokens present.
