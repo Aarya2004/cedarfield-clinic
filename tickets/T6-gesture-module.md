@@ -2,8 +2,8 @@
 id: T6
 title: MediaPipe gesture module (flagged progressive enhancement)
 type: task
-status: open
-assignee:
+status: in_progress
+assignee: aarya-claude
 blocked-by: []
 ---
 
