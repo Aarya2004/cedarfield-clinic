@@ -46,7 +46,7 @@ import { formatClock } from '../../lib/drop/time.ts';
 import type { DropDriver } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
-import { Band, ClinicBanner, Masthead } from './ClinicFrame.tsx';
+import { Band, ClinicBanner, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
 import { ReceiptCompare, type LaneReceipt } from './ReceiptCompare.tsx';
@@ -251,7 +251,8 @@ export function ClinicBooking() {
   return (
     <div className="clinic" data-clinic-route="book" data-clinic-wave={wave}>
       <ClinicBanner />
-      <div className="cl-shell">
+      <main className="cl-shell">
+        <h1 className="cl-sr">Book an appointment at {CLINIC_NAME}</h1>
         <Masthead
           aside={
             <>
@@ -370,7 +371,7 @@ export function ClinicBooking() {
             never registered.
           </p>
         </Band>
-      </div>
+      </main>
 
       {session.held !== null ? <div className="cl-dock-spacer" aria-hidden="true" /> : null}
     </div>

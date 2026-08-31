@@ -13,12 +13,23 @@ export const CLINIC_NAME = 'Cedarfield Clinic';
 /** Placeholder brand, pure content (SPEC-V1 §1) — no product identity has landed yet. */
 export const CLINIC_STANDFIRST = 'Appointments · cancellations released in waves';
 
+/**
+ * The honesty line, and the page's banner landmark.
+ *
+ * The `<header>` wrapper is not decoration: axe flagged both routes for `region` (content outside
+ * any landmark) and `landmark-one-main` on 2026-08-31, and an entry that argues accessibility must
+ * not fail the first audit a judge runs. The wrapper is a bare block element — `.cl-banner` keeps
+ * every rule it had, so nothing moves on screen. `Masthead`'s own `<header>` sits inside `<main>`
+ * and is therefore not a second banner landmark.
+ */
 export function ClinicBanner() {
   return (
-    <p className="cl-banner" data-clinic-banner>
-      <b>Demo inventory.</b>
-      <span>Simulated rival, labelled as one. Nothing real is booked and no payment is taken.</span>
-    </p>
+    <header className="cl-bannerbar">
+      <p className="cl-banner" data-clinic-banner>
+        <b>Demo inventory.</b>
+        <span>Simulated rival, labelled as one. Nothing real is booked and no payment is taken.</span>
+      </p>
+    </header>
   );
 }
 

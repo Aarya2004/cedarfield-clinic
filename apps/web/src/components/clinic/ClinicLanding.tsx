@@ -21,7 +21,7 @@ export function ClinicLanding() {
   return (
     <div className="clinic" data-clinic-route="landing">
       <ClinicBanner />
-      <div className="cl-shell">
+      <main className="cl-shell">
         <Masthead
           aside={
             <Link className="cl-quiet" href="/clinic/book" data-clinic-nav="book">
@@ -114,7 +114,7 @@ export function ClinicLanding() {
             </Link>
           </p>
         </Band>
-      </div>
+      </main>
     </div>
   );
 }
