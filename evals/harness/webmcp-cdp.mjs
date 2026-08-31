@@ -195,12 +195,16 @@ for (const step of steps) {
       out({ step: 'key', key: step.key, ctrl: !!step.ctrl, ms: Math.round(performance.now() - t0) });
     } else if (step.eval) {
       const value = await evalJs(step.eval);
+      // Echo at most 2 KB of the expression: an injected library (axe is 553 KB) turned one log
+      // line into half a megabyte, and Node drops pending stdout on exit — the tail of the run,
+      // summary included, silently vanished (found 2026-08-31 while gating a11y on step results).
+      const exprEcho = step.eval.length > 2048 ? `${step.eval.slice(0, 2048)}… [+${step.eval.length - 2048} chars]` : step.eval;
       // A bare eval (no equals/matches) is a recorded measurement: it must at least produce a value.
       // Opus pass 3: a bare step whose value was null counted toward "0 failed" for a day.
       const recorded = !('equals' in step) && !('matches' in step);
       const ok = 'equals' in step ? JSON.stringify(value) === JSON.stringify(step.equals) : 'matches' in step ? new RegExp(step.matches).test(String(value)) : value !== null && value !== undefined && value !== false;
       if (!ok) await fail();
-      out({ step: 'eval', expr: step.eval, value, ...('equals' in step ? { equals: step.equals, ok } : {}), ...('matches' in step ? { matches: step.matches, ok } : {}), ...(recorded ? { recorded: true, ok } : {}), ms: Math.round(performance.now() - t0) });
+      out({ step: 'eval', expr: exprEcho, value, ...('equals' in step ? { equals: step.equals, ok } : {}), ...('matches' in step ? { matches: step.matches, ok } : {}), ...(recorded ? { recorded: true, ok } : {}), ms: Math.round(performance.now() - t0) });
     } else if (step.sleep) {
       await sleep(step.sleep);
       out({ step: 'sleep', ms: step.sleep });

@@ -48,16 +48,22 @@ const freePort = () =>
     s.on('error', rej);
   });
 
-/** Steps: wait for hydration (the counter only exists once React runs), inject axe, run it. */
+/** Steps: wait for hydration (the hooks only exist once React runs), inject axe, run it. */
 function stepsFor(route) {
-  const ready =
-    route === '/clinic'
-      ? "!!document.querySelector('[data-clinic-route=\"landing\"]')"
-      : "!!document.querySelector('[data-slot-state]')";
+  // `/` and `/clinic` both render the landing; only the booking route has slots. Getting this
+  // wrong is not cosmetic: the first version waited for `[data-slot-state]` on `/`, which never
+  // appears there, so the audit sat out a silent 30 s timeout per run and the failed wait was
+  // ignored — an audit that cannot fail its own readiness check is not a gate (found 2026-08-31
+  // in self-review; the summary check below closes the second half of that hole).
+  const ready = route.startsWith('/clinic/book')
+    ? "!!document.querySelector('[data-slot-state]')"
+    : "!!document.querySelector('[data-clinic-route=\"landing\"]')";
   return [
     { waitFor: ready, timeout: 30000 },
     { sleep: 700 },
-    { eval: `${axeSource}; typeof axe`, equals: 'function' },
+    // axe.min.js is a UMD bundle whose global is an object, not a function (first version
+    // asserted 'function' and failed on every route once the gate started reading step results).
+    { eval: `${axeSource}; typeof axe`, equals: 'object' },
     {
       eval:
         `axe.run(document, { runOnly: { type: 'tag', values: ${JSON.stringify(tags)} }, resultTypes: ['violations'] })` +
@@ -96,15 +102,22 @@ try {
       maxBuffer: 32 * 1024 * 1024, // axe's own source echoes back in the step log; 1 MB is not enough
     });
     const lines = (run.stdout ?? '').split('\n').filter(Boolean);
-    const found = lines
-      .map((l) => {
-        try {
-          return JSON.parse(l);
-        } catch {
-          return null;
-        }
-      })
-      .find((d) => d && typeof d.value === 'string' && d.value.includes('violations'));
+    const parsed = lines.map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    });
+    const found = parsed.find((d) => d && typeof d.value === 'string' && d.value.includes('violations'));
+    const summary = parsed.find((d) => d && d.summary)?.summary;
+    if (summary && summary.failed > 0) {
+      // A failed readiness wait or a failed injection means the audit ran against a page state we
+      // did not intend — treat it as a violation of the gate itself, never as a clean pass.
+      console.log(`✖ ${route} — ${summary.failed} harness step(s) failed before/around the audit`);
+      violations += 1;
+      continue;
+    }
     if (!found) {
       console.error(`✖ ${route}: the audit produced no result (harness failed)`);
       console.error((run.stderr ?? '').slice(-800));

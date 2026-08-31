@@ -88,7 +88,7 @@ agent real capability (hold, watch, compare, queue) while making the consequenti
 ```bash
 pnpm install
 cd apps/web && pnpm typecheck && pnpm lint && pnpm test    # 418 unit tests
-cd .. && node evals/run-all.mjs --only=clinic              # 4 live browser cases, real tool calls
+cd .. && node evals/run-all.mjs --only=clinic              # 8 live browser cases, real tool calls
 node evals/a11y.mjs                                        # axe-core on both routes
 ```
 
