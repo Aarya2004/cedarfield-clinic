@@ -41,14 +41,16 @@ export interface TaxSnapshot {
 const zero = (): TaxCount => ({ pointer: 0, key: 0, scroll: 0, gesture: 0 });
 
 export class TaxMeter {
+  readonly mode: TaxMode;
   private counts: TaxCount = zero();
   private lastScrollAt = -Infinity;
   private startedAt: number;
+  private readonly now: () => number;
 
-  constructor(
-    readonly mode: TaxMode,
-    private readonly now: () => number = () => Date.now(),
-  ) {
+  // No constructor parameter properties: node --experimental-strip-types (strip-only) rejects them.
+  constructor(mode: TaxMode, now: () => number = () => Date.now()) {
+    this.mode = mode;
+    this.now = now;
     this.startedAt = this.now();
   }
 
