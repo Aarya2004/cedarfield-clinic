@@ -1,0 +1,7 @@
+[
+  { "_doc": ["The front door: `/` must be the product a judge came to see, not the pre-pivot terminal."] },
+  { "waitFor": "!!document.querySelector('[data-clinic-route=\"landing\"]')", "timeout": 25000 },
+  { "eval": "document.title", "matches": "Cedarfield|Clinic" },
+  { "eval": "!!document.querySelector('main.cl-shell')", "equals": true },
+  { "eval": "!!document.querySelector('.xterm, [data-rokan-terminal]')", "equals": false }
+]

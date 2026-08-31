@@ -5,7 +5,7 @@
 
 **Project name:** _TODO — the two founders pick it; "The Drop" is the working title._
 **Tagline:** Your agent can hold it. Only you can take it.
-**Live URL:** `https://<deploy>/clinic`
+**Live URL:** `https://<deploy>` (the front door is the product; the booking page is `/clinic/book`)
 <!-- TODO(before submit): Vercel has no git auto-deploy on this project. Run
      `cd apps/web && vercel --prod --yes`, then open /clinic/book in ChatGPT desktop and confirm
      the Site-tools arrow lists five clinic_* tools before pasting the URL here and in README.md. -->

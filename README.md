@@ -10,7 +10,7 @@ appears — and then it stops, because **there is no booking tool**. The only th
 appointment is one act from the person the appointment is for: **one key, one switch press, or one
 held gesture.** Nothing an agent can call, and nothing a script can fake, reaches that step.
 
-**Live:** `https://<deploy>/clinic` — open it in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or in
+**Live:** `https://<deploy>` — the front door is the product. Open it in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or in
 **Chrome 152+** with `chrome://flags/#enable-webmcp-testing`.
 <!-- TODO(before submit): paste the deployed origin here and in docs/SUBMISSION.md. -->
 **Video:** _TODO — unlisted YouTube, ≤ 3:00._ · Entry for the **OpenAI WebMCP Challenge**. Apache-2.0.
@@ -19,7 +19,7 @@ held gesture.** Nothing an agent can call, and nothing a script can fake, reache
 
 ## 60 seconds, no login
 
-1. Open **`/clinic/book`**. Six appointments; a countdown to the next release; a quiet counter in the
+1. Open the live URL, then **“Book an appointment”** (`/clinic/book`). Six appointments; a countdown to the next release; a quiet counter in the
    corner that counts every interaction the page costs you. Nothing is signed in, nothing is real.
 2. **Book one by hand.** Click a slot, fill the form, submit. Watch the counter climb — and watch a
    slot or two vanish while you type, taken by the (labelled) simulated rival. That is the web most
@@ -133,7 +133,9 @@ Traces and screenshots for every one of these are committed under `docs/evidence
 
 ```
 apps/web
-  app/clinic            landing — the thesis, the countdown, how it works
+  app/page.tsx          the front door — renders the clinic landing
+  app/clinic            the same landing at its own path
+  app/terminal          Rokan Terminal, the pre-pivot entry, kept and still evalled
   app/clinic/book       the product: board · dock · manual flow · counter
   components/clinic     the calm-clinic surface (typographic, token-driven, no canvas)
   components/drop       ConfirmDock/Surface · TtlBar · SlotBoard · ClinicTools (the mount)

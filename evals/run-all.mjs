@@ -229,7 +229,9 @@ for (const f of cases) {
   const extraQuery = typeof first.query === 'string' ? `&${first.query}` : '';
   // `clinic-*` cases drive the Drop product's own route instead of Rokan's terminal at `/`.
   // They need no bridge and no pairing hash — the page is the whole product (SPEC-V1 §7.2).
-  const routePath = f.startsWith('clinic-landing') ? '/clinic' : f.startsWith('clinic-') ? '/clinic/book' : '/';
+  // `/` is the product (the clinic landing) since 2026-08-31; Rokan's terminal moved to `/terminal`
+  // and its cases drive it there. clinic-* cases drive the booking route.
+  const routePath = f === 'clinic-landing-frontdoor.json' ? '/' : f.startsWith('clinic-landing') ? '/clinic' : f.startsWith('clinic-') ? '/clinic/book' : '/terminal';
   const url = `http://localhost:${WEB_PORT}${routePath}?test=1${extraQuery}${withBridge || judgeUrl ? pairingHash : ''}`;
   // Judge runs own the committed evidence (docs/evidence/demo/*.png); every other mode shoots to scratch.
   // Judge runs own the committed evidence, so they must shoot to the case's declared path — set the
