@@ -93,6 +93,11 @@ const NO_COUNT: CounterSnapshot = { total: 0, breakdown: emptyBreakdown() };
  */
 const GESTURE_ENABLED = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
 
+/** "9:00 AM" must never break across a line inside the dock's headline ("Move 8:40 AM → 9:00 | AM"). */
+function noWrap(timeLabel: string): string {
+  return timeLabel.replace(/ /g, '\u00A0');
+}
+
 /** How long a prepared cancel stays armed before the page quietly stands down. */
 const PENDING_ACT_TTL_SECONDS = 45;
 
@@ -196,7 +201,7 @@ export function ClinicBooking() {
     (slotId: string): boolean => {
       const slot = driver.snapshot().slots.find((s) => s.id === slotId);
       if (!slot || slot.state !== 'booked_yours') return false;
-      setPendingAct({ kind: 'cancel', slotId, timeLabel: slot.timeLabel, detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now() });
+      setPendingAct({ kind: 'cancel', slotId, timeLabel: noWrap(slot.timeLabel), detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now() });
       return true;
     },
     [driver],
@@ -215,7 +220,7 @@ export function ClinicBooking() {
         kind: 'move',
         fromId,
         toId,
-        timeLabel: `${from.timeLabel} → ${to.timeLabel}`,
+        timeLabel: `${noWrap(from.timeLabel)} → ${noWrap(to.timeLabel)}`,
         detail: `${to.clinician} · ${to.kind}`,
         armedAt: Date.now(),
       });
