@@ -49,8 +49,31 @@ export const CLINIC_TOOL_NAMES = [
   'clinic_release_hold',
   'clinic_prepare_cancel',
   'clinic_prepare_move',
+  'clinic_my_appointment',
   'clinic_explain_confirm',
 ] as const;
+
+/**
+ * SPEC-V4 (2026-09-01): tools born from the human act. The base set is registered on load. The
+ * booked set does not exist until a PERSON has booked — it is registered live (toolchange) the
+ * moment the press lands and unregistered when the last booking is gone. The thesis, visible in
+ * the tool list itself: the human's press is what gives the agent its next capabilities.
+ */
+export const BASE_TOOL_NAMES = [
+  'clinic_list_drops',
+  'clinic_find_slots',
+  'clinic_clinicians',
+  'clinic_hold_slot',
+  'clinic_hold_status',
+  'clinic_release_hold',
+  'clinic_explain_confirm',
+] as const satisfies readonly ClinicToolName[];
+export const BOOKED_TOOL_NAMES = ['clinic_prepare_cancel', 'clinic_prepare_move', 'clinic_my_appointment'] as const satisfies readonly ClinicToolName[];
+
+/** Pure: does this view carry a booking of the visitor's — the condition that births the booked set. */
+export function hasOwnBooking(view: ClinicToolsView): boolean {
+  return view.session.slots.some((s) => s.state === 'booked_yours');
+}
 
 export type ClinicToolName = (typeof CLINIC_TOOL_NAMES)[number];
 
@@ -126,6 +149,8 @@ export interface ClinicToolsOptions {
    */
   onPrepareCancel?: (slotId: string) => boolean;
   onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
+  /** How often the registration watches for the human's booking (tests set it tiny). */
+  watchMs?: number;
 }
 
 const DEFAULT_SETTLE_TIMEOUT_MS = 1_200;
@@ -425,6 +450,12 @@ export const PREPARE_CANCEL_DESCRIPTION =
   'Arm the page for the person to CANCEL their booked appointment. Cancels nothing itself: the ' +
   'dock shows "press to cancel" and only a key, switch or held gesture from the person performs ' +
   'it. Refused when nothing is booked.';
+
+export const MY_APPOINTMENT_DESCRIPTION =
+  "Your human's booked appointment(s) on this board — time, clinician, kind, slot id — newest " +
+  'first. This tool exists only because your human booked: it appeared when they pressed, and ' +
+  'it disappears if nothing is booked. Read-only. To change a booking, arm a cancel or a move; ' +
+  'the press is theirs.';
 
 export const PREPARE_MOVE_DESCRIPTION =
   'Arm the page for the person to MOVE their booking to another slot. Holds the target slot so it ' +
@@ -821,6 +852,32 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       },
     },
     {
+      name: 'clinic_my_appointment',
+      title: "Your human's booked appointment(s)",
+      description: MY_APPOINTMENT_DESCRIPTION,
+      inputSchema: NO_INPUT_SCHEMA,
+      annotations: { readOnlyHint: true },
+      async execute() {
+        const view = source();
+        const mine = [...view.session.slots].reverse().filter((s) => s.state === 'booked_yours').map(toAgentSlot);
+        if (mine.length === 0) {
+          return asToolResult({
+            ok: false,
+            error: 'nothing_booked',
+            detail: 'Your human has no booked appointment on this board right now.',
+            open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        return asToolResult({
+          ok: true,
+          appointments: mine,
+          newest_first: true,
+          you_can: 'Arm a cancel (clinic_prepare_cancel) or a move (clinic_prepare_move). Your human performs either with one press; you cannot.',
+          changing: 'human_only' as const,
+        });
+      },
+    },
+    {
       name: 'clinic_explain_confirm',
       title: 'Why there is no booking tool',
       description: EXPLAIN_CONFIRM_DESCRIPTION,
@@ -832,7 +889,8 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           ok: true,
           booking: 'human_only' as const,
           reason: NO_BOOKING_TOOL_REASON,
-          tools_that_exist: [...CLINIC_TOOL_NAMES],
+          tools_that_exist: hasOwnBooking(view) ? [...CLINIC_TOOL_NAMES] : [...BASE_TOOL_NAMES],
+          ...(hasOwnBooking(view) ? {} : { tools_that_appear_after_your_human_books: [...BOOKED_TOOL_NAMES] }),
           tool_that_books: null,
           human_only_acts: ['book', 'cancel', 'move'],
           what_to_tell_your_human: HOLD_CHOREOGRAPHY,
@@ -852,8 +910,8 @@ export type ClinicRegistrationState =
   | { kind: 'error'; message: string };
 
 /**
- * Register the nine with `document.modelContext` (or the `navigator` alias) under ONE
- * AbortController; the returned function aborts it, which unregisters all nine. Feature-detected:
+ * Register the base seven with `document.modelContext` (or the `navigator` alias); the booked three
+ * are born and unregistered by the human's act (SPEC-V4). The returned function drops everything. Feature-detected:
  * with no modelContext this is a no-op that reports `unsupported` — the page must work identically
  * in a browser that has never heard of WebMCP.
  */
@@ -867,25 +925,76 @@ export async function registerClinicTools(
     onState({ kind: 'unsupported' });
     return () => {};
   }
-  const ac = new AbortController();
-  try {
-    for (const def of clinicToolDefs(source, options)) {
-      const tool: ModelContextTool<unknown> = {
-        name: def.name,
-        title: def.title,
-        description: def.description,
-        inputSchema: def.inputSchema,
-        annotations: def.annotations,
-        execute: def.execute,
-      };
-      await mc.registerTool(tool, { signal: ac.signal });
+  const defs = clinicToolDefs(source, options);
+  const toTool = (def: ClinicToolDef): ModelContextTool<unknown> => ({
+    name: def.name,
+    title: def.title,
+    description: def.description,
+    inputSchema: def.inputSchema,
+    annotations: def.annotations,
+    execute: def.execute,
+  });
+  const registerSet = async (names: readonly ClinicToolName[], signal: AbortSignal) => {
+    for (const def of defs) {
+      if (names.includes(def.name)) await mc.registerTool(toTool(def), { signal });
     }
-    onState({ kind: 'registered', names: [...CLINIC_TOOL_NAMES] });
+  };
+
+  const base = new AbortController();
+  let booked: AbortController | null = null;
+  let disposed = false;
+  const liveNames = (): ClinicToolName[] => (booked ? [...CLINIC_TOOL_NAMES] : [...BASE_TOOL_NAMES]);
+
+  try {
+    await registerSet(BASE_TOOL_NAMES, base.signal);
+    onState({ kind: 'registered', names: liveNames() });
   } catch (e) {
     // Half a surface is worse than none: a throw mid-loop must not leave the earlier tools live
     // under a label that says registration failed.
-    ac.abort();
+    base.abort();
     onState({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+    return () => {};
   }
-  return () => ac.abort();
+
+  // The human's act, watched: a booking appears → the booked set is born (Chrome fires
+  // toolchange); the last booking goes → it is unregistered. Polled, because the seam has no
+  // event stream and 400 ms is well inside the beat of a person reading a dock.
+  let busy = false;
+  const reconcile = async () => {
+    if (disposed || busy) return;
+    busy = true;
+    try {
+      const want = hasOwnBooking(source());
+      if (want && booked === null) {
+        const ac = new AbortController();
+        booked = ac;
+        try {
+          await registerSet(BOOKED_TOOL_NAMES, ac.signal);
+        } catch {
+          ac.abort();
+          booked = null;
+          return;
+        }
+        if (!disposed) onState({ kind: 'registered', names: liveNames() });
+      } else if (!want && booked !== null) {
+        booked.abort();
+        booked = null;
+        if (!disposed) onState({ kind: 'registered', names: liveNames() });
+      }
+    } finally {
+      busy = false;
+    }
+  };
+  await reconcile(); // a reload with a booking already on the board gets its tools at once
+  const watch = setInterval(() => void reconcile(), options.watchMs ?? 400);
+  // Under Node (tests) a live interval would keep the process alive after the last test; the
+  // browser's setInterval returns a number and has no unref — hence the guard.
+  (watch as unknown as { unref?: () => void }).unref?.();
+
+  return () => {
+    disposed = true;
+    clearInterval(watch);
+    booked?.abort();
+    base.abort();
+  };
 }

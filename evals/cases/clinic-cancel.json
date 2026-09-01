@@ -46,6 +46,13 @@
   "_doc": "Now the agent arms the cancel. The tool cancels NOTHING: the slot stays booked."
  },
  {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
+  "timeout": 8000
+ },
+ {
+  "list": true
+ },
+ {
   "invoke": "clinic_prepare_cancel",
   "outputMatches": "armed.{0,2}:.{0,2}cancel[\\s\\S]*human_only"
  },

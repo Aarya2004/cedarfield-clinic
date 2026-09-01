@@ -17,6 +17,8 @@ import { createMockDriver, type MockDropDriver } from './mock-driver.ts';
 import type { ModelContext, ModelContextTool, RegisterToolOptions } from '../webmcp/types.ts';
 import {
   CLINIC_TOOL_NAMES,
+  BASE_TOOL_NAMES,
+  BOOKED_TOOL_NAMES,
   HOLD_CHOREOGRAPHY,
   CANCEL_CHOREOGRAPHY,
   MOVE_CHOREOGRAPHY,
@@ -161,9 +163,9 @@ test('THE THESIS: no registered tool offers to book or confirm anything', async 
   const { mc, live } = fakeMc();
   const restore = withModelContext(mc);
   try {
-    await registerClinicTools(ready().source, () => {});
+    await registerClinicTools(ready().source, () => {}, { watchMs: 5 });
     const names = live();
-    assert.equal(names.length, 9);
+    assert.equal(names.length, 7, 'before any booking: the base seven');
     for (const name of names) {
       assert.ok(!/book/i.test(name), `${name} must not contain "book" — only the human books`);
       // The VERB is the thing under test: `clinic_explain_confirm` explains, it does not confirm.
@@ -173,8 +175,9 @@ test('THE THESIS: no registered tool offers to book or confirm anything', async 
         `${name} must not act like a booking tool`,
       );
     }
-    // Exhaustive, so a sixth tool cannot be added without this assertion being re-read.
-    assert.deepEqual(names, [...CLINIC_TOOL_NAMES]);
+    // Exhaustive, so an eighth base tool cannot be added without this assertion being re-read.
+    // (The booked three are born later by the human's press — asserted in the next test.)
+    assert.deepEqual(names, [...BASE_TOOL_NAMES]);
   } finally {
     restore();
   }
@@ -196,13 +199,14 @@ test('THE THESIS: no tool path ever calls driver.confirm()', async () => {
 
 // ── registration ────────────────────────────────────────────────────────────────────────────────
 
-test('exactly nine tools register, in a stable order, with stable names', async () => {
+test('seven tools register on load; the booked three are born by the human press and die with the booking', async () => {
   const { mc, regs, live } = fakeMc();
   const restore = withModelContext(mc);
   try {
     const states: unknown[] = [];
-    await registerClinicTools(ready().source, (s) => states.push(s));
-    assert.equal(regs.length, 9);
+    const { driver, source } = ready();
+    const dispose = await registerClinicTools(source, (s) => states.push(s), { watchMs: 5 });
+    assert.equal(regs.length, 7);
     assert.deepEqual(live(), [
       'clinic_list_drops',
       'clinic_find_slots',
@@ -210,12 +214,25 @@ test('exactly nine tools register, in a stable order, with stable names', async 
       'clinic_hold_slot',
       'clinic_hold_status',
       'clinic_release_hold',
-      'clinic_prepare_cancel',
-      'clinic_prepare_move',
       'clinic_explain_confirm',
     ]);
-    assert.deepEqual(live(), [...CLINIC_TOOL_NAMES]);
-    assert.deepEqual(states, [{ kind: 'registered', names: [...CLINIC_TOOL_NAMES] }]);
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES]);
+    assert.deepEqual(states, [{ kind: 'registered', names: [...BASE_TOOL_NAMES] }]);
+    // THE HUMAN BOOKS (directly on the driver — the test is the person) → three tools are born
+    const open = driver.snapshot().slots.find((s) => s.state === 'open')!;
+    driver.hold(open.id);
+    driver.book(open.id);
+    await new Promise((r) => setTimeout(r, 40));
+    // registration order: the base seven first, then the three the press created
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES], 'after the press: the full ten, booked set included');
+    assert.deepEqual([...live()].sort(), [...CLINIC_TOOL_NAMES].sort());
+    assert.deepEqual(states.at(-1), { kind: 'registered', names: [...CLINIC_TOOL_NAMES] });
+    // THE HUMAN CANCELS → the three are unregistered again
+    driver.cancel(open.id);
+    await new Promise((r) => setTimeout(r, 40));
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES], 'no booking, no booked tools');
+    dispose();
+    assert.deepEqual(live(), [], 'dispose drops everything');
   } finally {
     restore();
   }
@@ -266,7 +283,7 @@ test('abort unregisters all five (the returned dispose is the AbortController)',
   const restore = withModelContext(mc);
   try {
     const dispose = await registerClinicTools(ready().source, () => {});
-    assert.equal(live().length, 9);
+    assert.equal(live().length, 7);
     dispose();
     assert.deepEqual(live(), []);
   } finally {
@@ -377,7 +394,8 @@ test('clinic_explain_confirm names the absent tool and what to say to the human'
   assert.equal(out.ok, true);
   assert.equal(out.tool_that_books, null);
   assert.equal(out.booking, 'human_only');
-  assert.deepEqual(out.tools_that_exist, [...CLINIC_TOOL_NAMES]);
+  assert.deepEqual(out.tools_that_exist, [...BASE_TOOL_NAMES], 'no booking yet: the base seven');
+  assert.deepEqual(out.tools_that_appear_after_your_human_books, [...BOOKED_TOOL_NAMES]);
   assert.equal(out.what_to_tell_your_human, HOLD_CHOREOGRAPHY);
   assert.match(String(out.reason), /trusted event|browser-trusted/i);
 });
@@ -473,7 +491,7 @@ const FORBIDDEN_TOOL_NAMES = [
 test('no booking tool exists — not in the names, not in the defs, not in any description', () => {
   const defs = clinicToolDefs(frozenSource([], []));
   const names = defs.map((d) => d.name);
-  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the registered defs are exactly the declared nine');
+  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the defs are exactly the declared ten');
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
     assert.ok(!(names as string[]).includes(forbidden), `${forbidden} must never be on this page tool surface`);
     assert.ok(

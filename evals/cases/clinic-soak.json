@@ -40,6 +40,13 @@
   "timeout": 8000
  },
  {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
+  "timeout": 8000
+ },
+ {
+  "list": true
+ },
+ {
   "invoke": "clinic_prepare_cancel",
   "outputMatches": "armed.{0,2}:.{0,2}cancel"
  },
@@ -73,8 +80,12 @@
   "_doc": "The tools are coherent on the new wave: the old booking is gone, cancel refuses, holds work."
  },
  {
-  "invoke": "clinic_prepare_cancel",
-  "outputMatches": "false[\\s\\S]*nothing_booked"
+  "list": true
+ },
+ {
+  "expect": {
+   "noTool": "clinic_prepare_cancel"
+  }
  },
  {
   "invoke": "clinic_list_drops",
@@ -97,6 +108,6 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "9"
+  "equals": "7"
  }
 ]

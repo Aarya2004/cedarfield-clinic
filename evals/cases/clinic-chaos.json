@@ -46,11 +46,12 @@
   "outputMatches": "eliminated_by"
  },
  {
-  "invoke": "clinic_prepare_move",
-  "inputFrom": {
-   "new_slot_id": "'; DROP TABLE slots;--'"
-  },
-  "outputMatches": "false[\\s\\S]*(nothing_booked|unknown_slot)"
+  "list": true
+ },
+ {
+  "expect": {
+   "noTool": "clinic_prepare_move"
+  }
  },
  {
   "_doc": "A plain hold via the id minted above (the stringified-JSON input path is unit-tested in coerceInput)."
@@ -70,8 +71,12 @@
   "_doc": "Arming a cancel while holding: refused with hold_in_progress, dock stays on book."
  },
  {
-  "invoke": "clinic_prepare_cancel",
-  "outputMatches": "false[\\s\\S]*(nothing_booked|hold_in_progress)"
+  "list": true
+ },
+ {
+  "expect": {
+   "noTool": "clinic_prepare_cancel"
+  }
  },
  {
   "_doc": "Hold spam: re-holding your OWN held slot is refused (an agent cannot refresh its TTL by re-calling); release/re-hold cycles stay coherent; a bare release with nothing held is refused."
@@ -140,6 +145,13 @@
  {
   "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
   "timeout": 8000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
+  "timeout": 8000
+ },
+ {
+  "list": true
  },
  {
   "invoke": "clinic_prepare_cancel",
@@ -237,7 +249,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "9"
+  "equals": "7"
  },
  {
   "eval": "document.querySelector('[data-clinic-act]') === null && document.querySelector('[data-clinic-dock]') === null",

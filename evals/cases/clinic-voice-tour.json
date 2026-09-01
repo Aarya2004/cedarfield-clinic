@@ -56,11 +56,15 @@
   "outputMatches": "false[\\s\\S]*bad_time"
  },
  {
-  "_doc": "prepare_cancel with nothing booked refuses with a reason \u2014 no dock appears."
+  "_doc": "SPEC-V4: with nothing booked, prepare_cancel does not EXIST \u2014 the human's press is what creates it."
  },
  {
-  "invoke": "clinic_prepare_cancel",
-  "outputMatches": "false[\\s\\S]*nothing_booked"
+  "list": true
+ },
+ {
+  "expect": {
+   "noTool": "clinic_prepare_cancel"
+  }
  },
  {
   "eval": "document.querySelector('[data-clinic-act]') === null",
