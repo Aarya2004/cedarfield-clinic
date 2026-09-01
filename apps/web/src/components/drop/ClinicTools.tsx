@@ -100,10 +100,10 @@ export function ClinicTools({
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
   const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard });
-  const seams = useRef({ onPrepareCancel, onPrepareMove });
+  const seams = useRef({ onPrepareCancel, onPrepareMove, settleTimeoutMs });
   useEffect(() => {
     view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard };
-    seams.current = { onPrepareCancel, onPrepareMove };
+    seams.current = { onPrepareCancel, onPrepareMove, settleTimeoutMs };
   });
 
   useEffect(() => {
@@ -120,7 +120,8 @@ export function ClinicTools({
         // Live seams: registration happens once, the page's callbacks change every render.
         onPrepareCancel: (slotId) => seams.current.onPrepareCancel?.(slotId) ?? false,
         onPrepareMove: (fromId, toId) => seams.current.onPrepareMove?.(fromId, toId) ?? false,
-        ...(settleTimeoutMs !== undefined ? { settleTimeoutMs } : {}),
+        // Live too: the budget is read at each call, so the page may learn it after registration.
+        settleTimeoutMs: () => seams.current.settleTimeoutMs ?? 1200,
       },
     ).then((d) => {
       if (disposed) d();
@@ -130,9 +131,8 @@ export function ClinicTools({
       disposed = true;
       dispose?.();
     };
-    // The settle budget changes exactly once (when the page learns it is live); re-registering
-    // then is the correct behaviour — the tools must carry the budget they will actually need.
-  }, [settleTimeoutMs]);
+    // Once per mount. Every value the tools read is a ref (view, seams, budget), never a dep.
+  }, []);
 
   return (
     <p

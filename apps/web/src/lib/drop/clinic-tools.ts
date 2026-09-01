@@ -113,7 +113,7 @@ export interface ClinicToolsOptions {
    * How long `clinic_hold_slot` / `clinic_release_hold` wait for the session fold to agree with the
    * driver before answering honestly that they could not confirm it. Small: the driver is local.
    */
-  settleTimeoutMs?: number;
+  settleTimeoutMs?: number | (() => number);
   /** Poll interval while settling. */
   settlePollMs?: number;
   /** Feature detection seam, for tests. Defaults to `document/navigator.modelContext`. */
@@ -432,7 +432,11 @@ export const PREPARE_MOVE_DESCRIPTION =
   'one press from the person performs the swap atomically. Refused without a booking or an open target.';
 
 export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOptions = {}): ClinicToolDef[] {
-  const timeoutMs = options.settleTimeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS;
+  // A getter, because the page learns its budget (live board = two network round trips) after
+  // the tools are registered, and registration is once per mount — re-registering the same nine
+  // names collides in the model context.
+  const settleBudget = () =>
+    typeof options.settleTimeoutMs === 'function' ? options.settleTimeoutMs() : (options.settleTimeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS);
   const pollMs = options.settlePollMs ?? DEFAULT_SETTLE_POLL_MS;
 
   return [
@@ -593,7 +597,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         const previous = before.session.held?.slotId ?? null;
         // The one verb. `driver.confirm` is one property away and is never touched here.
         before.driver.hold(slotId);
-        const settled = await settle(source, (v) => v.session.held?.slotId === slotId, timeoutMs, pollMs);
+        const settled = await settle(source, (v) => v.session.held?.slotId === slotId, settleBudget(), pollMs);
         const after = source();
         if (!settled) {
           const now = after.session.slots.find((s) => s.id === slotId);
@@ -645,7 +649,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           } satisfies ErrorResult);
         }
         before.driver.release(held.slotId);
-        const settled = await settle(source, (v) => v.session.held === null, timeoutMs, pollMs);
+        const settled = await settle(source, (v) => v.session.held === null, settleBudget(), pollMs);
         const after = source();
         if (!settled) {
           return asToolResult({
@@ -802,7 +806,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           } satisfies ErrorResult);
         }
         // The freeze lands through React state; answer with the target as it IS, not as it was.
-        await settle(source, (v) => v.session.held?.slotId === target.id, timeoutMs, pollMs);
+        await settle(source, (v) => v.session.held?.slotId === target.id, settleBudget(), pollMs);
         const after = source();
         const targetNow = after.session.slots.find((s) => s.id === target.id) ?? target;
         return asToolResult({

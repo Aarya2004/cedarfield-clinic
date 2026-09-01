@@ -49,33 +49,45 @@ const rpcB = async (fn, args) => {
   const { data, error } = await b.rpc(fn, args);
   return { data, error: error?.message ?? null };
 };
-const board = await rpcB('clinic_board');
+// Never start within 25 s of a wave boundary: the whole choreography must fit inside one wave.
+let board = await rpcB('clinic_board');
 ok(!board.error, 'visitor B reads the board', board.error ?? `wave ${board.data?.wave}`);
+if (board.error) process.exit(1);
+{
+  const untilNext = Date.parse(board.data.next_wave_at) - Date.parse(board.data.server_now);
+  if (untilNext < 25_000) {
+    console.log(`· ${Math.round(untilNext / 1000)} s to the next release — waiting for a fresh wave`);
+    await new Promise((r) => setTimeout(r, untilNext + 1500));
+    board = await rpcB('clinic_board');
+  }
+}
 const open = (board.data?.slots ?? []).filter((s) => s.state === 'open');
 ok(open.length >= 2, 'at least two open slots to race over', `${open.length} open`);
 if (failures) process.exit(1);
-const target = open[0].id; // B will take this one while A watches
-const aTarget = open[1].id; // A will hold this one; B must be refused it
+// The page picks the two slots ITSELF once its live board has landed (so they exist in A's DOM and
+// are open in the same wave A is looking at); this script reads them back from the step output.
+
 
 // ── visitor A: the real page, headless, on the LIVE board ────────────────────────────────────
 const work = mkdtempSync(join(tmpdir(), 'drop-live-'));
 const steps = [
   { allowErrors: ['INFO: Created TensorFlow Lite XNNPACK delegate'], waitFor: "document.querySelector('[data-clinic-route=\"book\"]') !== null", timeout: 20000 },
-  { waitFor: "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", timeout: 15000 },
-  // the live board has landed (the connecting line is gone) and B's target is visible and open
-  { waitFor: `document.querySelector('[data-clinic-slot="${target}"]')?.getAttribute('data-slot-state') === 'open'`, timeout: 20000 },
-  { eval: "document.querySelector('[data-clinic-wave-age]')?.textContent?.includes('live for every visitor')", equals: true },
-  // hand the script a beat to book as B, then watch A's page — no reload, no click — show it gone
-  { eval: "'watching'", equals: 'watching' },
-  { waitFor: `document.querySelector('[data-clinic-slot="${target}"]')?.getAttribute('data-slot-state') === 'taken_by_other'`, timeout: 15000 },
-  { eval: `document.querySelector('[data-clinic-slot="${target}"]')?.textContent?.includes('Another patient')`, equals: true },
+  { waitFor: "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", timeout: 20000 },
+  // the LIVE board has landed: the wave line says so, and at least two slots are open in A's DOM
+  { waitFor: "document.querySelector('[data-clinic-wave-age]')?.textContent?.includes('live for every visitor') === true", timeout: 20000 },
+  { waitFor: "document.querySelectorAll('[data-slot-state=\"open\"]').length >= 2", timeout: 20000 },
+  // the page nominates B's target and A's target; the script reads them from this line
+  { eval: "(() => { const o = [...document.querySelectorAll('[data-slot-state=\"open\"]')].map(e => e.getAttribute('data-clinic-slot')); window.__t = o[0]; window.__a = o[1]; return 'targets:' + o[0] + ',' + o[1]; })()", matches: '^targets:' },
+  // B books now (script side); A's page — no reload, no click — must show it gone within seconds
+  { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__t + '\"]')?.getAttribute('data-slot-state') === 'taken_by_other'", timeout: 15000 },
+  { eval: "document.querySelector('[data-clinic-slot=\"' + window.__t + '\"]')?.textContent?.includes('Another patient')", equals: true },
   { shot: 'docs/evidence/clinic/live-another-patient.png' },
-  // A holds through the real tool; then B (below) is refused the same slot by the database
-  { invoke: 'clinic_hold_slot', input: { slot_id: aTarget }, outputMatches: 'held.{0,2}:true' },
-  { waitFor: `document.querySelector('[data-clinic-slot="${aTarget}"]')?.getAttribute('data-slot-state') === 'held_by_you'`, timeout: 8000 },
-  { eval: "'held'", equals: 'held' },
+  // A holds through the real tool; then B (script side) is refused the same slot by the database
+  { invoke: 'clinic_hold_slot', inputFrom: { slot_id: 'window.__a' }, outputMatches: 'held.{0,2}:true' },
+  { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'", timeout: 10000 },
+  { eval: "'held:' + window.__a", matches: '^held:' },
   { sleep: 4000 },
-  { eval: `document.querySelector('[data-clinic-slot="${aTarget}"]')?.getAttribute('data-slot-state')`, equals: 'held_by_you' },
+  { eval: "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state')", equals: 'held_by_you' },
 ];
 const caseFile = join(work, 'live.json');
 writeFileSync(caseFile, JSON.stringify(steps));
@@ -102,16 +114,23 @@ const waitForLine = (needle, ms) =>
     tick();
   });
 
+let target = null;
+let aTarget = null;
 try {
-  await waitForLine('"value":"watching"', 60_000);
+  await waitForLine('"value":"targets:', 90_000);
+  const m = out.match(/"value":"targets:([^,"]+),([^"]+)"/);
+  if (!m) throw new Error('could not read the targets the page nominated');
+  target = m[1];
+  aTarget = m[2];
+  ok(true, 'the page nominated the race', `${target} (B takes) · ${aTarget} (A holds)`);
   const hold = await rpcB('clinic_hold', { slot_id: target });
   ok(!hold.error, `visitor B holds ${target}`, hold.error);
   const book = await rpcB('clinic_book', { slot_id: target });
   ok(!book.error, `visitor B books ${target} (hold-before-book, server-enforced)`, book.error);
 
-  await waitForLine('"value":"held"', 60_000);
+  await waitForLine('"value":"held:', 60_000);
   const steal = await rpcB('clinic_hold', { slot_id: aTarget });
-  ok(!!steal.error && steal.error.includes('slot_unavailable'), `visitor B refused A's held slot by the database`, steal.error ?? 'was allowed!');
+  ok(!!steal.error && steal.error.includes('slot_unavailable:held'), `visitor B refused A's held slot by the database`, steal.error ?? 'was allowed!');
   const stealBook = await rpcB('clinic_book', { slot_id: aTarget });
   ok(!!stealBook.error, `visitor B cannot book A's hold`, stealBook.error ?? 'was allowed!');
 } catch (e) {
@@ -132,8 +151,10 @@ const summary = out
 ok(code === 0 && summary && summary.failed === 0, "visitor A's page: every step", summary ? `${summary.steps} steps, ${summary.failed} failed` : `exit ${code}`);
 
 // leave the shared world as we found it
-const cancel = await rpcB('clinic_cancel', { slot_id: target });
-ok(!cancel.error, 'visitor B cancels its booking (cleanup)', cancel.error);
+if (target) {
+  const cancel = await rpcB('clinic_cancel', { slot_id: target });
+  ok(!cancel.error, 'visitor B cancels its booking (cleanup)', cancel.error);
+}
 rmSync(work, { recursive: true, force: true });
 console.log(failures === 0 ? '\nLIVE BOARD PROVEN WITH TWO VISITORS' : `\n${failures} check(s) failed`);
 process.exit(failures === 0 ? 0 : 1);
