@@ -22,24 +22,6 @@
   padding: 0 var(--clinic-pad) 6rem;
 }
 
-.cl-banner {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.9rem;
-  align-items: baseline;
-  padding: 0.6rem var(--clinic-pad);
-  border-bottom: 1px solid var(--clinic-rule);
-  background: var(--clinic-gone-sheet);
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  color: var(--clinic-muted);
-}
-
-.cl-banner b {
-  color: var(--clinic-ink);
-  font-weight: 600;
-}
-
 .cl-masthead {
   display: flex;
   flex-wrap: wrap;
@@ -123,53 +105,6 @@
   }
 }
 
-/* --- the tool manifest --------------------------------------------------- */
-
-.cl-manifest {
-  padding: 1.1rem 1.2rem 1.25rem;
-  border: 1px solid var(--clinic-rule);
-  border-radius: 2px;
-  background: var(--clinic-sheet);
-}
-
-.cl-manifest__title {
-  margin: 0;
-  font-size: var(--clinic-label);
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--clinic-muted);
-}
-
-.cl-manifest__list {
-  margin: 0.85rem 0 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--clinic-mono);
-  font-size: 0.8125rem;
-  line-height: 2;
-  color: var(--clinic-ink);
-  overflow-wrap: anywhere;
-}
-
-.cl-manifest__list s {
-  color: var(--clinic-gone);
-  text-decoration-thickness: 1px;
-}
-
-.cl-manifest[data-clinic-manifest='absent'] .cl-manifest__list {
-  font-size: 0.9375rem;
-}
-
-.cl-manifest__note {
-  margin: 0.9rem 0 0;
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--clinic-rule);
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--clinic-muted);
-}
-
 /* The gutter word, pinned to the top edge of its band (align-self, not sticky). */
 .cl-band__label {
   align-self: start;
@@ -207,12 +142,6 @@
 
 .cl-band > .cl-band__body > .cl-clock + * {
   margin-top: 1.75rem;
-}
-
-.cl-band > .cl-band__body > * + .cl-trust {
-  margin-top: 1.9rem;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--clinic-rule);
 }
 
 /* The one CTA above the fold stands further off its paragraph than the band's rhythm gives, and it
@@ -1123,23 +1052,6 @@ html:has(.cl-dock) {
   border: 0;
 }
 
-.cl-trust {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.85rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.9375rem;
-  color: var(--clinic-ink);
-}
-
-.cl-trust li + li::before {
-  content: '·';
-  margin-right: 0.85rem;
-  color: var(--clinic-rule-strong);
-}
-
 .cl-note {
   margin: 0;
   max-width: var(--clinic-measure);
@@ -1287,4 +1199,395 @@ html:has(.cl-dock) {
   font-size: 0.75rem;
   line-height: 1.55;
   color: var(--clinic-dock-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+ * SPEC-V3 — the practice's own surfaces: the top bar and its nav, the services strip, the
+ * clinician roster, the footer, and the card a person has after they book.
+ *
+ * APPENDED AS ONE BLOCK on purpose. The booking route was being reworked in a second lane against
+ * this same file, so everything new lands here rather than beside the rule it is related to. Two
+ * rules DO override earlier ones — `.cl-masthead` gains an inner wrapper — and they are marked.
+ *
+ * No new colour enters the page: every value below is a token from `clinic-tokens.css`, and the
+ * only cedar is on the appointment card, which is the one object on the site that is the visitor's.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* --- the top bar ---------------------------------------------------------
+ * The masthead now wraps its contents, so it can be a full-bleed bar outside `<main>` (the home
+ * page, where it is the banner landmark) or an inline block inside `.cl-shell` (the booking page,
+ * unchanged on screen). OVERRIDES the `.cl-masthead` rule above: the flex row moved to `__inner`. */
+.cl-masthead {
+  display: block;
+  padding: 0;
+}
+
+.cl-masthead__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding: 1.4rem 0 1.1rem;
+}
+
+.cl-masthead[data-masthead='bar'] {
+  background: var(--clinic-sheet);
+  border-bottom: 1px solid var(--clinic-rule);
+}
+
+/* The same max-width and the same pad as `.cl-shell`, so the wordmark sits on the page's own left
+   edge rather than a few pixels off it. */
+.cl-masthead[data-masthead='bar'] .cl-masthead__inner {
+  max-width: var(--clinic-max);
+  margin: 0 auto;
+  padding: 1.15rem var(--clinic-pad) 1.05rem;
+}
+
+.cl-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 clamp(1rem, 0.6rem + 1.2vw, 1.9rem);
+}
+
+/* The nav's three words are the home page's three gutter words, in the same order. */
+.cl-nav a {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid transparent;
+  color: var(--clinic-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color var(--clinic-quick) var(--clinic-ease);
+}
+
+.cl-nav a:hover {
+  border-bottom-color: var(--clinic-rule-strong);
+}
+
+/* The home page ends in a footer rather than under a fixed dock, so the shell stops reserving the
+   dock's clearance at the bottom of the column. */
+[data-clinic-route='landing'] .cl-shell {
+  padding-bottom: clamp(2rem, 1rem + 3vw, 4rem);
+}
+
+/* --- what you can book ---------------------------------------------------
+ * Three services, each opened by its own short rule. The rules are the structure: no icons, no
+ * numbers — the three are a set, not a sequence, so nothing here implies an order. */
+.cl-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 clamp(1rem, 0.5rem + 1.6vw, 2.25rem);
+  max-width: 52rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-strip li {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--clinic-rule-strong);
+}
+
+.cl-strip b {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--clinic-ink);
+}
+
+.cl-strip span {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--clinic-muted);
+}
+
+/* --- the clinician roster ------------------------------------------------
+ * A timetable, not a card grid: name, what they are the one to ask about, and the first time they
+ * still have open in the release that is on the board right now. It rhymes with `.cl-sheet` on
+ * purpose — the same hairlines, the same tabular time on the right — so the board a click away is
+ * already familiar. The time is sans, never mono: mono is for numbers an instrument measured. */
+.cl-roster {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--clinic-rule);
+}
+
+.cl-roster__row {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) minmax(0, 12rem);
+  align-items: baseline;
+  gap: 0.35rem clamp(1rem, 0.5rem + 1.5vw, 2rem);
+  padding: 1.05rem 0;
+  border-bottom: 1px solid var(--clinic-rule);
+}
+
+.cl-roster__name {
+  margin: 0;
+  font-family: var(--clinic-serif);
+  font-size: 1.45rem;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--clinic-ink);
+}
+
+.cl-roster__spec {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--clinic-muted);
+}
+
+.cl-roster__next {
+  margin: 0;
+  text-align: right;
+}
+
+.cl-roster__time {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--clinic-ink);
+}
+
+.cl-roster__unit {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+/* --- the footer, which is also Contact ----------------------------------- */
+.cl-footer {
+  border-top: 1px solid var(--clinic-rule-strong);
+  background: var(--clinic-sheet);
+}
+
+.cl-footer__inner {
+  max-width: var(--clinic-max);
+  margin: 0 auto;
+  padding: clamp(2rem, 1.2rem + 2vw, 3rem) var(--clinic-pad) clamp(2.5rem, 1.5rem + 2vw, 3.5rem);
+}
+
+.cl-footer__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem 1.5rem;
+  margin-bottom: 1.7rem;
+}
+
+.cl-footer__mark {
+  margin: 0;
+  font-family: var(--clinic-serif);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.cl-footer__cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.9rem clamp(1.25rem, 0.5rem + 2vw, 3rem);
+}
+
+.cl-footer__head {
+  margin: 0 0 0.7rem;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clinic-muted);
+}
+
+.cl-footer__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--clinic-ink);
+}
+
+.cl-footer__note {
+  max-width: 26rem;
+  margin: 0.8rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--clinic-muted);
+}
+
+.cl-footer__cta {
+  margin: 0;
+}
+
+.cl-footer__legal {
+  max-width: var(--clinic-measure);
+  margin: clamp(1.75rem, 1rem + 2vw, 2.75rem) 0 0;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--clinic-rule);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--clinic-muted);
+}
+
+/* --- your appointment ----------------------------------------------------
+ * The one plate on the site that is unambiguously the visitor's, so it is the one plate that
+ * carries cedar — an edge and the time. Nothing else here is coloured. */
+.cl-appt {
+  max-width: 34rem;
+  padding: 1.35rem 1.5rem 1.5rem;
+  background: var(--clinic-sheet);
+  border: 1px solid var(--clinic-rule);
+  border-left: 3px solid var(--clinic-yours);
+}
+
+.cl-appt__eyebrow {
+  margin: 0;
+  font-size: var(--clinic-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clinic-yours);
+}
+
+.cl-appt__time {
+  margin: 0.6rem 0 0;
+  font-size: var(--clinic-time);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--clinic-yours);
+}
+
+.cl-appt__detail {
+  margin: 0.6rem 0 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--clinic-ink);
+}
+
+/* A reference is read down a phone line, not measured, so it is set in the sans — tracked out and
+   tabular so the characters can be dictated one at a time. Mono would claim an instrument. */
+.cl-appt__ref {
+  margin: 0.95rem 0 0;
+  font-size: 0.875rem;
+  color: var(--clinic-muted);
+}
+
+.cl-appt__ref b {
+  margin-left: 0.35rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--clinic-ink);
+}
+
+.cl-appt__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.cl-appt__actions button[aria-disabled='true'] {
+  color: var(--clinic-gone);
+  border-color: var(--clinic-rule);
+}
+
+.cl-appt__moves {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 1.15rem 0 0;
+  padding: 1rem 0 0;
+  list-style: none;
+  border-top: 1px solid var(--clinic-rule);
+}
+
+.cl-appt__moves span {
+  color: var(--clinic-muted);
+}
+
+.cl-appt__note {
+  margin: 1.15rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--clinic-muted);
+}
+
+/* --- narrow -------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .cl-strip {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.1rem 0;
+  }
+
+  /* The name and the time share the top line; what the doctor is the one to ask about sits under
+     the name, where a second column would have been. */
+  .cl-roster__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.3rem 1rem;
+  }
+
+  .cl-roster__name {
+    grid-column: 1;
+  }
+
+  .cl-roster__spec {
+    grid-column: 1;
+  }
+
+  .cl-roster__next {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cl-footer__cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .cl-masthead[data-masthead='bar'] .cl-masthead__inner {
+    gap: 0.5rem 1.25rem;
+  }
+
+  .cl-appt {
+    padding: 1.15rem 1.15rem 1.3rem;
+  }
+}
+
+/* --- reduced motion ------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .cl-nav a {
+    transition: none;
+  }
+}
+
+/* The countdown was the biggest thing on the old landing because it was the argument. On a
+   practice's home page it is a fact among facts, so it steps back below the hero sentence: the
+   ladder now reads thesis (5.25rem) → clock → the roster's times. The clock keeps its own scale
+   rule; only the ceiling moves. */
+[data-clinic-route='landing'] .cl-clock__value {
+  font-size: clamp(2.9rem, 1.6rem + 4vw, 4.5rem);
 }

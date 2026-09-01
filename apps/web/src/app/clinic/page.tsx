@@ -10,9 +10,9 @@ import { ClinicLanding } from '@/components/clinic/ClinicLanding';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Cedarfield Clinic — appointments released in waves',
+  title: 'Cedarfield Clinic — book a same-day appointment',
   description:
-    'A clinic that hands the structure of booking to your agent and keeps the one act that must stay yours: the keypress. Demo inventory, simulated rival, nothing real is booked.',
+    'Cancelled appointments at Cedarfield Clinic go back on the list at the next release, so nobody has to refresh the page to catch one. Book online, or call 01632 960 118.',
 };
 
 export default function ClinicPage() {
