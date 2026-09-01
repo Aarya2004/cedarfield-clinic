@@ -234,6 +234,15 @@
   text-wrap: balance;
 }
 
+/* The wave line is the one lead whose words grow while you read them: five seconds in, "Released
+   just now" becomes "Released 5 seconds ago", the line wraps, and the whole board underneath used
+   to drop 46px (CLS 0.096 at 1280x900, 0.078 at 390x844 — measured). It settles at two lines at
+   every width this page supports, so it is given two from the start. `lh` is the line it actually
+   sets in, so the reservation follows --clinic-display rather than a frozen pixel height. */
+.cl-lead[data-clinic-wave-age] {
+  min-height: 2lh;
+}
+
 /* --- the thesis ---------------------------------------------------------- */
 
 .cl-thesis {
@@ -406,6 +415,19 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* The board is one honest line on the server and six rows the frame it hydrates, so the receipt
+   and the honesty block below it used to fall 638px on first paint — CLS 0.298 at 1280x900 and
+   0.529 at 390x844, measured with a layout-shift observer. The empty state keeps every word it
+   had; it simply stands in a space the size of the board it is waiting for. This is a reservation,
+   not a skeleton: nothing here pretends to be a row, and no number is drawn that an instrument did
+   not produce. The room is booked in a row's own terms — 1rem of padding top and bottom, the time,
+   the clinician line 0.5rem under it — so it tracks --clinic-time at every width instead of
+   freezing a pixel count that the type scale would walk away from. The 5px is the five hairlines
+   that sit between six rows. */
+[data-clinic-sheet='empty'] {
+  min-height: calc(6 * (2rem + var(--clinic-time) + 0.5rem + 1.3125rem) + 5px);
 }
 
 .cl-row {
@@ -1195,6 +1217,15 @@ html:has(.cl-dock) {
   .cl-row__action,
   .cl-row__tag {
     justify-self: start;
+  }
+
+  /* The narrow row stacks what the wide one sets in three columns — state, time, clinician, act —
+     so the room the board needs is four lines and three 0.5rem gaps instead of one. */
+  [data-clinic-sheet='empty'] {
+    min-height: calc(
+      6 * (2.2rem + 0.9625rem + 0.5rem + var(--clinic-time) + 0.5rem + 1.3125rem + 0.5rem + 1.4rem) +
+        5px
+    );
   }
 
   .cl-clock__value {
