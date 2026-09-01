@@ -87,7 +87,7 @@ const BOOKING_GRACE_MS = 25_000;
 const NO_COUNT: CounterSnapshot = { total: 0, breakdown: emptyBreakdown() };
 
 /**
- * T6's camera dwell, same flag as the bench. Off in the submitted build; when on, the SAME held
+ * T6's camera dwell, same flag as the bench. ON in the submitted build (opt-in at runtime); the SAME held
  * gesture that books also cancels and moves — one human act for every consequential verb, always
  * beside a keyboard alternative (WCAG 2.5.4). GestureConfirm degrades to 'unavailable' when the
  * script-provisioned weights are absent, so the flag alone can never break a page.
@@ -105,10 +105,12 @@ function noWrap(timeLabel: string): string {
  *   · per-URL:   ?test=1 → same, so the eval harness always drives a deterministic world.
  */
 const LIVE_BUILD = process.env.NEXT_PUBLIC_LIVE_BOARD !== '0';
-function wantsLiveBoard(): boolean {
-  if (!LIVE_BUILD) return false;
+function isTestMode(): boolean {
   if (typeof window === 'undefined') return false;
-  return !new URLSearchParams(window.location.search).has('test');
+  return new URLSearchParams(window.location.search).has('test');
+}
+function wantsLiveBoard(): boolean {
+  return LIVE_BUILD && typeof window !== 'undefined' && !isTestMode();
 }
 
 /** What the page runs on for the frame(s) before the live driver exists. Does nothing, honestly. */
@@ -133,11 +135,25 @@ type PendingAct =
 
 export function ClinicBooking() {
   // ── the wave ───────────────────────────────────────────────────────────────────────────────────
-  const mountedAt = useRef<number>(Date.now());
+  /**
+   * The seeded board's clock origin. Real visitors: the epoch, so this page and the landing
+   * countdown agree to the second and a fresh driver is advanced to where the wave already is
+   * (wave-clock.ts's contract). Under ?test=1: page load, so every eval sees a wave land on
+   * arrival with the rival exactly where the cases expect it.
+   */
+  const [clockOrigin] = useState<number>(() => (isTestMode() ? Date.now() : 0));
+  // Hydration rule: the server's HTML and the client's first render must be identical, and any
+  // text derived from the wall clock ("Released 12 s ago", the wave index) never is. So the first
+  // render is the neutral one — elapsed 0, wave 0 — and the real clock takes over after mount.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const [wave, setWave] = useState(0);
   // Decided once, on the client, before the first driver exists. SSR renders the seeded board and
   // the live driver takes over on hydration — the page is identical either way until data arrives.
-  const [wantLive] = useState<boolean>(() => wantsLiveBoard());
+  // Decided in an effect, never in the initial render: the server has no `window`, and a first
+  // client render that disagrees with the server's HTML is a hydration error on every visit.
+  const [wantLive, setWantLive] = useState<boolean>(false);
+  useEffect(() => setWantLive(wantsLiveBoard()), []);
   // Fail toward a working product: if the live board has not produced a world within the grace
   // (network trouble, an outage, a corporate proxy eating websockets), the visitor silently gets
   // the seeded board — the same complete product, minus other people. Never a hung page.
@@ -152,23 +168,35 @@ export function ClinicBooking() {
     if (!live) return;
     const d = createSupabaseDriver();
     setLiveDriver(d);
+    const giveUp = () => {
+      // One line in the console for whoever debugs it; the page itself just keeps working.
+      console.warn('[cedarfield] live board unavailable, using the seeded board:', d.meta().lastError);
+      setLiveFailed(true);
+    };
+    // A definitive answer (sign-in refused, board switched off) falls back at once; only a slow
+    // network gets the full grace.
+    const probe = setInterval(() => {
+      const m = d.meta();
+      if (m.ready) return;
+      if (m.offline || (m.lastError !== null && m.lastError.startsWith('sign_in:'))) giveUp();
+    }, 250);
     const grace = setTimeout(() => {
-      if (!d.meta().ready) {
-        // One line in the console for whoever debugs it; the page itself just keeps working.
-        console.warn('[cedarfield] live board unavailable, using the seeded board:', d.meta().lastError);
-        setLiveFailed(true);
-      }
+      if (!d.meta().ready) giveUp();
     }, 6000);
     return () => {
       clearTimeout(grace);
+      clearInterval(probe);
       d.dispose();
       setLiveDriver(null);
     };
   }, [live]);
-  const mockDriver = useMemo(
-    () => (live ? null : createMockDriver({ seed: waveSeed(wave), scenario: 'hold-and-book', overrides: WAVE_OVERRIDES })),
-    [live, wave],
-  );
+  const mockDriver = useMemo(() => {
+    if (live) return null;
+    const d = createMockDriver({ seed: waveSeed(wave), scenario: 'hold-and-book', overrides: WAVE_OVERRIDES });
+    // Arriving mid-wave: advance to where the wave already is, so the board matches the countdown.
+    if (clockOrigin === 0) d.advance(msIntoWave(Date.now()));
+    return d;
+  }, [live, wave, clockOrigin]);
   const driver: DropDriver & { snapshot(): { slots: Slot[]; hold: { slotId: string } | null } } = live
     ? (liveDriver ?? INERT_DRIVER)
     : mockDriver!;
@@ -181,7 +209,7 @@ export function ClinicBooking() {
    * re-renders this component every animation frame — a second rAF loop would buy nothing. It is
    * deliberately NOT `session.now`, which the seam resets to zero on every driver swap.
    */
-  const elapsed = Date.now() - mountedAt.current;
+  const elapsed = hydrated ? Date.now() - clockOrigin : 0;
 
   // ── the manual walk ────────────────────────────────────────────────────────────────────────────
   const [flow, dispatch] = useReducer(manualFlowReducer, [], initialManualFlowState);
@@ -240,8 +268,11 @@ export function ClinicBooking() {
   const frozenFor = useRef<string | null>(null);
   const bookedSlotId = flow.bookedSlotId;
   useEffect(() => {
-    if (bookedSlotId === null || frozenFor.current === bookedSlotId) return;
-    frozenFor.current = bookedSlotId;
+    // Seeded ids repeat every wave (slot-1…6), so the key carries the wave as well.
+    if (bookedSlotId === null) return;
+    const key = `${wave}:${bookedSlotId}`;
+    if (frozenFor.current === key) return;
+    frozenFor.current = key;
     const snapshot = pageCounter.current?.snapshot() ?? NO_COUNT;
     setHandReceipt({
       slotLabel: findSlot(flow.slots, bookedSlotId)?.timeLabel ?? bookedSlotId,
@@ -249,7 +280,7 @@ export function ClinicBooking() {
       breakdown: snapshot.breakdown,
       slotsLost: flow.slotsLost,
     });
-  }, [bookedSlotId, flow.slots, flow.slotsLost]);
+  }, [bookedSlotId, flow.slots, flow.slotsLost, wave]);
 
   // ── SPEC-V2: the prepared act ─────────────────────────────────────────────────────────────────
   // clinic_prepare_cancel / clinic_prepare_move arm ONE pending act; a trusted press performs it.
@@ -269,10 +300,14 @@ export function ClinicBooking() {
     (slotId: string): boolean => {
       const slot = driver.snapshot().slots.find((s) => s.id === slotId);
       if (!slot || slot.state !== 'booked_yours') return false;
+      const current = pendingActRef.current;
+      // Re-arming the same cancel keeps the original clock: an agent cannot keep a destructive
+      // dock alive indefinitely by re-calling every forty seconds.
+      if (current?.kind === 'cancel' && current.slotId === slotId) return true;
       setPendingAct({ kind: 'cancel', slotId, timeLabel: noWrap(slot.timeLabel), detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now() });
       return true;
     },
-    [driver],
+    [driver, setPendingAct],
   );
 
   const prepareMove = useCallback(
@@ -298,7 +333,7 @@ export function ClinicBooking() {
       });
       return true;
     },
-    [driver],
+    [driver, setPendingAct],
   );
 
   // A cancel arm expires on its own clock; the page re-renders every frame, so render-time math.
@@ -322,10 +357,10 @@ export function ClinicBooking() {
       const anchor = pendingAct.kind === 'cancel' ? pendingAct.slotId : pendingAct.fromId;
       if (session.slots.find((s) => s.id === anchor)?.state !== 'booked_yours') setPendingAct(null);
     }
-  }, [pendingAct, pendingSecondsLeft, session.held, session.slots]);
+  }, [pendingAct, pendingSecondsLeft, session.held, session.slots, setPendingAct]);
 
   // A new wave is a new driver and a new board: nothing prepared against the old one survives.
-  useEffect(() => setPendingAct(null), [driver]);
+  useEffect(() => setPendingAct(null), [driver, setPendingAct]);
 
   /** The trusted press. The ONLY call sites of driver.cancel / driver.move in the product. */
   const confirmPendingAct = useCallback(() => {
@@ -340,17 +375,17 @@ export function ClinicBooking() {
     } else {
       driver.move(act.fromId, act.toId);
       // The move produced a booking; hold the board for the same grace a booking gets.
-      setLastBookedAt(Date.now() - mountedAt.current);
+      setLastBookedAt(Date.now() - clockOrigin);
     }
     setPendingAct(null);
-  }, [driver, flow.bookedSlotId, setPendingAct]);
+  }, [driver, flow.bookedSlotId, setPendingAct, clockOrigin]);
 
   const dismissPendingAct = useCallback(() => {
     if (pendingAct?.kind === 'move' && session.held?.slotId === pendingAct.toId) {
       session.release(pendingAct.toId); // give the frozen target back
     }
     setPendingAct(null);
-  }, [pendingAct, session]);
+  }, [pendingAct, session, setPendingAct]);
 
   // ── acts ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -370,24 +405,45 @@ export function ClinicBooking() {
     lastLocalRequest.current = session.now;
     dispatch({ type: 'submit_booking' });
     manualDriver.confirm(flow.selectedSlotId);
-    lastLocalRequest.current = null;
-    setLastBookedAt(Date.now() - mountedAt.current);
-  }, [flow.selectedSlotId, manualDriver, session.now]);
+    // The seeded driver answers inside this call, so the claim can close at once. The live driver
+    // answers over the network: the claim must STAND so the hold that lands a moment later reads
+    // as yours, not your agent's (LOCAL_REQUEST_WINDOW_MS closes it).
+    if (!live) lastLocalRequest.current = null;
+    setLastBookedAt(Date.now() - clockOrigin);
+  }, [flow.selectedSlotId, manualDriver, session.now, live, clockOrigin]);
 
+  /** The press happened; the booking has not yet. The receipt waits for the `booked` event. */
+  const pendingAgentReceipt = useRef<{ slotId: string; receipt: LaneReceipt } | null>(null);
   const confirmHold = useCallback(() => {
     const slotId = session.held?.slotId;
     if (slotId === undefined) return;
-    // Frozen before the dock unmounts, so the number cannot drift while the receipt is on screen.
+    // Frozen before the dock unmounts, so the number cannot drift while the receipt is on screen —
+    // but only WRITTEN when the driver confirms the booking, so a refused press (hold expired at
+    // the boundary, on the live board) never produces a receipt for an appointment nobody has.
     const snapshot = dockCounter.current?.snapshot() ?? NO_COUNT;
+    pendingAgentReceipt.current = {
+      slotId,
+      receipt: {
+        slotLabel: findSlot(session.slots, slotId)?.timeLabel ?? slotId,
+        count: snapshot.total,
+        breakdown: snapshot.breakdown,
+        slotsLost: 0,
+      },
+    };
     session.confirm(slotId);
-    setAgentReceipt({
-      slotLabel: findSlot(session.slots, slotId)?.timeLabel ?? slotId,
-      count: snapshot.total,
-      breakdown: snapshot.breakdown,
-      slotsLost: 0,
-    });
-    setLastBookedAt(Date.now() - mountedAt.current);
   }, [session]);
+  useEffect(
+    () =>
+      driver.subscribe((event) => {
+        const pending = pendingAgentReceipt.current;
+        if (event.type === 'booked' && pending && event.slotId === pending.slotId) {
+          pendingAgentReceipt.current = null;
+          setAgentReceipt(pending.receipt);
+          setLastBookedAt(Date.now() - clockOrigin);
+        }
+      }),
+    [driver, clockOrigin],
+  );
 
   // Booking another appointment starts a new measurement, but it does not erase the last one: the
   // receipt is a record of something that happened, not a live readout.
@@ -418,19 +474,6 @@ export function ClinicBooking() {
    * there are no such tools — the only thing that performs a consequential act is a keypress the
    * browser marked as trusted (the prepare_* tools go through the real tool surface, not this seam).
    */
-  useEffect(() => {
-    const w = window as unknown as { __CEDARFIELD_AGENT__?: unknown };
-    w.__CEDARFIELD_AGENT__ = {
-      listDrops: () => driver.snapshot().slots,
-      holdSlot: (slotId: string) => driver.hold(slotId),
-      holdStatus: () => driver.snapshot().hold,
-      releaseHold: (slotId: string) => driver.release(slotId),
-    };
-    return () => {
-      delete w.__CEDARFIELD_AGENT__;
-    };
-  }, [driver]);
-
   const heldSlot = session.held === null ? undefined : findSlot(session.slots, session.held.slotId);
   // Live: the release schedule is the server's and it waits for nobody — anything booked is yours
   // across waves, which is what the copy says. Seeded: the swap defers while this visitor is busy.
@@ -471,7 +514,7 @@ export function ClinicBooking() {
                 ? liveMeta?.ready
                   ? `${describeWaveAge(Math.max(0, Date.now() - (liveMeta.waveStartedAt ?? Date.now())))} · ${session.slots.filter((s) => s.state === 'open').length} open · live for every visitor`
                   : 'Connecting to the live board…'
-                : `${describeWaveAge(msIntoWave(elapsed))} · ${session.slots.filter((s) => s.state === 'open').length} of ${session.slots.length} still open`}
+                : `${describeWaveAge(msIntoWave(elapsed))} · ${session.slots.filter((s) => s.state === 'open').length} of ${session.slots.length} still open${liveFailed ? ' · live board unreachable, showing the seeded board' : ''}`}
             </p>
             <p className="cl-prose">
               {live
@@ -491,10 +534,16 @@ export function ClinicBooking() {
           ) : null}
 
           {arrival !== null && heldSlot ? (
-            <p className="cl-agent" role="status" data-clinic-agent-strip>
-              {holdHeadline(origin, session.secondsLeft)}
-              <span>
+            <p className="cl-agent" data-clinic-agent-strip>
+              {/* The seconds tick every frame; a live region that re-reads them would speak forty-five
+                  times. Screen readers get the arrival sentence once, below; the dock's own regions
+                  carry the 30 s / 10 s marks. */}
+              <span aria-hidden="true">{holdHeadline(origin, session.secondsLeft)}</span>
+              <span aria-hidden="true">
                 {heldSlot.timeLabel} with {heldSlot.clinician}. Your agent cannot press the key.
+              </span>
+              <span className="cl-sr" role="status">
+                {arrival}
               </span>
             </p>
           ) : null}
@@ -609,15 +658,19 @@ export function ClinicBooking() {
           onPrepareCancel={prepareCancel}
           onPrepareMove={prepareMove}
           armedAct={pendingAct?.kind ?? null}
+          waveLandedAt={live ? (liveMeta?.waveStartedAt ?? null) : null}
+          sharedBoard={live}
+          // Two network round trips (RPC + re-read) on a judge's hotel wifi is not 1.2 s.
+          settleTimeoutMs={live ? 8000 : undefined}
         />
 
         <Band label="Honestly">
           <p className="cl-prose">
-            Cedarfield is a fictional clinic and this inventory is generated on your machine. The
-            rival is a seeded simulation and is
-            labelled as one everywhere it appears. Nothing here books a real appointment, takes a
-            payment, or leaves this browser. There is no tool on this page that books — the verb was
-            never registered.
+            {live
+              ? 'Cedarfield is a fictional clinic. This board is shared and live: every visitor sees the same slots, your holds and bookings go to a database as slot ids only, and your name, date of birth and phone never leave this page. The rival is a labelled simulation; "Another patient" is a real visitor. Nothing here books a real appointment or takes a payment. There is no tool on this page that books — the verb was never registered.'
+              : liveFailed
+                ? 'The live board could not be reached, so this is the seeded board: generated on your machine, the same product minus other people. The rival is a seeded simulation, labelled as one everywhere it appears. Nothing here books a real appointment, takes a payment, or leaves this browser. There is no tool on this page that books — the verb was never registered.'
+                : 'Cedarfield is a fictional clinic and this inventory is generated on your machine. The rival is a seeded simulation and is labelled as one everywhere it appears. Nothing here books a real appointment, takes a payment, or leaves this browser. There is no tool on this page that books — the verb was never registered.'}
           </p>
         </Band>
       </main>

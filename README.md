@@ -1,8 +1,9 @@
 # The Drop — your agent can hold it. Only you can take it.
 
 > **Working title.** The product name is being chosen by the two people building it; the fictional
-> clinic on the page is "Cedarfield Clinic". Everything below is true today and reproducible from
-> this repo.
+> clinic on the page is "Cedarfield Clinic". Everything below is true today; the seeded board and
+> every proof re-run from this repo, and the live board's schema is committed under
+> `supabase/migrations/`.
 
 A clinic releases cancelled appointments in waves. They are gone in seconds. On this page your
 agent does the fast, expensive part — watch the drop, compare, **hold** a slot the instant it
@@ -19,10 +20,12 @@ held gesture.** Nothing an agent can call, and nothing a script can fake, reache
 ## 60 seconds, no login
 
 1. Open the live URL, then **“Book an appointment”** (`/clinic/book`). Six appointments; a countdown to the next release; a quiet counter in the
-   corner that counts every interaction the page costs you. Nothing is signed in, nothing is real.
+   corner that counts every interaction the page costs you. No login, no account of yours — the
+   page signs itself into an anonymous session so your hold is yours across reloads. Nothing is real.
 2. **Book one by hand.** Click a slot, fill the form, submit. Watch the counter climb — and watch a
-   slot or two vanish while you type, taken by the (labelled) simulated rival. That is the web most
-   people use.
+   slot or two vanish while you type: the (labelled) simulated rival, or **another visitor on the
+   same board**, labelled "Another patient". Open it in two windows and race yourself: this board is
+   one world for everyone. That is the web most people use.
 3. **Now ask your agent**, in ChatGPT's side panel: *"hold me the earliest appointment."* It calls
    `clinic_hold_slot`. A slot freezes with a 45-second bar, the dock at the bottom arms, and the
    page says who holds it. Your agent cannot finish. **Press Enter.** Booked — one interaction.
@@ -87,10 +90,12 @@ description:
 
 > *the agent does the fast, expensive parts · the person does the one part that must stay theirs*
 
-This is also the honest answer to "could you do this without WebMCP?" — no. A REST API would let
-anything with the URL book the slot. The page's tool surface is the only place you can hand an
-agent real capability (hold, watch, compare, queue) while making the consequential act
-*inexpressible* in the API it is given.
+This is also the honest answer to "could you do this without WebMCP?" — no. Behind the page a
+database enforces fairness between strangers (one hold each, hold-before-book, only your own
+booking cancels or moves, an atomic move); it cannot enforce that a *human* pressed anything, and
+a server never can. The page's tool surface is the only place you can hand an agent real
+capability (search, hold, watch, arm) while making the consequential act *inexpressible* in the
+API the agent is given — and the only place a trusted press can be told from a scripted one.
 
 ---
 
@@ -98,9 +103,10 @@ agent real capability (hold, watch, compare, queue) while making the consequenti
 
 ```bash
 pnpm install
-cd apps/web && pnpm typecheck && pnpm lint && pnpm test    # 432 unit tests
-cd .. && node evals/run-all.mjs --only=clinic              # 16 live browser cases, real tool calls
-node evals/a11y.mjs                                        # axe-core on both routes
+cd apps/web && pnpm typecheck && pnpm lint && pnpm test    # 441 unit tests
+cd .. && node evals/run-all.mjs --only=clinic              # 17 live browser cases, real tool calls (seeded board, ?test=1)
+node evals/a11y.mjs                                        # axe-core on all three routes
+node evals/live-two-visitors.mjs --url=<origin>            # the shared board: visitor B books, visitor A's page shows it go
 ```
 
 | Proof | Where |
@@ -147,8 +153,9 @@ Traces and screenshots for every one of these are committed under `docs/evidence
   five-minute holds on restaurant tables. What is different here is the inversion: in that demo the
   agent also confirms. Here it cannot, the race is visible rather than implied, and the page counts
   what it costs you either way.
-- Not a spend limiter, not an account system, not a scalper tool: **your own agent, your own
-  booking, no resale, and only a human books.**
+- Not a spend limiter, not a sign-up system (an anonymous per-browser session only, no
+  credentials), not a scalper tool: **your own agent, your own booking, no resale, at most three
+  bookings each, and only a human books.**
 
 ---
 
@@ -163,20 +170,24 @@ apps/web
   components/clinic     the calm-clinic surface (typographic, token-driven, no canvas)
   components/drop       ConfirmDock/Surface · TtlBar · SlotBoard · ClinicTools (the mount)
   lib/drop              clinic-tools (the nine tools) · confirm-logic (the trusted-event gate)
-                        mock-driver (seeded waves + rival) · interaction-counter · gesture-logic
+                        supabase-driver (the shared live board: Postgres + RLS + RPCs)
+                        mock-driver (the seeded board every eval drives) · interaction-counter · gesture-logic
+supabase/migrations     the live board's schema and its six SECURITY DEFINER verbs
 evals                   run-all.mjs · a11y.mjs · harness/webmcp-cdp.mjs · cases/clinic-*.json
 docs/evidence/clinic    traces + screenshots for every claim above
 ```
 
-The board state is a seeded in-page driver: no accounts, no database, no server round trip, and no
-model call anywhere in the product — the reasoning is done by *your* agent, in your client. The
-`DropDriver` seam (`lib/drop/types.ts`) is the one place a real backend would plug in: `hold()` is
-the agent's verb and the only one ever registered; `book()` and `confirm()` are the human's and are
-unreachable from any tool.
+The board is shared and live: one Supabase Postgres inventory every visitor sees, an anonymous
+session per browser, realtime plus a 2.5-second poll. `?test=1` (or `NEXT_PUBLIC_LIVE_BOARD=0`)
+gives the seeded in-page driver the evals run against, and the page falls back to it by itself if
+the live board cannot be reached. No model call anywhere in the product — the reasoning is done by
+*your* agent, in your client. The `DropDriver` seam (`lib/drop/types.ts`) is where the backend
+plugs in (`supabase-driver.ts`): `hold()` is the agent's verb and the only one ever registered;
+`book()`, `confirm()`, `cancel()` and `move()` are the human's and are unreachable from any tool.
 
 **Security and trust boundaries:** `docs/SECURITY.md` §10 — including the one that is honestly a
-residual (the page itself is the trust boundary; what the design forecloses is anything holding
-only the tool surface or the endpoints).
+residual (the server guarantees integrity between visitors; the page guarantees intent; a script
+with the public key can book a slot of its own but never touch anyone else's).
 
 ## Where everything else is
 

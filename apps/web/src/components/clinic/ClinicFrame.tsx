@@ -88,12 +88,22 @@ export function Band({ label, actor, open = false, flush = false, aside, wide = 
 
 /**
  * The tool manifest — the specimen this site's whole argument rests on, set in the margin where a
- * reference belongs. Five verbs your agent can call, and one it cannot because it does not exist.
+ * reference belongs. Nine verbs your agent can call, and one it cannot because it does not exist.
  * The struck line is the design: an absence is the load-bearing part of the contract, so it is
  * printed rather than described.
  */
 export function ToolManifest({ absent = false }: { absent?: boolean }) {
-  const tools = ['clinic_list_drops()', 'clinic_hold_slot(slot_id)', 'clinic_hold_status()', 'clinic_release_hold()', 'clinic_explain_confirm()'];
+  const tools = [
+    'clinic_list_drops()',
+    'clinic_find_slots(clinician?, kind?, after?, before?)',
+    'clinic_clinicians()',
+    'clinic_hold_slot(slot_id)',
+    'clinic_hold_status()',
+    'clinic_release_hold()',
+    'clinic_prepare_cancel()',
+    'clinic_prepare_move(new_slot_id)',
+    'clinic_explain_confirm()',
+  ];
   return (
     <div className="cl-manifest" data-clinic-manifest={absent ? 'absent' : 'present'}>
       <p className="cl-manifest__title">{absent ? 'Not on this page' : 'Published to your agent'}</p>
@@ -109,7 +119,7 @@ export function ToolManifest({ absent = false }: { absent?: boolean }) {
       <p className="cl-manifest__note">
         {absent
           ? 'There is no tool that books. The verb was never registered, so there is nothing for an agent to find, and nothing for a jailbreak to reach.'
-          : 'Five tools, registered on the booking page only. Each description carries the same sentence: one keypress on the page books it — you cannot.'}
+          : 'Nine tools, registered on the booking page only. Three read, two search, two hold, two arm — and every result that hands your agent a hold says the same sentence: one keypress on the page books it — you cannot.'}
       </p>
     </div>
   );

@@ -23,7 +23,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
           Something broke on this page.
         </p>
         <p style={{ color: '#555c62', fontSize: '1.05rem', lineHeight: 1.6 }}>
-          Nothing real was at stake — the inventory here is a demo. Reloading starts a fresh release.
+          Nothing real was at stake — Cedarfield is a fictional clinic. Reloading brings the board back.
         </p>
         <p>
           <button

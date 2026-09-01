@@ -7,7 +7,7 @@
 **Tagline:** Your agent can hold it. Only you can take it.
 **Live URL:** https://rokan-terminal.vercel.app (the front door is the product; the booking page is `/clinic/book`)
 <!-- Deployed and verified 2026-08-31: node evals/verify-deployed.mjs --url=… — all checks green
-     (routes, five tools, no booking tool, synthetic press refused, trusted press books, hold
+     (routes, nine tools, no booking tool, synthetic press refused, trusted press books, hold
      lapses clean, agent edge cases, responsive, front door is the product, axe clean ×3).
      Evidence: docs/evidence/clinic/2026-08-31-deployed-verification.txt
      TODO: the origin still carries the pre-pivot project name — see DROP-STATUS. -->
@@ -87,20 +87,28 @@ everything, so an agent on a voice call can say which filter to relax.
 gated on a browser-trusted event, which no tool call, no console `.click()` and no extension can
 produce. Every synthetic attempt is counted and shown on screen instead of being silently dropped.
 
-That is the honest answer to "could you do this without WebMCP?" — no. A REST endpoint would let
-anything holding the URL book the slot. A page's own tool surface is the only place you can hand an
-agent real capability while making the consequential act *inexpressible* in the API it is given. The
-fifth tool exists so the agent can explain that boundary in its own words when a user asks it to
-just book the thing.
+That is the honest answer to "could you do this without WebMCP?" — no. Behind the page a database
+enforces fairness between strangers — one hold each, hold-before-book, only your own booking
+cancels or moves, an atomic move — and it cannot enforce that a *human* pressed anything; no
+server can. A page's own tool surface is the only place you can hand an agent real capability
+while making the consequential act *inexpressible* in the API it is given, and the only place a
+trusted press can be told from a scripted one. `clinic_explain_confirm` exists so the agent can
+explain that boundary in its own words when a user asks it to just book the thing.
 
 ## Implementation
 
-Next.js 15 (App Router, TS strict) on Vercel. The board is a seeded in-page driver — no accounts, no
-database, no backend, **and no model call of our own anywhere in the product**: the reasoning is the
-visitor's own agent, in their own client. One `DropDriver` seam is the single place a real clinic
-backend would plug in; `hold()` is the agent's verb and the only one ever registered, while `book()`
-and `confirm()` are the human's and are unreachable from any tool — the unit-test fakes throw if a
-tool so much as reaches for them.
+Next.js 15 (App Router, TS strict) on Vercel. **The board is shared and live**: one Supabase
+Postgres inventory every visitor sees — open it in two windows and race yourself. An anonymous
+session per browser (no sign-up, no credentials), realtime updates with a poll fallback, and the
+integrity a page can never provide for two strangers at once enforced by the database as RLS +
+`SECURITY DEFINER` functions: one hold per visitor, hold-before-book, only your own booking cancels
+or moves, an atomic move, three bookings each at most. Waves release on a 90-second server clock
+for everyone at once. **No model call of our own anywhere in the product**: the reasoning is the
+visitor's own agent, in their own client. One `DropDriver` seam is where the backend plugs in
+(`supabase-driver.ts`; the seeded in-page driver behind `?test=1` is what every eval drives);
+`hold()` is the agent's verb and the only one ever registered, while `book()`, `confirm()`,
+`cancel()` and `move()` are the human's and are unreachable from any tool — the unit-test fakes
+throw if a tool so much as reaches for them.
 
 Verification is a first-class part of the repo, not a claim in a README:
 
@@ -116,14 +124,18 @@ Verification is a first-class part of the repo, not a claim in a README:
 | The voice surface: searches, clinician listing, refusals readable aloud | `clinic-voice-tour.json` |
 | **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on all three routes | `node evals/a11y.mjs` |
 
-Plus 432 unit tests. Traces and screenshots for every row are committed under
-`docs/evidence/clinic/`. Everything above re-runs from a clean clone in two commands.
+| The shared board is real: visitor B books, visitor A's open page shows "Another patient" with no reload; the database refuses B visitor A's held slot | `node evals/live-two-visitors.mjs` |
+
+Plus 441 unit tests. Traces and screenshots for every row are committed under
+`docs/evidence/clinic/`. The seeded-board proofs above re-run from a clean clone in two commands;
+the live board's schema is committed under `supabase/migrations/`.
 
 ## What we are not claiming
 
-- **The inventory is fictional and the page says so on every screen.** Nothing real is booked, no
-  payment is taken, nothing is signed in. The rival is a seeded simulation, labelled as one wherever
-  it appears.
+- **The clinic is fictional and the page says so on every screen.** Nothing real is booked, no
+  payment is taken, no one signs up (an anonymous per-browser session only). The rival is a
+  labelled simulation; every other name on the board is a real visitor, labelled "Another patient",
+  never as the rival.
 - **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
   keyboard-accessible page — never "the accessible version". W3C's APA group is explicit that an
   agent route does not discharge a page's own obligations, and we agree with them.
@@ -148,7 +160,8 @@ Plus 432 unit tests. Traces and screenshots for every row are committed under
 
 ## What is next
 
-A real clinic backend behind the same `DropDriver` seam; the waitlist cascade, so that when a hold
+A real clinic's scheduling system behind the same `DropDriver` seam the live board already uses;
+the waitlist cascade, so that when a hold
 lapses the next person receives their own full window and nobody has to race at all; and a
 standards note to the WebMCP CG, whose accessibility section is currently an empty stub, proposing
 consequential acts as human-only affordances that a tool surface deliberately cannot express.

@@ -123,6 +123,8 @@ generic errors.)
 - Tool descriptions can still be ignored by a non-cooperative agent — by design nothing depends on them.
 - `hex_run` redaction hides git SHAs from the agent (not from the human).
 - CSP: per-request nonce + `'strict-dynamic'` for scripts (no `unsafe-inline`); `style-src` still allows inline styles (Tailwind).
+  With the live board on (the submitted default) `connect-src` also carries exactly the one Supabase project origin and
+  its `wss://` twin — never a wildcard over `*.supabase.co`.
   With the gesture build flag on (the submitted default) the script-src additionally carries `'wasm-unsafe-eval'` — wasm
   compilation only, it does not restore JS `eval` — and Permissions-Policy grants `camera=(self)`; with the flag off both
   headers are byte-identical to the pre-gesture build (asserted by the middleware's own branch); `connect-src` is the WebSocket allowlist.
@@ -193,11 +195,31 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   descriptions, and the test fakes throw if any tool reaches `driver.book()` or `driver.confirm()`). Booking runs only from an event the browser itself marked
   `isTrusted` (`confirm-logic.ts`) — which no tool call, no console `.click()` and no extension can
   produce. Every synthetic attempt is counted and shown on screen rather than silently dropped.
-- **Residual boundary, honestly:** the page itself is the trust boundary — a malicious script running IN the page
-  could dispatch nothing trusted (the browser owns `isTrusted`), but it could of course call the page's own
-  handlers directly. What the design forecloses is the realistic case: anything holding only the tool
-  surface — an agent, an extension, a script with the URL — cannot book, and its attempts are visible.
-- **Injection surface:** slot inventory, clinicians and wave copy are page-authored; no tool echoes
+- **Residual boundary, honestly (rewritten for the live board, SPEC-V3):** the trusted-event gate
+  lives in the page. The database (below) enforces *fairness between visitors* — one hold each,
+  hold-before-book, only-your-booking cancels and moves, an atomic move — and it **cannot and does
+  not** enforce that a human pressed anything: a script holding the publishable key (public, in
+  the bundle by design) can create an anonymous session and call `clinic_hold` then `clinic_book`
+  directly, for a slot of its own. What the design forecloses is the case that matters: the
+  **agent's** API — the WebMCP surface — cannot express booking, cancelling or moving, an agent
+  that tries is counted on screen, and no actor of any kind can take another visitor's hold or
+  booking. This is the same honest shape as every real booking system: the server guarantees
+  integrity, the client guarantees intent.
+- **The live board (SPEC-V3):** every visitor shares one inventory in a Supabase Postgres project.
+  Identity is an anonymous session per browser (`signInAnonymously`; no sign-up, no credentials,
+  no email — an `auth.users` row exists so RLS has a subject). RLS is on; the only policy is SELECT
+  for `authenticated`; there are no INSERT/UPDATE/DELETE policies — every write goes through six
+  `SECURITY DEFINER` functions (`clinic_board/hold/release/book/cancel/move`, `search_path`
+  pinned) whose checks are the invariants above plus a three-active-bookings cap per visitor. The
+  publishable key ships in the bundle and is public by design; secrecy authorises nothing. The
+  schema is committed at `supabase/migrations/*.sql`. Realtime is a `postgres_changes`
+  subscription on the one table, with a 2.5 s poll fallback; other visitors' UUIDs are not exposed
+  (`clinic_board` returns booleans `yours_held`/`yours_booked`, never the holder). The booking
+  form's fields (name, date of birth, phone, reason) are transmitted nowhere: every function takes
+  only a slot id. `?test=1` or `NEXT_PUBLIC_LIVE_BOARD=0` pins the seeded in-page board, which is
+  what every eval drives — nothing in CI mutates the shared inventory.
+- **Injection surface:** slot inventory, clinicians and wave copy are server-generated
+  deterministically from the wave index (`clinic_sweep`) or page-authored; no tool echoes
   text authored by anyone other than its own caller (refusals may quote the caller's slot id or
   time string back to the same agent, length-capped and JSON-escaped), so nothing an outsider
   writes can reach a tool description or a tool result.
@@ -231,12 +253,15 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   the camera itself — an extension or OS-level actor substituting a fake video stream — which is
   the same actor class that could already forge trusted input via the debugger API. Voice is
   refused as a confirm channel for a sharper reason: the agent HAS a voice, and in a speakers+mic
-  demo could utter the confirmation itself. It does not have a hand.
-- **No model, no key, no PII, no server:** the product makes no LLM call of its own and has no backend —
-  the reasoning is the visitor's own agent in their own client, and the demo form is transmitted nowhere.
-  Every number on screen is measured by the code that shows it; the counter counts only trusted events.
-- **Fairness in the demo:** one live hold per visitor; the labelled simulated rival takes three of six slots
-  over the first forty seconds and never the last open one, so someone arriving late can always still book.
+  live showing could utter the confirmation itself. It does not have a hand.
+- **No model call, no PII:** the product makes no LLM call of its own — the reasoning is the
+  visitor's own agent in their own client — and stores no personal data: the form is transmitted
+  nowhere and the database holds slot states and anonymous session ids only. Every number on
+  screen is measured by the code that shows it; the counter counts only trusted events.
+- **Fairness:** one live hold per visitor (server-enforced), at most three active bookings per
+  visitor (server-enforced). The labelled simulated rival takes exactly three of six slots per
+  wave at +6/+20/+34 s, only slots still open, and never the last open one — so someone arriving
+  late can always still book. Other visitors can take the last open one; that is the point.
 - **Accessibility:** axe-core reports 0 violations on all three routes (WCAG 2.0/2.1/2.2 A + AA), gated by
   `node evals/a11y.mjs`. The camera gesture is opt-in per person, always beside a keyboard path.
 

@@ -63,7 +63,7 @@ export interface ConfirmDockProps {
   onRelease?: () => void;
   /** The parent scopes the agent-lane counter to this element. */
   measuredRef?: (element: HTMLDivElement | null) => void;
-  /** T6's camera dwell, when the flag is on. Absent by default (GESTURE.md). */
+  /** T6's camera dwell. On in the submitted build, opt-in per person at runtime (GESTURE.md). */
   gestureSlot?: React.ReactNode;
 }
 

@@ -1,6 +1,34 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-09-01 later (Engineer #4)** Branch `main`.
+Last update: **2026-09-01 night (Engineer #4, Fable 5.1)** Branch `main`.
+
+## Build log — Engineer #4 (2026-09-01 night) — SPEC-V3 shipped + full adversarial sweep closed
+**SPEC-V3 — the shared live board.** Arav: "not a simulation — real judges racing each other."
+`SupabaseDriver` behind the unchanged `DropDriver` seam; Postgres + RLS + six SECURITY DEFINER
+verbs (one hold per visitor, hold-before-book, own-booking cancel/move, atomic move, 3-booking cap,
+current-wave-only holds, exactly-3-of-6 rival that never takes the last open slot, runtime kill
+switch `clinic_settings.live`, no cross-visitor uuids exposed). Anonymous session per browser;
+realtime after sign-in + 2.5 s poll + local sweep; server-clock skew corrected; refusals spoken
+(`refusalSentence`); a refused book/move gives its hold back. `?test=1` pins the seeded board —
+run-all, verify-deployed AND a11y drive that; nothing in CI touches the shared world. Live board
+unreachable/offline → immediate fallback to the seeded board, announced on the wave line.
+Migrations committed under `supabase/migrations/` (3 files). Proof: `evals/live-two-visitors.mjs`.
+**Three reviewers (security × 2, docs truth, fresh-eyes) + my own pass — every finding fixed:**
+hydration mismatch on live visits (live decided in an effect); driver born in render (StrictMode
+corpse); gesture sheet dark-on-dark inside the dock (token remap); agent strip ticking under
+`role=status` (45 announcements); landing vs booking wave clocks disagreed (epoch-aligned now,
+page-relative only under `?test=1`); manual booking read as "Held by your agent" on live; agent
+receipt written before the server answered (now on the `booked` event); move failure could offer a
+second booking; re-arming a cancel restarted its clock; `wave_landed_seconds_ago` false on live;
+landing manifest listed five tools; every "no backend / generated on your machine / off by default
+/ demo" claim retrued across README, SUBMISSION, SECURITY §10 (residual rewritten exactly),
+DROP-STATUS, VIDEO-SCRIPT, comments; harness no longer passes a throwing expression; three weak
+eval regexes tightened; partial tool registration aborts; `parseClockText` accepts numbers; newest
+booking wins for prepare_*; build survives a failed model fetch (bad files removed, never served);
+the "Node.js v25.9.0" eval heisenbug was my own `cd ..` after a shell cwd reset — absolute paths now.
+**Owed by humans:** Supabase dashboard → Authentication → Anonymous sign-ins ON (the live board
+has never had a visitor); then deploy + `verify-deployed` + `live-two-visitors`; Aarya's real-hand
+gesture test; Arav's ChatGPT desktop hour.
 
 ## Build log — Engineer #4 (2026-09-01, second pass) — security review closed + launch surface
 Security-engineer review of the SPEC-V2 + gesture delta: **no P0**; found a genuinely new attack

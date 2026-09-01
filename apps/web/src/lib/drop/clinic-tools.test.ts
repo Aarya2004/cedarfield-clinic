@@ -541,7 +541,9 @@ test('parseClockText reads what a person would say', () => {
   assert.equal(parseClockText('12:15 pm'), 12 * 60 + 15);
   assert.equal(parseClockText('half past nine'), null);
   assert.equal(parseClockText('25:00'), null);
-  assert.equal(parseClockText(7), null);
+  assert.equal(parseClockText(7), 7 * 60, 'a bare number is an hour, as Chrome/agents sometimes send it');
+  assert.equal(parseClockText(Number.NaN), null);
+  assert.equal(parseClockText({}), null);
 });
 
 test('clinic_find_slots filters by clinician, kind and window — and names the killing constraint', async () => {

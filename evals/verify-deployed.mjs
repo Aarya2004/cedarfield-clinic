@@ -59,7 +59,7 @@ const cases = [
   ['clinic-phone-acts.json', '/clinic/book'],
   // clinic-soak.json is deliberately NOT here: its walk-away-and-wait beats (45s arm expiry, a
   // full deferred wave rollover) can exceed the per-case timeout. Run it by hand:
-  //   node evals/harness/webmcp-cdp.mjs <origin>/clinic/book evals/cases/clinic-soak.json
+  //   node evals/harness/webmcp-cdp.mjs '<origin>/clinic/book?test=1' evals/cases/clinic-soak.json
 ];
 for (const [file, path] of cases) {
   // `_doc` headers are prose (the harness skips them too) and `shot` steps write into the repo's

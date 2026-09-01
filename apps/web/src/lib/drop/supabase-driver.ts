@@ -9,7 +9,7 @@
  *     none of this file is reachable except through that gate or the agent's own hold/release;
  *   · the DATABASE now enforces what a page never could for two strangers at once: one hold per
  *     visitor, hold-before-book, only-your-booking cancels, and an atomic move — as RLS +
- *     SECURITY DEFINER functions, not as promises (supabase/migrations: cedarfield_board).
+ *     SECURITY DEFINER functions, not as promises (supabase/migrations/*.sql, committed).
  *
  * Identity is an anonymous Supabase session per browser: your holds and bookings are yours across
  * reloads, and no other visitor — and no script holding only the publishable key — can touch them.
@@ -74,6 +74,8 @@ export interface LiveMeta {
   lastError: string | null;
   /** Bumps on every refusal so the page can show the same sentence twice if it happens twice. */
   errorSeq: number;
+  /** The board said `board_offline` (the runtime kill switch) — fall back now, not after the grace. */
+  offline?: boolean;
 }
 
 /** What the person is told when the database says no. Specific, calm, never a stack trace. */
@@ -82,7 +84,8 @@ export function refusalSentence(raw: string): string {
   if (raw.includes('not_your_hold')) return 'The hold ran out before the press landed. Hold it again.';
   if (raw.includes('not_your_booking')) return 'That appointment is no longer yours to change.';
   if (raw.includes('nothing_held')) return 'There was no hold to give back.';
-  if (raw.includes('sign_in')) return 'Could not reach the live board. Reload to try again.';
+  if (raw.includes('booking_cap')) return 'Three appointments is the limit here. Cancel one to book another.';
+  if (raw.includes('sign_in') || raw.includes('board_offline')) return 'Could not reach the live board. Reload to try again.';
   return 'That did not go through. The board has been refreshed.';
 }
 
@@ -130,7 +133,7 @@ export function createSupabaseDriver(): LiveDriver {
     const { data, error } = await client.rpc(fn, args);
     // clinic_board failing is connectivity, not a refusal of anything the person did
     if (error && fn !== 'clinic_board') meta = { ...meta, lastError: `${fn}: ${error.message}`, errorSeq: meta.errorSeq + 1 };
-    if (error && fn === 'clinic_board') meta = { ...meta, lastError: `${fn}: ${error.message}` };
+    if (error && fn === 'clinic_board') meta = { ...meta, lastError: `${fn}: ${error.message}`, offline: error.message.includes('board_offline') };
     return { data, error: error?.message ?? null };
   };
 
@@ -198,10 +201,16 @@ export function createSupabaseDriver(): LiveDriver {
 
   // realtime: any change to the board, from anyone, anywhere → re-read. Polling is the fallback
   // for the judge whose network eats websockets; the local sweep catches a hold dying mid-tick.
-  const channel = client
-    .channel('clinic_slots_live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'clinic_slots' }, () => void refresh())
-    .subscribe();
+  // The channel joins AFTER the anonymous session exists: a subscription made with the bare key
+  // may never be re-evaluated when the token arrives, and would silently live on polling alone.
+  let channel: ReturnType<SupabaseClient['channel']> | null = null;
+  void ensureAuth().then((signedIn) => {
+    if (!signedIn || disposed) return;
+    channel = client
+      .channel('clinic_slots_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clinic_slots' }, () => void refresh())
+      .subscribe();
+  });
   const poll = setInterval(() => void refresh(), POLL_MS);
   const sweep = setInterval(() => {
     if (myHold !== null && myHold.expiresAt <= Date.now()) void refresh();
@@ -211,11 +220,15 @@ export function createSupabaseDriver(): LiveDriver {
   void refresh();
 
   /** A verb is: call the database, then believe only what it says back. */
-  const verb = (fn: string, args: Record<string, unknown>, onOk?: () => void) => {
-    void rpc(fn, args).then(({ error }) => {
-      if (!error) onOk?.();
+  const verb = (fn: string, args: Record<string, unknown>, onFail?: () => Promise<unknown>) => {
+    void rpc(fn, args).then(async ({ error }) => {
+      if (error && onFail) await onFail();
       void refresh();
     });
+  };
+  /** A hold left behind by a refused act must not sit there offering a second press. */
+  const releaseQuietly = async (slotId: string): Promise<void> => {
+    await client.rpc('clinic_release', { slot_id: slotId });
   };
 
   return {
@@ -233,7 +246,7 @@ export function createSupabaseDriver(): LiveDriver {
     },
     /** The human's press on a held slot. Server refuses unless the hold is yours and alive. */
     confirm(slotId) {
-      verb('clinic_book', { slot_id: slotId });
+      verb('clinic_book', { slot_id: slotId }, () => releaseQuietly(slotId));
     },
     /**
      * The manual first-come path: a real booking site holds nothing for you. Hold-before-book is a
@@ -243,14 +256,16 @@ export function createSupabaseDriver(): LiveDriver {
     book(slotId) {
       void rpc('clinic_hold', { slot_id: slotId }).then(({ error }) => {
         if (error) return void refresh();
-        verb('clinic_book', { slot_id: slotId });
+        verb('clinic_book', { slot_id: slotId }, () => releaseQuietly(slotId));
       });
     },
     cancel(slotId) {
       verb('clinic_cancel', { slot_id: slotId });
     },
     move(fromSlotId, toSlotId) {
-      verb('clinic_move', { from_slot: fromSlotId, to_slot: toSlotId });
+      // A refused move must also drop the freeze on the target — otherwise the page would be
+      // left holding `to` with a book dock on it, one press from a SECOND appointment.
+      verb('clinic_move', { from_slot: fromSlotId, to_slot: toSlotId }, () => releaseQuietly(toSlotId));
     },
     meta: () => meta,
     snapshot: () => ({ slots: slots.map((s) => ({ ...s })), hold: myHold ? { slotId: myHold.slotId } : null }),
@@ -258,7 +273,8 @@ export function createSupabaseDriver(): LiveDriver {
       disposed = true;
       clearInterval(poll);
       clearInterval(sweep);
-      void client.removeChannel(channel);
+      if (channel) void client.removeChannel(channel);
+      void client.auth.stopAutoRefresh();
     },
   };
 }

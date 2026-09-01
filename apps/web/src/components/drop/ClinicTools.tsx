@@ -3,7 +3,7 @@
 /**
  * ClinicTools — the nine WebMCP tools of the booking page, mounted (SPEC-V1 §3, SPEC-V2 §2).
  *
- * PROVISIONAL SCHEMA — Arav red-lines before lock. The tools themselves live in
+ * The tools themselves live in
  * `lib/drop/clinic-tools.ts`; this file is only the mount point and a two-line status indicator.
  *
  * ── HOW TO USE IT (the whole API) ───────────────────────────────────────────────────────────────
@@ -58,6 +58,11 @@ export interface ClinicToolsProps {
   onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
   /** The act the dock is armed for right now — so clinic_hold_status never misdescribes the press. */
   armedAct?: 'cancel' | 'move' | null;
+  /** SPEC-V3: the server's wave start (session-clock units) and whether the board is shared. */
+  waveLandedAt?: number | null;
+  sharedBoard?: boolean;
+  /** How long hold/release wait for the fold. The live board is two network round trips. */
+  settleTimeoutMs?: number;
 }
 
 // Same fallbacks as the rest of the drop skin (components/drop/drop-tokens.css), so this line is
@@ -69,6 +74,8 @@ function label(state: ClinicRegistrationState): string {
   switch (state.kind) {
     case 'registered':
       return `Site tools · ${state.names.length}`;
+    case 'pending':
+      return 'Site tools · registering…';
     case 'unsupported':
       // Honest: nothing is listening, so we do not print a count as if something were.
       return 'Site tools · not offered by this browser';
@@ -77,15 +84,25 @@ function label(state: ClinicRegistrationState): string {
   }
 }
 
-export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCancel, onPrepareMove, armedAct = null }: ClinicToolsProps) {
-  const [state, setState] = useState<ClinicRegistrationState>({ kind: 'unsupported' });
+export function ClinicTools({
+  driver,
+  session,
+  nextWaveAt = null,
+  onPrepareCancel,
+  onPrepareMove,
+  armedAct = null,
+  waveLandedAt = null,
+  sharedBoard = false,
+  settleTimeoutMs,
+}: ClinicToolsProps) {
+  const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
 
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
-  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct });
+  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard });
   const seams = useRef({ onPrepareCancel, onPrepareMove });
   useEffect(() => {
-    view.current = { driver, session, nextWaveAt, armedAct };
+    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard };
     seams.current = { onPrepareCancel, onPrepareMove };
   });
 
@@ -103,6 +120,7 @@ export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCance
         // Live seams: registration happens once, the page's callbacks change every render.
         onPrepareCancel: (slotId) => seams.current.onPrepareCancel?.(slotId) ?? false,
         onPrepareMove: (fromId, toId) => seams.current.onPrepareMove?.(fromId, toId) ?? false,
+        ...(settleTimeoutMs !== undefined ? { settleTimeoutMs } : {}),
       },
     ).then((d) => {
       if (disposed) d();
@@ -112,7 +130,9 @@ export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCance
       disposed = true;
       dispose?.();
     };
-  }, []);
+    // The settle budget changes exactly once (when the page learns it is live); re-registering
+    // then is the correct behaviour — the tools must carry the budget they will actually need.
+  }, [settleTimeoutMs]);
 
   return (
     <p

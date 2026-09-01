@@ -1,6 +1,5 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════════════════════════════╗
- * ║  PROVISIONAL SCHEMA — Arav red-lines before lock.                                            ║
  * ║  Names, input schemas and result shapes below are a proposal (SPEC-V1 §3), not a contract.    ║
  * ║  Nothing outside this file and ClinicTools.tsx depends on them; change them freely until the  ║
  * ║  lock, then move whatever survives into a `contract:` commit.                                 ║
@@ -87,6 +86,14 @@ export interface ClinicToolsView {
    * when the armed press actually moves. The tools must never describe a press they cannot see.
    */
   armedAct?: 'cancel' | 'move' | null;
+  /**
+   * SPEC-V3: on the live board every refresh is a `drop_wave` resync, so "the last drop_wave in the
+   * log" is always seconds ago — a false number. The page passes the server's real wave start
+   * instead (session-clock units). Absent ⇒ the log is the truth (seeded board).
+   */
+  waveLandedAt?: number | null;
+  /** SPEC-V3: true when other visitors share this board — so the agent can say so out loud. */
+  sharedBoard?: boolean;
   /** The verbs. `hold` / `release` are called here; `confirm` is the human path and never is. */
   driver: DropDriver;
   /** The fold the UI renders: slots, held, secondsLeft, now, log. */
@@ -172,6 +179,8 @@ export interface ListDropsResult {
   ok: true;
   clinic: string;
   fictional_clinic: true;
+  /** Present and true on the live board: other slots on it belong to real visitors. */
+  shared_board?: true;
   slots: AgentSlot[];
   open_count: number;
   /** Seconds until the next wave, when the page knows; null when it does not. Never invented. */
@@ -243,6 +252,7 @@ export function holdSummary(view: ClinicToolsView): HoldSummary | null {
 export function listDrops(view: ClinicToolsView): ListDropsResult {
   const { session } = view;
   const lastWave = [...session.log].reverse().find((e) => e.type === 'drop_wave');
+  const landedAt = view.waveLandedAt ?? lastWave?.at ?? null;
   const nextWaveAt = view.nextWaveAt ?? null;
   return {
     ok: true,
@@ -251,7 +261,8 @@ export function listDrops(view: ClinicToolsView): ListDropsResult {
     slots: session.slots.map(toAgentSlot),
     open_count: openIds(session.slots).length,
     next_wave_seconds: nextWaveAt === null ? null : Math.max(0, round1((nextWaveAt - session.now) / 1000)),
-    wave_landed_seconds_ago: lastWave ? Math.max(0, round1((session.now - lastWave.at) / 1000)) : null,
+    wave_landed_seconds_ago: landedAt === null ? null : Math.max(0, round1((session.now - landedAt) / 1000)),
+    ...(view.sharedBoard ? { shared_board: true as const } : {}),
     your_hold: holdSummary(view),
     booking: 'human_only',
   };
@@ -303,7 +314,7 @@ async function settle(source: ClinicToolsSource, predicate: (v: ClinicToolsView)
 
 export const LIST_DROPS_DESCRIPTION =
   "List the appointment slots in this clinic's current drop: id, time, clinician, kind, and state " +
-  '(open, held_by_you, held_by_other, taken_by_rival, booked_yours, expired_hold). Read-only — it ' +
+  '(open, held_by_you, held_by_other, taken_by_rival, taken_by_other, booked_yours, expired_hold). Read-only — it ' +
   'changes nothing. Start here, then clinic_hold_slot to take one slot out of the race for your ' +
   'human. There is deliberately NO booking tool on this page: only your human can book, with one ' +
   'key press on the page. Fictional clinic, simulated rival — nothing real is booked.';
@@ -362,6 +373,8 @@ export const holdSlotSchema = {
  */
 /** "9", "9:00", "9:00 AM", "4 pm" → minutes since midnight; null when unparseable. */
 export function parseClockText(raw: unknown): number | null {
+  // Chrome and agents alike may pass `after: 9` as a number; it means the same as "9".
+  if (typeof raw === 'number' && Number.isFinite(raw)) raw = String(raw);
   if (typeof raw !== 'string') return null;
   const m = raw.trim().toLowerCase().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
   if (!m) return null;
@@ -567,7 +580,11 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             detail:
               slot.state === 'taken_by_rival'
                 ? 'Someone else took this slot. Pick another id from open_slot_ids.'
-                : `Slot "${slotId}" is ${slot.state}.`,
+                : slot.state === 'taken_by_other'
+                  ? 'Another visitor booked this slot. Pick another id from open_slot_ids.'
+                  : slot.state === 'held_by_other'
+                    ? 'Another visitor is holding this slot right now. Pick another id from open_slot_ids.'
+                    : `Slot "${slotId}" is ${slot.state}.`,
             slot_state: slot.state,
             open_slot_ids: openIds(before.session.slots),
           } satisfies ErrorResult);
@@ -656,7 +673,8 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       annotations: { readOnlyHint: false },
       async execute() {
         const view = source();
-        const booked = view.session.slots.find((s) => s.state === 'booked_yours');
+        // The NEWEST booking: on the live board earlier ones stay visible for a few waves.
+        const booked = [...view.session.slots].reverse().find((s) => s.state === 'booked_yours');
         if (!booked) {
           return asToolResult({
             ok: false,
@@ -708,7 +726,8 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         const input = coerceInput(raw);
         const toId = typeof input.new_slot_id === 'string' ? input.new_slot_id.trim() : '';
         const view = source();
-        const booked = view.session.slots.find((s) => s.state === 'booked_yours');
+        // The NEWEST booking: on the live board earlier ones stay visible for a few waves.
+        const booked = [...view.session.slots].reverse().find((s) => s.state === 'booked_yours');
         if (!booked) {
           return asToolResult({
             ok: false,
@@ -825,6 +844,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
 export type ClinicRegistrationState =
   | { kind: 'unsupported' }
   | { kind: 'registered'; names: ClinicToolName[] }
+  | { kind: 'pending' }
   | { kind: 'error'; message: string };
 
 /**
@@ -858,6 +878,9 @@ export async function registerClinicTools(
     }
     onState({ kind: 'registered', names: [...CLINIC_TOOL_NAMES] });
   } catch (e) {
+    // Half a surface is worse than none: a throw mid-loop must not leave the earlier tools live
+    // under a label that says registration failed.
+    ac.abort();
     onState({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
   }
   return () => ac.abort();

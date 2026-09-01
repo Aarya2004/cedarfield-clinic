@@ -88,7 +88,19 @@ const send = (method, params = {}) => new Promise((r) => {
   pending.set(i, (m) => { clearTimeout(timer); r(m); });
   ws.send(JSON.stringify({ id: i, method, params }));
 });
-const evalJs = async (expression) => { const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); return r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description ?? null; };
+// A thrown expression is NOT a value: it used to come back as the exception's description — a
+// truthy string — so a `waitFor` that threw passed instantly. Now it is `undefined`, which no
+// `equals`/`matches`/`waitFor` accepts, and the description is kept for the step's output.
+let lastEvalError = null;
+const evalJs = async (expression) => {
+  const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+  if (r.result?.exceptionDetails) {
+    lastEvalError = r.result.exceptionDetails.exception?.description ?? r.result.exceptionDetails.text ?? 'exception';
+    return undefined;
+  }
+  lastEvalError = null;
+  return r.result?.result?.value ?? null;
+};
 await send('Page.enable'); await send('Runtime.enable'); await send('WebMCP.enable');
 const nav = await send('Page.navigate', { url });
 const frameId = nav.result.frameId;

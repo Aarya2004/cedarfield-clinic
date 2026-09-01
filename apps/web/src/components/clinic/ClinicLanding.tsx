@@ -59,8 +59,9 @@ export function ClinicLanding() {
           <p className="cl-lead">It finds the slot and holds it.</p>
           <p className="cl-prose">
             The booking page publishes its appointments as tools your agent can call — list what is
-            open, hold one, check the hold, give it back. Your agent takes a{' '}
-            <strong>{HOLD_TTL_SECONDS}-second hold</strong> on the time you asked for. No account,
+            open, search by clinician or time, hold one, check the hold, give it back, arm a cancel
+            or a move for you to confirm. Your agent takes a{' '}
+            <strong>{HOLD_TTL_SECONDS}-second hold</strong> on the time you asked for. No sign-up,
             no scraping, no form.
           </p>
         </Band>
@@ -93,8 +94,9 @@ export function ClinicLanding() {
 
         <Band label="Honestly">
           <p className="cl-prose">
-            The appointments are generated on your machine and the rival is a seeded simulation,
-            labelled as one wherever it appears. Every interaction count on the booking page was
+            The appointments come from one shared board every visitor sees, released on a
+            90-second clock; the rival is a labelled simulation, and every other name on the board is
+            a real visitor, labelled &ldquo;Another patient&rdquo;. Every interaction count on the booking page was
             measured by the page while you used it — no number here was written by hand. Nothing
             books a real appointment and nothing takes a payment.
           </p>

@@ -106,7 +106,7 @@
  },
  {
   "invoke": "clinic_explain_confirm",
-  "outputMatches": "human|person|press"
+  "outputMatches": "tool_that_books.{0,2}:null"
  },
  {
   "invoke": "clinic_list_drops",

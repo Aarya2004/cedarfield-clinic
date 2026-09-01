@@ -13,8 +13,10 @@
  *
  * WHAT IT IS NOT. Proof that a human acted. `ConfirmSurface` can make that claim about the keyboard
  * because the UA marks synthetic events `isTrusted === false`; a classifier has no equivalent — a
- * printed hand or a video of one is an `Open_Palm` to any model. So the gesture path is off by
- * default, behind `NEXT_PUBLIC_DROP_GESTURE=1`, and the demo's security line stays a keyboard line.
+ * printed hand or a video of one is an `Open_Palm` to any model. So the gesture path is strictly
+ * opt-in at runtime (the build ships it on; `NEXT_PUBLIC_DROP_GESTURE=0` removes it entirely), its
+ * trust root is stated as physical presence in SECURITY.md §10, and the security line stays a
+ * keyboard line.
  *
  * SHAPE. All the rules — dwell accumulation, flicker tolerance, cancel-on-lost-palm, fire-once,
  * the six `data-gesture-state` values, the persisted prefs — live in `../../lib/drop/gesture-logic.ts`
@@ -192,7 +194,7 @@ export function GestureConfirm({
     } else if (!armedRef.current) {
       setFired(false);
     }
-  }, []);
+  }, [done]);
 
   // ---- start: the only place the camera is ever opened -------------------------
   const start = useCallback(async () => {

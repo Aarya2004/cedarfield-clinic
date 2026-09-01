@@ -37,7 +37,7 @@
   "inputFrom": {
    "slot_id": "window.__a"
   },
-  "outputMatches": "held|ttl|true"
+  "outputMatches": "held.{0,2}:true"
  },
  {
   "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'",

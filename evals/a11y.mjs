@@ -96,7 +96,7 @@ try {
   for (const route of routes) {
     const stepsFile = join(work, `steps${route.replace(/\W+/g, '_')}.json`);
     writeFileSync(stepsFile, JSON.stringify(stepsFor(route)));
-    const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${base}${route}`, stepsFile], {
+    const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${base}${route}${route.includes('?') ? '&' : '?'}test=1`, stepsFile], {
       encoding: 'utf8',
       timeout: 180_000,
       maxBuffer: 32 * 1024 * 1024, // axe's own source echoes back in the step log; 1 MB is not enough
