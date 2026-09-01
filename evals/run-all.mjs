@@ -249,7 +249,7 @@ for (const f of cases) {
       // Gesture cases get Chrome's fake camera so the wasm→model→getUserMedia pipeline is provable
       // headlessly; every other case keeps the stock launch (and a stray operator export is unset).
       ROKAN_EVAL_CHROME_FLAGS: f.includes('gesture')
-        ? '--use-fake-device-for-media-stream --use-fake-ui-for-media-stream'
+        ? `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream ${process.env.ROKAN_EVAL_CHROME_FLAGS ?? ''}`.trim()
         : '',
     },
   });

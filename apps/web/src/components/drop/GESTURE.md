@@ -7,7 +7,11 @@
 > to hold a slot (or use `window.__CEDARFIELD_AGENT__.holdSlot(...)` in the console), click
 > **Enable camera** on the dock, hold an open palm through the dwell — the row books. Then book one,
 > have the agent call `clinic_prepare_cancel`, and confirm the SAME palm cancels with the cancel
-> copy. What to film and the tremor/flicker checks below still apply unchanged.
+> copy. What to film and the tremor/flicker checks below still apply unchanged. NEW 2026-09-01: the dock
+> prints the model's LIVE classification in `data-gesture-seen` (e.g. `Open_Palm 0.92` — inspect
+> the `[data-gesture-confirm]` element) — keep devtools open in the filmed test and the proof reads
+> itself. CI already proves everything up to the classifier (`clinic-gesture-boot`); your hand
+> closes the last inch (`evals/manual/README.md` has the full story).
 
 An open palm held in front of the lens for a configurable dwell (default 1000ms) calls the **same**
 `onConfirm` the Enter key calls. It plugs into `ConfirmSurface`'s `gestureSlot` and it is never the

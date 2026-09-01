@@ -105,6 +105,10 @@ export function GestureConfirm({
   const [holding, setHolding] = useState(false);
   const [fired, setFired] = useState(false);
   const [live, setLive] = useState('');
+  // What the model is seeing right now ("Open_Palm 0.87", or ''). Honest-numbers ethos applied to
+  // the camera: the person (and anyone in devtools) can watch the recognizer's actual output, so a
+  // dwell that will not fill is a diagnosable fact rather than a mystery.
+  const [seen, setSeen] = useState('');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -140,6 +144,7 @@ export function GestureConfirm({
     setHolding(false);
     setProgress(0);
     setFired(false);
+    setSeen('');
   }, []);
 
   useEffect(() => teardown, [teardown]);
@@ -175,6 +180,7 @@ export function GestureConfirm({
       }
     }
 
+    if (gesture !== null) setSeen(`${gesture} ${score.toFixed(2)}`);
     const step = stepDwell(dwellRef.current, { at, gesture, score, armed: armedRef.current }, configRef.current);
     dwellRef.current = step.state;
     setProgress(dwellProgress(step.state, configRef.current));
@@ -328,6 +334,7 @@ export function GestureConfirm({
       data-gesture-failure={failure ?? undefined}
       data-gesture-dwell-ms={dwellMs}
       data-gesture-progress={progress.toFixed(2)}
+      data-gesture-seen={running ? seen : undefined}
       aria-label="Confirm with a hand gesture (optional)"
       style={{ ['--p' as string]: progress }}
     >

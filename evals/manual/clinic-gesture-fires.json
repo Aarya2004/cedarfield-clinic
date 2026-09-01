@@ -1,0 +1,61 @@
+[
+ {
+  "_doc": "THE PALM BOOKS IT \u2014 headless. Chrome's fake camera plays Google's own hand-landmarker test image (an open hand) on loop; the shipped recognizer classifies it, the dwell fills, and the act fires with ZERO key presses. If the gesture never fires this case times out at 'still ready'.",
+  "allowErrors": [
+   "INFO: Created TensorFlow Lite XNNPACK delegate"
+  ]
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "eval": "(() => { const b = document.querySelector('[data-gesture-toggle][data-gesture-enable]'); if (!b) return 'no-button'; b.click(); return 'clicked'; })()",
+  "equals": "clicked"
+ },
+ {
+  "waitFor": "['ready','held','fired'].includes(document.querySelector('[data-gesture-confirm]')?.getAttribute('data-gesture-state'))",
+  "timeout": 30000
+ },
+ {
+  "_doc": "The hand is on camera from frame one: the dwell should fill (~1s) and fire."
+ },
+ {
+  "waitFor": "document.querySelector('[data-gesture-confirm]')?.getAttribute('data-gesture-state') === 'fired'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "shot": "docs/evidence/clinic/palm-booked.png"
+ },
+ {
+  "eval": "document.querySelector('[data-untrusted-attempts]')?.getAttribute('data-untrusted-attempts') ?? '0'",
+  "equals": "0"
+ }
+]
