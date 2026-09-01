@@ -42,6 +42,7 @@ import {
   type ManualFlowAction,
 } from '../../lib/drop/manual-flow.ts';
 import { createMockDriver } from '../../lib/drop/mock-driver.ts';
+import { createSupabaseDriver, type LiveDriver } from '../../lib/drop/supabase-driver.ts';
 import { formatClock } from '../../lib/drop/time.ts';
 import type { DropDriver } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
@@ -98,6 +99,18 @@ function noWrap(timeLabel: string): string {
   return timeLabel.replace(/ /g, '\u00A0');
 }
 
+/**
+ * SPEC-V3: the shared live board. ON by default; two kill switches, both honest:
+ *   · build-time: NEXT_PUBLIC_LIVE_BOARD=0 → every visitor gets the seeded in-page board;
+ *   · per-URL:   ?test=1 → same, so the eval harness always drives a deterministic world.
+ */
+const LIVE_BUILD = process.env.NEXT_PUBLIC_LIVE_BOARD !== '0';
+function wantsLiveBoard(): boolean {
+  if (!LIVE_BUILD) return false;
+  if (typeof window === 'undefined') return false;
+  return !new URLSearchParams(window.location.search).has('test');
+}
+
 /** How long a prepared cancel stays armed before the page quietly stands down. */
 const PENDING_ACT_TTL_SECONDS = 45;
 
@@ -110,11 +123,40 @@ export function ClinicBooking() {
   // ── the wave ───────────────────────────────────────────────────────────────────────────────────
   const mountedAt = useRef<number>(Date.now());
   const [wave, setWave] = useState(0);
-  const driver = useMemo(
-    () => createMockDriver({ seed: waveSeed(wave), scenario: 'hold-and-book', overrides: WAVE_OVERRIDES }),
-    [wave],
+  // Decided once, on the client, before the first driver exists. SSR renders the seeded board and
+  // the live driver takes over on hydration — the page is identical either way until data arrives.
+  const [wantLive] = useState<boolean>(() => wantsLiveBoard());
+  // Fail toward a working product: if the live board has not produced a world within the grace
+  // (network trouble, an outage, a corporate proxy eating websockets), the visitor silently gets
+  // the seeded board — the same complete product, minus other people. Never a hung page.
+  const [liveFailed, setLiveFailed] = useState(false);
+  const live = wantLive && !liveFailed;
+  const liveDriver = useRef<LiveDriver | null>(null);
+  if (live && liveDriver.current === null && typeof window !== 'undefined') {
+    liveDriver.current = createSupabaseDriver();
+  }
+  useEffect(() => () => liveDriver.current?.dispose(), []);
+  useEffect(() => {
+    if (!live) return;
+    const grace = setTimeout(() => {
+      if (!liveDriver.current?.meta().ready) {
+        // One line in the console for whoever debugs it; the page itself just keeps working.
+        console.warn('[cedarfield] live board unavailable, using the seeded board:', liveDriver.current?.meta().lastError);
+        liveDriver.current?.dispose();
+        liveDriver.current = null;
+        setLiveFailed(true);
+      }
+    }, 6000);
+    return () => clearTimeout(grace);
+  }, [live]);
+  const mockDriver = useMemo(
+    () => (live ? null : createMockDriver({ seed: waveSeed(wave), scenario: 'hold-and-book', overrides: WAVE_OVERRIDES })),
+    [live, wave],
   );
-  const session = useDropSession(driver, { running: true, clock: driver });
+  const driver = live ? liveDriver.current! : mockDriver!;
+  // A real driver has no clock: events carry epoch `at` and `now` is Date.now() (useDropSession's
+  // own contract). The simulated driver still doubles as the clock it always was.
+  const session = useDropSession(driver, { running: true, clock: live ? null : (driver as ReturnType<typeof createMockDriver>) });
 
   /**
    * Elapsed page time. Read during render rather than held in state because the session already
@@ -346,8 +388,10 @@ export function ClinicBooking() {
 
   const wantedWave = waveIndexAt(elapsed);
   useEffect(() => {
+    // Live board: the server rolls the waves for everyone at once; there is nothing to stage here.
+    if (live) return;
     if (!busy && wantedWave !== wave) setWave(wantedWave);
-  }, [busy, wantedWave, wave]);
+  }, [busy, wantedWave, wave, live]);
 
   /**
    * The agent seam, for the eval harness and for anyone reading the page with dev tools open. It
@@ -370,7 +414,16 @@ export function ClinicBooking() {
   }, [driver]);
 
   const heldSlot = session.held === null ? undefined : findSlot(session.slots, session.held.slotId);
-  const nextRelease = busy ? null : msUntilNextWave(elapsed);
+  // Live: the release schedule is the server's and it waits for nobody — anything booked is yours
+  // across waves, which is what the copy says. Seeded: the swap defers while this visitor is busy.
+  const liveMeta = live ? liveDriver.current?.meta() : undefined;
+  const nextRelease = live
+    ? liveMeta?.nextWaveAt != null
+      ? Math.max(0, liveMeta.nextWaveAt - Date.now())
+      : null
+    : busy
+      ? null
+      : msUntilNextWave(elapsed);
   const arrival = origin === 'agent' && heldSlot ? agentArrivalAnnouncement(origin, heldSlot.timeLabel) : null;
 
   return (
@@ -396,13 +449,20 @@ export function ClinicBooking() {
         <div ref={regionRef} data-clinic-measured="booking">
           <Band label="This wave" open>
             <p className="cl-lead" data-clinic-wave-age>
-              {describeWaveAge(msIntoWave(elapsed))} · {session.slots.filter((s) => s.state === 'open').length} of{' '}
-              {session.slots.length} still open
+              {live
+                ? liveMeta?.ready
+                  ? `${describeWaveAge(Math.max(0, Date.now() - (liveMeta.waveStartedAt ?? Date.now())))} · ${session.slots.filter((s) => s.state === 'open').length} open · live for every visitor`
+                  : 'Connecting to the live board…'
+                : `${describeWaveAge(msIntoWave(elapsed))} · ${session.slots.filter((s) => s.state === 'open').length} of ${session.slots.length} still open`}
             </p>
             <p className="cl-prose">
-              {nextRelease === null
-                ? 'The next release is held back while this booking is in play — nothing on the board will be cleared out from under you.'
-                : `Next release in ${formatClock(nextRelease / 1000)}. A release replaces the board; anything you have booked is already yours.`}
+              {live
+                ? nextRelease === null
+                  ? 'This board is shared by everyone here right now. Anything you book stays yours.'
+                  : `Next release in ${formatClock(nextRelease / 1000)} — for everyone at once. This board is shared: when another patient books a time, you watch it go. Anything you book stays yours.`
+                : nextRelease === null
+                  ? 'The next release is held back while this booking is in play — nothing on the board will be cleared out from under you.'
+                  : `Next release in ${formatClock(nextRelease / 1000)}. A release replaces the board; anything you have booked is already yours.`}
             </p>
           </Band>
 
@@ -521,7 +581,7 @@ export function ClinicBooking() {
         <ClinicTools
           driver={driver}
           session={session}
-          nextWaveAt={nextRelease === null ? null : session.now + nextRelease}
+          nextWaveAt={live ? (liveMeta?.nextWaveAt ?? null) : nextRelease === null ? null : session.now + nextRelease}
           onPrepareCancel={prepareCancel}
           onPrepareMove={prepareMove}
           armedAct={pendingAct?.kind ?? null}

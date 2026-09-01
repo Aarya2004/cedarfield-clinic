@@ -31,6 +31,7 @@ const STATE_WORD: Record<SlotState, string> = {
   held_by_you: 'Held — yours',
   held_by_other: 'Held by someone else',
   taken_by_rival: 'Taken',
+  taken_by_other: 'Taken',
   booked_yours: 'Booked — yours',
   expired_hold: 'Lapsed',
 };
@@ -113,6 +114,8 @@ export function SlotSheet({
                 </span>
               ) : slot.state === 'taken_by_rival' ? (
                 <span className="cl-row__tag">{RIVAL_LABEL}</span>
+              ) : slot.state === 'taken_by_other' ? (
+                <span className="cl-row__tag">Another patient</span>
               ) : slot.state === 'expired_hold' ? (
                 <span className="cl-row__tag">Hold ran out</span>
               ) : null}

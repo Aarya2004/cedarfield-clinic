@@ -22,6 +22,12 @@ const bridgeHosts = (process.env.NEXT_PUBLIC_BRIDGE_HOSTS ?? '')
  *     this origin outright, so without this the module could only ever report `unavailable`.
  */
 const gesture = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
+// SPEC-V3: the shared live board. Same rule as the gesture doors: present only when the build
+// asked for it, and scoped to the one project origin — never a wildcard over all of Supabase.
+const liveBoard = process.env.NEXT_PUBLIC_LIVE_BOARD !== '0';
+const supabaseOrigin = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://hxqpaquhkmnrnjfutuyu.supabase.co').replace(/\/$/, '');
+const supabaseWs = supabaseOrigin.replace(/^https:/, 'wss:');
+const liveHosts = liveBoard ? ` ${supabaseOrigin} ${supabaseWs}` : '';
 
 export function middleware(request: NextRequest) {
   const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
@@ -33,7 +39,7 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    `connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss://*.trycloudflare.com${bridgeHosts}`,
+    `connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss://*.trycloudflare.com${bridgeHosts}${liveHosts}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

@@ -68,6 +68,7 @@ const STATUS_WORD: Record<SlotState, string> = {
   held_by_you: 'Held for you',
   held_by_other: 'Being booked',
   taken_by_rival: 'Taken',
+  taken_by_other: 'Taken',
   booked_yours: 'Booked',
   expired_hold: 'Gone',
 };

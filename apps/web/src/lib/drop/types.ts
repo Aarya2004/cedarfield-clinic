@@ -6,6 +6,8 @@ export type SlotState =
   | 'held_by_you'
   | 'held_by_other'
   | 'taken_by_rival'
+  /** Live board only: another real visitor booked it. Labelled honestly, never as the rival. */
+  | 'taken_by_other'
   | 'booked_yours'
   | 'expired_hold';
 

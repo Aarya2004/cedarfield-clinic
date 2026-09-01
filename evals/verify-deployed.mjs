@@ -74,7 +74,10 @@ for (const [file, path] of cases) {
   }
   const tmp = join(work, file);
   writeFileSync(tmp, JSON.stringify(steps));
-  const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${origin}${path}`, tmp], {
+  // ?test=1 pins the seeded in-page board (SPEC-V3): these cases assert a deterministic world and
+  // must never mutate the shared live inventory real visitors are on.
+  const testPath = `${path}${path.includes('?') ? '&' : '?'}test=1`;
+  const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${origin}${testPath}`, tmp], {
     encoding: 'utf8',
     timeout: 240_000,
     maxBuffer: 32 * 1024 * 1024,

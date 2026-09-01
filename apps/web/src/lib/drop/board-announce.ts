@@ -45,6 +45,7 @@ export function slotAnnouncement(slot: Pick<Slot, 'timeLabel' | 'state'>): strin
     case 'held_by_other':
       return `${t} held by someone else`;
     case 'taken_by_rival':
+    case 'taken_by_other':
       return `${t} slot taken`;
     case 'booked_yours':
       return `${t} booked — yours`;
