@@ -32,13 +32,13 @@ reaches that step.
 
 1. Open the live URL in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or **Chrome 152+** with
    `chrome://flags/#enable-webmcp-testing`, then click **Book an appointment** (`/clinic/book`).
-2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): seven `clinic_*` tools —
-   and no booking, cancel, or move tool among them. Watch the list again after step 5: three more appear.
+2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): nine `clinic_*` tools —
+   and no booking, cancel, or move tool among them. Watch the list again after step 5: one more appears.
 3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a 45-second bar and
    the dock at the bottom arms.
 4. Ask it to *"just book it."* It will explain that it can't, and why.
 5. **Press Enter.** Booked — the receipt shows what the same task costs by hand versus the one
-   press it cost you, and **three new tools appear in your agent's list**, born by that press.
+   press it cost you, and **a new tool appears in your agent's list**, born by that press.
 
 Everything the description claims is also re-runnable from the repo in two commands (below).
 
@@ -74,14 +74,17 @@ Neither party can complete the task alone, and that is the design rather than a 
 
 ## Why WebMCP, specifically
 
-Seven tools are registered on `/clinic/book` when it loads (`document.modelContext.registerTool()`):
+Nine tools are registered on `/clinic/book` when it loads (`document.modelContext.registerTool()`):
 `clinic_list_drops`, `clinic_find_slots`, `clinic_clinicians`, `clinic_hold_slot`,
-`clinic_hold_status`, `clinic_release_hold`, `clinic_explain_confirm`. **Three more are born by the
-human's press**: the instant a person books, `clinic_my_appointment`, `clinic_prepare_cancel` and
-`clinic_prepare_move` are registered live — `toolchange` fires, the agent's list grows — and they
-are unregistered when the last booking is gone. The tool surface is not a static manifest; it is a
-live statement of what the person has done. In MCP-B's taxonomy (read · navigation · human-approved
-write): ten read/arming tools and zero write tools — the writes are the person's, at the page. The writes — hold, release, and the two prepare tools — are all
+`clinic_hold_status`, `clinic_release_hold`, `clinic_prepare_cancel`, `clinic_prepare_move`,
+`clinic_explain_confirm` — the arming tools included, on purpose, so a person with no booking always
+hears *"you have nothing booked"* rather than *"I have no such tool"*. **The tenth is born by the
+human's press**: the instant a person books, `clinic_my_appointment` is registered live —
+`toolchange` fires, the agent's list grows — and it is unregistered when the last booking is gone.
+What the press creates is purely additive: a client slow to notice `toolchange` loses nothing; a
+client that sees it watches a human act change the agent's surface. In MCP-B's taxonomy (read ·
+navigation · human-approved write): ten read/arming tools and zero write tools — the writes are the
+person's, at the page. The writes — hold, release, and the two prepare tools — are all
 reversible and self-expiring; `clinic_prepare_cancel` / `clinic_prepare_move` **arm** the page's
 dock and perform nothing: the cancel or the move happens only on a browser-trusted press, through
 the same gate as booking. A search that matches nothing names the constraint that eliminated
@@ -118,7 +121,7 @@ Verification is a first-class part of the repo, not a claim in a README:
 
 | Proof | Case |
 |---|---|
-| Seven tools at load, ten after the human books (three born live); **no** booking/cancel/move tool (nine negative assertions) | `evals/cases/clinic-thesis.json` |
+| Nine tools at load, ten after the human books (one born live, additive only); **no** booking/cancel/move tool (nine negative assertions) | `evals/cases/clinic-thesis.json` |
 | A synthetic press is **blocked**; a browser-trusted press **books** — same page, same run | same case |
 | The agent path costs the person **1** interaction | same case |
 | A hold lapses after 45 s: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |

@@ -61,13 +61,16 @@ page's own receipt shows both numbers live. Case: `evals/cases/clinic-manual-tax
 
 ## What makes this WebMCP, specifically
 
-**The tool that is missing is the design — and the tools that appear are the proof.** Seven tools
-are registered on `/clinic/book` when it loads. Three more **do not exist until a person has
-booked**: the moment the trusted press lands, `clinic_prepare_cancel`, `clinic_prepare_move` and
-`clinic_my_appointment` are registered live (`toolchange`), and they are unregistered when the last
-booking is gone. The human's press is what gives the agent its next capabilities. None of the ten
-books, cancels, or moves anything — that is not an omission we could patch later; it is the
-contract. Ask your agent out loud — *"what doctors are there?"*, *"anything after nine?"*,
+**The tool that is missing is the design — and the tool that appears is the proof.** Nine tools
+are registered on `/clinic/book` when it loads — including the arming tools, on purpose: a person
+with no booking must still hear *"you have nothing booked"* from their agent, and a voice user
+whose client is slow to notice `toolchange` must never lose a capability. The tenth,
+`clinic_my_appointment`, **does not exist until a person has booked**: the moment the trusted press
+lands it is registered live (`toolchange` fires, the agent's list grows), and it is unregistered
+when the last booking is gone. What the human's press creates is purely additive — a client that
+misses the change loses nothing; a client that sees it watches a human act change the agent's
+surface. None of the ten books, cancels, or moves anything — that is not an omission we could
+patch later; it is the contract. Ask your agent out loud — *"what doctors are there?"*, *"anything after nine?"*,
 *"cancel my appointment"* — and it can answer, search, hold, and **arm** the page. The act itself
 is always one trusted press from you.
 
@@ -79,15 +82,15 @@ is always one trusted press from you.
 | `clinic_hold_slot` | ❌ | Holds one slot for 45 s for **this** visitor. Books nothing, auto-releases |
 | `clinic_hold_status` | ✅ | Seconds left, and what the person must do |
 | `clinic_release_hold` | ❌ | Gives the hold back early (a write — it mutates the board) |
+| `clinic_prepare_cancel` | ❌ | **Arms** the dock to cancel your booking. Cancels nothing — your key does. Always present, so "nothing booked" is always sayable |
+| `clinic_prepare_move` | ❌ | Freezes the target slot and **arms** the dock. One trusted press swaps atomically |
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists, what exists now, and what your press will create |
 | *born by your press:* `clinic_my_appointment` | ✅ | Your booking(s), newest first — exists only while you have one |
-| *born by your press:* `clinic_prepare_cancel` | ❌ | **Arms** the dock to cancel your booking. Cancels nothing — your key does |
-| *born by your press:* `clinic_prepare_move` | ❌ | Freezes the target slot and **arms** the dock. One trusted press swaps atomically |
 
 In the vocabulary of the MCP-B taxonomy (read tools · navigation tools · human-approved write
-tools): seven read/arming tools always, three read/arming tools that exist only after a human act,
-and **zero write tools** — the writes that matter are performed by the person, at the page, through
-a browser-trusted event the agent's API cannot express.
+tools): nine read/arming tools always, one read tool that exists only after a human act, and
+**zero write tools** — the writes that matter are performed by the person, at the page, through a
+browser-trusted event the agent's API cannot express.
 
 Cancelling and moving are, if anything, *worse* to automate than booking — they destroy something
 the person fought for. So they follow the same law: the agent prepares, the page shows exactly what
@@ -121,7 +124,7 @@ node evals/live-two-visitors.mjs --url=<origin>            # the shared board: v
 
 | Proof | Where |
 |---|---|
-| 7 tools at load, **10 after the human books** (three born live), **no** booking/cancel/move tool (9 negative assertions) | `evals/cases/clinic-thesis.json` |
+| 9 tools at load, **10 after the human books** (one born live, additive only), **no** booking/cancel/move tool (9 negative assertions) | `evals/cases/clinic-thesis.json` |
 | A synthetic press is **blocked**; a trusted press **books** — same page, same run | same case |
 | The agent path costs the person **1** interaction | same case |
 | A hold lapses after 45 s: slot returns, **nothing booked** | `clinic-hold-lapses.json` |
@@ -179,7 +182,7 @@ apps/web
   app/clinic/book       the product: board · dock · manual flow · counter
   components/clinic     the calm-clinic surface (typographic, token-driven, no canvas)
   components/drop       ConfirmDock/Surface · TtlBar · SlotBoard · ClinicTools (the mount)
-  lib/drop              clinic-tools (the ten tools; three born by the press) · confirm-logic (the trusted-event gate)
+  lib/drop              clinic-tools (the ten tools; one born by the press) · confirm-logic (the trusted-event gate)
                         supabase-driver (the shared live board: Postgres + RLS + RPCs)
                         mock-driver (the seeded board every eval drives) · interaction-counter · gesture-logic
 supabase/migrations     the live board's schema and its six SECURITY DEFINER verbs

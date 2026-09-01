@@ -47,12 +47,12 @@
  },
  {
   "expect": {
-   "noTool": "clinic_prepare_cancel"
+   "tool": "clinic_prepare_cancel"
   }
  },
  {
   "expect": {
-   "noTool": "clinic_prepare_move"
+   "tool": "clinic_prepare_move"
   }
  },
  {
@@ -102,7 +102,12 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "7"
+  "equals": "9"
+ },
+ {
+  "expect": {
+   "noTool": "clinic_my_appointment"
+  }
  },
  {
   "invoke": "clinic_explain_confirm",
@@ -168,7 +173,7 @@
   "timeout": 8000
  },
  {
-  "_doc": "SPEC-V4: the human's press just BIRTHED three tools (toolchange). They did not exist a second ago."
+  "_doc": "SPEC-V4: the human's press just BIRTHED a tool (toolchange) \u2014 clinic_my_appointment did not exist a second ago. The arming tools were always there, so a slow client loses nothing."
  },
  {
   "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
@@ -176,16 +181,6 @@
  },
  {
   "list": true
- },
- {
-  "expect": {
-   "tool": "clinic_prepare_cancel"
-  }
- },
- {
-  "expect": {
-   "tool": "clinic_prepare_move"
-  }
  },
  {
   "expect": {

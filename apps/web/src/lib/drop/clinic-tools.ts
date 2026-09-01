@@ -54,10 +54,13 @@ export const CLINIC_TOOL_NAMES = [
 ] as const;
 
 /**
- * SPEC-V4 (2026-09-01): tools born from the human act. The base set is registered on load. The
- * booked set does not exist until a PERSON has booked — it is registered live (toolchange) the
- * moment the press lands and unregistered when the last booking is gone. The thesis, visible in
- * the tool list itself: the human's press is what gives the agent its next capabilities.
+ * SPEC-V4 (2026-09-01): a tool born from the human act. The base nine are registered on load —
+ * INCLUDING the arming tools, on purpose: a person with no booking must still hear "you have
+ * nothing booked" from their agent, and a voice user whose client is slow to notice `toolchange`
+ * must never lose a capability. What the press creates is therefore purely additive: the moment a
+ * person books, `clinic_my_appointment` is registered live (toolchange fires, the list grows), and
+ * it is unregistered when the last booking is gone. A client that misses the change loses nothing;
+ * a client that sees it watches the human's act change the agent's surface.
  */
 export const BASE_TOOL_NAMES = [
   'clinic_list_drops',
@@ -66,9 +69,11 @@ export const BASE_TOOL_NAMES = [
   'clinic_hold_slot',
   'clinic_hold_status',
   'clinic_release_hold',
+  'clinic_prepare_cancel',
+  'clinic_prepare_move',
   'clinic_explain_confirm',
 ] as const satisfies readonly ClinicToolName[];
-export const BOOKED_TOOL_NAMES = ['clinic_prepare_cancel', 'clinic_prepare_move', 'clinic_my_appointment'] as const satisfies readonly ClinicToolName[];
+export const BOOKED_TOOL_NAMES = ['clinic_my_appointment'] as const satisfies readonly ClinicToolName[];
 
 /** Pure: does this view carry a booking of the visitor's — the condition that births the booked set. */
 export function hasOwnBooking(view: ClinicToolsView): boolean {
@@ -213,6 +218,8 @@ export interface ListDropsResult {
   /** Seconds since the wave on the board landed, or null before the first wave. */
   wave_landed_seconds_ago: number | null;
   your_hold: HoldSummary | null;
+  /** The visitor's booked slots, newest first — so "cancel my appointment" can be answered without any born tool. */
+  your_bookings: AgentSlot[];
   booking: 'human_only';
 }
 
@@ -289,6 +296,7 @@ export function listDrops(view: ClinicToolsView): ListDropsResult {
     wave_landed_seconds_ago: landedAt === null ? null : Math.max(0, round1((session.now - landedAt) / 1000)),
     ...(view.sharedBoard ? { shared_board: true as const } : {}),
     your_hold: holdSummary(view),
+    your_bookings: [...session.slots].reverse().filter((s) => s.state === 'booked_yours').map(toAgentSlot),
     booking: 'human_only',
   };
 }
@@ -910,8 +918,8 @@ export type ClinicRegistrationState =
   | { kind: 'error'; message: string };
 
 /**
- * Register the base seven with `document.modelContext` (or the `navigator` alias); the booked three
- * are born and unregistered by the human's act (SPEC-V4). The returned function drops everything. Feature-detected:
+ * Register the base nine with `document.modelContext` (or the `navigator` alias); the tenth is
+ * born and unregistered by the human's act (SPEC-V4). The returned function drops everything. Feature-detected:
  * with no modelContext this is a no-op that reports `unsupported` — the page must work identically
  * in a browser that has never heard of WebMCP.
  */
@@ -977,8 +985,15 @@ export async function registerClinicTools(
         }
         if (!disposed) onState({ kind: 'registered', names: liveNames() });
       } else if (!want && booked !== null) {
-        booked.abort();
+        // The state settles no matter what the platform does with the abort: a throwing unregister
+        // must never leave the page claiming a tool that has no booking behind it.
+        const dying = booked;
         booked = null;
+        try {
+          dying.abort();
+        } catch {
+          /* the model context refused to unregister; the count is still the truth we can keep */
+        }
         if (!disposed) onState({ kind: 'registered', names: liveNames() });
       }
     } finally {

@@ -83,9 +83,8 @@
   "list": true
  },
  {
-  "expect": {
-   "noTool": "clinic_prepare_cancel"
-  }
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "false[\\s\\S]*nothing_booked"
  },
  {
   "invoke": "clinic_list_drops",
@@ -108,6 +107,6 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "7"
+  "equals": "9"
  }
 ]

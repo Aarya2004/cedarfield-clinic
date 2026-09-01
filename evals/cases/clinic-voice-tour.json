@@ -56,15 +56,11 @@
   "outputMatches": "false[\\s\\S]*bad_time"
  },
  {
-  "_doc": "SPEC-V4: with nothing booked, prepare_cancel does not EXIST \u2014 the human's press is what creates it."
+  "_doc": "prepare_cancel with nothing booked refuses WITH A REASON the agent can say aloud \u2014 the arming tools are always present, so a voice user always hears 'nothing booked', never 'no such tool'."
  },
  {
-  "list": true
- },
- {
-  "expect": {
-   "noTool": "clinic_prepare_cancel"
-  }
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "false[\\s\\S]*nothing_booked"
  },
  {
   "eval": "document.querySelector('[data-clinic-act]') === null",

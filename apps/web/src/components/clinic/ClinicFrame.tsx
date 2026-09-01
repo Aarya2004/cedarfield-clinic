@@ -100,11 +100,11 @@ export function ToolManifest({ absent = false }: { absent?: boolean }) {
     'clinic_hold_slot(slot_id)',
     'clinic_hold_status()',
     'clinic_release_hold()',
+    'clinic_prepare_cancel()',
+    'clinic_prepare_move(new_slot_id)',
     'clinic_explain_confirm()',
     '— born by your press —',
     'clinic_my_appointment()',
-    'clinic_prepare_cancel()',
-    'clinic_prepare_move(new_slot_id)',
   ];
   return (
     <div className="cl-manifest" data-clinic-manifest={absent ? 'absent' : 'present'}>
@@ -121,7 +121,7 @@ export function ToolManifest({ absent = false }: { absent?: boolean }) {
       <p className="cl-manifest__note">
         {absent
           ? 'There is no tool that books. The verb was never registered, so there is nothing for an agent to find, and nothing for a jailbreak to reach.'
-          : 'Seven tools on the booking page when it loads; three more exist only after you have booked — your press creates them, and cancelling removes them. Every result that hands your agent a hold says the same sentence: one keypress on the page books it — you cannot.'}
+          : 'Nine tools on the booking page when it loads — the arming tools always, so "nothing booked" is always sayable. A tenth exists only after you have booked: your press creates it, cancelling removes it. Every result that hands your agent a hold says the same sentence: one keypress on the page books it — you cannot.'}
       </p>
     </div>
   );
