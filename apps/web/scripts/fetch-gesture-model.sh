@@ -71,8 +71,8 @@ if command -v sha256sum >/dev/null 2>&1; then
 elif command -v shasum >/dev/null 2>&1; then
   got=$(shasum -a 256 "$model" | cut -d' ' -f1)
 else
-  got=""
-  echo "! no sha256 tool found; size checked, checksum skipped" >&2
+  echo "✗ no sha256 tool found — refusing to ship an unverified model (security review P2-2)." >&2
+  exit 1
 fi
 
 if [ -n "$got" ]; then

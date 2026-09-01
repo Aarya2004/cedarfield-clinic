@@ -12,6 +12,7 @@ import {
   surfaceCopy,
   surfaceUrgency,
   type ConfirmAttempt,
+  ARM_DEAD_ZONE_MS,
 } from './confirm-logic.ts';
 
 const armed = (over: Partial<ConfirmAttempt> = {}): ConfirmAttempt => ({
@@ -183,4 +184,18 @@ test('copy names the slot when armed and explains itself when there is nothing t
   const done = surfaceCopy(st(true, 0));
   assert.equal(done.status, 'Hold expired');
   assert.match(done.footnote, /ran out/);
+});
+
+// ── P1-1: the arming dead-zone (security review 2026-09-01) ─────────────────────────────────────
+
+test('a trusted press inside ARM_DEAD_ZONE_MS is ignored — agent-timed arming cannot catch a finger', () => {
+  const base = { isTrusted: true, source: 'key' as const, key: 'Enter', disabled: false, secondsLeft: 30, alreadyConfirmed: false };
+  assert.deepEqual(decideConfirm({ ...base, msSinceArmed: 0 }), { kind: 'ignore', reason: 'too-soon' });
+  assert.deepEqual(decideConfirm({ ...base, msSinceArmed: ARM_DEAD_ZONE_MS - 1 }), { kind: 'ignore', reason: 'too-soon' });
+  assert.deepEqual(decideConfirm({ ...base, msSinceArmed: ARM_DEAD_ZONE_MS }), { kind: 'confirm' });
+  // The book dock passes no msSinceArmed and keeps its immediate confirm.
+  assert.deepEqual(decideConfirm(base), { kind: 'confirm' });
+  // A synthetic press in the dead-zone is still BLOCKED and counted, not silently ignored:
+  // the untrusted check outranks the window.
+  assert.deepEqual(decideConfirm({ ...base, isTrusted: false, msSinceArmed: 10 }), { kind: 'blocked', reason: 'untrusted' });
 });

@@ -1,6 +1,27 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-09-01 (Engineer #4)** Branch `main`.
+Last update: **2026-09-01 later (Engineer #4)** Branch `main`.
+
+## Build log — Engineer #4 (2026-09-01, second pass) — security review closed + launch surface
+Security-engineer review of the SPEC-V2 + gesture delta: **no P0**; found a genuinely new attack
+class — the agent times and re-labels the dock the person is about to press. All four P1s and all
+six P2s fixed and tested (441 tests):
+- **P1-1** destructive docks never take keyboard focus; trusted press within 500ms of arming
+  ignored as agent-timed (`ARM_DEAD_ZONE_MS`, `too-soon`; synthetic presses in the window still
+  count as blocked). Act-dock evals gained the human beat (sleep 700).
+- **P1-2** `clinic_prepare_move` refuses `hold_in_progress` on a foreign live hold (tool + page
+  defense in depth); moving ONTO your held slot stays legal.
+- **P1-3** act docks keyed by target — any re-arm is a fresh dock, fresh announcement, fresh
+  counters. **P2-1** pendingActRef claims the act synchronously (no same-frame double cancel/move);
+  idempotency documented as a `DropDriver` contract requirement. **P2-2** model fetch fails closed
+  without a sha tool. **P2-4** `new_slot_id` maxLength 64. **P1-4/P2-3/P2-5/P2-6** SECURITY.md
+  claims corrected (camera revisit truth, dwell grace, echo sentence, CSP gesture headers, fakes
+  cover cancel/move) + a new "arming attack class" section.
+Launch surface: root metadata is clinic-first with OG/twitter cards (`public/og.png`), favicon
+(`app/icon.svg`), branded error.tsx + not-found.tsx, robots.txt; /terminal keeps its own title.
+Merged Aarya's 3 UX commits (scroll-padding focus fix — CSS-only, no interaction with P1-1).
+**Gate: 441 tests · 17/17 clinic evals · axe 0×3 · typecheck/lint/build clean. Ready for deploy →
+Aarya's hands-on pass.**
 
 ## Build log — Engineer #4 (2026-09-01) — gesture LIVE + field-honest positioning (Arav: "take this to #1")
 Field research (2 agents, 2026-08-31): 1,022 hackathon repos scanned — the withheld-tool mechanism

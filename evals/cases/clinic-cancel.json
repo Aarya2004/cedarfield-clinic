@@ -86,6 +86,12 @@
   "_doc": "The human's Enter cancels it; the slot goes back to open."
  },
  {
+  "_doc": "ARM_DEAD_ZONE_MS: a press within 500ms of arming is ignored as agent-timed; the case waits like a person would."
+ },
+ {
+  "sleep": 700
+ },
+ {
   "focus": "[data-clinic-act=\"cancel\"] button[data-clinic-confirm]"
  },
  {

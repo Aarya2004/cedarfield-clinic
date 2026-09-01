@@ -89,6 +89,12 @@
   "_doc": "One trusted Enter performs the swap atomically: target booked, origin back to open."
  },
  {
+  "_doc": "ARM_DEAD_ZONE_MS: a press within 500ms of arming is ignored as agent-timed; the case waits like a person would."
+ },
+ {
+  "sleep": 700
+ },
+ {
   "focus": "[data-clinic-act=\"move\"] button[data-clinic-confirm]"
  },
  {

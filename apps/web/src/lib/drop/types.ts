@@ -55,7 +55,9 @@ export interface DropDriver {
    * than booking, because they destroy something the person fought for. Tools may *arm* the dock
    * for them (clinic_prepare_cancel / clinic_prepare_move); only a trusted press calls these.
    */
+  /** MUST be idempotent/state-guarded: a same-frame double call may not cancel twice. */
   cancel(slotId: string): void;
   /** Atomic: `to` becomes yours, `from` returns to open. One call — a cancel-then-rebook round trip is a race. */
+  /** Same idempotency requirement as `cancel` — the mock's state guards are the reference. */
   move(fromSlotId: string, toSlotId: string): void;
 }

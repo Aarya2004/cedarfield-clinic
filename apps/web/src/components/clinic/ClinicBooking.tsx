@@ -195,7 +195,15 @@ export function ClinicBooking() {
   // clinic_prepare_cancel / clinic_prepare_move arm ONE pending act; a trusted press performs it.
   // A cancel arm carries its own clock; a move arm lives exactly as long as the hold it placed on
   // the target slot — hold gone, arm gone. Either way the agent armed it and only a person fires it.
-  const [pendingAct, setPendingAct] = useState<PendingAct | null>(null);
+  const [pendingAct, setPendingActState] = useState<PendingAct | null>(null);
+  // P2-1: a gesture dwell (rAF) and a trusted keypress in the same frame both close over a stale
+  // non-null pendingAct. The ref is the synchronous truth: whoever nulls it first performs the act,
+  // the other call returns — so a real backend never sees a double cancel/move.
+  const pendingActRef = useRef<PendingAct | null>(null);
+  const setPendingAct = useCallback((next: PendingAct | null) => {
+    pendingActRef.current = next;
+    setPendingActState(next);
+  }, []);
 
   const prepareCancel = useCallback(
     (slotId: string): boolean => {
@@ -214,6 +222,10 @@ export function ClinicBooking() {
       const to = slots.find((s) => s.id === toId);
       if (!from || from.state !== 'booked_yours') return false;
       if (!to || (to.state !== 'open' && to.state !== 'held_by_you') || fromId === toId) return false;
+      // P1-2 defense in depth (the tool refuses first): never swap the dock out from under a live
+      // hold on a different slot — that hold may have the person's finger over its book key.
+      const held = driver.snapshot().hold;
+      if (held !== null && held.slotId !== toId) return false;
       // Freeze the target while the person decides — hold is the agent's verb, so this is allowed.
       driver.hold(toId);
       setPendingAct({
@@ -257,19 +269,21 @@ export function ClinicBooking() {
 
   /** The trusted press. The ONLY call sites of driver.cancel / driver.move in the product. */
   const confirmPendingAct = useCallback(() => {
-    if (pendingAct === null) return;
-    if (pendingAct.kind === 'cancel') {
-      driver.cancel(pendingAct.slotId);
+    const act = pendingActRef.current;
+    if (act === null) return;
+    pendingActRef.current = null; // claim it synchronously; a same-frame second caller sees null
+    if (act.kind === 'cancel') {
+      driver.cancel(act.slotId);
       // A manually-booked slot leaves the flow sitting on its "booked" card; cancelling that slot
       // must take the card with it, or the page would show a booking the board no longer has.
-      if (flow.bookedSlotId === pendingAct.slotId) dispatch({ type: 'restart' });
+      if (flow.bookedSlotId === act.slotId) dispatch({ type: 'restart' });
     } else {
-      driver.move(pendingAct.fromId, pendingAct.toId);
+      driver.move(act.fromId, act.toId);
       // The move produced a booking; hold the board for the same grace a booking gets.
       setLastBookedAt(Date.now() - mountedAt.current);
     }
     setPendingAct(null);
-  }, [pendingAct, driver, flow.bookedSlotId]);
+  }, [driver, flow.bookedSlotId, setPendingAct]);
 
   const dismissPendingAct = useCallback(() => {
     if (pendingAct?.kind === 'move' && session.held?.slotId === pendingAct.toId) {
@@ -461,7 +475,7 @@ export function ClinicBooking() {
             <ConfirmDock
               // Keyed apart from the hold dock: switching book→cancel/move must be a fresh dock —
               // fresh announcement, fresh untrusted counter, fresh agent-lane measurement.
-              key={`act-${pendingAct.kind}`}
+              key={`act-${pendingAct.kind}-${pendingAct.kind === 'move' ? pendingAct.toId : pendingAct.slotId}`}
               act={pendingAct.kind}
               secondsLeft={pendingSecondsLeft}
               ttlSeconds={pendingAct.kind === 'move' ? (session.held?.ttlSeconds ?? HOLD_TTL_SECONDS) : PENDING_ACT_TTL_SECONDS}

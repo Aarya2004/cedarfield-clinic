@@ -393,7 +393,7 @@ export const findSlotsSchema = {
 export const prepareMoveSchema = {
   type: 'object',
   properties: {
-    new_slot_id: { type: 'string', description: 'The open slot to move the booking to, from clinic_find_slots or clinic_list_drops.' },
+    new_slot_id: { type: 'string', maxLength: 64, description: 'The open slot to move the booking to, from clinic_find_slots or clinic_list_drops.' },
   },
   required: ['new_slot_id'],
   additionalProperties: false,
@@ -749,6 +749,16 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             detail: `Slot "${toId}" is ${target.state}, not open.`,
             slot_state: target.state,
             open_slot_ids: openIds(view.session.slots),
+          } satisfies ErrorResult);
+        }
+        // P1-2: a live hold on a DIFFERENT slot means the person may be mid-press on the book dock.
+        // Arming a move would silently release that hold and swap the dock's meaning under their
+        // finger. Refused — unless the hold IS the target, which is the legitimate two-step flow.
+        if (view.session.held !== null && view.session.held.slotId !== target.id) {
+          return asToolResult({
+            ok: false,
+            error: 'hold_in_progress',
+            detail: 'You are holding a different slot — the page shows your human the booking dock. Release the hold (clinic_release_hold) or let them decide it first.',
           } satisfies ErrorResult);
         }
         // Never `driver.move` — the swap itself is the human's. The dock is armed with the target,

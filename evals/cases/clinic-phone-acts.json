@@ -65,6 +65,9 @@
   "shot": "docs/evidence/clinic/phone-cancel-dock.png"
  },
  {
+  "sleep": 700
+ },
+ {
   "focus": "[data-clinic-act=\"cancel\"] button[data-clinic-confirm]"
  },
  {

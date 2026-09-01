@@ -139,17 +139,31 @@ export function ConfirmDock({
     if (next.armed && (prev === null || !prev.armed)) {
       setConfirmed(false);
       setPressed(false);
-      const active = typeof document === 'undefined' ? null : document.activeElement;
-      const typing =
-        active instanceof HTMLElement &&
-        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
-      if (!typing) capRef.current?.focus();
+      // P1-1: only the BOOK dock may take focus. A cancel/move dock is armed at a moment the agent
+      // chose — stealing focus would aim the person's in-flight Enter at a destructive act. Those
+      // docks announce themselves and wait to be reached deliberately (Tab, click, or gesture).
+      if (act === 'book') {
+        const active = typeof document === 'undefined' ? null : document.activeElement;
+        const typing =
+          active instanceof HTMLElement &&
+          (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+        if (!typing) capRef.current?.focus();
+      }
     }
   }, [armed, secondsLeft, slotLabel, audioOn, player, act]);
 
+  // When this dock mounted — which, for the keyed act docks, is when it was armed (P1-1/P1-3).
+  const armedAtRef = useRef<number>(typeof performance === 'undefined' ? 0 : performance.now());
+
   const attempt = useCallback(
     (a: { isTrusted: boolean | undefined; source: 'key' | 'pointer'; key?: string; repeat?: boolean }) => {
-      const decision = decideConfirm({ ...a, disabled: !armed, secondsLeft, alreadyConfirmed: confirmed });
+      const decision = decideConfirm({
+        ...a,
+        disabled: !armed,
+        secondsLeft,
+        alreadyConfirmed: confirmed,
+        ...(act !== 'book' ? { msSinceArmed: (typeof performance === 'undefined' ? 0 : performance.now()) - armedAtRef.current } : {}),
+      });
       if (decision.kind === 'blocked') {
         setUntrusted((n) => n + 1);
         return;
@@ -159,7 +173,7 @@ export function ConfirmDock({
         onConfirm();
       }
     },
-    [armed, confirmed, onConfirm, secondsLeft],
+    [armed, confirmed, onConfirm, secondsLeft, act],
   );
 
   const blocked = blockedAnnouncement(untrusted, act);

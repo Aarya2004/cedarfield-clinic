@@ -23,6 +23,11 @@ export interface ConfirmAttempt {
   disabled: boolean;
   secondsLeft: number;
   alreadyConfirmed: boolean;
+  /**
+   * ms since the surface was armed, for destructive acts only. Omit for the book dock. Below
+   * ARM_DEAD_ZONE_MS the press is ignored as agent-timed.
+   */
+  msSinceArmed?: number;
 }
 
 export type ConfirmDecision =
@@ -31,7 +36,16 @@ export type ConfirmDecision =
   /** A synthetic press. Never fires; always increments `data-untrusted-attempts`. */
   | { kind: 'blocked'; reason: 'untrusted' }
   /** Not a press at all, or a press with nothing to press for. */
-  | { kind: 'ignore'; reason: 'other-key' | 'repeat' | 'disabled' | 'expired' | 'already-confirmed' };
+  | { kind: 'ignore'; reason: 'other-key' | 'repeat' | 'disabled' | 'expired' | 'already-confirmed' | 'too-soon' };
+
+/**
+ * P1-1 (security review 2026-09-01): a destructive dock (cancel/move) is armed at a moment the
+ * AGENT chooses. A trusted press that lands within this window of the arming was almost certainly
+ * aimed at something else — a prompt-injected agent could time the arm under the person's finger.
+ * Presses inside the window are ignored (not counted as synthetic: they are real, just early).
+ * The book dock has no dead-zone: its press is the person answering a hold they asked for.
+ */
+export const ARM_DEAD_ZONE_MS = 500;
 
 export function isConfirmKey(key: string | undefined): boolean {
   return key !== undefined && (CONFIRM_KEYS as readonly string[]).includes(key);
@@ -51,6 +65,7 @@ export function decideConfirm(a: ConfirmAttempt): ConfirmDecision {
     if (a.repeat === true) return { kind: 'ignore', reason: 'repeat' };
   }
   if (a.isTrusted !== true) return { kind: 'blocked', reason: 'untrusted' };
+  if (a.msSinceArmed !== undefined && a.msSinceArmed < ARM_DEAD_ZONE_MS) return { kind: 'ignore', reason: 'too-soon' };
   if (a.disabled) return { kind: 'ignore', reason: 'disabled' };
   if (a.secondsLeft <= 0) return { kind: 'ignore', reason: 'expired' };
   if (a.alreadyConfirmed) return { kind: 'ignore', reason: 'already-confirmed' };

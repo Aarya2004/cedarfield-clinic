@@ -201,6 +201,9 @@
   "timeout": 8000
  },
  {
+  "sleep": 700
+ },
+ {
   "focus": "[data-clinic-act=\"move\"] button[data-clinic-confirm]"
  },
  {

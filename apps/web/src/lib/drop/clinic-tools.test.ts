@@ -747,3 +747,23 @@ test('clinic_hold_status describes the press the dock will ACTUALLY perform', as
   assert.equal(plain.next_step, HOLD_CHOREOGRAPHY);
   assert.equal('armed_act' in plain, false);
 });
+
+test('clinic_prepare_move refuses while a hold is live on a DIFFERENT slot (P1-2)', async () => {
+  const { driver, source } = ready();
+  const armed: Array<[string, string]> = [];
+  const defs = clinicToolDefs(source, { ...FAST, onPrepareMove: (a, b) => (armed.push([a, b]), true) });
+  const prep = defs.find((d) => d.name === 'clinic_prepare_move')!;
+  const open = driver.snapshot().slots.filter((s) => s.state === 'open');
+  driver.hold(open[0].id);
+  driver.book(open[0].id);
+  driver.hold(open[1].id); // the person may be mid-press on this book dock
+  const out = await callJson(prep, { new_slot_id: open[2].id });
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'hold_in_progress');
+  assert.deepEqual(armed, [], 'the dock was never swapped under the live hold');
+  assert.equal(driver.snapshot().hold?.slotId, open[1].id, 'the hold survives untouched');
+  // …but moving ONTO the held slot is the legitimate two-step flow and stays allowed.
+  const ok = await callJson(prep, { new_slot_id: open[1].id });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.armed, 'move');
+});
