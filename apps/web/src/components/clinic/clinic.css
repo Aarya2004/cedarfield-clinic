@@ -170,7 +170,7 @@
   color: var(--clinic-muted);
 }
 
-/* The gutter word. Sticky at the top of its band so a long body keeps its label in view. */
+/* The gutter word, pinned to the top edge of its band (align-self, not sticky). */
 .cl-band__label {
   align-self: start;
   margin: 0;
