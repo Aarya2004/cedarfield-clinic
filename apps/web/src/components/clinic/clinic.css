@@ -1122,6 +1122,18 @@ button.cl-row__inner:hover .cl-row__action {
   height: 13rem;
 }
 
+/* The dock is fixed, so a tab stop can sit *behind* it and the browser will not move: an element
+   the dock merely covers still counts as in the scrollport, so nothing scrolls. Measured before
+   this rule, with the dock armed: tabbing to "Access needs" put the whole textarea behind the dock
+   at 1280x900, and to "Phone number" at 390x844 — WCAG 2.2 AA 2.4.11 (Focus Not Obscured, Minimum)
+   is a fail the moment focus is fully hidden. scroll-padding shortens the region the browser aims
+   focus into, which is the one mechanism that moves an element it considers already visible.
+   Scoped with :has, so it exists only while a dock does, and only on a page carrying one. The dock
+   measures 146px at desktop widths and 307px at 390px; the clearances clear both. */
+html:has(.cl-dock) {
+  scroll-padding-bottom: 16rem;
+}
+
 /* --- utilities ----------------------------------------------------------- */
 
 .cl-sr {
@@ -1222,6 +1234,11 @@ button.cl-row__inner:hover .cl-row__action {
 
   .cl-dock-spacer {
     height: 17rem;
+  }
+
+  /* The dock is 307px tall here — the phone's clearance for focus is bigger for the same reason. */
+  html:has(.cl-dock) {
+    scroll-padding-bottom: 21rem;
   }
 }
 
