@@ -59,7 +59,7 @@ else
   mv "$model.part" "$model"
 fi
 
-size=$(wc -c < "$model")
+size=$(wc -c < "$model" | tr -d '[:space:]')  # macOS wc pads with spaces; a string compare must not see them
 if [ "$size" != "$MODEL_BYTES" ]; then
   echo "✗ unexpected size: $size bytes, expected $MODEL_BYTES. Google may have re-published the" >&2
   echo "  model; check the model card, then update MODEL_BYTES/MODEL_SHA256 in this script." >&2

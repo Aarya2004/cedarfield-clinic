@@ -242,7 +242,16 @@ for (const f of cases) {
     encoding: 'utf8',
     // A hung case used to hang the suite: the harness has its own per-send timeout, this is the backstop.
     timeout: 180000,
-    env: { ...process.env, ...shotEnv, ROKAN_EVAL_CHROME_PROFILE_ROOT: chromeProfileRoot },
+    env: {
+      ...process.env,
+      ...shotEnv,
+      ROKAN_EVAL_CHROME_PROFILE_ROOT: chromeProfileRoot,
+      // Gesture cases get Chrome's fake camera so the wasm→model→getUserMedia pipeline is provable
+      // headlessly; every other case keeps the stock launch (and a stray operator export is unset).
+      ROKAN_EVAL_CHROME_FLAGS: f.includes('gesture')
+        ? '--use-fake-device-for-media-stream --use-fake-ui-for-media-stream'
+        : '',
+    },
   });
   let r = runCase();
   let attempt = 1;

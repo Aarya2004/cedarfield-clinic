@@ -70,6 +70,8 @@ export const MODEL_PATH = '/models/mediapipe/gesture_recognizer.task';
 export interface GestureConfirmProps {
   /** The same callback the keycap fires. Called once per completed dwell. */
   onConfirm: () => void;
+  /** SPEC-V2: the act one completed dwell performs. Every sentence this module says uses it. */
+  verb?: 'book' | 'cancel' | 'move';
   /** Is there a live hold to confirm? A dwell over an idle surface accumulates nothing. */
   armed: boolean;
   /** Override for tests or a different deployment layout. */
@@ -88,9 +90,11 @@ interface Recognizer {
 export function GestureConfirm({
   onConfirm,
   armed,
+  verb = 'book',
   wasmBasePath = WASM_BASE_PATH,
   modelPath = MODEL_PATH,
 }: GestureConfirmProps) {
+  const done = verb === 'book' ? 'Booked.' : verb === 'cancel' ? 'Cancelled.' : 'Moved.';
   const [enabled, setEnabled] = useState(false);
   const [phase, setPhase] = useState<LoadPhase>(null);
   const [modelPct, setModelPct] = useState(0);
@@ -177,7 +181,7 @@ export function GestureConfirm({
     setHolding(isHolding(step.state));
     if (step.fire) {
       setFired(true);
-      setLive('Palm held. Booked.');
+      setLive(`Palm held. ${done}`);
       onConfirmRef.current();
     } else if (!armedRef.current) {
       setFired(false);
@@ -248,7 +252,7 @@ export function GestureConfirm({
       lastVideoTime.current = -1;
       setPhase(null);
       setRunning(true);
-      setLive(`Camera on. Hold an open palm for ${(dwellMs / 1000).toFixed(1)} seconds to book.`);
+      setLive(`Camera on. Hold an open palm for ${(dwellMs / 1000).toFixed(1)} seconds to ${verb}.`);
       rafRef.current = requestAnimationFrame(loop);
     } catch (err) {
       // Two failure families, told apart honestly: the assets did not arrive, or the camera did not.
@@ -256,9 +260,9 @@ export function GestureConfirm({
       teardown();
       setPhase(null);
       setFailure(kind);
-      setLive(failureCopy(kind));
+      setLive(failureCopy(kind, verb));
     }
-  }, [dwellMs, loop, modelPath, teardown, wasmBasePath]);
+  }, [dwellMs, loop, modelPath, teardown, wasmBasePath, verb]);
 
   // ---- the switch, persisted ---------------------------------------------------
   const enable = useCallback(() => {
@@ -273,8 +277,8 @@ export function GestureConfirm({
     setFailure(null);
     setPhase(null);
     teardown();
-    setLive('Camera off. Enter still books it.');
-  }, [teardown]);
+    setLive(`Camera off. Enter still ${verb === 'book' ? 'books' : verb === 'cancel' ? 'cancels' : 'moves'} it.`);
+  }, [teardown, verb]);
 
   // ---- mount: read the prefs; reopen the lens only where a grant already stands ----
   const startedOnce = useRef(false);
@@ -314,7 +318,7 @@ export function GestureConfirm({
 
   const state = gestureUiState({ enabled, loading: phase !== null, failure, running, fired, holding });
   const seconds = (dwellMs / 1000).toFixed(1);
-  const headline = useMemo(() => copyFor(state, seconds, phase, modelPct), [state, seconds, phase, modelPct]);
+  const headline = useMemo(() => copyFor(state, seconds, phase, modelPct, verb), [state, seconds, phase, modelPct, verb]);
 
   return (
     <section
@@ -353,8 +357,8 @@ export function GestureConfirm({
               leaves a dead control on the surface is the thing this state exists to prevent. */}
           <p className="rk-g-sub" data-gesture-note>
             {failure !== null
-              ? failureCopy(failure)
-              : 'Optional. Enter books it either way, and the camera never leaves this page.'}
+              ? failureCopy(failure, verb)
+              : `Optional. Enter ${verb === 'book' ? 'books' : verb === 'cancel' ? 'cancels' : 'moves'} it either way, and the camera never leaves this page.`}
           </p>
         </div>
 
@@ -413,10 +417,11 @@ function copyFor(
   seconds: string,
   phase: LoadPhase,
   pct: number,
+  verb: 'book' | 'cancel' | 'move',
 ): string {
   switch (state) {
     case 'disabled':
-      return 'Or book it with an open palm.';
+      return `Or ${verb} it with an open palm.`;
     case 'loading':
       return phase === 'model'
         ? `Loading the hand model — ${pct}%`
@@ -428,7 +433,7 @@ function copyFor(
     case 'held':
       return 'Holding — keep it up.';
     case 'fired':
-      return 'Booked, from your palm.';
+      return `${verb === 'book' ? 'Booked' : verb === 'cancel' ? 'Cancelled' : 'Moved'}, from your palm.`;
     case 'unavailable':
     default:
       return 'Camera unavailable.';

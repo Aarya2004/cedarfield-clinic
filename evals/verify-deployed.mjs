@@ -65,7 +65,13 @@ for (const [file, path] of cases) {
   // `_doc` headers are prose (the harness skips them too) and `shot` steps write into the repo's
   // committed evidence, which a verification run must never do. NB: the harness reads `allowErrors`
   // from steps[0] — if a case ever sets it on its `_doc` header, hoist it before filtering.
-  const steps = JSON.parse(readFileSync(join(root, 'evals/cases', file), 'utf8')).filter((s) => !s._doc && !s.shot);
+  const raw = JSON.parse(readFileSync(join(root, 'evals/cases', file), 'utf8'));
+  // The harness reads allowErrors from steps[0]; a case that declares it on its _doc header must
+  // keep it after the header is filtered out (the NB below, honored the day it came true).
+  const steps = raw.filter((s) => !s._doc && !s.shot);
+  if (raw[0]?.allowErrors !== undefined && steps[0] && steps[0].allowErrors === undefined) {
+    steps[0] = { ...steps[0], allowErrors: raw[0].allowErrors };
+  }
   const tmp = join(work, file);
   writeFileSync(tmp, JSON.stringify(steps));
   const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${origin}${path}`, tmp], {

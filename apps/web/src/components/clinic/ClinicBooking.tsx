@@ -473,7 +473,9 @@ export function ClinicBooking() {
               onRelease={dismissPendingAct}
               measuredRef={attachDock}
               gestureSlot={
-                GESTURE_ENABLED ? <GestureConfirm onConfirm={confirmPendingAct} armed={pendingSecondsLeft > 0} /> : undefined
+                GESTURE_ENABLED ? (
+                  <GestureConfirm verb={pendingAct.kind} onConfirm={confirmPendingAct} armed={pendingSecondsLeft > 0} />
+                ) : undefined
               }
             />
           ) : session.held !== null && session.secondsLeft > 0 && heldSlot ? (

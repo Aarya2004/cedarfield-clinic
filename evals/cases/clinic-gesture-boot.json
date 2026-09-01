@@ -1,0 +1,83 @@
+[
+ {
+  "_doc": "Gesture boot proof, no human required: Chrome's fake camera (via ROKAN_EVAL_CHROME_FLAGS in run-all) feeds the real pipeline \u2014 dynamic import, wasm compile under the production CSP, 8MB model streamed from OUR origin, getUserMedia granted. A hand can't be faked headlessly, so the assertion is 'ready and watching', not 'fired' \u2014 the dwell-fires proof is the human camera test (GESTURE.md).",
+  "allowErrors": [
+   "INFO: Created TensorFlow Lite XNNPACK delegate"
+  ]
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "_doc": "The gesture module is ON the armed dock (flag baked into the build) and dormant until the human opts in."
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-dock] [data-gesture-confirm]') !== null",
+  "equals": true
+ },
+ {
+  "eval": "document.querySelector('[data-gesture-confirm]')?.getAttribute('data-gesture-state')",
+  "equals": "disabled"
+ },
+ {
+  "eval": "(() => { const b = document.querySelector('[data-gesture-toggle][data-gesture-enable]'); if (!b) return 'no-button'; b.click(); return 'clicked'; })()",
+  "equals": "clicked"
+ },
+ {
+  "_doc": "wasm runtime + streamed model + camera. 30s budget: the compile is real."
+ },
+ {
+  "waitFor": "['ready','held'].includes(document.querySelector('[data-gesture-confirm]')?.getAttribute('data-gesture-state'))",
+  "timeout": 30000
+ },
+ {
+  "eval": "document.querySelector('[data-gesture-confirm]')?.getAttribute('data-gesture-failure') ?? 'none'",
+  "equals": "none"
+ },
+ {
+  "eval": "(() => { const v = document.querySelector('[data-gesture-confirm] video'); return !!v && !v.paused && v.readyState >= 2; })()",
+  "equals": true
+ },
+ {
+  "shot": "docs/evidence/clinic/gesture-boot.png"
+ },
+ {
+  "_doc": "Opting out shuts the lens and the keyboard line returns."
+ },
+ {
+  "eval": "(() => { const b = document.querySelector('[data-gesture-toggle]'); b.click(); return 'clicked'; })()",
+  "equals": "clicked"
+ },
+ {
+  "waitFor": "document.querySelector('[data-gesture-confirm]')?.getAttribute('data-gesture-state') === 'disabled'",
+  "timeout": 5000
+ },
+ {
+  "eval": "(() => { const v = document.querySelector('[data-gesture-confirm] video'); return !v || v.srcObject === null; })()",
+  "equals": true
+ }
+]

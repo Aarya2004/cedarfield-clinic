@@ -202,16 +202,17 @@ export function classifyCameraError(err: unknown): GestureFailure {
  * key still books, and the module has to say so rather than leave a dead button on the surface.
  */
 export const FAILURE_COPY: Record<GestureFailure, string> = {
-  denied: 'Camera access was declined. The keyboard still books this — press Enter.',
-  'no-camera': 'No camera found on this device. The keyboard still books this — press Enter.',
-  'in-use': 'The camera is busy in another app. The keyboard still books this — press Enter.',
-  unsupported: 'This browser will not hand out a camera here. The keyboard still books this — press Enter.',
-  'load-failed': 'The hand model did not load. The keyboard still books this — press Enter.',
-  error: 'The camera did not start. The keyboard still books this — press Enter.',
+  denied: 'Camera access was declined.',
+  'no-camera': 'No camera found on this device.',
+  'in-use': 'The camera is busy in another app.',
+  unsupported: 'This browser will not hand out a camera here.',
+  'load-failed': 'The hand model did not load.',
+  error: 'The camera did not start.',
 };
 
-export function failureCopy(failure: GestureFailure): string {
-  return FAILURE_COPY[failure];
+export function failureCopy(failure: GestureFailure, verb: 'book' | 'cancel' | 'move' = 'book'): string {
+  const does = verb === 'book' ? 'books' : verb === 'cancel' ? 'cancels' : 'moves';
+  return `${FAILURE_COPY[failure]} The keyboard still ${does} this — press Enter.`;
 }
 
 // ---------------------------------------------------------------------------

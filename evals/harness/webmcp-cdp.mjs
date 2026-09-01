@@ -45,7 +45,11 @@ const port = await freePort();
 // its own children instead of pkill-ing every webmcp-cdp Chrome on the machine (another agent's included).
 const profileRoot = process.env.ROKAN_EVAL_CHROME_PROFILE_ROOT || tmpdir();
 const profileDir = join(profileRoot, `webmcp-cdp-${port}`);
-const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, '--enable-features=WebMCP', '--no-first-run', 'about:blank'], { stdio: 'ignore' });
+// ROKAN_EVAL_CHROME_FLAGS: extra Chrome switches, space-separated. Used by the gesture boot case
+// to hand Chrome a fake camera (--use-fake-device-for-media-stream --use-fake-ui-for-media-stream)
+// so the wasm→model→getUserMedia pipeline is provable headlessly, with no human in front of a lens.
+const extraFlags = (process.env.ROKAN_EVAL_CHROME_FLAGS ?? '').split(' ').filter(Boolean);
+const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, '--enable-features=WebMCP', '--no-first-run', ...extraFlags, 'about:blank'], { stdio: 'ignore' });
 // Any uncaught throw past this point must still reap Chrome — a leaked headless browser per failed
 // case is how the 767 MB RSS of 2026-08-28 happened.
 const reap = () => { try { chrome.kill('SIGKILL'); } catch { /* gone */ } try { rmSync(profileDir, { recursive: true, force: true }); } catch { /* gone */ } };
@@ -237,10 +241,16 @@ if (shot) {
 // A page exception / console.error was reported in the summary and counted for nothing — a case
 // could go green while the app threw. It now fails the case unless the case's FIRST step opts in
 // with `"allowErrors": true` (with a comment saying which error and why).
-const allowErrors = steps[0]?.allowErrors === true;
-if (pageErrors.length && !allowErrors) {
+// true = accept everything (last resort). An ARRAY of regex strings is the precise form: errors
+// matching any pattern are filtered as known-benign (e.g. MediaPipe's INFO lines on console.error),
+// and anything else still fails the case — the gate stays armed for real errors.
+const allowSpec = steps[0]?.allowErrors;
+const allowErrors = allowSpec === true;
+const allowPatterns = Array.isArray(allowSpec) ? allowSpec.map((p) => new RegExp(p)) : [];
+const realErrors = pageErrors.filter((e) => !allowPatterns.some((re) => re.test(e)));
+if (realErrors.length && !allowErrors) {
   failed++;
-  out({ step: 'pageErrors', ok: false, count: pageErrors.length, errors: pageErrors.slice(0, 5), hint: 'set "allowErrors": true on the first step of this case to accept them' });
+  out({ step: 'pageErrors', ok: false, count: realErrors.length, errors: realErrors.slice(0, 5), hint: 'set "allowErrors": true (or an array of benign-error regexes) on the first step of this case to accept them' });
 }
 // `steps` counts what ran, not what the file contains: `_doc` entries are prose, and counting
 // them padded every documented case's step total by one.
