@@ -85,7 +85,7 @@
  },
  {
   "invoke": "clinic_release_hold",
-  "outputMatches": "ok"
+  "outputMatches": "ok.{0,2}:true"
  },
  {
   "invoke": "clinic_hold_slot",
@@ -96,7 +96,7 @@
  },
  {
   "invoke": "clinic_release_hold",
-  "outputMatches": "ok"
+  "outputMatches": "ok.{0,2}:true"
  },
  {
   "invoke": "clinic_hold_slot",
@@ -107,7 +107,7 @@
  },
  {
   "invoke": "clinic_release_hold",
-  "outputMatches": "ok"
+  "outputMatches": "ok.{0,2}:true"
  },
  {
   "invoke": "clinic_release_hold",

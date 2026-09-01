@@ -93,7 +93,7 @@
  },
  {
   "invoke": "clinic_release_hold",
-  "outputMatches": "ok"
+  "outputMatches": "ok.{0,2}:true"
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",

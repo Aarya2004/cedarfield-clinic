@@ -71,6 +71,10 @@
   "timeout": 8000
  },
  {
+  "invoke": "clinic_hold_status",
+  "outputMatches": "armed_act[\\s\\S]{0,6}move[\\s\\S]*moves the booking"
+ },
+ {
   "eval": "document.querySelector('[data-clinic-slot=\"' + window.__from + '\"]')?.getAttribute('data-slot-state')",
   "equals": "booked_yours"
  },

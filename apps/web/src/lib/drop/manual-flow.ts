@@ -212,6 +212,12 @@ function applyDriverEvent(state: ManualFlowState, event: DropEvent): ManualFlowS
       return reconcileSelection({ ...state, slots });
     }
 
+    // SPEC-V2: a cancel (or a move's reopened origin) hands the slot back. Without this the flow's
+    // board copy keeps saying booked_yours and isBookable() silently refuses a manual click on a
+    // slot that is genuinely open again.
+    case 'cancelled':
+      return reconcileSelection({ ...state, slots: withSlotState(state.slots, event.slotId, 'open') });
+
     // Holds belong to the agent's story, not this one: a manual booking site holds nothing for you.
     case 'hold_started':
     case 'hold_tick':

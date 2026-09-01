@@ -56,6 +56,8 @@ export interface ClinicToolsProps {
    */
   onPrepareCancel?: (slotId: string) => boolean;
   onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
+  /** The act the dock is armed for right now — so clinic_hold_status never misdescribes the press. */
+  armedAct?: 'cancel' | 'move' | null;
 }
 
 // Same fallbacks as the rest of the drop skin (components/drop/drop-tokens.css), so this line is
@@ -75,15 +77,15 @@ function label(state: ClinicRegistrationState): string {
   }
 }
 
-export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCancel, onPrepareMove }: ClinicToolsProps) {
+export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCancel, onPrepareMove, armedAct = null }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'unsupported' });
 
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
-  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt });
+  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct });
   const seams = useRef({ onPrepareCancel, onPrepareMove });
   useEffect(() => {
-    view.current = { driver, session, nextWaveAt };
+    view.current = { driver, session, nextWaveAt, armedAct };
     seams.current = { onPrepareCancel, onPrepareMove };
   });
 

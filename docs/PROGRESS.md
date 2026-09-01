@@ -1,6 +1,26 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-31 evening (Engineer #4)** Branch `main`.
+Last update: **2026-08-31 night (Engineer #4)** Branch `main`.
+
+## Build log — Engineer #4 (2026-08-31 night) — self-audit of SPEC-V2: 5 findings, all fixed + tested
+Adversarial re-read of everything I shipped today, then dynamic re-verification.
+- **Bug (would bite a judge):** the manual-flow reducer swallowed `cancelled`, so after an
+  agent-armed cancel the flow's board copy kept the slot `booked_yours` and `isBookable()` silently
+  refused a manual click on a slot that was genuinely open — until the next wave resync. Fixed +
+  2 tests.
+- **Honesty:** `clinic_find_slots` on an EMPTY board blamed the caller's clinician/kind filter;
+  `no_open_slots` now wins. `prepare_move`/`prepare_cancel` answered `dock_not_wired` when the real
+  reason was a race (target taken mid-arm / booking rolled away) — both now name the race
+  (`slot_unavailable` with fresh state / `nothing_booked`). 3 tests.
+- **Coherence:** while a move was armed, `clinic_hold_status` read the freeze-hold and told the
+  agent the keypress BOOKS; armed cancel said "nothing held, call hold_slot". `ClinicToolsView`
+  gains `armedAct`; status now carries `armed_act` and the choreography of the press the dock will
+  actually perform. Asserted live in the cancel/move eval cases.
+- **Eval hygiene:** two `outputMatches: "ok"` in chaos/soak also matched `"ok":false` — tightened.
+- **Reviewed, no change needed:** fold log growth is self-resetting per wave (driver swap);
+  mock `hold()` auto-releases the previous hold so prepare_move's freeze is clean; per-call
+  reverse-scan in list_drops is bounded by one wave's events.
+- **Gate:** 439/439 unit tests · 16/16 clinic evals · lint/build clean.
 
 ## Build log — Engineer #4 (2026-08-31 evening) — SPEC-V2: the voice surface, 9 tools, cancel/move stay human
 Arav's directive: make the agent genuinely conversational (voice: "what doctors are there?",

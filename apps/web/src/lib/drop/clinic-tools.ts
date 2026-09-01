@@ -81,6 +81,12 @@ export const NO_BOOKING_TOOL_REASON =
 
 /** What the tools are allowed to see. Everything is live — never a captured snapshot. */
 export interface ClinicToolsView {
+  /**
+   * SPEC-V2: which prepared act (if any) the page's dock is currently armed for. Without this,
+   * `clinic_hold_status` would read the move-freeze hold and tell the agent the keypress BOOKS —
+   * when the armed press actually moves. The tools must never describe a press they cannot see.
+   */
+  armedAct?: 'cancel' | 'move' | null;
   /** The verbs. `hold` / `release` are called here; `confirm` is the human path and never is. */
   driver: DropDriver;
   /** The fold the UI renders: slots, held, secondsLeft, now, log. */
@@ -189,6 +195,8 @@ export interface HoldStatusResult {
   ok: true;
   held: boolean;
   your_hold: HoldSummary | null;
+  /** The prepared act the dock is armed for right now, when the page reports one. */
+  armed_act?: 'cancel' | 'move';
   booking: 'human_only';
   next_step: string;
 }
@@ -252,14 +260,23 @@ export function listDrops(view: ClinicToolsView): ListDropsResult {
 /** Pure: the whole `clinic_hold_status` answer. */
 export function holdStatus(view: ClinicToolsView): HoldStatusResult {
   const hold = holdSummary(view);
+  const armed = view.armedAct ?? null;
   return {
     ok: true,
     held: hold !== null,
     your_hold: hold,
+    ...(armed ? { armed_act: armed } : {}),
     booking: 'human_only',
-    next_step: hold
-      ? HOLD_CHOREOGRAPHY
-      : 'Nothing is held for your human right now. Call clinic_list_drops, then clinic_hold_slot.',
+    // The sentence must describe the press the dock will actually perform. A move's freeze IS a
+    // hold, but the armed key moves; an armed cancel holds nothing, but the key cancels.
+    next_step:
+      armed === 'move'
+        ? MOVE_CHOREOGRAPHY
+        : armed === 'cancel'
+          ? CANCEL_CHOREOGRAPHY
+          : hold
+            ? HOLD_CHOREOGRAPHY
+            : 'Nothing is held for your human right now. Call clinic_list_drops, then clinic_hold_slot.',
   };
 }
 
@@ -457,13 +474,15 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         const nextWaveAt = view.nextWaveAt ?? null;
         const nextWave = nextWaveAt === null ? null : Math.max(0, round1((nextWaveAt - view.session.now) / 1000));
         if (matches.length === 0) {
-          const eliminated_by = wantClin && byClin.length === 0
-            ? 'clinician'
-            : wantKind && byKind.length === 0
-              ? 'kind'
-              : after !== null || before !== null
-                ? 'time_window'
-                : 'no_open_slots';
+          const eliminated_by = open.length === 0
+            ? 'no_open_slots'
+            : wantClin && byClin.length === 0
+              ? 'clinician'
+              : wantKind && byKind.length === 0
+                ? 'kind'
+                : after !== null || before !== null
+                  ? 'time_window'
+                  : 'no_open_slots';
           return asToolResult({
             ok: true,
             matches: [],
@@ -655,6 +674,15 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         }
         // Never `driver.cancel` — that verb is the human's. The page's dock is armed instead.
         if (!options.onPrepareCancel || !options.onPrepareCancel(booked.id)) {
+          // Say WHY when we can: the page refuses when the board moved between our read and the arm.
+          const nowSlot = source().session.slots.find((s) => s.id === booked.id);
+          if (!nowSlot || nowSlot.state !== 'booked_yours') {
+            return asToolResult({
+              ok: false,
+              error: 'nothing_booked',
+              detail: 'The booking is no longer on the board (the release may have rolled). Call clinic_list_drops.',
+            } satisfies ErrorResult);
+          }
           return asToolResult({
             ok: false,
             error: 'dock_not_wired',
@@ -726,6 +754,18 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         // Never `driver.move` — the swap itself is the human's. The dock is armed with the target,
         // and the page freezes it with a hold (the agent's verb) so nobody takes it mid-decision.
         if (!options.onPrepareMove || !options.onPrepareMove(booked.id, target.id)) {
+          // Say WHY when we can: the usual reason is a race — the target got taken mid-call.
+          const nowView = source();
+          const nowTarget = nowView.session.slots.find((s) => s.id === target.id);
+          if (nowTarget && nowTarget.state !== 'open' && nowTarget.state !== 'held_by_you') {
+            return asToolResult({
+              ok: false,
+              error: 'slot_unavailable',
+              detail: `Slot "${target.id}" was taken while arming. Pick another from clinic_find_slots.`,
+              slot_state: nowTarget.state,
+              open_slot_ids: openIds(nowView.session.slots),
+            } satisfies ErrorResult);
+          }
           return asToolResult({
             ok: false,
             error: 'dock_not_wired',

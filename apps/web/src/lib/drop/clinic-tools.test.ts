@@ -20,6 +20,7 @@ import {
   HOLD_CHOREOGRAPHY,
   CANCEL_CHOREOGRAPHY,
   MOVE_CHOREOGRAPHY,
+  holdStatus,
   parseClockText,
   clinicToolDefs,
   registerClinicTools,
@@ -669,4 +670,80 @@ test('clinic_prepare_cancel refuses while a hold is live — the book dock keeps
   assert.equal(out.ok, false);
   assert.equal(out.error, 'hold_in_progress');
   assert.deepEqual(armed, [], 'nothing was armed behind the live hold');
+});
+
+test('clinic_find_slots on an EMPTY board blames no_open_slots, never your filter', async () => {
+  const src = frozenSource([], []);
+  const defs = clinicToolDefs(src, FAST);
+  const out = await callJson(defs.find((d) => d.name === 'clinic_find_slots')!, { clinician: 'Boone' });
+  assert.equal(out.ok, true);
+  assert.equal(out.eliminated_by, 'no_open_slots', 'an empty board is not the clinician\u2019s fault');
+});
+
+test('clinic_prepare_move names the race when the target is taken mid-arm', async () => {
+  const booked: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'booked_yours' };
+  const target: Slot = { id: 's2', timeLabel: '9:20 AM', clinician: 'Dr. B', kind: 'Consult', state: 'open' };
+  const src = frozenSource([booked, target], []);
+  const defs = clinicToolDefs(src, {
+    ...FAST,
+    // The page refuses AND the board shows why: the rival got there first.
+    onPrepareMove: () => {
+      target.state = 'taken_by_rival';
+      return false;
+    },
+  });
+  const out = await callJson(defs.find((d) => d.name === 'clinic_prepare_move')!, { new_slot_id: 's2' });
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'slot_unavailable');
+  assert.equal(out.slot_state, 'taken_by_rival');
+});
+
+test('clinic_prepare_cancel explains a vanished booking instead of dock_not_wired', async () => {
+  const booked: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'booked_yours' };
+  const src = frozenSource([booked], []);
+  const defs = clinicToolDefs(src, {
+    ...FAST,
+    onPrepareCancel: () => {
+      booked.state = 'open'; // the wave rolled under us
+      return false;
+    },
+  });
+  const out = await callJson(defs.find((d) => d.name === 'clinic_prepare_cancel')!);
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'nothing_booked');
+});
+
+test('clinic_hold_status describes the press the dock will ACTUALLY perform', async () => {
+  const held: Slot = { id: 's2', timeLabel: '9:20 AM', clinician: 'Dr. B', kind: 'Consult', state: 'held_by_you' };
+  const booked: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'booked_yours' };
+  // A move's freeze IS a hold — but the armed key moves, and the status must say so.
+  const moveView = (): ClinicToolsView => ({
+    driver: { subscribe: () => () => {}, hold: () => {}, release: () => {}, confirm: () => {}, book: () => {}, cancel: () => {}, move: () => {} },
+    session: {
+      now: 0,
+      slots: [booked, held],
+      held: { slotId: 's2', ttlSeconds: 45, startedAt: 0 },
+      secondsLeft: 40,
+      log: [],
+      hold: () => {},
+      confirm: () => {},
+      release: () => {},
+    },
+    armedAct: 'move',
+  });
+  const moveStatus = holdStatus(moveView());
+  assert.equal(moveStatus.held, true);
+  assert.equal(moveStatus.armed_act, 'move');
+  assert.equal(moveStatus.next_step, MOVE_CHOREOGRAPHY, 'never "books it" while the press moves');
+  // An armed cancel holds nothing — but the status must not send the agent hunting for a hold.
+  const cancelView = { ...moveView(), armedAct: 'cancel' as const };
+  cancelView.session = { ...cancelView.session, held: null, secondsLeft: 0, slots: [booked] };
+  const cancelStatus = holdStatus(cancelView);
+  assert.equal(cancelStatus.held, false);
+  assert.equal(cancelStatus.armed_act, 'cancel');
+  assert.equal(cancelStatus.next_step, CANCEL_CHOREOGRAPHY);
+  // No armed act: the original sentences, unchanged.
+  const plain = holdStatus({ ...moveView(), armedAct: null });
+  assert.equal(plain.next_step, HOLD_CHOREOGRAPHY);
+  assert.equal('armed_act' in plain, false);
 });

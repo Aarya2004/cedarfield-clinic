@@ -509,6 +509,7 @@ export function ClinicBooking() {
           nextWaveAt={nextRelease === null ? null : session.now + nextRelease}
           onPrepareCancel={prepareCancel}
           onPrepareMove={prepareMove}
+          armedAct={pendingAct?.kind ?? null}
         />
 
         <Band label="Honestly">

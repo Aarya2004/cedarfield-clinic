@@ -10,6 +10,7 @@ import {
   ACCESSIBILITY_MAX,
   describeSlotsLost,
   emptyDetails,
+  findSlot,
   hasErrors,
   initialManualFlowState,
   isBookable,
@@ -348,4 +349,29 @@ test('the reducer never mutates the state it is handed', () => {
   manualFlowReducer(before, { type: 'back' });
   manualFlowReducer(before, { type: 'submit_booking' });
   assert.equal(JSON.stringify(before), snapshot);
+});
+
+// ── SPEC-V2: cancelled hands the slot back to the manual walk ────────────────────────────────────
+
+test('a cancelled event reopens the slot and a manual click on it works again', () => {
+  let state = initialManualFlowState([]);
+  state = manualFlowReducer(state, { type: 'driver_event', event: { type: 'drop_wave', slots: BOARD, at: 0 } });
+  state = manualFlowReducer(state, { type: 'driver_event', event: { type: 'booked', slotId: 's2', at: 1 } });
+  assert.equal(findSlot(state.slots, 's2')?.state, 'booked_yours');
+  // Before the fix this stayed booked_yours and open_slot silently refused the click.
+  state = manualFlowReducer(state, { type: 'driver_event', event: { type: 'cancelled', slotId: 's2', at: 2 } });
+  assert.equal(findSlot(state.slots, 's2')?.state, 'open');
+  state = manualFlowReducer(state, { type: 'open_slot', slotId: 's2' });
+  assert.equal(state.step, 'detail', 'the reopened slot is clickable again');
+  assert.equal(state.selectedSlotId, 's2');
+});
+
+test('a cancelled event for a slot mid-selection reconciles rather than stranding the walk', () => {
+  let state = initialManualFlowState([]);
+  state = manualFlowReducer(state, { type: 'driver_event', event: { type: 'drop_wave', slots: BOARD, at: 0 } });
+  state = manualFlowReducer(state, { type: 'driver_event', event: { type: 'booked', slotId: 's1', at: 1 } });
+  state = manualFlowReducer(state, { type: 'open_slot', slotId: 's3' });
+  state = manualFlowReducer(state, { type: 'driver_event', event: { type: 'cancelled', slotId: 's1', at: 2 } });
+  assert.equal(state.step, 'detail', 'an unrelated cancel does not disturb the selection');
+  assert.equal(state.selectedSlotId, 's3');
 });
