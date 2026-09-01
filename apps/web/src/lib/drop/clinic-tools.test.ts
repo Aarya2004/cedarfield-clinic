@@ -300,11 +300,11 @@ test('a registerTool that rejects is reported, never thrown at the page', async 
 
 // ── behaviour ───────────────────────────────────────────────────────────────────────────────────
 
-test('clinic_list_drops reports the live board, honestly labelled as a demo', async () => {
+test('clinic_list_drops reports the live board, honestly labelled as fictional', async () => {
   const { get } = defsFor(ready().source);
   const out = await callJson(get('clinic_list_drops'));
   assert.equal(out.ok, true);
-  assert.equal(out.demo, true);
+  assert.equal(out.fictional_clinic, true);
   assert.equal(out.booking, 'human_only');
   const slots = out.slots as { id: string; time: string; clinician: string; kind: string; state: string }[];
   assert.equal(slots.length, 6);

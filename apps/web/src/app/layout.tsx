@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Your agent can hold it. Only you can take it.',
     description:
-      'A clinic drop your agent can watch, search and hold — and a booking only a human keypress can make. Demo inventory; nothing real is booked.',
+      'A clinic drop your agent can watch, search and hold — and a booking only a human keypress can make. A fictional clinic; nothing real is booked.',
     images: ['/og.png'],
     type: 'website',
   },

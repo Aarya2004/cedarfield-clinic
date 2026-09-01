@@ -529,7 +529,8 @@ export function ClinicBooking() {
 
         <Band label="Honestly">
           <p className="cl-prose">
-            Demo inventory, generated on your machine. The rival is a seeded simulation and is
+            Cedarfield is a fictional clinic and this inventory is generated on your machine. The
+            rival is a seeded simulation and is
             labelled as one everywhere it appears. Nothing here books a real appointment, takes a
             payment, or leaves this browser. There is no tool on this page that books — the verb was
             never registered.

@@ -171,7 +171,7 @@ export interface AgentSlot {
 export interface ListDropsResult {
   ok: true;
   clinic: string;
-  demo: true;
+  fictional_clinic: true;
   slots: AgentSlot[];
   open_count: number;
   /** Seconds until the next wave, when the page knows; null when it does not. Never invented. */
@@ -247,7 +247,7 @@ export function listDrops(view: ClinicToolsView): ListDropsResult {
   return {
     ok: true,
     clinic: CLINIC_NAME,
-    demo: true,
+    fictional_clinic: true,
     slots: session.slots.map(toAgentSlot),
     open_count: openIds(session.slots).length,
     next_wave_seconds: nextWaveAt === null ? null : Math.max(0, round1((nextWaveAt - session.now) / 1000)),
@@ -306,7 +306,7 @@ export const LIST_DROPS_DESCRIPTION =
   '(open, held_by_you, held_by_other, taken_by_rival, booked_yours, expired_hold). Read-only — it ' +
   'changes nothing. Start here, then clinic_hold_slot to take one slot out of the race for your ' +
   'human. There is deliberately NO booking tool on this page: only your human can book, with one ' +
-  'key press on the page. Demo inventory, simulated rival — nothing real is booked.';
+  'key press on the page. Fictional clinic, simulated rival — nothing real is booked.';
 
 export const HOLD_SLOT_DESCRIPTION =
   'Hold one open slot for your human for a short time (the result carries ttl_seconds and ' +
@@ -522,7 +522,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         return asToolResult({
           ok: true,
           clinic: CLINIC_NAME,
-          demo: true,
+          fictional_clinic: true,
           clinicians: [...byName.entries()].map(([name, row]) => ({
             name,
             open_times: row.open_times,

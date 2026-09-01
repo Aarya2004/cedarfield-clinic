@@ -26,8 +26,8 @@ export function ClinicBanner() {
   return (
     <header className="cl-bannerbar">
       <p className="cl-banner" data-clinic-banner>
-        <b>Demo inventory.</b>
-        <span>Simulated rival, labelled as one. Nothing real is booked and no payment is taken.</span>
+        <b>Cedarfield is a fictional clinic.</b>
+        <span>The rival is simulated and labelled. Nothing real is booked and no payment is taken.</span>
       </p>
     </header>
   );

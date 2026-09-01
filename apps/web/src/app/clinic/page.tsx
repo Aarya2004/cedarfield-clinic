@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Cedarfield Clinic — appointments released in waves',
   description:
-    'A clinic that hands the structure of booking to your agent and keeps the one act that must stay yours: the keypress. Demo inventory, simulated rival, nothing real is booked.',
+    'A clinic that hands the structure of booking to your agent and keeps the one act that must stay yours: the keypress. A fictional clinic with a simulated rival — nothing real is booked.',
 };
 
 export default function ClinicPage() {

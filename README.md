@@ -1,7 +1,7 @@
 # The Drop — your agent can hold it. Only you can take it.
 
 > **Working title.** The product name is being chosen by the two people building it; the fictional
-> clinic in the demo is "Cedarfield Clinic". Everything below is true today and reproducible from
+> clinic on the page is "Cedarfield Clinic". Everything below is true today and reproducible from
 > this repo.
 
 A clinic releases cancelled appointments in waves. They are gone in seconds. On this page your

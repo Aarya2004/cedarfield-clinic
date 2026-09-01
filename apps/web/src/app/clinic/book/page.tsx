@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Book an appointment — Cedarfield Clinic',
   description:
-    'Book by hand, or let your agent hold a time and book it with one keypress. Both costs are counted on the page. Demo inventory, simulated rival, nothing real is booked.',
+    'Book by hand, or let your agent hold a time and book it with one keypress. Both costs are counted on the page. A fictional clinic with a simulated rival — nothing real is booked.',
 };
 
 export default function ClinicBookPage() {
