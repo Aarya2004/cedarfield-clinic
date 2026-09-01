@@ -1,0 +1,81 @@
+[
+ {
+  "_doc": "The act docks at phone width. clinic-responsive never arms cancel/move; a stranger on a phone will. Asserts the dock fits (no horizontal scroll), the key is visible, and the press works."
+ },
+ {
+  "viewport": {
+   "width": 390,
+   "height": 844
+  }
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-armed] button, button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "armed.{0,2}:.{0,2}cancel"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-act]')?.getAttribute('data-clinic-act') === 'cancel'",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.documentElement.scrollWidth <= 392",
+  "equals": true
+ },
+ {
+  "eval": "(() => { const b = document.querySelector('[data-clinic-act=\"cancel\"] button[data-clinic-confirm]'); const r = b?.getBoundingClientRect(); return !!r && r.width > 0 && r.right <= 392 && r.left >= 0; })()",
+  "equals": true
+ },
+ {
+  "shot": "docs/evidence/clinic/phone-cancel-dock.png"
+ },
+ {
+  "focus": "[data-clinic-act=\"cancel\"] button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'open'",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.documentElement.scrollWidth <= 392",
+  "equals": true
+ }
+]

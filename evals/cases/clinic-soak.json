@@ -1,0 +1,102 @@
+[
+ {
+  "_doc": "Soak: time-driven paths no scripted eval reaches. A cancel arm left alone expires at 45s and stands down without cancelling; once nothing is in play the deferred wave rolls; the tools answer coherently on the new board; zero page errors across ~3 minutes."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "eval": "(() => { window.__wave0 = document.querySelector('[data-clinic-wave]')?.getAttribute('data-clinic-wave'); const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-armed] button, button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "armed.{0,2}:.{0,2}cancel"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-act]')?.getAttribute('data-clinic-act') === 'cancel'",
+  "timeout": 8000
+ },
+ {
+  "_doc": "Walk away. The arm must expire on its own (45s) WITHOUT cancelling anything."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-act]') === null",
+  "timeout": 55000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "booked_yours"
+ },
+ {
+  "_doc": "With the arm gone and the booking past its grace, the deferred wave eventually rolls: a genuinely new board."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-wave]')?.getAttribute('data-clinic-wave') !== window.__wave0",
+  "timeout": 150000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "_doc": "The tools are coherent on the new wave: the old booking is gone, cancel refuses, holds work."
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "false[\\s\\S]*nothing_booked"
+ },
+ {
+  "invoke": "clinic_list_drops",
+  "outputMatches": "open_count[\\s\\S]*next_wave_seconds"
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot2 = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot2; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot2"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "invoke": "clinic_release_hold",
+  "outputMatches": "ok"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
+  "equals": "9"
+ }
+]

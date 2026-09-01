@@ -1,0 +1,247 @@
+[
+ {
+  "_doc": "Dynamic testing: the sequences no script promises. Garbage inputs, double-arming, arming the slot you hold, reload mid-hold, spam. Every answer must be a readable refusal or a clean recovery \u2014 never a page error (the harness fails on any)."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "_doc": "Garbage in every doorway: numbers, objects, empty strings, absurd lengths."
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "12345"
+  },
+  "outputMatches": "false[\\s\\S]*(slot_id_required|unknown_slot)"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "''"
+  },
+  "outputMatches": "false[\\s\\S]*slot_id_required"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "'x'.repeat(500)"
+  },
+  "outputMatches": "false[\\s\\S]*(unknown_slot|slot_id_required)"
+ },
+ {
+  "invoke": "clinic_find_slots",
+  "inputFrom": {
+   "clinician": "'<script>alert(1)</script>'"
+  },
+  "outputMatches": "eliminated_by"
+ },
+ {
+  "invoke": "clinic_prepare_move",
+  "inputFrom": {
+   "new_slot_id": "'; DROP TABLE slots;--'"
+  },
+  "outputMatches": "false[\\s\\S]*(nothing_booked|unknown_slot)"
+ },
+ {
+  "_doc": "A plain hold via the id minted above (the stringified-JSON input path is unit-tested in coerceInput)."
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "_doc": "Arming a cancel while holding: refused with hold_in_progress, dock stays on book."
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "false[\\s\\S]*(nothing_booked|hold_in_progress)"
+ },
+ {
+  "_doc": "Hold spam: re-holding your OWN held slot is refused (an agent cannot refresh its TTL by re-calling); release/re-hold cycles stay coherent; a bare release with nothing held is refused."
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "false[\\s\\S]*already_held_by_you"
+ },
+ {
+  "invoke": "clinic_release_hold",
+  "outputMatches": "ok"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "invoke": "clinic_release_hold",
+  "outputMatches": "ok"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "invoke": "clinic_release_hold",
+  "outputMatches": "ok"
+ },
+ {
+  "invoke": "clinic_release_hold",
+  "outputMatches": "false[\\s\\S]*nothing_held"
+ },
+ {
+  "eval": "[...document.querySelectorAll('[data-slot-state=\"held_by_you\"]')].length",
+  "equals": 0
+ },
+ {
+  "_doc": "Book, then double-arm a cancel: the second arm supersedes cleanly, one dock, still booked."
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-armed] button, button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "armed.{0,2}:.{0,2}cancel"
+ },
+ {
+  "invoke": "clinic_prepare_cancel",
+  "outputMatches": "armed.{0,2}:.{0,2}cancel"
+ },
+ {
+  "eval": "[...document.querySelectorAll('[data-clinic-dock]')].length",
+  "equals": 1
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "booked_yours"
+ },
+ {
+  "_doc": "Dismiss via the dock's own Never mind \u2014 nothing cancelled, dock gone."
+ },
+ {
+  "eval": "(() => { const b = document.querySelector('[data-clinic-act=\"cancel\"] [data-clinic-release]'); if (!b) return 'no-button'; b.click(); return 'clicked'; })()",
+  "equals": "clicked"
+ },
+ {
+  "sleep": 300
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-act]') === null",
+  "equals": true
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "booked_yours"
+ },
+ {
+  "_doc": "prepare_move onto the slot the booking itself occupies via find_slots round trip \u2014 and moving TO a held target after the agent held it first (held_by_you targets are legal)."
+ },
+ {
+  "eval": "(() => { const el = [...document.querySelectorAll('[data-slot-state=\"open\"]')].find(e => e.getAttribute('data-clinic-slot') !== window.__slot); window.__to = el && el.getAttribute('data-clinic-slot'); return typeof window.__to; })()",
+  "equals": "string"
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__to"
+  },
+  "outputMatches": "held.{0,2}:true"
+ },
+ {
+  "invoke": "clinic_prepare_move",
+  "inputFrom": {
+   "new_slot_id": "window.__to"
+  },
+  "outputMatches": "armed.{0,2}:.{0,2}move[\\s\\S]*target_frozen.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-act]')?.getAttribute('data-clinic-act') === 'move'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-clinic-act=\"move\"] button[data-clinic-confirm]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__to + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "eval": "[...document.querySelectorAll('[data-slot-state=\"booked_yours\"]')].length",
+  "equals": 1
+ },
+ {
+  "_doc": "Reload mid-state: the demo board is in-page by design, so a reload is a fresh wave \u2014 the page must come back clean, tools re-registered, no ghost dock."
+ },
+ {
+  "eval": "(() => { location.reload(); return 'reloading'; })()",
+  "equals": "reloading"
+ },
+ {
+  "sleep": 1500
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
+  "equals": "9"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-act]') === null && document.querySelector('[data-clinic-dock]') === null",
+  "equals": true
+ },
+ {
+  "invoke": "clinic_list_drops",
+  "outputMatches": "slot"
+ }
+]
