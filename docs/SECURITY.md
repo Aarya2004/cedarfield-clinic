@@ -196,19 +196,29 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   surface — an agent, an extension, a script with the URL — cannot book, and its attempts are visible.
 - **Injection surface:** slot inventory, clinicians and wave copy are page-authored; no tool echoes
   visitor-authored text, so nothing an outsider writes can reach a tool description or a tool result.
-- **Camera:** the gesture path is **off in the submitted build** (`NEXT_PUBLIC_DROP_GESTURE` unset), and the
-  middleware only opens `connect-src` for it when the build asked for it. When it is enabled, frames never
-  leave the page and the runtime loads from `/models/mediapipe/` on our own origin — never a Google CDN —
-  because the weights carry Google's MediaPipe model terms. Those ~42 MB are **provisioned, not committed**
-  (`apps/web/scripts/fetch-gesture-model.sh`, `public/models/` is gitignored), so a clone of this repo has
-  the code and not the weights: enabling the flag without running that script gives a 404 and the keyboard
-  path, which is the correct failure. Keyboard/switch stays primary either way, and the dwell resets on any
-  flicker below the visible threshold so a tremor cannot fire it.
+- **Camera:** the gesture path is **on in the submitted build** (`NEXT_PUBLIC_DROP_GESTURE` defaults
+  to 1 in the build script; `=0` is the kill switch) and **strictly opt-in at runtime** — nothing
+  loads and no lens opens until the person clicks "Enable camera" on an armed dock. Frames never
+  leave the page and the runtime loads from `/models/mediapipe/` on our own origin — never a Google
+  CDN — because the weights carry Google's MediaPipe model terms. Those ~42 MB are **provisioned at
+  build time, not committed** (`apps/web/scripts/fetch-gesture-model.sh`, sha256-pinned;
+  `public/models/` is gitignored): a clone that builds runs the fetch itself, and a missing model is
+  an honest on-screen failure plus the keyboard path. Keyboard/switch stays primary, and the dwell
+  resets on any flicker below the visible threshold so a tremor cannot fire it.
+- **The gesture's trust root, stated exactly.** The keyboard confirm is gated on `isTrusted`, which
+  no script, extension `.click()`, or tool call can forge. A completed camera dwell is a different,
+  weaker root: **physical presence** — it requires a person's hand in front of a lens they opted
+  into. What it defends against: every remote and same-page actor (a tool call, console script, or
+  injected code cannot conjure a hand). What it does not defend against: software with power over
+  the camera itself — an extension or OS-level actor substituting a fake video stream — which is
+  the same actor class that could already forge trusted input via the debugger API. Voice is
+  refused as a confirm channel for a sharper reason: the agent HAS a voice, and in a speakers+mic
+  demo could utter the confirmation itself. It does not have a hand.
 - **No model, no key, no PII, no server:** the product makes no LLM call of its own and has no backend —
   the reasoning is the visitor's own agent in their own client, and the demo form is transmitted nowhere.
   Every number on screen is measured by the code that shows it; the counter counts only trusted events.
 - **Fairness in the demo:** one live hold per visitor; the labelled simulated rival takes three of six slots
   over the first forty seconds and never the last open one, so someone arriving late can always still book.
 - **Accessibility:** axe-core reports 0 violations on all three routes (WCAG 2.0/2.1/2.2 A + AA), gated by
-  `node evals/a11y.mjs`. The camera gesture is off unless flagged, always beside a keyboard path.
+  `node evals/a11y.mjs`. The camera gesture is opt-in per person, always beside a keyboard path.
 

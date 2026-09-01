@@ -127,9 +127,19 @@ Plus 432 unit tests. Traces and screenshots for every row are committed under
 - **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
   keyboard-accessible page — never "the accessible version". W3C's APA group is explicit that an
   agent route does not discharge a page's own obligations, and we agree with them.
-- **Keyboard and switch are the primary confirm.** The camera gesture is a progressive enhancement,
-  off in the submitted build, always beside a keyboard alternative, with a visible threshold and a
-  dwell that resets on any flicker so a tremor cannot fire it (WCAG 2.5.4).
+- **Keyboard and switch are the primary confirm.** The camera gesture is **live and strictly
+  opt-in** — no lens opens until the person clicks "Enable camera" on the dock. On-device, from our
+  origin, visible threshold, dwell resets on any flicker so a tremor cannot fire it (WCAG 2.5.4),
+  keyboard always beside it. And voice is deliberately NOT a confirm channel: the agent has a voice
+  — in a live demo it could speak the confirmation into the mic itself. It does not have a hand.
+- **We are not the only entry that withholds a tool, and we say so.** Several entries in this
+  challenge gate a consequential act behind a human click, and one registers the withheld tool when
+  a button is pressed. What no other entry does, as far as we can find: the withholding is
+  *permanent and platform-enforced* (a browser-trusted event, not a UI promise), every synthetic
+  attempt is **counted on screen**, the cost of the task is **measured** both ways by the page
+  itself, an atomic move keeps a rescheduling human from ever racing their own cancellation — and
+  the human-final act itself is made available to someone who cannot press anything at all, with a
+  held gesture.
 - **We did not invent the hold.** Netlify's own WebMCP demo, *Mabel's Table*, has agents place
   five-minute holds on restaurant tables. The inversion is ours: there the agent also confirms; here
   it cannot, the race is visible rather than implied, and the page counts what the task costs you

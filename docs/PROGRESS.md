@@ -1,6 +1,31 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-08-31 night (Engineer #4)** Branch `main`.
+Last update: **2026-09-01 (Engineer #4)** Branch `main`.
+
+## Build log — Engineer #4 (2026-09-01) — gesture LIVE + field-honest positioning (Arav: "take this to #1")
+Field research (2 agents, 2026-08-31): 1,022 hackathon repos scanned — the withheld-tool mechanism
+now has ≥5 rivals (one near-clone), accessibility ~10 entries, voice exists, **camera gesture: 0**.
+Build Week winners' bar: human keeps the act, constrained AI, real dependence, micro-UX. Decision
+(Arav approved): occupy the empty lane — gesture as the human-final act for all three verbs — and
+position honestly against the field. **Voice deliberately does NOT confirm** (the agent has a
+voice; in a speakers+mic demo it could utter the confirmation itself — it does not have a hand).
+- **Gesture live:** flag defaults ON in the build script (`NEXT_PUBLIC_DROP_GESTURE=0` kill
+  switch); weights fetched sha-pinned AT BUILD TIME (Vercel provisions itself); GestureConfirm
+  verb-aware (was hardcoded "Booked." on cancel/move docks); fetch script macOS `wc` padding bug
+  fixed; strictly opt-in at runtime (click "Enable camera").
+- **Proof:** `clinic-gesture-boot.json` drives the real pipeline headlessly via Chrome's fake
+  camera (run-all injects the flags for gesture-named cases): wasm under production CSP → 8MB model
+  streamed → getUserMedia → state `ready` → opt-out tears the lens down. Harness gained a scoped
+  benign-error allowlist (MediaPipe INFO on console.error); verify-deployed hoists `allowErrors`
+  past `_doc` headers.
+- **Docs:** README/SUBMISSION/SECURITY rewritten — gesture ON + opt-in, the trust-root distinction
+  (isTrusted vs physical presence, extension caveat stated), and an honest differentiation
+  paragraph naming that withheld-tool rivals exist.
+- **Gate:** 439 tests · 17/17 clinic evals · axe 0×3 · lint/build clean.
+- **OWED (humans):** Aarya — real-hand camera test per `components/drop/GESTURE.md` (dwell fires,
+  tremor doesn't; film it). Kill rule: janky by Sep 1 evening → `NEXT_PUBLIC_DROP_GESTURE=0` in
+  Vercel env, docs revert commit ready. Arav — redeploy (build now self-provisions weights), then
+  verify-deployed (20 checks); the ChatGPT desktop hour (text + voice mode) remains the #1 gap.
 
 ## Build log — Engineer #4 (2026-08-31 night) — self-audit of SPEC-V2: 5 findings, all fixed + tested
 Adversarial re-read of everything I shipped today, then dynamic re-verification.

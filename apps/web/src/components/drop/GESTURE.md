@@ -1,5 +1,14 @@
 # GestureConfirm — the camera dwell (ticket T6)
 
+> **2026-09-01 — the clinic docks are the live surface now.** The manual camera test below was
+> written against `/drop-spike`; the shipped module sits on `/clinic/book`'s confirm dock (book,
+> cancel, AND move — the copy follows the verb). Fastest real-hand test today:
+> `cd apps/web && pnpm build && pnpm start`, open `http://localhost:3000/clinic/book`, ask an agent
+> to hold a slot (or use `window.__CEDARFIELD_AGENT__.holdSlot(...)` in the console), click
+> **Enable camera** on the dock, hold an open palm through the dwell — the row books. Then book one,
+> have the agent call `clinic_prepare_cancel`, and confirm the SAME palm cancels with the cancel
+> copy. What to film and the tremor/flicker checks below still apply unchanged.
+
 An open palm held in front of the lens for a configurable dwell (default 1000ms) calls the **same**
 `onConfirm` the Enter key calls. It plugs into `ConfirmSurface`'s `gestureSlot` and it is never the
 primary path: WCAG 2.5.4 requires motion actuation to have a UI alternative and to be disableable,

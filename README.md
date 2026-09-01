@@ -128,11 +128,21 @@ Traces and screenshots for every one of these are committed under `docs/evidence
 - **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
   keyboard-accessible page — not "the accessible version". W3C's APA group and WCAG are explicit
   that an agent route does not discharge a page's own obligations, and we agree.
-- **Keyboard and switch are the primary confirm.** The camera gesture is a progressive enhancement and
-  is **off in the submitted build**; its ~42 MB of MediaPipe weights are provisioned by a script rather
-  than committed (Google's model terms), so a fresh clone has the code and not the weights. When it is on
-  it runs entirely on-device from our own origin, with a visible threshold and a keyboard alternative
-  always present (WCAG 2.5.4 — motion actuation must be disableable).
+- **Keyboard and switch are the primary confirm.** The camera gesture is **live in the submitted
+  build and strictly opt-in**: the dock offers "Enable camera"; nothing loads and no lens opens until
+  a person clicks it. It runs entirely on-device from our own origin (the ~42 MB of MediaPipe assets
+  are fetched sha-pinned at build time, never committed — Google's model terms — and never from a
+  CDN), with a visible threshold, an adjustable dwell that resets on any flicker so a tremor cannot
+  fire it, and a keyboard alternative always present (WCAG 2.5.4). The boot pipeline — wasm under
+  the production CSP, streamed model, camera grant, clean teardown — is asserted headlessly in
+  `clinic-gesture-boot.json`; the dwell firing on a real hand is a filmed human test.
+- **A gesture is not a browser-trusted event, and we say so.** The keyboard gate is `isTrusted` —
+  unforgeable by any script. The camera gate is *physical presence*: a completed dwell requires a
+  hand in front of a real lens the person opted into. Different trust root, stated honestly in
+  `SECURITY.md`, and the reason voice is NOT a confirm channel: **the agent has a voice — in a live
+  demo it could speak "book it" into the mic itself. It does not have a hand.** So voice drives
+  everything up to the act (search, hold, arm a cancel or a move), and the act itself takes a key,
+  a switch, or a hand.
 - **We did not invent the hold.** Netlify's own WebMCP demo, *Mabel's Table*, has agents place
   five-minute holds on restaurant tables. What is different here is the inversion: in that demo the
   agent also confirms. Here it cannot, the race is visible rather than implied, and the page counts
