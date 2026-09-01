@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ASSISTANT_TAG,
   LOCAL_REQUEST_WINDOW_MS,
-  agentArrivalAnnouncement,
-  holdGutterLabel,
+  assistantTag,
   holdHeadline,
   holdOrigin,
 } from './hold-origin.ts';
@@ -32,25 +32,18 @@ test('non-finite clocks fall back to the agent rather than claiming your click',
   assert.equal(holdOrigin(1000, Number.NaN), 'agent');
 });
 
-test('the headline is the sentence the board and the dock both carry', () => {
-  assert.equal(holdHeadline('agent', 41), 'Held by your agent — 0:41 · one keypress books it');
-  assert.equal(holdHeadline('you', 41), 'Held for you — 0:41 · one keypress books it');
+test('the headline reads the same however the time was reserved', () => {
+  assert.equal(holdHeadline(41), 'This time is held for you — 0:41');
+  assert.equal(holdHeadline(5), 'This time is held for you — 0:05');
 });
 
 test('the headline ceils, so it never reads 0:00 while there is time left', () => {
-  assert.equal(holdHeadline('agent', 0.4), 'Held by your agent — 0:01 · one keypress books it');
-  assert.equal(holdHeadline('agent', 0), 'Held by your agent — 0:00 · one keypress books it');
+  assert.equal(holdHeadline(0.4), 'This time is held for you — 0:01');
+  assert.equal(holdHeadline(0), 'This time is held for you — 0:00');
 });
 
-test('the gutter names the actor in the label column', () => {
-  assert.equal(holdGutterLabel('agent'), 'Held — your agent');
-  assert.equal(holdGutterLabel('you'), 'Held — yours');
-});
-
-test('only an agent hold is announced, and the announcement names the act you still owe', () => {
-  assert.equal(
-    agentArrivalAnnouncement('agent', '9:20 AM'),
-    'Your agent holds 9:20 AM. Press Enter to book it — your agent cannot.',
-  );
-  assert.equal(agentArrivalAnnouncement('you', '9:20 AM'), null);
+test('only a hold the assistant asked for carries the tag', () => {
+  assert.equal(assistantTag('agent'), ASSISTANT_TAG);
+  assert.equal(assistantTag('agent'), 'via your assistant');
+  assert.equal(assistantTag('you'), null);
 });

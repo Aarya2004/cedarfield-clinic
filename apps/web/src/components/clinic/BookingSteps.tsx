@@ -5,10 +5,8 @@
  *
  * The reducer, the validation and the slot-loss rules are `lib/drop/manual-flow.ts` verbatim: real
  * fields and not one more, validation only when you ask to move on, Back that never discards what
- * you typed, and — the rule with teeth — a slot taken out from under you returns you to the board
- * with every character still in the form. The honesty of the comparison depends on this being a
- * GOOD booking flow rather than a strawman built to lose, so nothing here was padded to inflate the
- * count. It still costs dozens of interactions. That is the finding, not the trick.
+ * you typed, and — the rule with teeth — a time booked out from under you returns you to the board
+ * with every character still in the form.
  *
  * Presentation only below: the bench's `ManualBookingFlow` and its module CSS are not referenced.
  * One correction carried over from it, because it was found by driving a browser and not by any
@@ -310,6 +308,9 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
 
       {state.step === 'booked' ? (
         <div data-clinic-step="booked">
+          {/* The reference, the date, add-to-calendar and the cancel/move controls are the
+              `AppointmentCard` band `ClinicBooking` renders under this panel — a booking made by
+              the assistant never walks through these steps and must get the same card. */}
           <p className="cl-prose cl-panel__block">
             {state.details.fullName.trim() === '' ? 'The patient' : state.details.fullName} is booked
             in. Cedarfield asks that you arrive ten minutes early, and calls the number you gave if

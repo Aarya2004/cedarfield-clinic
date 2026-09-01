@@ -415,23 +415,6 @@ button.cl-link {
   outline-offset: 2px;
 }
 
-/* --- the quiet counter --------------------------------------------------- */
-
-.cl-counter {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.45rem;
-  font-family: var(--clinic-mono);
-  font-size: 0.8125rem;
-  color: var(--clinic-muted);
-}
-
-.cl-counter b {
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--clinic-ink);
-}
-
 /* --- the appointment sheet ----------------------------------------------- */
 
 .cl-sheet {
@@ -878,82 +861,6 @@ button.cl-row__inner:hover .cl-row__action {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- the receipt --------------------------------------------------------- */
-
-.cl-receipt {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: 0;
-  border: 1px solid var(--clinic-rule);
-  border-radius: 2px;
-  background: var(--clinic-sheet);
-}
-
-.cl-receipt__col {
-  padding: 1.35rem 1.4rem 1.5rem;
-  border-left: 1px solid var(--clinic-rule);
-}
-
-.cl-receipt__col:first-child {
-  border-left: 0;
-}
-
-.cl-receipt__label {
-  margin: 0;
-  font-size: var(--clinic-label);
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--clinic-muted);
-}
-
-.cl-receipt__n {
-  display: block;
-  margin: 0.6rem 0 0;
-  font-family: var(--clinic-mono);
-  font-size: clamp(3rem, 1.8rem + 4.5vw, 5.5rem);
-  font-weight: 500;
-  line-height: 0.9;
-  letter-spacing: -0.05em;
-  font-variant-numeric: tabular-nums;
-}
-
-.cl-receipt__col[data-lane='agent'] .cl-receipt__n {
-  color: var(--clinic-yours);
-}
-
-.cl-receipt__unit {
-  margin: 0.5rem 0 0;
-  font-size: 0.9375rem;
-  color: var(--clinic-muted);
-}
-
-.cl-receipt__note {
-  margin: 0.85rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--clinic-muted);
-}
-
-.cl-receipt__breakdown {
-  margin: 0.85rem 0 0;
-  font-family: var(--clinic-mono);
-  font-size: 0.75rem;
-  line-height: 1.7;
-  color: var(--clinic-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-/* A blank, drawn as a blank. Showing a placeholder digit for a lane nobody has run would be the
-   one dishonest pixel on the page. */
-.cl-receipt__empty {
-  display: block;
-  width: 3rem;
-  height: 3px;
-  margin: 2.4rem 0 2.2rem;
-  background: var(--clinic-rule-strong);
-}
-
 /* --- the confirm dock ---------------------------------------------------- */
 
 .cl-dock {
@@ -1171,20 +1078,6 @@ button.cl-row__inner:hover .cl-row__action {
   border-color: var(--clinic-dock-muted);
 }
 
-.cl-dock__blocked {
-  margin: 0;
-  font-family: var(--clinic-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--clinic-dock-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.cl-dock__blocked[data-hot='true'] {
-  color: var(--clinic-dock-alert);
-}
-
 /* The camera dwell's slot (GESTURE.md; absent unless NEXT_PUBLIC_DROP_GESTURE=1). It takes a whole
    row under the act rather than a fourth column, so the sentence, the seconds and the key keep the
    widths they have when the flag is off — turning the gesture on must not re-lay-out the one act.
@@ -1354,4 +1247,44 @@ html:has(.cl-dock) {
   .cl-key[data-pressed='true'] {
     transform: none;
   }
+}
+
+/* ═══ SPEC-V3 — the booking page in clinic voice ═════════════════════════════════════════════════
+ * Appended as one block (V3 lane rule: agent A owns the landing and the frame). Three small pieces
+ * of presentation the reframe needed. Every colour is an existing token with a measured ratio. */
+
+/* "via your assistant" — how the time got reserved, stated as a fact rather than badged as an
+   event. It borrows the row's cedar (a grey tag beside a cedar numeral would say "gone", which is
+   the opposite of what the row means) and drops the box: a bordered chip next to a five-rem time
+   competes with the one thing this row is meant to be.
+   --clinic-yours on --clinic-yours-wash: 7.26:1. */
+.cl-row__tag--via {
+  padding-right: 0;
+  border: 0;
+  color: var(--clinic-yours);
+}
+
+/* `.cl-agent span` is 0-1-1, so the tag needs 0-2-0 to win the colour — not a nested selector for
+   its own sake. --clinic-muted on --clinic-yours-wash: 5.44:1. */
+.cl-agent .cl-agent__via {
+  color: var(--clinic-muted);
+  font-weight: 400;
+}
+
+.cl-dock__via {
+  color: var(--clinic-dock-muted); /* 6.83:1 on --clinic-dock-bg */
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+/* Confirm your way (WCAG 2.5.4, 2.1.1). The key is one route into the act and never the only one,
+   so the alternatives are named under it instead of left to be discovered. It sits in the dock's
+   own muted ink at the weight of the minor controls beside it — a note, not a second instruction. */
+.cl-dock__ways {
+  margin: 0;
+  max-width: 30rem;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--clinic-dock-muted);
 }

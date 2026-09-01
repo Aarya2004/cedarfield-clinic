@@ -27,15 +27,16 @@
  * `driver.confirm()`, `driver.cancel()` or `driver.move()` — the prepare_* tools only ARM the dock.
  * Booking stays where it belongs: the human's own key press, on the page, gated on a trusted event.
  *
- * The indicator is intentionally quiet — one muted mono line, `data-clinic-tools` on it for the
- * headless drive, `title` carrying the tool names for a curious human. It says what is true: the
- * count when registration succeeded, and plain language when this browser has no model context.
+ * ── WHY IT RENDERS NOTHING (SPEC-V3 §1) ─────────────────────────────────────────────────────────
+ * It used to print "Site tools · N" in the masthead. A clinic booking page does not narrate its own
+ * integrations to a patient, so the line is gone. The element stays — hidden, empty — because the
+ * registration state is still worth exposing to the harness and to anyone with dev tools open:
+ * `data-clinic-tools` (registered | unsupported | error) and `data-clinic-tool-count`.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import type { DropDriver } from '../../lib/drop/types.ts';
 import {
-  CLINIC_TOOL_NAMES,
   registerClinicTools,
   type ClinicRegistrationState,
   type ClinicToolsView,
@@ -58,23 +59,6 @@ export interface ClinicToolsProps {
   onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
   /** The act the dock is armed for right now — so clinic_hold_status never misdescribes the press. */
   armedAct?: 'cancel' | 'move' | null;
-}
-
-// Same fallbacks as the rest of the drop skin (components/drop/drop-tokens.css), so this line is
-// legible with or without that stylesheet and identical to the board when both are present.
-const MUTED = 'var(--drop-muted, #555c62)';
-const MONO = 'var(--drop-font-mono, var(--font-mono), ui-monospace, monospace)';
-
-function label(state: ClinicRegistrationState): string {
-  switch (state.kind) {
-    case 'registered':
-      return `Site tools · ${state.names.length}`;
-    case 'unsupported':
-      // Honest: nothing is listening, so we do not print a count as if something were.
-      return 'Site tools · not offered by this browser';
-    case 'error':
-      return 'Site tools · registration failed';
-  }
 }
 
 export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCancel, onPrepareMove, armedAct = null }: ClinicToolsProps) {
@@ -114,24 +98,14 @@ export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCance
     };
   }, []);
 
+  // `hidden` rather than a class: this mount point has no stylesheet of its own, and the attribute
+  // takes it out of the accessibility tree as well as the layout while leaving the hooks queryable.
   return (
-    <p
+    <span
+      hidden
       data-clinic-tools={state.kind}
       data-clinic-tool-count={state.kind === 'registered' ? state.names.length : 0}
-      title={
-        `WebMCP tools published by this page: ${CLINIC_TOOL_NAMES.join(', ')}. ` +
-        'None of them can book — only you can.' +
-        (state.kind === 'error' ? ` Registration failed: ${state.message}` : '')
-      }
-      style={{
-        margin: 0,
-        font: `400 0.75rem/1.4 ${MONO}`,
-        letterSpacing: '0.02em',
-        color: MUTED,
-      }}
-    >
-      {label(state)}
-    </p>
+    />
   );
 }
 

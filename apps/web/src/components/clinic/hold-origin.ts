@@ -1,14 +1,14 @@
 /**
- * Who took this hold — the "an agent is here" affordance (SPEC-V1 §5, brief item 5).
+ * Who asked for this hold (SPEC-V3 §2).
  *
  * A hold arrives at the page as a `hold_started` event and the event does not say who asked for it.
- * It is the same event whether a human clicked a row or a WebMCP tool called `clinic_hold_slot`,
- * because the driver seam deliberately has one verb. But the two cases have to READ differently on
- * screen: if your agent did it, the page owes you a sentence saying so, and the dock's whole
- * argument ("it held the slot, it cannot press the key") only lands when the page names the actor.
+ * It is the same event whether the visitor clicked a row or their assistant called
+ * `clinic_hold_slot`, because the driver seam deliberately has one verb. The page still owes the
+ * visitor the distinction: a time held on their behalf carries a small "via your assistant" tag, the
+ * way any product with an assistant integration would say so.
  *
  * So the page records the instant a local control asked for a hold, and this module decides: a hold
- * that starts without a recent local request came from somewhere else — the agent.
+ * that starts without a recent local request was asked for somewhere else.
  *
  * Pure, no DOM, relative imports: unit-testable under `node --test` (tickets/MAP.md).
  */
@@ -42,25 +42,21 @@ export function holdOrigin(
 }
 
 /**
- * The line the board strip and the dock eyebrow both carry — the sentence the brief asks for,
- * verbatim: "Held by your agent — 0:41 · one keypress books it".
+ * The line the strip above the board carries while a time is reserved: the promise, then the clock.
+ * Origin-free on purpose — the hold reads the same to the visitor however it was asked for, and the
+ * tag below is what names the assistant.
  */
-export function holdHeadline(origin: HoldOrigin, secondsLeft: number): string {
-  const clock = formatClock(secondsLeft);
-  const who = origin === 'agent' ? 'Held by your agent' : 'Held for you';
-  return `${who} — ${clock} · one keypress books it`;
-}
-
-/** The gutter word beside the held row. Short enough for the label column at 390px. */
-export function holdGutterLabel(origin: HoldOrigin): string {
-  return origin === 'agent' ? 'Held — your agent' : 'Held — yours';
+export function holdHeadline(secondsLeft: number): string {
+  return `This time is held for you — ${formatClock(secondsLeft)}`;
 }
 
 /**
- * What the strip above the board says when an agent hold is live. Announced once (politely), not
- * per tick, so the seconds are deliberately absent from this sentence.
+ * The tag a hold placed by the visitor's assistant carries — on the board row and in the dock. Small
+ * and factual: the visitor should know how the time got reserved without being lectured about it.
  */
-export function agentArrivalAnnouncement(origin: HoldOrigin, timeLabel: string): string | null {
-  if (origin !== 'agent') return null;
-  return `Your agent holds ${timeLabel}. Press Enter to book it — your agent cannot.`;
+export const ASSISTANT_TAG = 'via your assistant';
+
+/** The tag for this hold, or null when the visitor reserved the time themselves. */
+export function assistantTag(origin: HoldOrigin): string | null {
+  return origin === 'agent' ? ASSISTANT_TAG : null;
 }
