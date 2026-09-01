@@ -38,7 +38,7 @@ export function ClinicLanding() {
             For millions of people, each one is expensive. This page hands the structure to your
             agent — and leaves you <em>the one act that must stay yours</em>.
           </p>
-          <p className="cl-rise" data-step="3" style={{ marginTop: '2rem' }}>
+          <p className="cl-rise cl-hero-cta" data-step="3">
             <Link className="cl-cta" href="/clinic/book" data-clinic-cta="hero">
               Open the booking page
               <span aria-hidden="true">→</span>

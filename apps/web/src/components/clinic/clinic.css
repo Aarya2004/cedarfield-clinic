@@ -189,6 +189,12 @@
   color: var(--clinic-yours);
 }
 
+/* The step line inside the manual panel wears the gutter's type but not its top pad: it is the
+   first thing in a panel that already has padding, not a word pinned beside a band. */
+.cl-band__label--flush {
+  padding-top: 0;
+}
+
 /* Two classes on purpose. Every block below sets `margin: 0` from its own single-class rule, and a
    single-class rule declared later in the file would win the tie and collapse the band's rhythm. */
 .cl-band > .cl-band__body > * + * {
@@ -207,6 +213,12 @@
   margin-top: 1.9rem;
   padding-top: 1.1rem;
   border-top: 1px solid var(--clinic-rule);
+}
+
+/* The one CTA above the fold stands further off its paragraph than the band's rhythm gives, and it
+   has to be written at this specificity or the rule two blocks up wins the tie. */
+.cl-band > .cl-band__body > * + .cl-hero-cta {
+  margin-top: 2rem;
 }
 
 .cl-prose {
@@ -381,6 +393,17 @@
   color: var(--clinic-ink);
   text-decoration-color: var(--clinic-rule-strong);
   text-underline-offset: 0.25em;
+}
+
+/* "Hide this" in the lost-slot rail is a button, because it acts on this page and goes nowhere.
+   It should still read as part of the sentence it ends, so the button chrome is taken off here
+   rather than in a style attribute on the element (DESIGN.md, presentation lives in this file). */
+button.cl-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
 }
 
 .cl-link:hover {
@@ -662,6 +685,16 @@ button.cl-row__inner:hover .cl-row__action {
   background: var(--clinic-sheet);
 }
 
+/* The panel's own rhythm. Its children are grandchildren of `.cl-band__body`, so the band's
+   `> * + *` rules never reach them and these two are what set the vertical spacing inside a step. */
+.cl-panel__lead {
+  margin-top: 0.5rem;
+}
+
+.cl-panel__block {
+  margin-top: 1.35rem;
+}
+
 .cl-chosen {
   display: flex;
   flex-wrap: wrap;
@@ -695,6 +728,11 @@ button.cl-row__inner:hover .cl-row__action {
   display: block;
   font-size: 0.9375rem;
   font-weight: 600;
+}
+
+/* "(optional)" is part of the label but not part of the ask, so it drops the label's weight. */
+.cl-field__optional {
+  font-weight: 400;
 }
 
 .cl-field__hint {
@@ -741,6 +779,7 @@ button.cl-row__inner:hover .cl-row__action {
 }
 
 .cl-summary {
+  margin-top: 1.5rem;
   padding: 1rem 1.1rem;
   border: 2px solid var(--clinic-alert);
   border-radius: 2px;
@@ -998,6 +1037,13 @@ button.cl-row__inner:hover .cl-row__action {
   text-wrap: balance;
 }
 
+/* The clinician and the kind, set back from the time they belong to so the headline reads as one
+   sentence with one emphasis. Held down by opacity rather than a second ink: the dock's family has
+   exactly one muted, and it is already carrying the note underneath. 6.3:1 on --clinic-dock-bg. */
+.cl-dock__detail {
+  opacity: 0.62;
+}
+
 .cl-dock__note {
   margin: 0.5rem 0 0;
   max-width: 46ch;
@@ -1137,6 +1183,20 @@ button.cl-row__inner:hover .cl-row__action {
 
 .cl-dock__blocked[data-hot='true'] {
   color: var(--clinic-dock-alert);
+}
+
+/* The camera dwell's slot (GESTURE.md; absent unless NEXT_PUBLIC_DROP_GESTURE=1). It takes a whole
+   row under the act rather than a fourth column, so the sentence, the seconds and the key keep the
+   widths they have when the flag is off — turning the gesture on must not re-lay-out the one act.
+   It paints from the dock's own family, like everything else inside the dark object. */
+.cl-dock__gesture {
+  flex: 1 0 100%;
+  margin-top: 0.2rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--clinic-dock-edge);
+  color: var(--clinic-dock-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
 
 /* Space the page keeps free so the dock never covers the last row of the sheet. */

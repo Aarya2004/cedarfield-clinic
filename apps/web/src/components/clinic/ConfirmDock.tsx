@@ -199,7 +199,7 @@ export function ConfirmDock({
             {origin === 'agent' ? copy.eyebrowAgent : copy.eyebrowYou}
           </p>
           <p className="cl-dock__line">
-            {copy.line} {slotLabel} <span style={{ opacity: 0.62 }}>· {slotDetail}</span>
+            {copy.line} {slotLabel} <span className="cl-dock__detail">· {slotDetail}</span>
           </p>
           <p className="cl-dock__note">
             {act === 'book'

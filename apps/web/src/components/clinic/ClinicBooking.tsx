@@ -413,7 +413,6 @@ export function ClinicBooking() {
                 <button
                   type="button"
                   className="cl-link"
-                  style={{ background: 'none', border: 0, font: 'inherit', cursor: 'pointer', padding: 0 }}
                   data-clinic-action="dismiss-lost"
                   onClick={() => dispatch({ type: 'dismiss_lost' })}
                 >

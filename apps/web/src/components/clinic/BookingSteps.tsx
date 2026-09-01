@@ -113,15 +113,15 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
 
   return (
     <div className="cl-panel" data-clinic-flow={state.step} data-clinic-slots-lost={state.slotsLost}>
-      <p className="cl-band__label" style={{ paddingTop: 0 }}>
+      <p className="cl-band__label cl-band__label--flush">
         {position === null ? STEP_TITLE[state.step] : `Step ${position} of ${STEP_ORDER.length}`}
       </p>
-      <h2 className="cl-lead" ref={headingRef} tabIndex={-1} style={{ marginTop: '0.5rem' }}>
+      <h2 className="cl-lead cl-panel__lead" ref={headingRef} tabIndex={-1}>
         {STEP_TITLE[state.step]}
       </h2>
 
       {selected !== undefined && state.step !== 'booked' ? (
-        <div className="cl-chosen" style={{ marginTop: '1.35rem' }}>
+        <div className="cl-chosen cl-panel__block">
           <span className="cl-chosen__time">{selected.timeLabel}</span>
           <span className="cl-chosen__who">
             {selected.clinician} · {selected.kind}
@@ -131,7 +131,7 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
 
       {state.step === 'detail' && selected !== undefined ? (
         <div data-clinic-step="detail">
-          <p className="cl-prose" style={{ marginTop: '1.35rem' }}>
+          <p className="cl-prose cl-panel__block">
             Cedarfield needs a few details before it can put this time in the book. It takes about a
             minute, and nothing holds the appointment for you while you fill it in — that is how
             first-come booking works, here and everywhere.
@@ -174,7 +174,6 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
               tabIndex={-1}
               role="alert"
               data-clinic-errors={errorFields.length}
-              style={{ marginTop: '1.5rem' }}
             >
               <h3>{errorFields.length === 1 ? 'There is a problem' : 'There are problems'}</h3>
               <ul>
@@ -210,7 +209,7 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
                 <div key={field} className="cl-field" data-invalid={error !== undefined ? 'true' : 'false'}>
                   <label htmlFor={id}>
                     {meta.label}
-                    {meta.optional ? <span style={{ fontWeight: 400 }}> (optional)</span> : null}
+                    {meta.optional ? <span className="cl-field__optional"> (optional)</span> : null}
                   </label>
                   {meta.hint ? (
                     <p className="cl-field__hint" id={`${id}-hint`}>
@@ -304,14 +303,14 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
       ) : null}
 
       {state.step === 'booking' ? (
-        <p className="cl-prose" role="status" data-clinic-step="booking" style={{ marginTop: '1.35rem' }}>
+        <p className="cl-prose cl-panel__block" role="status" data-clinic-step="booking">
           Sending your booking…
         </p>
       ) : null}
 
       {state.step === 'booked' ? (
         <div data-clinic-step="booked">
-          <p className="cl-prose" style={{ marginTop: '1.35rem' }}>
+          <p className="cl-prose cl-panel__block">
             {state.details.fullName.trim() === '' ? 'The patient' : state.details.fullName} is booked
             in. Cedarfield asks that you arrive ten minutes early, and calls the number you gave if
             anything has to move.
