@@ -70,8 +70,20 @@ export interface LiveMeta {
   nextWaveAt: number | null;
   /** Signed in and first board loaded. The page renders a quiet connecting line until true. */
   ready: boolean;
-  /** The last verb refusal, for anyone debugging with the console open. Never rendered as UI. */
+  /** The last verb refusal — a friendly sentence the page shows once, plus the raw code. */
   lastError: string | null;
+  /** Bumps on every refusal so the page can show the same sentence twice if it happens twice. */
+  errorSeq: number;
+}
+
+/** What the person is told when the database says no. Specific, calm, never a stack trace. */
+export function refusalSentence(raw: string): string {
+  if (raw.includes('slot_unavailable')) return 'Someone else got there first. Pick another time.';
+  if (raw.includes('not_your_hold')) return 'The hold ran out before the press landed. Hold it again.';
+  if (raw.includes('not_your_booking')) return 'That appointment is no longer yours to change.';
+  if (raw.includes('nothing_held')) return 'There was no hold to give back.';
+  if (raw.includes('sign_in')) return 'Could not reach the live board. Reload to try again.';
+  return 'That did not go through. The board has been refreshed.';
 }
 
 export interface LiveDriver extends DropDriver {
@@ -89,9 +101,14 @@ export function createSupabaseDriver(): LiveDriver {
   const subscribers = new Set<(e: DropEvent) => void>();
   let slots: Slot[] = [];
   let myHold: { slotId: string; expiresAt: number } | null = null;
-  let meta: LiveMeta = { waveStartedAt: null, nextWaveAt: null, ready: false, lastError: null };
+  let meta: LiveMeta = { waveStartedAt: null, nextWaveAt: null, ready: false, lastError: null, errorSeq: 0 };
   let disposed = false;
   let refreshing = false;
+  let dirty = false;
+  // server clock − client clock. Every server timestamp is shifted by this before it meets
+  // Date.now(): a visitor whose laptop runs 20 s fast still sees a 45 s hold, not a 25 s one.
+  let skewMs = 0;
+  const toClient = (iso: string) => Date.parse(iso) - skewMs;
 
   const emit = (e: DropEvent) => {
     for (const cb of subscribers) cb(e);
@@ -102,7 +119,7 @@ export function createSupabaseDriver(): LiveDriver {
     if (data.session) return true;
     const { error } = await client.auth.signInAnonymously();
     if (error) {
-      meta = { ...meta, lastError: `sign_in: ${error.message}` };
+      meta = { ...meta, lastError: `sign_in: ${error.message}`, errorSeq: meta.errorSeq + 1 };
       return false;
     }
     return true;
@@ -111,7 +128,9 @@ export function createSupabaseDriver(): LiveDriver {
   const rpc = async (fn: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: string | null }> => {
     if (!(await ensureAuth())) return { data: null, error: meta.lastError };
     const { data, error } = await client.rpc(fn, args);
-    if (error) meta = { ...meta, lastError: `${fn}: ${error.message}` };
+    // clinic_board failing is connectivity, not a refusal of anything the person did
+    if (error && fn !== 'clinic_board') meta = { ...meta, lastError: `${fn}: ${error.message}`, errorSeq: meta.errorSeq + 1 };
+    if (error && fn === 'clinic_board') meta = { ...meta, lastError: `${fn}: ${error.message}` };
     return { data, error: error?.message ?? null };
   };
 
@@ -121,18 +140,23 @@ export function createSupabaseDriver(): LiveDriver {
    * BEFORE the resync is what keeps the TTL arithmetic alive across refreshes.
    */
   const refresh = async (): Promise<void> => {
-    if (disposed || refreshing) return;
+    if (disposed) return;
+    if (refreshing) {
+      dirty = true; // a ping landed mid-read: read again when this one finishes, never drop it
+      return;
+    }
     refreshing = true;
     try {
       const { data, error } = await rpc('clinic_board');
       if (error || !data) return;
       const board = data as Board;
       const now = Date.now();
+      skewMs = Date.parse(board.server_now) - now;
       const next = board.slots.map(rowToSlot);
       const mine = board.slots.find((r) => r.yours_held && r.state === 'held');
 
       if (mine && mine.hold_expires_at) {
-        const expiresAt = Date.parse(mine.hold_expires_at);
+        const expiresAt = toClient(mine.hold_expires_at);
         if (myHold?.slotId !== mine.id) {
           emit({ type: 'hold_started', slotId: mine.id, ttlSeconds: HOLD_TTL_SECONDS, at: expiresAt - HOLD_TTL_SECONDS * 1000 });
         }
@@ -157,14 +181,18 @@ export function createSupabaseDriver(): LiveDriver {
 
       slots = next;
       meta = {
-        waveStartedAt: Date.parse(board.wave_started_at),
-        nextWaveAt: Date.parse(board.next_wave_at),
+        ...meta,
+        waveStartedAt: toClient(board.wave_started_at),
+        nextWaveAt: toClient(board.next_wave_at),
         ready: true,
-        lastError: meta.lastError,
       };
       emit({ type: 'drop_wave', slots: next.map((s) => ({ ...s })), at: now });
     } finally {
       refreshing = false;
+      if (dirty && !disposed) {
+        dirty = false;
+        void refresh();
+      }
     }
   };
 

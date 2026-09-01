@@ -42,9 +42,9 @@ import {
   type ManualFlowAction,
 } from '../../lib/drop/manual-flow.ts';
 import { createMockDriver } from '../../lib/drop/mock-driver.ts';
-import { createSupabaseDriver, type LiveDriver } from '../../lib/drop/supabase-driver.ts';
+import { createSupabaseDriver, refusalSentence, type LiveDriver } from '../../lib/drop/supabase-driver.ts';
 import { formatClock } from '../../lib/drop/time.ts';
-import type { DropDriver } from '../../lib/drop/types.ts';
+import type { DropDriver, Slot } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
@@ -111,6 +111,18 @@ function wantsLiveBoard(): boolean {
   return !new URLSearchParams(window.location.search).has('test');
 }
 
+/** What the page runs on for the frame(s) before the live driver exists. Does nothing, honestly. */
+const INERT_DRIVER: DropDriver & { snapshot(): { slots: Slot[]; hold: null } } = {
+  subscribe: () => () => {},
+  hold: () => {},
+  book: () => {},
+  confirm: () => {},
+  release: () => {},
+  cancel: () => {},
+  move: () => {},
+  snapshot: () => ({ slots: [], hold: null }),
+};
+
 /** How long a prepared cancel stays armed before the page quietly stands down. */
 const PENDING_ACT_TTL_SECONDS = 45;
 
@@ -131,29 +143,35 @@ export function ClinicBooking() {
   // the seeded board — the same complete product, minus other people. Never a hung page.
   const [liveFailed, setLiveFailed] = useState(false);
   const live = wantLive && !liveFailed;
-  const liveDriver = useRef<LiveDriver | null>(null);
-  if (live && liveDriver.current === null && typeof window !== 'undefined') {
-    liveDriver.current = createSupabaseDriver();
-  }
-  useEffect(() => () => liveDriver.current?.dispose(), []);
+  // The live driver is born in an effect, not in render: React may mount, unmount and remount a
+  // component (StrictMode does exactly that), and a driver disposed by the first unmount must not
+  // survive as a corpse in a ref. Until it exists the page runs on an inert driver — no slots, the
+  // "connecting" line — which is also what the server-rendered HTML shows.
+  const [liveDriver, setLiveDriver] = useState<LiveDriver | null>(null);
   useEffect(() => {
     if (!live) return;
+    const d = createSupabaseDriver();
+    setLiveDriver(d);
     const grace = setTimeout(() => {
-      if (!liveDriver.current?.meta().ready) {
+      if (!d.meta().ready) {
         // One line in the console for whoever debugs it; the page itself just keeps working.
-        console.warn('[cedarfield] live board unavailable, using the seeded board:', liveDriver.current?.meta().lastError);
-        liveDriver.current?.dispose();
-        liveDriver.current = null;
+        console.warn('[cedarfield] live board unavailable, using the seeded board:', d.meta().lastError);
         setLiveFailed(true);
       }
     }, 6000);
-    return () => clearTimeout(grace);
+    return () => {
+      clearTimeout(grace);
+      d.dispose();
+      setLiveDriver(null);
+    };
   }, [live]);
   const mockDriver = useMemo(
     () => (live ? null : createMockDriver({ seed: waveSeed(wave), scenario: 'hold-and-book', overrides: WAVE_OVERRIDES })),
     [live, wave],
   );
-  const driver = live ? liveDriver.current! : mockDriver!;
+  const driver: DropDriver & { snapshot(): { slots: Slot[]; hold: { slotId: string } | null } } = live
+    ? (liveDriver ?? INERT_DRIVER)
+    : mockDriver!;
   // A real driver has no clock: events carry epoch `at` and `now` is Date.now() (useDropSession's
   // own contract). The simulated driver still doubles as the clock it always was.
   const session = useDropSession(driver, { running: true, clock: live ? null : (driver as ReturnType<typeof createMockDriver>) });
@@ -416,7 +434,7 @@ export function ClinicBooking() {
   const heldSlot = session.held === null ? undefined : findSlot(session.slots, session.held.slotId);
   // Live: the release schedule is the server's and it waits for nobody — anything booked is yours
   // across waves, which is what the copy says. Seeded: the swap defers while this visitor is busy.
-  const liveMeta = live ? liveDriver.current?.meta() : undefined;
+  const liveMeta = live ? liveDriver?.meta() : undefined;
   const nextRelease = live
     ? liveMeta?.nextWaveAt != null
       ? Math.max(0, liveMeta.nextWaveAt - Date.now())
@@ -465,6 +483,12 @@ export function ClinicBooking() {
                   : `Next release in ${formatClock(nextRelease / 1000)}. A release replaces the board; anything you have booked is already yours.`}
             </p>
           </Band>
+
+          {liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError ? (
+            <p className="cl-lost" role="status" data-clinic-refusal={liveMeta.errorSeq} key={liveMeta.errorSeq}>
+              {refusalSentence(liveMeta.lastError)}
+            </p>
+          ) : null}
 
           {arrival !== null && heldSlot ? (
             <p className="cl-agent" role="status" data-clinic-agent-strip>
