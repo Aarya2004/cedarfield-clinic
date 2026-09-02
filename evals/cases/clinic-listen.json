@@ -1,0 +1,42 @@
+[
+  {"_doc": ["clinic-listen — the page makes the person legible to the agent (2026-09-02).",
+            "At load there is no clinic_wait_for_request. The person types a request into the page (the",
+            "typed fallback; speech and signs feed the same queue): the tool is born, the agent's call",
+            "returns the person's words with via:typed, a second call with nothing said returns request:null",
+            "after the timeout, and 'stop' tells the agent to stop looping. Counts stay as other cases",
+            "expect (9 at load on the seeded board) because nothing listens until the person acts."]},
+  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
+  {"waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", "timeout": 15000},
+  {"list": true},
+  {"expect": {"noTool": "clinic_wait_for_request"}},
+  {"eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')", "equals": "9"},
+  {"eval": "document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen')", "equals": "idle"},
+
+  {"_doc": "The person types to the page (a trusted keystroke path is not required for a request — it is content, not consent)."},
+  {"focus": "[data-clinic-listen-typed]"},
+  {"type": "hold me the earliest appointment"},
+  {"focus": "[data-clinic-listen-send]"},
+  {"type": "\r"},
+  {"waitFor": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending')) === 1", "timeout": 4000},
+  {"eval": "(document.querySelector('[data-clinic-heard=\"typed\"]')?.textContent ?? '')", "matches": "hold me the earliest appointment"},
+  {"waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'", "timeout": 8000},
+  {"list": true},
+  {"expect": {"tool": "clinic_wait_for_request"}},
+
+  {"_doc": "The agent asks: it gets the person's words, and is told to loop."},
+  {"invoke": "clinic_wait_for_request", "input": {"timeout_seconds": 5}, "outputMatches": "hold me the earliest appointment[\\s\\S]*via.{0,4}:.{0,3}typed[\\s\\S]*call clinic_wait_for_request again"},
+  {"eval": "(document.querySelector('[data-clinic-call=\"ok\"]')?.textContent ?? '')", "matches": "heard you: “hold me the earliest appointment”"},
+  {"shot": "docs/evidence/clinic/listen-handed-over.png"},
+
+  {"_doc": "Nothing pending, nothing said: the tool waits the asked second and answers honestly. The queue drained, so the tool dies."},
+  {"waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '9'", "timeout": 8000},
+  {"expect": {"noTool": "clinic_wait_for_request"}},
+
+  {"_doc": "'stop' ends the loop."},
+  {"focus": "[data-clinic-listen-typed]"},
+  {"type": "stop"},
+  {"focus": "[data-clinic-listen-send]"},
+  {"type": "\r"},
+  {"waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'", "timeout": 8000},
+  {"invoke": "clinic_wait_for_request", "input": {"timeout_seconds": 5}, "outputMatches": "The person said stop"}
+]

@@ -118,14 +118,22 @@ is always one trusted press from you.
 | `clinic_prepare_move` | ❌ | Freezes the target slot and **arms** the dock. One trusted press swaps atomically |
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists, what exists now, and what your press will create |
 | *born by your grant:* `clinic_book_slot` | ❌ | Books **one** slot for you — exists only while the permission you pressed for stands (ten minutes), and dies with the booking |
+| *born while the page listens:* `clinic_wait_for_request` | ✅ | Hands the agent the next thing you **said, signed or typed to the page** (waits up to a minute). The agent loops: wait, act, wait. You never type into its window |
 | *born by your press:* `clinic_my_appointment` | ✅ | Your booking(s), newest first — exists only while you have one |
 | *shared board only:* `clinic_join_waitlist` | ❌ | Puts your human **in line** for a taken slot. If it comes back, it is theirs first — as a fresh hold, in order. Reversible |
 | *shared board only:* `clinic_leave_waitlist` | ❌ | Takes them out of the line |
 
 **Counted honestly:** nine tools on the seeded board (`?test=1`), **eleven on the shared board** every
-real visitor is on (the two queue verbs), **twelve while your permission stands, twelve once you
-have booked** — the booking tool and the appointment tool never coexist, so the twelve-tool cap we
-set ourselves holds. Thirteen names in the vocabulary.
+real visitor is on (the two queue verbs); one more while the page listens for you, one more while
+your permission stands, one more once you have booked. Fourteen names in the vocabulary, at most
+thirteen live at once, well inside Chrome's guidance of about thirty.
+
+**The page makes you legible to the agent.** WebMCP has no page-to-agent push, so a person who
+cannot type into the agent's window would be stuck. "Say it to the page" fixes that: the browser's
+own speech recognizer, a typed line, or five hand signs (thumbs up *yes*, thumbs down *no*, fist
+*stop*, one finger *the first one*, two fingers *another one* — five shapes, not a language) all
+land in one queue, and `clinic_wait_for_request` hands the agent the next one. Tell the agent once,
+"keep helping me with what I say to the page until I say stop", and never touch its window again.
 
 **Both halves of WebMCP, each doing the job it is for.** The tools above are the *imperative* API.
 The patient-details form is also published *declaratively* — `toolname="clinic_booking_form"`,

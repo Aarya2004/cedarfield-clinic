@@ -22,6 +22,20 @@ self-verifying.
       node evals/harness/webmcp-cdp.mjs 'http://localhost:3000/clinic/book?test=1' \
       evals/manual/clinic-gesture-fires.json
 
+## Say it to the page — live speech and signs (a real microphone, a real hand)
+
+CI proves the bridge with the typed line (`clinic-listen.json`). The two live channels:
+
+1. `/clinic/book` in Chrome 152 (or the Codex pane). Press **Listen for me**, allow the microphone.
+   `data-clinic-listen` = `listening`; the tool count ticks up by one (`clinic_wait_for_request`
+   born). Say "hold me the earliest appointment" and pause: the log under the panel reads
+   *Heard “hold me the earliest appointment”*, `data-clinic-listen-pending` = 1.
+2. In the agent (Codex): "keep helping me with what I say to the page until I say stop." Watch the
+   strip: *Your assistant: heard you: “hold me the earliest appointment” (voice)*, then the hold.
+3. Signs: click **Enable camera** on the panel, show a thumbs-up for half a second: the log reads
+   *Signed “yes”*. Thumbs down → "no", fist → "stop", one finger → "the first one", two → "another one".
+4. Say "stop": the agent's next wait returns the stop instruction and it stops looping.
+
 ## Talk to Cedarfield — the live voice loop (needs OPENAI_API_KEY on the deployment)
 
 CI proves the honest degrade (`clinic-voice-unavailable.json`: no key → the panel says so, tools

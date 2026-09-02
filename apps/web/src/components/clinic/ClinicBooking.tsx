@@ -56,6 +56,8 @@ import { AppointmentCard } from './AppointmentCard.tsx';
 import { AssistantGuide } from './AssistantGuide.tsx';
 import { PatientOnFile, validate as validatePatient, writePatient, type PatientOnFileRecord } from './PatientOnFile.tsx';
 import { VoiceAgent, type VoiceExecutor } from './VoiceAgent.tsx';
+import { ListenPanel } from './ListenPanel.tsx';
+import { createRequestQueue } from '../../lib/drop/request-queue.ts';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
 import { SlotSheet } from './SlotSheet.tsx';
@@ -482,7 +484,9 @@ export function ClinicBooking() {
     // bar's cues): a person who cannot watch the page still hears that the assistant acted, and
     // what it did. The page speaks its own record — never the assistant's words.
     try {
-      if (loadAudioPref(window.localStorage) && 'speechSynthesis' in window) {
+      // Never speak what the page just heard: with the recognizer on, the synthesized "heard you:
+      // …" would be transcribed straight back into the queue (2026-09-02 review, P2-2).
+      if (record.name !== 'clinic_wait_for_request' && loadAudioPref(window.localStorage) && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(`Your assistant${record.ok ? '' : ' was refused'}: ${record.summary.replace(/ — /g, '. ').replace(/ · /g, ', ')}`);
         u.rate = 1.05;
@@ -519,6 +523,14 @@ export function ClinicBooking() {
 
   /** The page's own voice client gets the live tool list and execute path from ClinicTools. */
   const [voiceExecutor, setVoiceExecutor] = useState<VoiceExecutor | null>(null);
+
+  // "Say it to the page": what the person says, signs or types, queued for whichever agent asks.
+  // The wait tool is born while the page listens or a request is waiting — the person's press.
+  const requestQueue = useMemo(() => createRequestQueue(), []);
+  const [listenActive, setListenActive] = useState(false);
+  // One microphone consumer at a time: the page's own voice agent and the recognizer exclude each
+  // other, so the agent's speech is never transcribed back as the person's words (review P1-3).
+  const [voiceLive, setVoiceLive] = useState(false);
 
   const [delegation, setDelegationState] = useState<Delegation | null>(null);
   const delegationRef = useRef<Delegation | null>(null);
@@ -559,12 +571,16 @@ export function ClinicBooking() {
       const grant = delegationRef.current;
       if (grant === null || grant.until <= Date.now()) return false;
       if (!requirePatient()) return false;
+      // The grant is spent HERE, synchronously — not when the booking lands. Two calls in the same
+      // tick could otherwise both pass the check and the second would take the one booking
+      // (2026-09-02 review, P2-1). A refused booking leaves the grant spent; the person presses again.
+      setDelegation(null);
       // Zero interactions: the person pressed once, earlier, to grant — the booking itself cost none.
       pendingAgentCount.current = { slotId, count: 0, delegated: true };
       session.confirm(slotId);
       return true;
     },
-    [session, requirePatient],
+    [session, requirePatient, setDelegation],
   );
 
   useEffect(
@@ -716,7 +732,8 @@ export function ClinicBooking() {
           <Band flush wide>
             <PatientOnFile sample={clockOrigin !== 0} onChange={onPatientChange} />
             <AssistantGuide />
-            {VOICE_ENABLED ? <VoiceAgent executor={voiceExecutor} /> : null}
+            <ListenPanel queue={requestQueue} gesture={GESTURE_ENABLED} onActive={setListenActive} disabled={voiceLive} />
+            {VOICE_ENABLED ? <VoiceAgent executor={voiceExecutor} disabled={listenActive} onLiveChange={setVoiceLive} /> : null}
           </Band>
 
           {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (
@@ -826,7 +843,11 @@ export function ClinicBooking() {
                   </button>
                   {/* The open palm grants too: the camera is a physical-presence root, the same one
                       that books, cancels and moves on the docks. Never on by itself — opt-in per visit. */}
-                  {GESTURE_ENABLED ? <GestureConfirm verb="grant" onConfirm={grantByGesture} armed /> : null}
+                  {/* Armed only when no other palm act is live: the dock's palm books, this one grants —
+                      one held palm must never do both (2026-09-02 review, P1-4). */}
+                  {GESTURE_ENABLED ? (
+                    <GestureConfirm verb="grant" onConfirm={grantByGesture} armed={session.held === null && pendingAct === null} />
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -859,6 +880,8 @@ export function ClinicBooking() {
               onCall={noteCall}
               patientOnFile={patient !== null}
               onExecutor={VOICE_ENABLED ? setVoiceExecutor : undefined}
+              requests={requestQueue}
+              listening={listenActive}
             />
           </Band>
 

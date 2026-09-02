@@ -214,7 +214,7 @@ export const FAILURE_COPY: Record<GestureFailure, string> = {
  * The four acts one held palm can perform (SPEC-V2, SPEC-V9): book, cancel, move — and `grant`,
  * which gives the assistant standing permission to book (births `clinic_book_slot`).
  */
-export type GestureVerb = 'book' | 'cancel' | 'move' | 'grant';
+export type GestureVerb = 'book' | 'cancel' | 'move' | 'grant' | 'sign';
 
 /** Every sentence the module says, conjugated once here so no verb is ever misdescribed. */
 export function verbForms(verb: GestureVerb): { infinitive: string; does: string; done: string; keyboard: string } {
@@ -229,6 +229,13 @@ export function verbForms(verb: GestureVerb): { infinitive: string; does: string
         does: 'grants it',
         done: 'Permission given',
         keyboard: 'press the button',
+      };
+    case 'sign':
+      return {
+        infinitive: 'sign to your assistant',
+        does: 'hands it over',
+        done: 'Signed',
+        keyboard: 'type it below',
       };
     case 'book':
     default:

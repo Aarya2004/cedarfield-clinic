@@ -284,7 +284,7 @@ test('schemas are stable: exactly six tools take input, everything else is a bar
   assert.deepEqual(wait.required, ['slot_id']);
   assert.deepEqual((get('clinic_leave_waitlist').inputSchema as { required: string[] }).required, ['slot_id']);
   assert.deepEqual((get('clinic_book_slot').inputSchema as { required: string[] }).required, ['slot_id']);
-  const WITH_INPUT = ['clinic_hold_slot', 'clinic_book_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist'];
+  const WITH_INPUT = ['clinic_hold_slot', 'clinic_book_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist', 'clinic_wait_for_request'];
   for (const def of defs.filter((d) => !WITH_INPUT.includes(d.name))) {
     assert.deepEqual(def.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
   }
@@ -519,6 +519,41 @@ test('no booking tool exists AT LOAD — the one that can book is born only by t
       !/\byou (can|may) (now )?book\b/i.test(d.description),
       `${d.name} must not tell an agent it can book`,
     );
+  }
+});
+
+test('clinic_wait_for_request hands the agent what the person said to the page, and is absent without the queue', async () => {
+  const { mc, regs, live } = fakeMc();
+  const restore = withModelContext(mc);
+  try {
+    const bare = await registerClinicTools(ready().source, () => {});
+    assert.ok(!live().includes('clinic_wait_for_request'), 'no queue seam ⇒ not registered');
+    bare();
+    let waiter: ((r: { at: number; text: string; via: string } | null) => void) | null = null;
+    const requests = {
+      wait: () => new Promise<{ at: number; text: string; via: string } | null>((res) => { waiter = res; }),
+      pending: () => 0,
+    };
+    const base = ready();
+    let listening = false;
+    const src = () => ({ ...base.source(), listening });
+    const dispose = await registerClinicTools(src, () => {}, { requests, watchMs: 5 });
+    assert.ok(!live().includes('clinic_wait_for_request'), 'queue seam but not listening ⇒ not yet');
+    listening = true; // the person pressed "Listen for me"
+    await new Promise((r) => setTimeout(r, 40));
+    assert.ok(live().includes('clinic_wait_for_request'), 'listening ⇒ born');
+    const tool = regs.find((r) => r.tool.name === 'clinic_wait_for_request' && !r.signal?.aborted)!.tool;
+    const p = tool.execute({ timeout_seconds: 5 }) as Promise<{ content: [{ text: string }] }>;
+    await new Promise((r) => setTimeout(r, 5));
+    waiter!({ at: Date.now() - 1000, text: 'hold me the earliest', via: 'voice' });
+    const out = JSON.parse((await p).content[0].text) as { ok: boolean; request: { text: string; via: string }; next_step: string };
+    assert.equal(out.ok, true);
+    assert.equal(out.request.text, 'hold me the earliest');
+    assert.equal(out.request.via, 'voice');
+    assert.match(out.next_step, /call clinic_wait_for_request again/);
+    dispose();
+  } finally {
+    restore();
   }
 });
 

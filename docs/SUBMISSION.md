@@ -28,6 +28,14 @@ only thing that books an appointment is one act from the person the appointment 
 press, one switch press, or one held gesture.** Nothing an agent can call, and nothing a script can
 fake, reaches that step.
 
+**One tool surface, three clients — and the page makes you legible to all of them.** Codex consumes
+these tools from its pane; Chrome 152 exposes them to any agent; the page hosts its own voice agent
+(*Talk to Cedarfield*) over the same tools. And because WebMCP has no page-to-agent push, *Say it
+to the page* fixes the gap for a person who cannot type into an agent's window: the browser's own
+speech recognizer, a typed line, or five hand signs land in one queue, and `clinic_wait_for_request`
+hands the agent the next one. Tell the agent once, "keep helping me with what I say to the page until
+I say stop", and never touch its window again.
+
 **The booking tool is born by your hand.** Press *Let my assistant book for me* (or hold an open
 palm to the camera) and the page births `clinic_book_slot` — one booking, ten minutes. Say *"yes,
 book it"* and the agent books; the page records **0 interactions — under the permission you gave**;

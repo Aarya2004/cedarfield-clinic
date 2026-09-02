@@ -2,6 +2,38 @@
 
 Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, ~09:45–10:30) — independent security review of tonight's surfaces; all eight findings fixed
+- Reviewer (read-only, ran the unit suite and a throwaway race script): P1 anon-callable voice quota
+  with caller-chosen cap; P1 route open to any origin + honest worth of a secret; P1 SECURITY said
+  "no microphone ever" while two mic consumers existed, and the voice agent's speech could be
+  transcribed back as the person's words; P1 one palm could book AND grant in the same second, and
+  the sign panel's camera auto-opened on load; P2 grant race; P2 speech echo; P2 ticket before mic
+  consent; P2 voice calls ignored abort; P3 impossible dates. Every one fixed the same hour:
+  migration `20260902130000_cedarfield_voice_quota_hardening.sql` (service_role only, 6/visitor/day
+  by salted hash, 60/day), route requires `Sec-Fetch-Site: same-origin` and
+  `SUPABASE_SERVICE_ROLE_KEY`, grant card armed only with no hold/act live, `GestureConfirm.autoStart`,
+  page-level mic exclusion (`voiceLive`/`listenActive`), grant spent synchronously, no speech for the
+  wait tool's summary, mic before ticket, AbortController per voice session, calendar-valid DOB.
+  SECURITY §10 rewritten where it was wrong. Verified sound by the reviewer: key handling, RPC
+  race-safety, CSP scoping, the grant's trust root, voice-agent parity, no HTML sinks, PII local only.
+- Suite on the pre-fix tree: 24/24 + axe 0×3 (the bridge itself). Suite on the fixed tree: running
+  at the time of writing; recorded in DROP-STATUS when it lands.
+
+## Build log — Engineer #4 (2026-09-02, ~08:30–09:30) — "Say it to the page": the person made legible to any agent
+- The gap both Codex's analysis and Arav named: WebMCP has no page → agent push, so a judge who cannot
+  type into the agent's window could not drive an external agent from the page. Built as a queue +
+  one read-only tool: `request-queue.ts` (push/take/wait with AbortSignal, bounded, unit-tested);
+  `clinic_wait_for_request` (waits ≤ 60 s for the next thing said/signed/typed, `untrustedContentHint`,
+  tells the agent to loop, "stop" ends it); `ListenPanel.tsx` (browser SpeechRecognition — Chromium,
+  no key — with auto-restart on silence, a typed line, and the sign channel); `GestureConfirm.onSign`
+  (a steady non-palm canned shape → one event; never the act) with five words (yes / no / stop / the
+  first one / another one); a third born set in the reconcile loop (`view.listening`) so the tool
+  exists only while the page listens or a request waits — every other case's counts unchanged.
+- Proof: `clinic-listen.json` 26/26 first run; unit 479/479; added to `verify-deployed` (18 cases).
+  Live speech and signs are physical checks (manual README). README, SECURITY §10, PERSONAS,
+  DROP-STATUS updated; the "twelve-tool cap" claim replaced by the honest count (fourteen names,
+  at most thirteen live, inside Chrome's ~30 guidance).
+
 ## Build log — Engineer #4 (2026-09-02, ~07:30–08:30) — "Talk to Cedarfield": the page's own voice client
 - Arav's decision after the Codex test: a person with no hands must be able to speak to the page
   and hear it. Codex has no Voice Mode; so the page hosts its own voice agent (OpenAI Realtime over

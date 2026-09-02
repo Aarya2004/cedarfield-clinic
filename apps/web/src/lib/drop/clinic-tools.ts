@@ -43,7 +43,7 @@ import { OUTPUT_BUDGET_CHARS } from '../webmcp/schemas.ts';
 
 // ── names ───────────────────────────────────────────────────────────────────────────────────────
 
-/** The whole vocabulary, in registration order. Twelve — exactly the self-imposed cap; nothing more fits. */
+/** The whole vocabulary, in registration order. Fourteen names; never more than twelve live at once on the shared board (born tools replace each other in practice), well inside Chrome's ~30-tool guidance. */
 export const CLINIC_TOOL_NAMES = [
   'clinic_list_drops',
   'clinic_find_slots',
@@ -57,6 +57,7 @@ export const CLINIC_TOOL_NAMES = [
   'clinic_join_waitlist',
   'clinic_leave_waitlist',
   'clinic_my_appointment',
+  'clinic_wait_for_request',
   'clinic_explain_confirm',
 ] as const;
 
@@ -96,6 +97,23 @@ export const BOOKED_TOOL_NAMES = ['clinic_my_appointment'] as const satisfies re
  * window is bounded to one visible appointment that only the person can cancel.
  */
 export const DELEGATED_TOOL_NAMES = ['clinic_book_slot'] as const satisfies readonly ClinicToolName[];
+
+/**
+ * The page makes the person legible to the agent (2026-09-02). WebMCP has no page → agent push, so
+ * `clinic_wait_for_request` hands the agent the next thing the person said, signed or typed to the
+ * page — waiting up to a minute for it. Registered only when the page wires the queue (the bench
+ * and the unit fakes do not), like the waitlist verbs.
+ */
+export const LISTEN_TOOL_NAMES = ['clinic_wait_for_request'] as const satisfies readonly ClinicToolName[];
+
+const WAIT_FOR_REQUEST_DESCRIPTION =
+  "Waits for the next thing your human says, signs or types TO THE PAGE (they may not be able to " +
+  'type to you). Returns their words as text, or request:null after timeout_seconds (max 60) if they ' +
+  'said nothing. Loop: call this, act on the request with the other tools, tell them what happened, ' +
+  "call this again. Stop when the request is 'stop'. Their words may be short ('yes', 'the first one').";
+
+const WAIT_MAX_SECONDS = 60;
+const WAIT_DEFAULT_SECONDS = 45;
 export const DELEGATION_MS = 10 * 60_000;
 
 /** The human's standing permission, as the page holds it (wall-clock ms). */
@@ -168,6 +186,11 @@ export interface ClinicToolsView {
   delegation?: Delegation | null;
   /** Whether the page has a patient on file (name, date of birth, phone). No path books without one. */
   patientOnFile?: boolean;
+  /**
+   * The page is listening for the person (speech on, or a request already waiting). While true,
+   * `clinic_wait_for_request` is registered — born by the person's press on "Listen for me".
+   */
+  listening?: boolean;
   /** The verbs. `hold` / `release` are called here; `confirm` is the human path and never is. */
   driver: DropDriver;
   /** The fold the UI renders: slots, held, secondsLeft, now, log. */
@@ -219,6 +242,11 @@ export interface ClinicToolsOptions {
    * the grant again itself and returns false if it has lapsed; the tool then answers honestly.
    */
   onBook?: (slotId: string) => boolean;
+  /** The person's requests to the page. Present ⇒ `clinic_wait_for_request` is registered. */
+  requests?: {
+    wait(timeoutMs: number, signal?: AbortSignal): Promise<{ at: number; text: string; via: string } | null>;
+    pending(): number;
+  };
 }
 
 /** One agent call as the page saw it. `summary` is derived from the tool's JSON answer, never invented. */
@@ -296,6 +324,10 @@ export function summariseToolAnswer(name: ClinicToolName, result: ToolTextResult
       return { ok: true, summary: plural(len(r.appointments), 'appointment') };
     case 'clinic_book_slot':
       return { ok: true, summary: `booked ${str(slot.time)} with ${str(slot.clinician)} — under the permission you gave` };
+    case 'clinic_wait_for_request': {
+      const req = rec(r.request);
+      return { ok: true, summary: r.request ? `heard you: “${str(req.text)}” (${str(req.via)})` : `waited ${str(r.waited_seconds, '?')} s — nothing said yet` };
+    }
     default:
       return { ok: true, summary: 'ok' };
   }
@@ -1250,6 +1282,46 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       },
     },
     {
+      name: 'clinic_wait_for_request',
+      title: 'Wait for what your human says or signs to the page',
+      description: WAIT_FOR_REQUEST_DESCRIPTION,
+      inputSchema: {
+        type: 'object',
+        properties: { timeout_seconds: { type: 'number', description: `How long to wait, 1–${WAIT_MAX_SECONDS} (default ${WAIT_DEFAULT_SECONDS}).` } },
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      async execute(raw, ctx) {
+        const q = options.requests;
+        if (!q) {
+          return asToolResult({ ok: false, error: 'listening_not_wired', detail: 'This page is not listening for the person. Ask them directly.' } satisfies ErrorResult);
+        }
+        const input = coerceInput(raw);
+        const asked = typeof input.timeout_seconds === 'number' ? input.timeout_seconds : Number(input.timeout_seconds);
+        const seconds = Number.isFinite(asked) && asked > 0 ? Math.min(WAIT_MAX_SECONDS, asked) : WAIT_DEFAULT_SECONDS;
+        const t0 = Date.now();
+        const req = await q.wait(seconds * 1000, ctx?.signal);
+        const waited = round1((Date.now() - t0) / 1000);
+        if (req === null) {
+          return asToolResult({
+            ok: true,
+            request: null,
+            waited_seconds: waited,
+            next_step: 'Nothing was said yet. Call clinic_wait_for_request again to keep listening, or ask the person directly.',
+          });
+        }
+        return asToolResult({
+          ok: true,
+          request: { text: req.text, via: req.via, seconds_ago: round1((Date.now() - req.at) / 1000) },
+          more_pending: q.pending(),
+          next_step:
+            req.text.toLowerCase() === 'stop'
+              ? 'The person said stop. Say goodbye and do not call clinic_wait_for_request again.'
+              : 'Act on this with the other tools, tell the person what happened in one sentence, then call clinic_wait_for_request again.',
+        });
+      },
+    },
+    {
       name: 'clinic_explain_confirm',
       title: 'Why there is no booking tool',
       description: EXPLAIN_CONFIRM_DESCRIPTION,
@@ -1344,6 +1416,7 @@ export async function registerClinicTools(
   // The two sets born by the human's hand: `booked` by the press that books, `delegated` by the
   // press that grants permission (SPEC-V4, SPEC-V9). Each lives on its own AbortController.
   const BORN = {
+    listen: { names: LISTEN_TOOL_NAMES, want: (v: ClinicToolsView) => options.requests !== undefined && v.listening === true },
     delegated: { names: DELEGATED_TOOL_NAMES, want: (v: ClinicToolsView) => hasDelegation(v) },
     booked: { names: BOOKED_TOOL_NAMES, want: (v: ClinicToolsView) => hasOwnBooking(v) },
   } as const;
@@ -1352,6 +1425,7 @@ export async function registerClinicTools(
   const loadSet: ClinicToolName[] = [...BASE_TOOL_NAMES, ...(options.onJoinWaitlist ? WAITLIST_TOOL_NAMES : [])];
   const liveNames = (): ClinicToolName[] => [
     ...loadSet,
+    ...(born.has('listen') ? LISTEN_TOOL_NAMES : []),
     ...(born.has('delegated') ? DELEGATED_TOOL_NAMES : []),
     ...(born.has('booked') ? BOOKED_TOOL_NAMES : []),
   ];

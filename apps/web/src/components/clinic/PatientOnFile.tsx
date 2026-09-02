@@ -51,7 +51,9 @@ export function writePatient(p: PatientOnFileRecord | null): void {
 export function validate(p: PatientOnFileRecord): string | null {
   if (p.fullName.trim().length < 2) return 'Enter the patient’s full name, as it appears on their record.';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(p.dateOfBirth.trim())) return 'Enter the date of birth as year, month and day.';
-  if (new Date(p.dateOfBirth) > new Date()) return 'That date of birth is in the future. Check the year.';
+  const dob = new Date(`${p.dateOfBirth.trim()}T12:00:00Z`);
+  if (Number.isNaN(dob.getTime()) || dob.toISOString().slice(0, 10) !== p.dateOfBirth.trim()) return 'That date does not exist. Check the month and day.';
+  if (dob > new Date()) return 'That date of birth is in the future. Check the year.';
   if (p.phone.replace(/\D/g, '').length < 7) return 'Enter a phone number the clinic can call.';
   return null;
 }

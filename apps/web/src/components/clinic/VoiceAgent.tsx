@@ -29,7 +29,7 @@ export interface VoiceExecutor {
   /** The tools that exist right now (born tools included, dead ones excluded). */
   tools: VoiceToolDef[];
   /** Runs a tool through the same path Codex's calls take; returns the JSON text the tool answered. */
-  execute: (name: string, input: unknown) => Promise<string>;
+  execute: (name: string, input: unknown, signal?: AbortSignal) => Promise<string>;
 }
 
 type VoiceState = 'idle' | 'connecting' | 'live' | 'ended' | 'unavailable';
@@ -43,8 +43,23 @@ interface RealtimeEvent {
   error?: { message?: string };
 }
 
-export function VoiceAgent({ executor }: { executor: VoiceExecutor | null }) {
+export interface VoiceAgentProps {
+  executor: VoiceExecutor | null;
+  /** The page's recognizer is listening: this agent must not start (its speech would be heard as the person's). */
+  disabled?: boolean;
+  /** Reports live/not-live so the page can pause the recognizer while the agent talks. */
+  onLiveChange?: (live: boolean) => void;
+}
+
+export function VoiceAgent({ executor, disabled = false, onLiveChange }: VoiceAgentProps) {
   const [state, setState] = useState<VoiceState>('idle');
+  const onLiveRef = useRef(onLiveChange);
+  onLiveRef.current = onLiveChange;
+  useEffect(() => {
+    onLiveRef.current?.(state === 'live' || state === 'connecting');
+  }, [state]);
+  /** Aborts every in-flight tool call (a 60 s wait, say) the moment the session ends. */
+  const callsRef = useRef<AbortController | null>(null);
   const [reason, setReason] = useState<string>('');
   const [said, setSaid] = useState<string>('');
   const [calls, setCalls] = useState(0);
@@ -61,6 +76,8 @@ export function VoiceAgent({ executor }: { executor: VoiceExecutor | null }) {
   const stop = useCallback((why: VoiceState = 'ended', detail = '') => {
     if (capRef.current !== null) clearTimeout(capRef.current);
     capRef.current = null;
+    callsRef.current?.abort();
+    callsRef.current = null;
     dcRef.current?.close();
     dcRef.current = null;
     pcRef.current?.close();
@@ -125,7 +142,7 @@ export function VoiceAgent({ executor }: { executor: VoiceExecutor | null }) {
         }
         let output: string;
         try {
-          output = await ex.execute(item.name, input);
+          output = await ex.execute(item.name, input, callsRef.current?.signal);
         } catch (e) {
           output = JSON.stringify({ ok: false, error: 'tool_failed', detail: e instanceof Error ? e.message : String(e) });
         }
@@ -140,12 +157,22 @@ export function VoiceAgent({ executor }: { executor: VoiceExecutor | null }) {
   );
 
   const start = useCallback(async () => {
-    if (state === 'connecting' || state === 'live') return;
+    if (state === 'connecting' || state === 'live' || disabled) return;
     setState('connecting');
     setReason('');
     setSaid('');
     setCalls(0);
-    // 1. A short-lived secret from our own route (the key never comes here).
+    callsRef.current = new AbortController();
+    // 1. The microphone FIRST — a refusal must not spend a ticket (2026-09-02 review, P2-3).
+    let mic: MediaStream;
+    try {
+      mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      stop('unavailable', 'The microphone was not allowed. Type to your assistant instead.');
+      return;
+    }
+    micRef.current = mic;
+    // 2. A short-lived secret from our own route (the key never comes here).
     let secret: string;
     let model: string;
     try {
@@ -161,15 +188,6 @@ export function VoiceAgent({ executor }: { executor: VoiceExecutor | null }) {
       stop('unavailable', 'Voice is not available right now.');
       return;
     }
-    // 2. The microphone — the browser asks the person; a refusal is stated, not hidden.
-    let mic: MediaStream;
-    try {
-      mic = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      stop('unavailable', 'The microphone was not allowed. Type to your assistant instead.');
-      return;
-    }
-    micRef.current = mic;
     // 3. WebRTC to the Realtime API: our audio up, the agent's audio down, events on a data channel.
     const pc = new RTCPeerConnection();
     pcRef.current = pc;
@@ -207,7 +225,7 @@ export function VoiceAgent({ executor }: { executor: VoiceExecutor | null }) {
     } catch {
       stop('unavailable', 'The voice connection could not be made.');
     }
-  }, [state, stop, onEvent, sendTools]);
+  }, [state, stop, onEvent, sendTools, disabled]);
 
   const live = state === 'live';
   return (
@@ -224,16 +242,18 @@ export function VoiceAgent({ executor }: { executor: VoiceExecutor | null }) {
         </div>
         {live || state === 'connecting' ? (
           <button type="button" className="cl-quiet" data-clinic-voice-stop onClick={() => stop('ended', '')}>
-            Stop listening
+            End the call
           </button>
         ) : (
-          <button type="button" className="cl-cta cl-cta--sm" data-clinic-voice-start onClick={() => void start()} disabled={executor === null}>
+          <button type="button" className="cl-cta cl-cta--sm" data-clinic-voice-start onClick={() => void start()} disabled={executor === null || disabled}>
             Talk to Cedarfield
           </button>
         )}
       </div>
       <p className="cl-voice__status" role="status" data-clinic-voice-status>
-        {state === 'idle'
+        {disabled && state !== 'live' && state !== 'connecting'
+          ? 'Paused while the page is listening for you above — one microphone at a time. Stop listening there to talk to Cedarfield.'
+          : state === 'idle'
           ? 'Press the button, allow the microphone, and speak. It answers out loud.'
           : state === 'connecting'
             ? 'Connecting…'

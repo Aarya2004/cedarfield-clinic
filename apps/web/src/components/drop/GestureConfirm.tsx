@@ -75,6 +75,20 @@ export const MODEL_PATH = '/models/mediapipe/gesture_recognizer.task';
 export interface GestureConfirmProps {
   /** The same callback the keycap fires. Called once per completed dwell. */
   onConfirm: () => void;
+  /**
+   * The sign channel (2026-09-02): a canned shape other than the open palm, held steady for a few
+   * readings, is reported once (category name, e.g. 'Thumb_Up') with a refractory gap. The page maps
+   * five of them to words for the agent. Never fires the act; that stays the palm's.
+   */
+  onSign?: (category: string) => void;
+  /** Reports whether the camera is running (the listen panel counts it as "listening"). */
+  onRunningChange?: (running: boolean) => void;
+  /**
+   * Reopen the lens on mount when the person enabled it before and the browser grant stands.
+   * The docks and the grant card do (the person is mid-act); the sign panel must not — a camera
+   * opening on page load with nothing to confirm is not a promise §10 makes (2026-09-02 review).
+   */
+  autoStart?: boolean;
   /** SPEC-V2/V9: the act one completed dwell performs. Every sentence this module says uses it. */
   verb?: GestureVerb;
   /** Is there a live hold to confirm? A dwell over an idle surface accumulates nothing. */
@@ -97,6 +111,9 @@ const INFER_EVERY_MS = 80;
 
 export function GestureConfirm({
   onConfirm,
+  onSign,
+  onRunningChange,
+  autoStart = true,
   armed,
   verb = 'book',
   wasmBasePath = WASM_BASE_PATH,
@@ -109,6 +126,11 @@ export function GestureConfirm({
   const [modelPct, setModelPct] = useState(0);
   const [failure, setFailure] = useState<GestureFailure | null>(null);
   const [running, setRunning] = useState(false);
+  const onRunningChangeRef = useRef(onRunningChange);
+  onRunningChangeRef.current = onRunningChange;
+  useEffect(() => {
+    onRunningChangeRef.current?.(running);
+  }, [running]);
   const [dwellMs, setDwellMs] = useState(1000);
   const [progress, setProgress] = useState(0);
   const [holding, setHolding] = useState(false);
@@ -140,6 +162,9 @@ export function GestureConfirm({
   // The loop reads these through refs so a re-render never restarts the camera.
   const onConfirmRef = useRef(onConfirm);
   onConfirmRef.current = onConfirm;
+  const onSignRef = useRef(onSign);
+  onSignRef.current = onSign;
+  const signRef = useRef<{ category: string; readings: number; firedAt: number }>({ category: '', readings: 0, firedAt: 0 });
   const armedRef = useRef(armed);
   armedRef.current = armed;
   const configRef = useRef<DwellConfig>({ dwellMs: 1000, graceMs: DEFAULT_GRACE_MS, minScore: DEFAULT_MIN_SCORE });
@@ -210,6 +235,23 @@ export function GestureConfirm({
     // when a hand was present sat on a stale value while a person stood in front of the lens
     // wondering why nothing happened (Arav, 2026-09-02, 05:20). Now the page says so, live.
     if (freshFrame) setSeen(gesture !== null ? `${gesture} ${score.toFixed(2)}` : 'no_hand');
+    // The sign channel: a steady non-palm shape (four readings, ~a third of a second) fires once,
+    // then not again for 1.5 s or until the hand changes. Confidence 0.8, above the canned model's
+    // usual noise floor on a still hand.
+    if (freshFrame && onSignRef.current) {
+      const s = signRef.current;
+      if (gesture !== null && gesture !== 'Open_Palm' && gesture !== 'None' && score >= 0.8) {
+        s.readings = gesture === s.category ? s.readings + 1 : 1;
+        s.category = gesture;
+        if (s.readings === 4 && at - s.firedAt > 1500) {
+          s.firedAt = at;
+          onSignRef.current(gesture);
+        }
+      } else {
+        s.category = '';
+        s.readings = 0;
+      }
+    }
     const step = stepDwell(dwellRef.current, { at, gesture, score, armed: armedRef.current }, configRef.current);
     dwellRef.current = step.state;
     setProgress(dwellProgress(step.state, configRef.current));
@@ -334,7 +376,7 @@ export function GestureConfirm({
         permission = 'unknown'; // Firefox and Safari have no camera permission descriptor
       }
       if (cancelled || startedOnce.current) return;
-      if (shouldAutoStart(pref, permission)) {
+      if (autoStart && shouldAutoStart(pref, permission)) {
         startedOnce.current = true;
         void start();
       }

@@ -81,11 +81,14 @@ export interface ClinicToolsProps {
   onCall?: (record: ToolCallRecord) => void;
   /** Whether the page has a patient on file — the tools say so, and the booking tool refuses without. */
   patientOnFile?: boolean;
+  /** The person's requests to the page, and whether the page is listening right now (births the wait tool). */
+  requests?: ClinicToolsOptions['requests'];
+  listening?: boolean;
   /**
    * The page's own voice client (VoiceAgent) consumes the same tools through the same execute
    * path. Called with the live list after every registration change, and with null on unmount.
    */
-  onExecutor?: (executor: { tools: { name: string; description: string; inputSchema: Record<string, unknown> }[]; execute: (name: string, input: unknown) => Promise<string> } | null) => void;
+  onExecutor?: (executor: { tools: { name: string; description: string; inputSchema: Record<string, unknown> }[]; execute: (name: string, input: unknown, signal?: AbortSignal) => Promise<string> } | null) => void;
 }
 
 export function ClinicTools({
@@ -105,6 +108,8 @@ export function ClinicTools({
   onCall,
   patientOnFile = false,
   onExecutor,
+  requests,
+  listening = false,
 }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
   // SPEC-V8: the page's own record of the agent's calls, newest first. Eight is a screenful; the
@@ -115,11 +120,11 @@ export function ClinicTools({
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
   const waitlistAvailable = onJoinWaitlist !== undefined;
-  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile });
-  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall, onExecutor });
+  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile, listening });
+  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall, onExecutor, requests });
   useEffect(() => {
-    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile };
-    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall, onExecutor };
+    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile, listening };
+    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall, onExecutor, requests };
   });
 
   // The voice client's view of the tools: the same defs, filtered to what is live right now, and an
@@ -136,11 +141,11 @@ export function ClinicTools({
     const live = defsRef.current.filter((d) => (names as readonly string[]).includes(d.name));
     cb({
       tools: live.map((d) => ({ name: d.name, description: d.description, inputSchema: d.inputSchema })),
-      execute: async (name, input) => {
+      execute: async (name, input, signal) => {
         const def = defsRef.current?.find((d) => d.name === name && (names as readonly string[]).includes(d.name));
         if (!def) return JSON.stringify({ ok: false, error: 'no_such_tool', detail: `No tool named ${name} exists right now.` });
         const at = Date.now();
-        const res = await def.execute(input);
+        const res = await def.execute(input, signal ? { signal } : undefined);
         const record = { at, name: def.name, ms: Date.now() - at, ...summariseToolAnswer(def.name, res) };
         seams.current.onCall?.(record);
         setCalls((prev) => [record, ...prev].slice(0, ACTIVITY_ROWS));
@@ -175,6 +180,8 @@ export function ClinicTools({
         settleTimeoutMs: () => seams.current.settleTimeoutMs ?? 1200,
         // SPEC-V9: the booking verb — the tool refuses unless the grant stands; the page re-checks.
         onBook: (id: string) => seams.current.onBook?.(id) ?? false,
+        // The person's requests to the page (the wait tool is born while the page listens).
+        ...(requests ? { requests } : {}),
         onCall: (record: ToolCallRecord) => {
           if (disposed) return;
           seams.current.onCall?.(record);
@@ -206,7 +213,7 @@ export function ClinicTools({
     };
     // The surface itself (which tools exist) is the only dependency; every value the tools READ is
     // a ref (view, seams, budget). A change here re-registers, serialised through the chain.
-  }, [waitlistAvailable]);
+  }, [waitlistAvailable, requests]);
 
   // `hidden` rather than a class: this mount point has no stylesheet of its own, and the attribute
   // takes it out of the accessibility tree as well as the layout while leaving the hooks queryable.
