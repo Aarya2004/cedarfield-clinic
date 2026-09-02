@@ -1,0 +1,11 @@
+Production verification after the clock retune (3 min holds / 6 min waves) + SPEC-V8 activity log
+Run by Arav, 2026-09-02, from the pasted terminal output. Deploy 61K13GhC2kGwQFBfDFjPrq6mTKGC → https://rokan-terminal.vercel.app
+
+verify-deployed: GET / /clinic /clinic/book 200 · 13 cases 0 failed
+  (thesis 47 · voice-tour 10 · cancel 27 · move 25 · agent-edges 18 · responsive 8 · rival-race 9 ·
+   hold-lapses 10 · receipt 10 · landing-frontdoor 4 · landing-phone 8 · chaos 50 · phone-acts 21)
+  axe: 0 violations on all three routes (wcag2a/2aa/21a/21aa/22a/22aa)
+live-two-visitors: 25 steps 0 failed — wave 4967572; B books s2, A's page shows "Another patient"
+  with no reload; A's hold answer carries "ttl_seconds":180,"seconds_left":180; the DB refuses B
+  (slot_unavailable:held, not_your_hold:held); A queues #1; B gives it back; the cascade hands it
+  to A — dock eyebrow "It came back to you · you book it"; B cancels (cleanup).
