@@ -149,6 +149,25 @@ export function AppointmentCard({
         Reference <b data-clinic-reference={reference}>{reference}</b>
       </p>
 
+      {/* One quiet line, because the landing page promises it: "every task is a number of
+          interactions". The number is the page's own measurement (trusted events only), never a
+          claim — and the hooks above carry it for the drive. Arav, 2026-09-02: keep it visible. */}
+      {interactions && (interactions.agent !== null || interactions.hand !== null) ? (
+        <p className="cl-appt__cost" data-clinic-cost>
+          {interactions.agent !== null ? (
+            <span data-lane="agent">
+              {interactions.delegated
+                ? 'Booked by your assistant under the permission you gave — 0 interactions from you.'
+                : `${interactions.agent} ${interactions.agent === 1 ? 'interaction' : 'interactions'} from you once your assistant had held it.`}
+            </span>
+          ) : interactions.hand !== null ? (
+            <span data-lane="hand">
+              {interactions.hand} {interactions.hand === 1 ? 'interaction' : 'interactions'} by hand, counted from arriving on this page.
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+
       <div className="cl-appt__actions">
         {startsAt === null ? null : (
           <button type="button" className="cl-quiet" data-clinic-action="add-to-calendar" onClick={download}>

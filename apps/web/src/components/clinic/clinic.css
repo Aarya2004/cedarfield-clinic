@@ -1601,3 +1601,12 @@ html:has(.cl-dock) {
   margin-top: 1rem;
 }
 
+
+/* --- the one quiet cost line on the appointment card (Arav's ruling, 2026-09-02) ------------- */
+
+.cl-appt__cost {
+  margin: 0.75rem 0 0;
+  font-size: var(--clinic-small);
+  line-height: 1.5;
+  color: var(--clinic-muted);
+}
