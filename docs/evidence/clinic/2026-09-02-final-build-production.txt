@@ -1,0 +1,17 @@
+Production verification after the 2026-09-02 deploy (run by Arav; recorded verbatim).
+Build includes: spec-literate pack (AbortSignal, WebMCP headers, browser-confirmed count),
+SPEC-V6 declarative form, hidden-tab-safe clock, SPEC-V7 hero board, cascade hardening.
+
+verify-deployed (seeded board, ?test=1): 3 routes 200 · thesis 45 · voice-tour 10 · cancel 27 ·
+move 25 · agent-edges 18 · responsive 8 · rival-race 9 · hold-lapses 10 · receipt 10 ·
+landing-frontdoor 4 · landing-phone 8 · chaos 50 · phone-acts 21 — 0 failed · axe 0×3
+DEPLOYED AND VERIFIED — https://rokan-terminal.vercel.app
+
+live-two-visitors (the shared board): B books → A sees "Another patient" in 259 ms; A holds via
+clinic_hold_slot; DB refuses B (slot_unavailable:held / not_your_hold:held); A releases; B holds;
+A's agent joins the line (position 1, "You're #1 in line" on the sheet); B lets go → cascade hands
+it to A in 208 ms, dock arms itself with origin waitlist: "It came back to you · you book it".
+25 steps, 0 failed · 11 tools registered on the live board · cleanup ok
+LIVE BOARD PROVEN WITH TWO VISITORS
+
+Headers on the origin: Permissions-Policy tools=(self) · Origin-Agent-Cluster ?1
