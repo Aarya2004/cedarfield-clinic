@@ -333,3 +333,20 @@ test('a remembered "on" reopens the camera only where the grant already stands',
   assert.equal(shouldAutoStart(true, 'unknown'), false, 'a browser without the Permissions API waits for a click');
   assert.equal(shouldAutoStart(false, 'granted'), false, 'off means off');
 });
+
+// SPEC-V10 §1.8 / §4: two gesture modules can be on one page (a dock and the grant band), so a
+// bare "Enable camera" is ambiguous to Voice Control ("Click Enable camera" → which?). The
+// accessible name keeps the visible text first (WCAG 2.5.3) and says what the palm would do.
+import { cameraControlName } from './gesture-logic.ts';
+
+test('camera controls are named by what the palm would do, visible text first', () => {
+  assert.equal(cameraControlName('Enable camera', 'book'), 'Enable camera to book it');
+  assert.equal(cameraControlName('Camera off', 'cancel'), 'Camera off to cancel it');
+  assert.equal(cameraControlName('Try again', 'move'), 'Try again to move it');
+  assert.equal(cameraControlName('Enable camera', 'grant'), 'Enable camera to let your assistant book');
+});
+
+test('the two modules that can share a page never share a camera-control name', () => {
+  assert.notEqual(cameraControlName('Enable camera', 'book'), cameraControlName('Enable camera', 'grant'));
+  assert.notEqual(cameraControlName('Camera off', 'cancel'), cameraControlName('Camera off', 'grant'));
+});

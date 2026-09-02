@@ -149,7 +149,9 @@ export function SlotSheet({
                   <span className="cl-sr">
                     Book {slot.timeLabel} with {slot.clinician}, {slot.kind}.
                   </span>
-                  {body}
+                  {/* The visible body is presentation: the sentence above IS the accessible name,
+                      short and unique per row, so "Click Book nine twenty" resolves (SPEC-V10). */}
+                  <span aria-hidden="true">{body}</span>
                 </button>
               ) : (
                 <div className="cl-row__inner">{body}</div>

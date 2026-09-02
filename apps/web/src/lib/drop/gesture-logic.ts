@@ -236,6 +236,15 @@ export function verbForms(verb: GestureVerb): { infinitive: string; does: string
   }
 }
 
+/**
+ * Accessible name for the module's buttons (SPEC-V10). Two modules can share a page — a dock and
+ * the grant band — so a bare "Enable camera" is ambiguous to Voice Control. Visible text first
+ * (WCAG 2.5.3), then what the palm would do.
+ */
+export function cameraControlName(visible: string, verb: GestureVerb): string {
+  return `${visible} to ${verbForms(verb).infinitive}`;
+}
+
 export function failureCopy(failure: GestureFailure, verb: GestureVerb = 'book'): string {
   const f = verbForms(verb);
   return `${FAILURE_COPY[failure]} The keyboard still ${f.does.replace(/ it$/, ' this')} — ${f.keyboard}.`;

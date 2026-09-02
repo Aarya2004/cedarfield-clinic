@@ -38,6 +38,7 @@ import {
 import { displaySeconds, fractionLeft } from '../../lib/drop/time.ts';
 import { formatClock } from '../../lib/drop/time.ts';
 import { assistantTag, type HoldOrigin } from './hold-origin.ts';
+import { CONFIRM_KEY, confirmControlName } from './confirm-name.ts';
 
 /** SPEC-V2: which consequential act one trusted press performs. The dock never performs two. */
 export type DockAct = 'book' | 'cancel' | 'move';
@@ -78,21 +79,21 @@ const ACT_COPY: Record<DockAct, { eyebrow: string; line: string; key: string; no
     // already says what is held.
     eyebrow: 'Held for you',
     line: 'Book',
-    key: 'Confirm booking',
+    key: CONFIRM_KEY.book,
     note: 'Confirm and this appointment goes in the book. Let the hold run out and the time goes back on the list.',
     region: 'Confirm your appointment',
   },
   cancel: {
     eyebrow: 'Cancelling this appointment',
     line: 'Cancel',
-    key: 'Confirm cancellation',
+    key: CONFIRM_KEY.cancel,
     note: 'Confirm and this time is released for someone else. Do nothing and the appointment stands.',
     region: 'Confirm the cancellation',
   },
   move: {
     eyebrow: 'Moving this appointment',
     line: 'Move',
-    key: 'Confirm move',
+    key: CONFIRM_KEY.move,
     note: 'Confirm and both times change in one step — the new one is held until you do. Do nothing and the appointment stands.',
     region: 'Confirm the move',
   },
@@ -259,6 +260,10 @@ export function ConfirmDock({
               data-untrusted-attempts={untrusted}
               aria-disabled={!armed}
               aria-describedby="cl-dock-hint"
+              // SPEC-V10: the name carries act + time so Voice Control's "Click Confirm booking
+              // nine twenty" is one unambiguous phrase; the visible text stays the act alone.
+              aria-label={confirmControlName(act, slotLabel)}
+              aria-keyshortcuts="Enter Space"
               onKeyDown={(e) => {
                 if (!isConfirmKey(e.key)) return;
                 // Cancels the page scroll on Space and the UA's synthetic activation click, so one

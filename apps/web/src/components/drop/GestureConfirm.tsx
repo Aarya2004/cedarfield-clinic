@@ -49,6 +49,7 @@ import {
   DWELL_STEP_MS,
   classifyCameraError,
   dwellProgress,
+  cameraControlName,
   failureCopy,
   verbForms,
   type GestureVerb,
@@ -376,16 +377,25 @@ export function GestureConfirm({
 
         <div className="rk-g-controls">
           {state === 'unavailable' ? (
-            <button type="button" className="rk-g-btn" data-gesture-retry onClick={enable}>
+            <button
+              type="button"
+              className="rk-g-btn"
+              data-gesture-retry
+              aria-label={cameraControlName('Try again', verb)}
+              onClick={enable}
+            >
               Try again
             </button>
           ) : null}
+          {/* SPEC-V10: a dock and the grant band can both be on the page, so the name says what the
+              palm would do — "Enable camera to book it" vs "… to let your assistant book". */}
           <button
             type="button"
             className="rk-g-btn"
             data-gesture-toggle
             data-gesture-enable={enabled ? undefined : 'true'}
             aria-pressed={enabled}
+            aria-label={cameraControlName(enabled ? 'Camera off' : 'Enable camera', verb)}
             onClick={enabled ? disable : enable}
           >
             {enabled ? 'Camera off' : 'Enable camera'}
