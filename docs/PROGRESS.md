@@ -1,6 +1,22 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-09-02 (Aarya's Claude, Fable 5.1)** Branch `main`.
+Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
+
+## Build log — Engineer #4 (2026-09-02, ~04:00) — Aarya's eight commits gated; two rulings; production verify widened
+- **Gated Aarya's `2fe4d8d` on this machine:** typecheck 0 · lint 0 · 474/474 unit · **clinic suite
+  21/21** (incl. `clinic-voice-names` 42 steps, `clinic-delegation` 34, the 10-minute soak) · axe 0×3.
+  The reported pre-existing red in `clinic-declarative` did **not** reproduce on the same tree; the
+  step now waits for the counter (`waitFor … === '1'`, 4 s) instead of a 300 ms sleep.
+- **Arav's ruling ("perfect it")**, both in Aarya's lane, both recorded in DROP-STATUS for him:
+  (1) the simulated demand is labelled on the page again — `taken_by_rival` rows read *"No longer
+  available · simulated demand"* (PLAN §0 / SECURITY: labelled wherever it appears); (2) the
+  appointment card carries one quiet measured line again ("Booked by your assistant under the
+  permission you gave — 0 interactions from you" / "N interactions from you once your assistant had
+  held it" / "N interactions by hand…"). Hooks unchanged; `clinic-delegation` asserts the line.
+- **`verify-deployed` now runs 16 cases**: + `clinic-delegation`, `clinic-activity-log`,
+  `clinic-voice-names`.
+- Full suite + axe re-run on the tree with both restorations: see the row in DROP-STATUS (result
+  recorded there when it lands); deploy pair handed to Arav after that.
 
 ## Build log — Aarya's Claude (2026-09-02) — clinic-production merged; the palm books on a real hand
 - **`clinic-production` merged into `main` and pushed** (`bd1e95c`): the practice-website restyle
