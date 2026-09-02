@@ -5,7 +5,7 @@
  * Visitor A is a real headless Chrome on the live page (no ?test=1 — the shared board). Visitor B is
  * a second anonymous session driven from this script through the same public API a browser uses.
  * B holds and books a slot while A's page is open; A's page must show that slot as
- * `taken_by_other` ("Another patient") within a few seconds, without a reload — realtime, not a
+ * `taken_by_other` ("Booked by another patient") within a few seconds, without a reload — realtime, not a
  * poll fallback. Then A holds a different slot and B must be refused it by the database.
  *
  *   node evals/live-two-visitors.mjs --url=https://rokan-terminal.vercel.app
@@ -74,13 +74,13 @@ const steps = [
   { allowErrors: ['INFO: Created TensorFlow Lite XNNPACK delegate'], waitFor: "document.querySelector('[data-clinic-route=\"book\"]') !== null", timeout: 20000 },
   { waitFor: "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", timeout: 20000 },
   // the LIVE board has landed: the wave line says so, and at least two slots are open in A's DOM
-  { waitFor: "document.querySelector('[data-clinic-wave-age]')?.textContent?.includes('live for every visitor') === true", timeout: 20000 },
+  { waitFor: "document.querySelector('[data-clinic-wave-age]')?.textContent?.includes('still available') === true", timeout: 20000 },
   { waitFor: "document.querySelectorAll('[data-slot-state=\"open\"]').length >= 2", timeout: 20000 },
   // the page nominates B's target and A's target; the script reads them from this line
   { eval: "(() => { const o = [...document.querySelectorAll('[data-slot-state=\"open\"]')].map(e => e.getAttribute('data-clinic-slot')); window.__t = o[0]; window.__a = o[1]; return 'targets:' + o[0] + ',' + o[1]; })()", matches: '^targets:' },
   // B books now (script side); A's page — no reload, no click — must show it gone within seconds
   { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__t + '\"]')?.getAttribute('data-slot-state') === 'taken_by_other'", timeout: 15000 },
-  { eval: "document.querySelector('[data-clinic-slot=\"' + window.__t + '\"]')?.textContent?.includes('Another patient')", equals: true },
+  { eval: "document.querySelector('[data-clinic-slot=\"' + window.__t + '\"]')?.textContent?.toLowerCase().includes('another patient')", equals: true },
   { shot: 'docs/evidence/clinic/live-another-patient.png' },
   // A holds through the real tool; then B (script side) is refused the same slot by the database
   { invoke: 'clinic_hold_slot', inputFrom: { slot_id: 'window.__a' }, outputMatches: 'held.{0,2}:true' },

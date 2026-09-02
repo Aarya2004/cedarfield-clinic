@@ -1,0 +1,13 @@
+Production verification — SPEC-V9 (booking tool born by your hand) + Aarya's practice-website restyle
+Deploy 5T59wgwz4wabVkUrFdKFckhiUsxU → https://rokan-terminal.vercel.app, commit 3b8296b. Run by Arav ~03:15, 2026-09-02.
+
+verify-deployed: GET / /clinic /clinic/book 200 · 13 cases 0 failed (thesis 47 · voice-tour 10 ·
+  cancel 27 · move 25 · agent-edges 18 · responsive 8 · rival-race 9 · hold-lapses 10 · receipt 10 ·
+  landing-frontdoor 4 · landing-phone 8 · chaos 50 · phone-acts 21) · axe 0 violations ×3 routes.
+live-two-visitors (Arav's run): mechanics all green — B books, A's row flips without reload, DB
+  refuses B (slot_unavailable:held, not_your_hold:held), A queues #1, cascade hands the slot back,
+  dock eyebrow "This time came back to you". Two COPY assertions failed against the restyle
+  ("live for every visitor", "Another patient" → now "still available", "Booked by another patient").
+  Assertions aligned; re-run by Engineer #4 against the same deploy: 25/25, 0 failed, wave 4967587.
+Local, same commit: clinic suite 20/20 incl. clinic-delegation (33 steps) and the 10-minute soak; axe 0×3;
+  unit 467/467; typecheck 0; lint 0.
