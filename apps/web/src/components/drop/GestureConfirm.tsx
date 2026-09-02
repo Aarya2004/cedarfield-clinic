@@ -172,8 +172,10 @@ export function GestureConfirm({
     // answer repeated: the grace window absorbs them (that is what it is for), and a camera that
     // freezes entirely therefore cancels the hold instead of quietly filling the ring on a still
     // image. `stepDwell` credits wall-clock time from the last real sighting, so nothing is lost.
+    let freshFrame = false;
     if (video.currentTime !== lastVideoTime.current) {
       lastVideoTime.current = video.currentTime;
+      freshFrame = true;
       try {
         const result = recognizer.recognizeForVideo(video, at);
         const top = result.gestures?.[0]?.[0];
@@ -186,7 +188,10 @@ export function GestureConfirm({
       }
     }
 
-    if (gesture !== null) setSeen(`${gesture} ${score.toFixed(2)}`);
+    // What the model saw on the last REAL frame — including "nothing". A reading that only updated
+    // when a hand was present sat on a stale value while a person stood in front of the lens
+    // wondering why nothing happened (Arav, 2026-09-02, 05:20). Now the page says so, live.
+    if (freshFrame) setSeen(gesture !== null ? `${gesture} ${score.toFixed(2)}` : 'no_hand');
     const step = stepDwell(dwellRef.current, { at, gesture, score, armed: armedRef.current }, configRef.current);
     dwellRef.current = step.state;
     setProgress(dwellProgress(step.state, configRef.current));
@@ -368,6 +373,11 @@ export function GestureConfirm({
           <p className="rk-g-head">{headline}</p>
           {/* The failure line is *rendered*, not just announced: a module that fails silently and
               leaves a dead control on the surface is the thing this state exists to prevent. */}
+          {running ? (
+            <p className="rk-g-seen" data-gesture-seeing>
+              {seeingCopy(seen)}
+            </p>
+          ) : null}
           <p className="rk-g-sub" data-gesture-note>
             {failure !== null
               ? failureCopy(failure, verb)
@@ -433,6 +443,32 @@ export function GestureConfirm({
 }
 
 const RING = 2 * Math.PI * 29;
+
+/**
+ * The live reading, in words a person can act on. `seen` is the raw `<category> <score>` the loop
+ * records (or `no_hand`), so the sentence is always what the model actually said last frame.
+ */
+export function seeingCopy(seen: string): string {
+  if (seen === '' || seen === 'no_hand') return 'Seeing: no hand yet — raise it into the window.';
+  const [category, score] = seen.split(' ');
+  const pct = Math.round(Number(score) * 100);
+  switch (category) {
+    case 'Open_Palm':
+      return `Seeing: an open palm (${pct}%) — hold it.`;
+    case 'None':
+      return 'Seeing: a hand, but not an open palm — spread your fingers, palm to the camera.';
+    case 'Closed_Fist':
+      return 'Seeing: a fist — open your hand.';
+    case 'Pointing_Up':
+    case 'Victory':
+    case 'Thumb_Up':
+    case 'Thumb_Down':
+    case 'ILoveYou':
+      return 'Seeing: a hand sign, not an open palm — show a flat, open hand.';
+    default:
+      return `Seeing: ${category.replace(/_/g, ' ').toLowerCase()} (${pct}%).`;
+  }
+}
 
 function copyFor(
   state: ReturnType<typeof gestureUiState>,
@@ -500,6 +536,18 @@ const SHEET = `
 }
 .rk-g[data-gesture-state='disabled'] .rk-g-video,
 .rk-g[data-gesture-state='unavailable'] .rk-g-video { display: none; }
+/* while the camera is on, the porthole is a window: a person must be able to see their own hand */
+.rk-g[data-gesture-state='ready'] .rk-g-eye,
+.rk-g[data-gesture-state='held'] .rk-g-eye,
+.rk-g[data-gesture-state='fired'] .rk-g-eye { width: 120px; height: 120px; }
+.rk-g[data-gesture-state='ready'] .rk-g-video,
+.rk-g[data-gesture-state='held'] .rk-g-video,
+.rk-g[data-gesture-state='fired'] .rk-g-video { opacity: 1; }
+.rk-g-seen {
+  margin: 4px 0 0;
+  font: 500 12px/1.4 var(--font-mono, ui-monospace, monospace);
+  color: var(--accent);
+}
 .rk-g-glyph { position: absolute; font-size: 13px; color: var(--clinic-dock-muted, var(--muted)); line-height: 1; }
 .rk-g-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
 .rk-g-track { fill: none; stroke: var(--edge); stroke-width: 4; }
