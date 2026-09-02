@@ -126,6 +126,16 @@ export function GestureConfirm({
   const dwellRef = useRef<DwellState>(initialDwellState());
   const lastVideoTime = useRef(-1);
   const lastInferAt = useRef(0);
+  // Chrome stops requestAnimationFrame for a hidden tab, so the loop stops with it. A person who
+  // switched windows and came back to "no hand" for a minute deserves the real reason (Arav's Mac,
+  // 2026-09-02 05:40: the tab was behind the Codex window the whole time).
+  const [pageHidden, setPageHidden] = useState(false);
+  useEffect(() => {
+    const sync = () => setPageHidden(document.visibilityState === 'hidden');
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, []);
 
   // The loop reads these through refs so a re-render never restarts the camera.
   const onConfirmRef = useRef(onConfirm);
@@ -383,7 +393,7 @@ export function GestureConfirm({
               leaves a dead control on the surface is the thing this state exists to prevent. */}
           {running ? (
             <p className="rk-g-seen" data-gesture-seeing>
-              {seeingCopy(seen)}
+              {pageHidden ? 'Paused: bring this window to the front — the camera only watches a visible page.' : seeingCopy(seen)}
             </p>
           ) : null}
           <p className="rk-g-sub" data-gesture-note>

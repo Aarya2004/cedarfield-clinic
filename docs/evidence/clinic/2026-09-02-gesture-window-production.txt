@@ -13,6 +13,7 @@ Physical camera test on Arav's Mac, Chrome 152, driven by Engineer #4 through th
     the panel prints "Seeing: …" in words.
   · NEW build: 15 s sampled → `no_hand` on every frame (Arav's hand was not in the window during the
     sample). MediaPipe's hand-landmark logs at 22:20:25 show the graph does run when a hand appears.
-  · Observed: the page's main thread is saturated while the camera is on (a 100 ms poll ran at ~1 s
-    intervals) — inference runs on every fresh frame at camera rate on CPU/XNNPACK. Candidate fix:
-    cap inference at ~12–15 fps.
+  · CORRECTED 05:45: the slow polls and the empty readings were NOT main-thread saturation — the
+    Chrome tab was HIDDEN behind the Codex window (document.visibilityState 'hidden', 0 rAF/700 ms,
+    timers throttled to ~1/s). Chrome stops the camera loop for hidden tabs. The inference cap (dfcaaab)
+    stays as a harmless bound; the real fix is the page saying 'Paused: bring this window to the front'.
