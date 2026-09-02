@@ -33,6 +33,27 @@ Last update: **2026-09-02 (Aarya's Claude, Fable 5.1)** Branch `main`.
   the dwell slider persists (`drop.gesture.dwellMs`) — a 0.4 s setting makes the palm feel instant;
   MediaPipe used the CPU delegate in real Chrome and was fast enough; macOS blocks the camera for
   terminal-spawned processes, so a real-hand test cannot be automated from a harness.
+- **SPEC-V10 — hands-free under macOS Voice Control (spec `tickets/SPEC-V10.md`; built + pushed
+  `b239183`/`361a5fb`/`52fe31b`).** The page never listens (no in-page speech, ever — the assistant
+  has a voice too); the OS's Voice Control is the hands-free path and its events are the same
+  trusted root as a switch. Built test-first: the confirm control's accessible name carries act +
+  time ("Confirm booking 9:20 AM", "Confirm cancellation 9:00 AM", "Confirm move to 9:20 AM" — the
+  arrow in the move label is not a word); row Book buttons' names are the hidden 7-word sentence
+  (visible body aria-hidden); camera buttons are named by what the palm would do. **The audit found
+  two real defects before any code**: two identical "Enable camera" buttons on one page (dock +
+  grant band) and 12-word row names. New eval `clinic-voice-names.json` (Arav's lane, with Aarya's
+  go): seven states, unique/short names, book dock takes focus, cancel dock does not — 42/42.
+  Gate: typecheck/lint clean · 474/474 · thesis/cancel/move/voice-tour/delegation green · axe 0×3.
+  **Owed:** the §5 manual script on the recording Mac (result section empty); whether the case
+  joins `verify-deployed` (Arav).
+- **Pre-existing red, not mine — `clinic-declarative.json` fails 1 step on main** (also on the
+  tree before any of today's Aarya-side commits): `form[data-clinic-step="details"]`'s
+  `data-clinic-agent-submits-blocked` reads `null`, the case expects `"1"`. SPEC-V6 surface (Arav).
+  Will show red in the next production verify unless looked at.
+- **Deploy owed.** Production is Arav's 03:20 PT build (SPEC-V9). Eight commits since: score-free
+  card + evals re-pointed, VIDEO-SCRIPT direction, README/SUBMISSION/SECURITY retrued, SPEC-V10
+  names + eval, GESTURE.md real-hand result. `cd apps/web && vercel --prod`, then
+  `verify-deployed`.
 
 ## Build log — Engineer #4 (2026-09-02, ~03:00) — SPEC-V9: the booking tool is born by your hand
 - **Arav's decision** (asked three times after the Codex desktop test): "yes, book it" must book.

@@ -7,7 +7,11 @@ This file is the single source of truth for what is green, what is blocking, and
 
 | Thing | State |
 |---|---|
-| `apps/web` gate | typecheck clean · **467/467 unit tests** · lint 0 errors · production build clean |
+| `apps/web` gate | typecheck clean · **474/474 unit tests** · lint 0 errors · production build clean (main @ `52fe31b`, 2026-09-02 ~03:30 PT) |
+| **SPEC-V10 — hands-free under macOS Voice Control (2026-09-02, Aarya's Claude)** | The page never listens; the OS's Voice Control drives it as trusted input, the same root as a switch. Every control has a unique speakable name in seven page states; the confirm control is named with act + time ("Confirm booking 9:20 AM" / "Confirm cancellation 9:00 AM" / "Confirm move to 9:20 AM"); the book dock takes focus on arm so "Press Return key" books, the cancel dock does not (agent-timed focus steal). Camera buttons are named by what the palm would do — the audit caught two identical "Enable camera" buttons on one page. Proof: `clinic-voice-names.json` 42/42 (not yet in `verify-deployed`); unit tests `confirm-name.test.ts`, `gesture-logic.test.ts`. **Owed (Aarya):** the six-minute manual script in `tickets/SPEC-V10.md` §5 on the recording Mac. |
+| **The page keeps no visible score (2026-09-02, Aarya's decision)** | The appointment card's "N interactions … / 0 under the permission" sentence is gone; counts live in `data-clinic-cost-hand` / `-agent` / `data-clinic-booked-under-permission`. `clinic-receipt` + `clinic-delegation` re-pointed. Simulated demand unlabelled on the page ("No longer available"), disclosed in README/SUBMISSION/video narration. **VIDEO-SCRIPT rewritten**: both flows end to end in real time, a real clock in frame, no page-side numbers. |
+| **Real-hand gesture test DONE (2026-09-02, Aarya, Chrome 152, live board)** | Open palm ≈1 s booked a live slot from the dock. Aarya also reports the camera worked inside the **Codex in-app browser** — recorded as a report pending one screenshot (`GESTURE.md`). Still untested by hand: flicker/tremor checks, the palm on a cancel, the grant by palm. |
+| **⚠ Pre-existing red on main — `clinic-declarative.json` 1 step** | `data-clinic-agent-submits-blocked` on the details form reads `null`, the case expects `"1"`. Reproduced on the tree before any of today's Aarya-side commits. SPEC-V6 surface (Arav). Will be red in the next production verify. |
 | **SPEC-V9 — the booking tool is born by your hand (2026-09-02 ~03:00, Arav's decision after the Codex test)** | Arav, three times: "the agent should book if I explicitly say yes". The page cannot see the chat, so the trust root stays the person's hand — pressed **once, earlier**: the **Your assistant** band (directly under the board) has *Let my assistant book for me* (trusted press only; synthetic clicks counted in `data-clinic-synthetic-grants`) and, when the build has the camera, the same **open-palm** module as the docks (`GestureConfirm verb="grant"`). A grant = one booking, ten minutes (`DELEGATION_MS`). It births `clinic_book_slot` (toolchange, same reconcile loop as `clinic_my_appointment`); the tool holds-then-books through the page's `onBook`, which re-checks the grant; the booking spends the grant and kills the tool; the card reads **0 interactions — your assistant booked it under the permission you gave**; the activity row says the same. Cancel/move never delegate. `clinic-delegation.json` proves absent → synthetic ignored → born → booked → dead; unit tests cover the refusal and the birth/death. Vocabulary is thirteen names; live count never exceeds twelve. SECURITY §10 has the residual. **Deployed and verified on production 2026-09-02 ~03:20** (`docs/evidence/clinic/2026-09-02-spec-v9-production.txt`: 17/17 seeded, axe 0×3, live proof 25/25 incl. cascade on the restyled page; the local suite on the same commit was 20/20 incl. `clinic-delegation`). |
 | **The judged client is the Codex desktop app** (2026-09-02 02:10, Arav's screenshot) | In-app browser pane, model 5.6 Terra, composer = dictation + Send only — **no Voice Mode**. Hands-free path for the video and for a disabled visitor: macOS Voice Control ("press Return" sends the dictated prompt; "press Return" on the page pane books — an OS-level key, browser-trusted). |
 | **SPEC-V8 — the page's own record of the agent (2026-09-02, after the ChatGPT desktop test)** | Arav, testing with ChatGPT desktop: "it keeps saying it's doing something… how am I supposed to tell if these commands have happened or not". Now `ClinicTools` wraps every tool's `execute` and keeps an **Agent activity** log on the page (`role=log`, `aria-live=polite`): time · tool · one line derived from the tool's own JSON answer ("held 8:40 AM with Dr. Fanning · 180 s, your press books it", "refused — That slot was taken…", "dock armed to cancel 9:00 AM — only your press cancels") · measured ms. Never invented: `summariseToolAnswer` reads the answer, a refusal quotes the tool's `detail`. `data-clinic-agent-log` = call count, `data-clinic-call=ok|refused` per row; asserted in `clinic-thesis`. Unit test in `clinic-tools.test.ts`. |
@@ -58,12 +62,20 @@ This file is the single source of truth for what is green, what is blocking, and
    rebuilding, and the verifier re-runs against the new origin in one command.
 4. **The name.** The fictional clinic is "Cedarfield Clinic"; the *product* has no name. Humans pick
    it (Devpost's own guidance). It is a string swap in `ClinicFrame.tsx` plus the two doc headers.
-5. **ChatGPT desktop verification.** The tools are proven to register in Chrome against the live
-   origin (nine seeded, eleven on the shared board, twelve once booked). Sol/Terra is still unmeasured, and it is the client the challenge names: open
-   `https://rokan-terminal.vercel.app/clinic/book`, check the Site-tools arrow lists eleven `clinic_*`
-   tools, say *"hold me the earliest appointment"*, then press Enter.
-6. **Video** (< 3 min, audio, YouTube). Script is shot-by-shot in `docs/VIDEO-SCRIPT.md`; ffmpeg on
-   the recording Mac needs fixing first.
+5. **The judged client, end to end.** Arav's one Codex desktop session (2026-09-02 00:42) proved
+   discovery, list, hold, an unprompted refusal and the relay of the human step — and the hold
+   expired before Enter. **Never yet seen in Codex:** hold → Enter → *Booked*; the tool list
+   updating when a tool is born (`clinic_my_appointment` / `clinic_book_slot` via `toolchange`) —
+   the born-by-hand video beat depends on it; the camera in the pane (Aarya reports it works;
+   screenshot owed). One 20-minute session with DevTools open decides which client each beat is
+   filmed in. Must precede recording.
+6. **Video** (< 3 min, audio, YouTube). Script rewritten 2026-09-02 for the shipped clinic surface
+   (`docs/VIDEO-SCRIPT.md`: both flows in real time, a real clock in frame, the simulation said
+   out loud once, palm + born-by-hand beats). ffmpeg on the recording Mac needs fixing first.
+7. **Deploy + re-verify.** Production is the 03:20 PT SPEC-V9 build; eight commits since (score-free
+   card, SPEC-V10 names, retrued docs). `cd apps/web && vercel --prod`, then
+   `node evals/verify-deployed.mjs --url=…`. Expect `clinic-declarative` red until item ⚠ above is
+   looked at.
 
 ## Mine, next, in order
 
