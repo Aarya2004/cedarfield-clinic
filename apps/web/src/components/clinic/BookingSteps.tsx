@@ -13,7 +13,7 @@
  * unit test: the error summary takes focus once per ATTEMPT to move on, never once per change in
  * the error count — the latter snatches the caret away the instant someone starts fixing a field.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ACCESSIBILITY_MAX,
   PATIENT_FIELDS,
@@ -78,7 +78,35 @@ export interface BookingStepsProps {
   onRestart: () => void;
 }
 
+/**
+ * SPEC-V6 — the DECLARATIVE half of WebMCP, on the real form (Chrome 152+ with the flag; ChatGPT
+ * ignores declarative forms, harmlessly). The details form carries `toolname` / `tooldescription`
+ * and every control a `toolparamdescription`, so the browser itself publishes it as a tool an agent
+ * can FILL. It deliberately carries no `toolautosubmit`: the agent fills, the person reviews and
+ * submits — the model the W3C APA group asked for on 2026-08-05 ("review by the user"). If a client
+ * ever submits on the agent's behalf anyway (`SubmitEvent.agentInvoked`), the submit is refused and
+ * counted, exactly like a synthetic keypress on the dock.
+ */
+const DECLARATIVE_FORM = {
+  toolname: 'clinic_booking_form',
+  tooldescription:
+    'Fill in the patient details for the appointment the person has chosen: full name, date of ' +
+    'birth (YYYY-MM-DD), reason, phone, access needs. Filling is all you can do — the person ' +
+    'reviews what you wrote and submits it themselves; there is no automatic submit.',
+} as const;
+const PARAM_DESCRIPTION: Record<PatientField, string> = {
+  fullName: 'The patient\'s full name as it appears on their record.',
+  dateOfBirth: 'Date of birth, YYYY-MM-DD.',
+  reason: 'One of: ' + REASONS.join(' · ') + '.',
+  phone: 'A phone number the clinic can call to move the appointment.',
+  accessibilityNeeds: 'Optional. Anything to arrange — step-free access, an interpreter, a longer appointment.',
+};
+
 export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, onBook, onRestart }: BookingStepsProps) {
+  // Did an agent (the browser's declarative tool) write into this form? Decided by the events the
+  // browser marks untrusted; a person typing is trusted. Shown as a review banner, never hidden.
+  const [agentFilled, setAgentFilled] = useState(false);
+  const [agentSubmitBlocked, setAgentSubmitBlocked] = useState(0);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const didMount = useRef(false);
@@ -163,13 +191,35 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
       {state.step === 'details' ? (
         <form
           data-clinic-step="details"
+          data-clinic-agent-filled={agentFilled ? 'true' : 'false'}
+          data-clinic-agent-submits-blocked={agentSubmitBlocked}
           noValidate
+          {...(DECLARATIVE_FORM as unknown as Record<string, string>)}
+          onInput={(event) => {
+            if (!event.nativeEvent.isTrusted) setAgentFilled(true);
+          }}
           onSubmit={(event) => {
             event.preventDefault();
+            // A submit the browser attributes to an agent never advances: filling is the agent's;
+            // submitting is the person's. Counted in the open, like a synthetic keypress.
+            if ((event.nativeEvent as SubmitEvent & { agentInvoked?: boolean }).agentInvoked === true || !event.nativeEvent.isTrusted) {
+              setAgentSubmitBlocked((n) => n + 1);
+              return;
+            }
             onAttemptReview();
             dispatch({ type: 'to_review' });
           }}
         >
+          {agentFilled ? (
+            <p className="cl-agent" role="status" data-clinic-agent-filled-banner>
+              Filled in by your assistant. Check it over — nothing is sent until you press Review, then Book.
+            </p>
+          ) : null}
+          {agentSubmitBlocked > 0 ? (
+            <p className="cl-lost" role="status" data-clinic-agent-submit-blocked={agentSubmitBlocked}>
+              This form is only sent when you press Review yourself.
+            </p>
+          ) : null}
           {errorFields.length > 0 ? (
             <div
               ref={summaryRef}
@@ -201,6 +251,7 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
                 id,
                 name: field,
                 value: state.details[field],
+                ...({ toolparamdescription: PARAM_DESCRIPTION[field] } as Record<string, string>),
                 'aria-invalid': error !== undefined,
                 'aria-describedby': describedBy === '' ? undefined : describedBy,
                 'data-clinic-field': field,

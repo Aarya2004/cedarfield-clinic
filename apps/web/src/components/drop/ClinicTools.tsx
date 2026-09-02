@@ -151,6 +151,7 @@ export function ClinicTools({
       data-clinic-tools-live={state.kind === 'registered' ? state.names.join(' ') : ''}
       data-clinic-booked={session.slots.some((s) => s.state === 'booked_yours') ? 'true' : 'false'}
       data-clinic-tools-error={state.kind === 'error' ? state.message : undefined}
+      data-clinic-browser-count={state.kind === 'registered' && state.browserCount !== undefined ? state.browserCount : undefined}
     />
   );
 }

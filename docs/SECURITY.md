@@ -237,6 +237,28 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   press; the queue changes who gets the chance, never who can act. Residual, stated: idle waiters
   cost a slot at most 3 × 45 s per wave; anonymous identities are rate-limited by the auth
   provider, not by us.
+- **The declarative form (SPEC-V6):** the details form carries `toolname`/`tooldescription`/
+  `toolparamdescription` and NO `toolautosubmit`. Filling is the browser's; submitting is the
+  person's: the submit handler refuses any event the browser attributes to an agent
+  (`SubmitEvent.agentInvoked`) or that is not `isTrusted`, and counts it on the form. An
+  agent-filled form is labelled as such before the person reviews it. Nothing the form holds
+  leaves the page (the live board takes slot ids only).
+- **Spec primitives, used or deliberately not (WebMCP CG issues cited):**
+  `execute(input, {signal})` — every tool honours the platform's AbortSignal: a cancelled call stops
+  waiting on the board and answers with what is true at that instant (the verb it already sent is
+  not un-sent; the agent can release). Idempotency (issue #267, Google: "the same non-idempotent
+  tool called twice") — every write verb is safe to repeat: re-holding your own slot is refused
+  with `already_held_by_you` rather than creating a second hold, arming is idempotent by design,
+  joining a line twice is a no-op (`on conflict do nothing`), and the database's one-hold-per-visitor
+  index makes a double hold impossible at commit. `untrustedContentHint` — deliberately NOT set:
+  no tool result carries text authored by anyone other than the caller (slot times, clinicians
+  and kinds are server-generated; other visitors appear only as states and counts); the day a
+  result carries another person's words, that tool gets the hint. Headers — `Permissions-Policy:
+  tools=(self)` (only this origin may register tools; an embedded third party never can) and
+  `Origin-Agent-Cluster: ?1` (Chrome disables WebMCP under `?0`). Chrome's size guidance (30-char
+  names, 500-char descriptions, 150-char params, 1.5 KB outputs) is asserted by unit tests, not
+  promised. The page shows two tool counts side by side — what it registered and what the browser
+  itself reports (`getTools`) — so the leverage claim is the platform's, not ours.
 - **Injection surface:** slot inventory, clinicians and wave copy are server-generated
   deterministically from the wave index (`clinic_sweep`) or page-authored; no tool echoes
   text authored by anyone other than its own caller (refusals may quote the caller's slot id or

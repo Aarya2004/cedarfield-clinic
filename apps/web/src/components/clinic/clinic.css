@@ -1494,3 +1494,35 @@ html:has(.cl-dock) {
     transition: none !important;
   }
 }
+
+
+/* --- the board on the home page ---------------------------------------------------------- */
+/* The same list the booking page shows, read-only. It inherits the row rules above; the only
+   difference is that a row here opens the booking page rather than a form. */
+
+.cl-preview {
+  max-width: 44rem;
+}
+
+.cl-preview__eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--clinic-muted);
+}
+
+.cl-preview__note {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--clinic-muted);
+}
+
+.cl-preview .cl-sheet {
+  margin: 0;
+}
+
+.cl-sheet--skeleton .cl-row--skeleton {
+  min-height: 4.25rem;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 0.5rem;
+  background: var(--clinic-band);
+}

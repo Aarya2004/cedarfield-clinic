@@ -11,6 +11,7 @@
  */
 import Link from 'next/link';
 import { Band, ClinicFooter, ClinicNav, ClinicPhoneLink, Masthead, PracticeCard, CLINIC_PHONE } from './ClinicFrame.tsx';
+import { BoardPreview } from './BoardPreview.tsx';
 import { ClinicianRoster } from './ClinicianRoster.tsx';
 import { NextWaveClock } from './NextWaveClock.tsx';
 import { HOLD_TTL_SECONDS } from './wave-clock.ts';
@@ -54,6 +55,11 @@ export function ClinicLanding() {
             </a>
             , Monday to Friday from 8:00.
           </p>
+        </Band>
+
+        <Band label="Available now" id="available" wide>
+          <h2 className="cl-lead">Available now</h2>
+          <BoardPreview />
         </Band>
 
         <Band label="Appointments" id="appointments" tone="grey" wide>

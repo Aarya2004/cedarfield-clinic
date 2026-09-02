@@ -42,6 +42,17 @@ reaches that step.
 
 Everything the description claims is also re-runnable from the repo in two commands (below).
 
+## What the standards bodies are asking for — and what this page answers
+
+The W3C APA (accessibility) working group reviewed WebMCP on 5 August 2026 and recorded that they
+are "excited for the possibilities of this technology" but "concerned about the API in its current
+form", asking for designs that keep "review by the user" in the loop and never interfere with the
+accessibility tree. The specification's own *Accessibility considerations* section is, at
+submission time, empty (WebMCP issue #277). This page is one concrete answer: the agent does
+everything a person with a switch cannot — watch, search, hold, queue — and the one act that
+must stay the person's is gated on the browser's own notion of a real keypress, with a keyboard
+path first, a camera gesture as an opt-in, and every synthetic attempt counted in the open.
+
 ## The problem, and who has it
 
 Every task on the web costs a number of interactions. For a mouse user that number is invisible. For
@@ -83,6 +94,13 @@ human's press**: the instant a person books, `clinic_my_appointment` is register
 `toolchange` fires, the agent's list grows — and it is unregistered when the last booking is gone.
 What the press creates is purely additive: a client slow to notice `toolchange` loses nothing; a
 client that sees it watches a human act change the agent's surface.
+
+**Both halves of the API.** The patient-details form is also published *declaratively*
+(`toolname`, `tooldescription`, a `toolparamdescription` per field) so Chrome lists it as a tool an
+agent can fill — with no `toolautosubmit`: the agent fills, the person reads it over and presses
+Review, then Book; a submit attributed to an agent or a script is refused and counted. This is the
+"review by the user" model the W3C APA group asked for on 5 August 2026, built with the primitive
+the platform provides for exactly that.
 
 **And on the shared board — where every real visitor is — two more tools make eleven, and the race is gone.** `clinic_join_waitlist` and
 `clinic_leave_waitlist`, let an agent put its human *in line* for a slot someone else holds. When

@@ -156,19 +156,41 @@ export function useDropSession(driver: DropDriver, options: DropSessionOptions):
 
     let handle = 0;
     let last = performance.now();
-    const frame = (t: number) => {
+    // One step, whoever calls it: the frame loop (smooth while visible) or the wall-clock ticks
+    // below (which keep going when the tab is hidden and no frames are delivered). Both advance
+    // from the same `last`, so time is never counted twice.
+    const step = () => {
+      const t = performance.now();
       const dt = t - last;
       last = t;
+      if (dt <= 0) return;
       if (clock) {
         clock.advance(dt);
         setNow((current) => current + dt);
       } else {
         setNow(Date.now());
       }
+    };
+    const frame = () => {
+      step();
       handle = requestAnimationFrame(frame);
     };
     handle = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(handle);
+    // Hidden tab (a judge reading the Tool Inspector, an app window covering the page): browsers
+    // stop animation frames entirely, and the countdown used to freeze while the server kept
+    // counting — a 45 s hold read "78 s left" and the press after coming back was refused. Timers
+    // are throttled in the background but still fire (≈1 Hz), and the moment the page is visible
+    // again it catches up in one step.
+    const ticker = setInterval(step, 1000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') step();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelAnimationFrame(handle);
+      clearInterval(ticker);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [running, clock]);
 
   const { held } = state;
