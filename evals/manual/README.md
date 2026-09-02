@@ -21,3 +21,11 @@ self-verifying.
       --use-file-for-fake-video-capture=/path/to/your-palm.y4m" \
       node evals/harness/webmcp-cdp.mjs 'http://localhost:3000/clinic/book?test=1' \
       evals/manual/clinic-gesture-fires.json
+
+## clinic-soak.json — time-driven paths (~3 min)
+
+Lives in `evals/cases/` and runs in `run-all`, but is deliberately NOT in `verify-deployed`: its
+walk-away beats (a 45 s cancel arm expiring, a full 90 s wave rollover) exceed the per-case timeout.
+Against an origin, run it by hand on the seeded board:
+
+    node evals/harness/webmcp-cdp.mjs '<origin>/clinic/book?test=1' evals/cases/clinic-soak.json

@@ -32,7 +32,7 @@ reaches that step.
 
 1. Open the live URL in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or **Chrome 152+** with
    `chrome://flags/#enable-webmcp-testing`, then click **Book an appointment** (`/clinic/book`).
-2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): nine `clinic_*` tools —
+2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): eleven `clinic_*` tools —
    and no booking, cancel, or move tool among them. Watch the list again after step 5: one more appears.
 3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a 45-second bar and
    the dock at the bottom arms.
@@ -74,7 +74,7 @@ Neither party can complete the task alone, and that is the design rather than a 
 
 ## Why WebMCP, specifically
 
-Nine tools are registered on `/clinic/book` when it loads (`document.modelContext.registerTool()`):
+Nine base tools are registered on `/clinic/book` when it loads (`document.modelContext.registerTool()`):
 `clinic_list_drops`, `clinic_find_slots`, `clinic_clinicians`, `clinic_hold_slot`,
 `clinic_hold_status`, `clinic_release_hold`, `clinic_prepare_cancel`, `clinic_prepare_move`,
 `clinic_explain_confirm` — the arming tools included, on purpose, so a person with no booking always
@@ -84,7 +84,7 @@ human's press**: the instant a person books, `clinic_my_appointment` is register
 What the press creates is purely additive: a client slow to notice `toolchange` loses nothing; a
 client that sees it watches a human act change the agent's surface.
 
-**And on the shared board, the race is gone.** Two more tools, `clinic_join_waitlist` and
+**And on the shared board — where every real visitor is — two more tools make eleven, and the race is gone.** `clinic_join_waitlist` and
 `clinic_leave_waitlist`, let an agent put its human *in line* for a slot someone else holds. When
 that slot comes back — a hold lapses, a cancellation, a move — the server hands it to the first in
 line as a fresh 45-second hold; the dock arms by itself (*"It came back to you"*) and one press
@@ -137,11 +137,10 @@ Verification is a first-class part of the repo, not a claim in a README:
 | Cancel/move are armed by the agent, performed only by a trusted press; a move swaps atomically | `clinic-cancel.json`, `clinic-move.json` |
 | The voice surface: searches, clinician listing, refusals readable aloud | `clinic-voice-tour.json` |
 | **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on all three routes | `node evals/a11y.mjs` |
-
-| The shared board is real: visitor B books, visitor A's open page shows "Another patient" with no reload; the database refuses B visitor A's held slot | `node evals/live-two-visitors.mjs` |
+| The shared board is real: visitor B books, visitor A's open page shows "Another patient" with no reload; the database refuses B the slot A holds | `node evals/live-two-visitors.mjs` |
 | The cascade: A queues for B's held slot; B lets go; A's dock arms by itself — "It came back to you" — nobody raced | same command |
 
-Plus 441 unit tests. Traces and screenshots for every row are committed under
+Plus 444 unit tests. Traces and screenshots for every row are committed under
 `docs/evidence/clinic/`. The seeded-board proofs above re-run from a clean clone in two commands;
 the live board's schema is committed under `supabase/migrations/`.
 
@@ -175,8 +174,8 @@ the live board's schema is committed under `supabase/migrations/`.
 
 ## What is next
 
-A real clinic's scheduling system behind the same `DropDriver` seam the live board already uses;
-the waitlist cascade, so that when a hold
+A real clinic's scheduling system behind the same `DropDriver` seam the live board already uses
+(the waitlist cascade shipped — see above); a longer queue window across releases, so that when a hold
 lapses the next person receives their own full window and nobody has to race at all; and a
 standards note to the WebMCP CG, whose accessibility section is currently an empty stub, proposing
 consequential acts as human-only affordances that a tool surface deliberately cannot express.

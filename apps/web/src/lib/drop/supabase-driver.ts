@@ -96,6 +96,7 @@ export function refusalSentence(raw: string): string {
   if (raw.includes('nothing_held')) return 'There was no hold to give back.';
   if (raw.includes('booking_cap')) return 'Three appointments is the limit here. Cancel one to book another.';
   if (raw.includes('waitlist_cap')) return 'Three waitlists is the limit here. Leave one to join another.';
+  if (raw.includes('waitlist_full')) return 'That line is full (three ahead). Try another time.';
   if (raw.includes('slot_open')) return 'That time is open right now — hold it instead of waiting for it.';
   if (raw.includes('already_yours')) return 'That time is already yours.';
   if (raw.includes('not_waiting')) return 'You were not waiting on that time.';
@@ -123,7 +124,17 @@ export function createSupabaseDriver(): LiveDriver {
   let myHold: { slotId: string; expiresAt: number } | null = null;
   // Holds this tab asked for. A hold that appears WITHOUT being asked for is the cascade handing
   // over a queued slot — announced as `granted`, so the dock treats it like an agent-timed arm.
-  const requested = new Set<string>();
+  // slot id → when this tab asked for it. A refused or superseded request is forgotten (on error,
+  // and after REQUEST_TTL_MS), so it can never relabel a later cascade grant as the tab's own hold.
+  const requested = new Map<string, number>();
+  const REQUEST_TTL_MS = 15_000;
+  const requestedRecently = (id: string) => {
+    const at = requested.get(id);
+    return at !== undefined && Date.now() - at < REQUEST_TTL_MS;
+  };
+  // Slots this visitor was in line for, as of the previous board read. A hold that appears on one
+  // of THESE without a local request is the cascade; a hold that appears after a reload is not.
+  let queuedBefore = new Set<string>();
   let meta: LiveMeta = { waveStartedAt: null, nextWaveAt: null, ready: false, lastError: null, errorSeq: 0 };
   let disposed = false;
   let refreshing = false;
@@ -181,7 +192,7 @@ export function createSupabaseDriver(): LiveDriver {
       if (mine && mine.hold_expires_at) {
         const expiresAt = toClient(mine.hold_expires_at);
         if (myHold?.slotId !== mine.id) {
-          const granted = !requested.has(mine.id);
+          const granted = !requestedRecently(mine.id) && queuedBefore.has(mine.id);
           requested.delete(mine.id);
           emit({
             type: 'hold_started',
@@ -211,6 +222,7 @@ export function createSupabaseDriver(): LiveDriver {
       }
 
       slots = next;
+      queuedBefore = new Set(board.slots.filter((r) => (r.your_position ?? 0) > 0).map((r) => r.id));
       meta = {
         ...meta,
         waveStartedAt: toClient(board.wave_started_at),
@@ -267,8 +279,10 @@ export function createSupabaseDriver(): LiveDriver {
       return () => subscribers.delete(cb);
     },
     hold(slotId) {
-      requested.add(slotId);
-      verb('clinic_hold', { slot_id: slotId });
+      requested.set(slotId, Date.now());
+      verb('clinic_hold', { slot_id: slotId }, async () => {
+        requested.delete(slotId); // refused: nothing of ours is pending on this slot
+      });
     },
     joinWaitlist(slotId) {
       verb('clinic_join_waitlist', { p_slot_id: slotId });
@@ -289,9 +303,12 @@ export function createSupabaseDriver(): LiveDriver {
      * upstream of this call either way.
      */
     book(slotId) {
-      requested.add(slotId);
+      requested.set(slotId, Date.now());
       void rpc('clinic_hold', { slot_id: slotId }).then(({ error }) => {
-        if (error) return void refresh();
+        if (error) {
+          requested.delete(slotId);
+          return void refresh();
+        }
         verb('clinic_book', { slot_id: slotId }, () => releaseQuietly(slotId));
       });
     },

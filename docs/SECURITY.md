@@ -220,12 +220,23 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   what every eval drives — nothing in CI mutates the shared inventory.
 - **The waitlist cascade (SPEC-V5):** `clinic_join_waitlist` / `clinic_leave_waitlist` are
   reversible agent verbs (a place in line, never an appointment), capped at three lines per
-  visitor, current-wave only, registered only on the shared board. The hand-over happens inside
-  `clinic_sweep` in wave order, one hold per visitor always (a waiter's other hold is given back),
-  and the simulated rival never takes a queued slot. A cascade grant lands at a moment nobody at
-  the keyboard chose, so the dock treats it exactly like an agent-timed arm — no focus steal and
-  the 500 ms dead zone — and announces it as such ("It came back to you"). Booking still requires
-  the trusted press; the queue changes who gets the chance, never who can act.
+  visitor and three waiters per slot, current-wave only, refused for rival-taken slots (that line
+  never moves), registered only on the shared board. The hand-over happens inside `clinic_sweep`
+  in each slot's queue order (`joined_at`, then visitor id for ties), under a row lock with a
+  re-check that the slot is still open: a lost race keeps the waiter's place, a unique/deadlock
+  collision skips that waiter rather than failing anyone's board read, and a raw Postgres error
+  never reaches a client. One hold per visitor always — a waiter's other hold is given back only
+  when the grant actually lands. The simulated rival never takes a queued slot. A cascade grant
+  lands at a moment nobody at the keyboard chose, so the dock treats it exactly like an
+  agent-timed arm: it is a fresh dock keyed by slot and start time (never a relabelled one under
+  a finger in flight), it takes no focus, the 500 ms dead zone applies, and the origin is derived
+  in render so the mount-time focus rule can never read a previous origin. A hold this tab asked
+  for and was refused is forgotten at once (and any request after 15 s), so a later grant is never
+  mislabelled as your own hold. It is announced — the strip above the board and its live region
+  say "It came back to you from the line — nobody raced you." Booking still requires the trusted
+  press; the queue changes who gets the chance, never who can act. Residual, stated: idle waiters
+  cost a slot at most 3 × 45 s per wave; anonymous identities are rate-limited by the auth
+  provider, not by us.
 - **Injection surface:** slot inventory, clinicians and wave copy are server-generated
   deterministically from the wave index (`clinic_sweep`) or page-authored; no tool echoes
   text authored by anyone other than its own caller (refusals may quote the caller's slot id or

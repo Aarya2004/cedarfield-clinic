@@ -5,7 +5,7 @@
  * ║  lock, then move whatever survives into a `contract:` commit.                                 ║
  * ╚══════════════════════════════════════════════════════════════════════════════════════════════╝
  *
- * The nine WebMCP tools of the Cedarfield Clinic booking page (SPEC-V1 §3, SPEC-V2 §2). Registered top-level,
+ * The WebMCP tools of the Cedarfield Clinic booking page (SPEC-V1 §3, V2, V4, V5). Registered top-level,
  * imperatively, feature-detected, under ONE AbortController — the idiom of lib/webmcp/register.ts.
  *
  * ── THE THESIS, IN WHAT IS ABSENT ───────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ import { OUTPUT_BUDGET_CHARS } from '../webmcp/schemas.ts';
 
 // ── names ───────────────────────────────────────────────────────────────────────────────────────
 
-/** The nine, in registration order. Nine, against a self-imposed cap of twelve. */
+/** The whole vocabulary, in registration order. Twelve — exactly the self-imposed cap; nothing more fits. */
 export const CLINIC_TOOL_NAMES = [
   'clinic_list_drops',
   'clinic_find_slots',
@@ -670,7 +670,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           return asToolResult({
             ok: false,
             error: slot.state === 'held_by_you' ? 'already_held_by_you' : 'slot_not_open',
-            ...(before.waitlistAvailable && (slot.state === 'held_by_other' || slot.state === 'taken_by_other' || slot.state === 'taken_by_rival')
+            ...(before.waitlistAvailable && (slot.state === 'held_by_other' || slot.state === 'taken_by_other')
               ? { hint: 'clinic_join_waitlist: put your human in line for it — if it comes back, it is theirs first.' }
               : {}),
             detail:
@@ -935,11 +935,20 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         if (slot.state === 'held_by_you' || slot.state === 'booked_yours') {
           return asToolResult({ ok: false, error: 'already_yours', detail: "That slot is already your human's.", slot_state: slot.state } satisfies ErrorResult);
         }
+        if (slot.state === 'taken_by_rival') {
+          // The simulated rival never gives a slot back this wave: a line behind it is a dead wait.
+          return asToolResult({ ok: false, error: 'slot_unavailable', detail: 'That slot was taken for the rest of this release; it will not come back. Pick another id from open_slot_ids, or wait for the next release.', slot_state: slot.state, open_slot_ids: openIds(view.session.slots) } satisfies ErrorResult);
+        }
         if (!options.onJoinWaitlist || !options.onJoinWaitlist(slotId)) {
           return asToolResult({ ok: false, error: 'waitlist_unavailable', detail: 'This board has no waitlist.' } satisfies ErrorResult);
         }
-        await settle(source, (v) => (v.session.slots.find((s) => s.id === slotId)?.yourPosition ?? 0) > 0, settleBudget(), pollMs);
+        const settled = await settle(source, (v) => (v.session.slots.find((s) => s.id === slotId)?.yourPosition ?? 0) > 0, settleBudget(), pollMs);
         const now = source().session.slots.find((s) => s.id === slotId);
+        if (!settled) {
+          // The seam is fire-and-forget; the board is the truth. A refused join (cap, a past wave, a
+          // race) must never be reported as a place in line.
+          return asToolResult({ ok: false, error: 'waitlist_not_confirmed', detail: 'The board did not report a place in line. It may be full for your human (three lines at most), or the slot changed. Call clinic_list_drops and try again.', slot_state: now?.state ?? slot.state, open_slot_ids: openIds(source().session.slots) } satisfies ErrorResult);
+        }
         return asToolResult({
           ok: true,
           waiting: true,
@@ -971,7 +980,10 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         if (!options.onLeaveWaitlist || !options.onLeaveWaitlist(slotId)) {
           return asToolResult({ ok: false, error: 'waitlist_unavailable', detail: 'This board has no waitlist.' } satisfies ErrorResult);
         }
-        await settle(source, (v) => !(v.session.slots.find((s) => s.id === slotId)?.yourPosition), settleBudget(), pollMs);
+        const left = await settle(source, (v) => !(v.session.slots.find((s) => s.id === slotId)?.yourPosition), settleBudget(), pollMs);
+        if (!left) {
+          return asToolResult({ ok: false, error: 'waitlist_not_confirmed', detail: 'The board still shows your human in that line. Call clinic_list_drops and try again.' } satisfies ErrorResult);
+        }
         return asToolResult({ ok: true, waiting: false, slot_id: slotId, booking: 'human_only' as const });
       },
     },

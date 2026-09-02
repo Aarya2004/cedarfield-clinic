@@ -243,13 +243,19 @@ export function ClinicBooking() {
 
   // ── who is holding ─────────────────────────────────────────────────────────────────────────────
   const lastLocalRequest = useRef<number | null>(null);
-  const [origin, setOrigin] = useState<HoldOrigin>('you');
   const heldSlotId = session.held?.slotId ?? null;
   const heldStartedAt = session.held?.startedAt ?? null;
+  // Derived in render, on purpose: the dock decides whether to take focus in ITS mount effect,
+  // which runs before this component's effects — an origin set in an effect would arrive one
+  // render late and a cascade grant would steal focus under the previous origin (security review).
+  const origin: HoldOrigin = session.held?.granted
+    ? 'waitlist'
+    : heldStartedAt === null
+      ? 'you'
+      : holdOrigin(heldStartedAt, lastLocalRequest.current);
 
   useEffect(() => {
     if (heldStartedAt === null || heldSlotId === null) return;
-    setOrigin(session.held?.granted ? 'waitlist' : holdOrigin(heldStartedAt, lastLocalRequest.current));
     // A hold that arrived while you were reading further down the page is invisible unless the page
     // shows you where it landed. Scrolling is not an interaction the counter sees, so this costs the
     // reader nothing on the receipt.
@@ -257,7 +263,7 @@ export function ClinicBooking() {
     if (row === null) return;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
-  }, [heldStartedAt, heldSlotId, session.held?.granted]);
+  }, [heldStartedAt, heldSlotId]);
 
   // ── receipts ───────────────────────────────────────────────────────────────────────────────────
   const [handReceipt, setHandReceipt] = useState<LaneReceipt | null>(null);
@@ -485,7 +491,7 @@ export function ClinicBooking() {
     : busy
       ? null
       : msUntilNextWave(elapsed);
-  const arrival = origin === 'agent' && heldSlot ? agentArrivalAnnouncement(origin, heldSlot.timeLabel) : null;
+  const arrival = (origin === 'agent' || origin === 'waitlist') && heldSlot ? agentArrivalAnnouncement(origin, heldSlot.timeLabel) : null;
 
   return (
     <div className="clinic" data-clinic-route="book" data-clinic-wave={wave}>
@@ -540,7 +546,8 @@ export function ClinicBooking() {
                   carry the 30 s / 10 s marks. */}
               <span aria-hidden="true">{holdHeadline(origin, session.secondsLeft)}</span>
               <span aria-hidden="true">
-                {heldSlot.timeLabel} with {heldSlot.clinician}. Your agent cannot press the key.
+                {heldSlot.timeLabel} with {heldSlot.clinician}.{' '}
+                {origin === 'waitlist' ? 'It came back to you from the line — nobody raced you.' : 'Your agent cannot press the key.'}
               </span>
               <span className="cl-sr" role="status">
                 {arrival}
@@ -626,7 +633,10 @@ export function ClinicBooking() {
             />
           ) : session.held !== null && session.secondsLeft > 0 && heldSlot ? (
             <ConfirmDock
-              key="hold-dock"
+              // Keyed by slot: a cascade grant that replaces a live hold (the sweep gives your other
+              // hold back and hands you the queued slot) must be a fresh dock — fresh dead zone,
+              // fresh announcement — never a relabelled one under a finger already in flight.
+              key={`hold-dock-${session.held.slotId}-${session.held.startedAt}`}
               secondsLeft={session.secondsLeft}
               ttlSeconds={session.held.ttlSeconds}
               slotLabel={heldSlot.timeLabel}

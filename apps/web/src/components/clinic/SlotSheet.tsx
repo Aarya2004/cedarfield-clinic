@@ -119,7 +119,7 @@ export function SlotSheet({
               ) : slot.state === 'expired_hold' ? (
                 <span className="cl-row__tag">Hold ran out</span>
               ) : null}
-              {slot.state !== 'open' && slot.state !== 'booked_yours' && ((slot.waiting ?? 0) > 0 || slot.yourPosition) ? (
+              {slot.state !== 'open' && ((slot.waiting ?? 0) > 0 || slot.yourPosition) ? (
                 <span className="cl-row__tag" data-clinic-waiting={slot.waiting ?? 0} data-clinic-position={slot.yourPosition ?? undefined}>
                   {slot.yourPosition ? `You're #${slot.yourPosition} in line` : `${slot.waiting} waiting`}
                 </span>

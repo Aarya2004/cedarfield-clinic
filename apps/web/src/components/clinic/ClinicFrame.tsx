@@ -124,7 +124,7 @@ export function ToolManifest({ absent = false }: { absent?: boolean }) {
       <p className="cl-manifest__note">
         {absent
           ? 'There is no tool that books. The verb was never registered, so there is nothing for an agent to find, and nothing for a jailbreak to reach.'
-          : 'Nine tools on the booking page when it loads — the arming tools always, so "nothing booked" is always sayable. A tenth exists only after you have booked: your press creates it, cancelling removes it. Every result that hands your agent a hold says the same sentence: one keypress on the page books it — you cannot.'}
+          : 'Eleven tools on the booking page — nine always (the arming tools included, so "nothing booked" is always sayable) plus two queue verbs on the shared board. A twelfth exists only after you have booked: your press creates it, cancelling removes it. Every result that hands your agent a hold says the same sentence: one keypress on the page books it — you cannot.'}
       </p>
     </div>
   );

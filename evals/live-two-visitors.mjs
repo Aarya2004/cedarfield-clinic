@@ -94,7 +94,7 @@ const steps = [
   { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state') === 'open'", timeout: 10000 },
   { eval: "(() => { const o = [...document.querySelectorAll('[data-slot-state=\"open\"]')].map(e => e.getAttribute('data-clinic-slot')).filter(id => id !== window.__t); window.__q = o[0]; return 'queue-target:' + o[0]; })()", matches: '^queue-target:' },
   { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__q + '\"]')?.getAttribute('data-slot-state') === 'held_by_other'", timeout: 15000 },
-  { invoke: 'clinic_join_waitlist', inputFrom: { slot_id: 'window.__q' }, outputMatches: 'waiting.{0,2}:true[\\s\\S]*position.{0,2}:1' },
+  { invoke: 'clinic_join_waitlist', inputFrom: { slot_id: 'window.__q' }, outputMatches: 'waiting.{0,2}:true[\\s\\S]*position.{0,2}:1[,}]' },
   { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__q + '\"] [data-clinic-position=\"1\"]') !== null", timeout: 10000 },
   { eval: "'queued:' + window.__q", matches: '^queued:' },
   // B releases (script side) → the sweep hands the slot to A → A's dock arms on its own

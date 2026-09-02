@@ -90,7 +90,7 @@ Then press Enter. **BOOKED — YOURS.** Cut to the receipt: **by hand, N · with
 
 **Shot.** Two windows on the shared board. Window B holds 9:20. In window A, ask the agent:
 *"get me in line for 9:20."* The row reads **You're #1 in line**. In window B, click **Give it
-back**. Window A's dock arms **by itself**: *"It came back to you — you book it."* Press Enter.
+back**. Window A's dock arms **by itself**: *"It came back to you · you book it."* Press Enter.
 
 **Narration** (~45 words)
 > "Someone else has the time I want. My agent puts me in line — that's a tool, and it's
@@ -99,14 +99,14 @@ back**. Window A's dock arms **by itself**: *"It came back to you — you book i
 
 ## 2:00 – 2:28 · Why it cannot cheat
 
-**Shot.** Open the **Site tools** arrow in ChatGPT and scroll the list slowly: nine tools, and no
+**Shot.** Open the **Site tools** arrow in ChatGPT and scroll the list slowly: eleven tools, and no
 booking, cancel or move tool among them. Then, in DevTools console, run
 `document.querySelector('[data-clinic-confirm]').click()` —
 nothing books, and the counter of **synthetic presses blocked** ticks up on screen.
 
 **Narration** (55 words)
-> "Here is the whole tool list this page gives an agent. Nine tools — list, search, who's on,
-> hold, status, release, arm a cancel, arm a move, and one that exists only to explain the rule.
+> "Here is the whole tool list this page gives an agent. Eleven tools — list, search, who's on,
+> hold, status, release, arm a cancel, arm a move, get in line, leave the line, and one that exists only to explain the rule.
 > Nothing that books, cancels or moves. And booking is gated on an
 > event only a browser can produce, so a script cannot fake it either. The page counts the attempts
 > in the open."

@@ -54,3 +54,10 @@ test('only an agent hold is announced, and the announcement names the act you st
   );
   assert.equal(agentArrivalAnnouncement('you', '9:20 AM'), null);
 });
+
+// ── SPEC-V5: a cascade grant has its own sentence ────────────────────────────────────────────
+test('waitlist origin: headline and arrival say it came back, never "your agent"', () => {
+  assert.match(holdHeadline('waitlist', 30), /It came back to you/);
+  assert.match(String(agentArrivalAnnouncement('waitlist', '9:20 AM')), /came back to you from the waitlist/);
+  assert.doesNotMatch(String(agentArrivalAnnouncement('waitlist', '9:20 AM')), /agent/);
+});

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ClinicTools — the nine WebMCP tools of the booking page, mounted (SPEC-V1 §3, SPEC-V2 §2).
+ * ClinicTools — the booking page's WebMCP tools, mounted (SPEC-V1 §3, V2, V4, V5).
  *
  * The tools themselves live in
  * `lib/drop/clinic-tools.ts`; this file is only the mount point and a two-line status indicator.
@@ -13,9 +13,9 @@
  *     <ClinicTools driver={driver} session={session} />
  *
  * Mount it once, anywhere inside /clinic/book — it renders one small line of text and nothing else,
- * so it is safe in a footer, a status rail, or beside the counter. On mount it registers the nine
- * tools with `document.modelContext`; on unmount it aborts the one AbortController, which
- * unregisters all nine. It owns no state and changes no board state: every tool reads and writes
+ * so it is safe in a footer, a status rail, or beside the counter. On mount it registers the base
+ * tools (plus the queue verbs on the shared board; one more is born by the person's booking) with `document.modelContext`; on unmount it aborts the one AbortController, which
+ * unregisters everything. It owns no state and changes no board state: every tool reads and writes
  * through the `driver` and `session` you pass, which are the same objects the UI renders from.
  *
  * Optional `nextWaveAt`: the clock ms of the next drop wave, in `session.now`'s units, if the page
@@ -23,7 +23,7 @@
  * not invent numbers.
  *
  * ── WHAT IT DELIBERATELY CANNOT DO ──────────────────────────────────────────────────────────────
- * There is no booking, cancelling or moving tool among the nine; this component never calls
+ * There is no booking, cancelling or moving tool among them; this component never calls
  * `driver.confirm()`, `driver.cancel()` or `driver.move()` — the prepare_* tools only ARM the dock.
  * Booking stays where it belongs: the human's own key press, on the page, gated on a trusted event.
  *
@@ -35,7 +35,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DropDriver } from '../../lib/drop/types.ts';
 import {
-  CLINIC_TOOL_NAMES,
   registerClinicTools,
   type ClinicRegistrationState,
   type ClinicToolsView,
@@ -166,7 +165,7 @@ export function ClinicTools({
       data-clinic-tools-live={state.kind === 'registered' ? state.names.join(' ') : ''}
       data-clinic-booked={session.slots.some((s) => s.state === 'booked_yours') ? 'true' : 'false'}
       title={
-        `WebMCP tools published by this page: ${CLINIC_TOOL_NAMES.join(', ')}. ` +
+        `WebMCP tools published by this page: ${state.kind === 'registered' ? state.names.join(', ') : 'none yet'}. ` +
         'None of them can book — only you can.' +
         (state.kind === 'error' ? ` Registration failed: ${state.message}` : '')
       }

@@ -61,8 +61,8 @@ page's own receipt shows both numbers live. Case: `evals/cases/clinic-manual-tax
 
 ## What makes this WebMCP, specifically
 
-**The tool that is missing is the design — and the tool that appears is the proof.** Nine tools
-are registered on `/clinic/book` when it loads — including the arming tools, on purpose: a person
+**The tool that is missing is the design — and the tool that appears is the proof.** Nine base tools
+are registered on `/clinic/book` when it loads (eleven on the shared board, which adds two queue verbs) — including the arming tools, on purpose: a person
 with no booking must still hear *"you have nothing booked"* from their agent, and a voice user
 whose client is slow to notice `toolchange` must never lose a capability. The tenth,
 `clinic_my_appointment`, **does not exist until a person has booked**: the moment the trusted press
@@ -86,9 +86,12 @@ is always one trusted press from you.
 | `clinic_prepare_move` | ❌ | Freezes the target slot and **arms** the dock. One trusted press swaps atomically |
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists, what exists now, and what your press will create |
 | *born by your press:* `clinic_my_appointment` | ✅ | Your booking(s), newest first — exists only while you have one |
-
 | *shared board only:* `clinic_join_waitlist` | ❌ | Puts your human **in line** for a taken slot. If it comes back, it is theirs first — as a fresh hold, in order. Reversible |
 | *shared board only:* `clinic_leave_waitlist` | ❌ | Takes them out of the line |
+
+**Counted honestly:** nine tools on the seeded board (`?test=1`), **eleven on the shared board** every
+real visitor is on (the two queue verbs), **twelve once you have booked** — exactly the
+twelve-tool cap we set ourselves.
 
 **The waitlist cascade — the race is gone.** On the shared board an agent can queue its human for
 a slot that is held or booked by someone else. When that slot comes back — a hold lapses, a
@@ -129,7 +132,7 @@ API the agent is given — and the only place a trusted press can be told from a
 
 ```bash
 pnpm install
-cd apps/web && pnpm typecheck && pnpm lint && pnpm test    # 441 unit tests
+cd apps/web && pnpm typecheck && pnpm lint && pnpm test    # 444 unit tests
 cd .. && node evals/run-all.mjs --only=clinic              # 17 live browser cases, real tool calls (seeded board, ?test=1)
 node evals/a11y.mjs                                        # axe-core on all three routes
 node evals/live-two-visitors.mjs --url=<origin>            # the shared board: visitor B books, visitor A's page shows it go

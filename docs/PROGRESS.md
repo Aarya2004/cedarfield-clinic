@@ -15,8 +15,19 @@ Last update: **2026-09-02 (Engineer #4, Fable 5.1)** Branch `main`.
 - **Registration is serialised on a promise chain** in `ClinicTools` (a surface change after
   mount — the queue verbs arriving with `live` — re-registers without name collisions).
 - Gate: 444 tests · lint 0 · seeded suite + axe · `live-two-visitors` grew the cascade beat.
-- Owed: deploy → verify-deployed + live-two-visitors on prod → monitor; ChatGPT desktop hour;
-  Aarya's real-hand test; video beat added to VIDEO-SCRIPT.
+- Deployed and verified on prod 2026-09-02 (17/17 seeded, 25/25 live incl. the cascade).
+- **Second review round (security + fresh eyes) on V4/V5 — all fixed, 448 tests:** the cascade
+  reopened the arming class three ways (a grant relabelled a live dock in place; a stale
+  `requested` id labelled a grant as your own hold; `origin` set one effect late so the dock's
+  focus rule read the previous origin) — dock keyed by slot+start, `requested` is a 15 s TTL map
+  cleared on refusal, origin derived in render. SQL: cascade hand-over re-checks under lock and
+  keeps a lost racer's place, unique/deadlock inside the sweep never fails another visitor's read
+  or leaks a uuid, `clinic_hold` on your own fresh grant is a success, per-slot queue cap 3,
+  deterministic tie order, visitor index. Tools: join/leave believe only the board
+  (`waitlist_not_confirmed`), rival-taken slots refused, arrival announced for the cascade,
+  "N waiting" on your own booking, title lists registered names. Docs: counts are 9 seeded / 11
+  shared / 12 booked everywhere; SECURITY cascade bullet exactly true; tables fixed; 444→448.
+  Still owed by humans: redeploy; ChatGPT desktop hour; Aarya's real-hand test.
 
 ## Build log — Engineer #4 (2026-09-01 night) — SPEC-V3 shipped + full adversarial sweep closed
 **SPEC-V3 — the shared live board.** Arav: "not a simulation — real judges racing each other."
