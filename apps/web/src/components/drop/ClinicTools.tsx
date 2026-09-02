@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * ClinicTools — the nine WebMCP tools of the booking page, mounted (SPEC-V1 §3, SPEC-V2 §2).
+ * ClinicTools — the booking page's WebMCP tools, mounted (SPEC-V1 §3, V2, V4, V5).
  *
- * PROVISIONAL SCHEMA — Arav red-lines before lock. The tools themselves live in
+ * The tools themselves live in
  * `lib/drop/clinic-tools.ts`; this file is only the mount point and a two-line status indicator.
  *
  * ── HOW TO USE IT (the whole API) ───────────────────────────────────────────────────────────────
@@ -13,9 +13,9 @@
  *     <ClinicTools driver={driver} session={session} />
  *
  * Mount it once, anywhere inside /clinic/book — it renders one small line of text and nothing else,
- * so it is safe in a footer, a status rail, or beside the counter. On mount it registers the nine
- * tools with `document.modelContext`; on unmount it aborts the one AbortController, which
- * unregisters all nine. It owns no state and changes no board state: every tool reads and writes
+ * so it is safe in a footer, a status rail, or beside the counter. On mount it registers the base
+ * tools (plus the queue verbs on the shared board; one more is born by the person's booking) with `document.modelContext`; on unmount it aborts the one AbortController, which
+ * unregisters everything. It owns no state and changes no board state: every tool reads and writes
  * through the `driver` and `session` you pass, which are the same objects the UI renders from.
  *
  * Optional `nextWaveAt`: the clock ms of the next drop wave, in `session.now`'s units, if the page
@@ -23,7 +23,7 @@
  * not invent numbers.
  *
  * ── WHAT IT DELIBERATELY CANNOT DO ──────────────────────────────────────────────────────────────
- * There is no booking, cancelling or moving tool among the nine; this component never calls
+ * There is no booking, cancelling or moving tool among them; this component never calls
  * `driver.confirm()`, `driver.cancel()` or `driver.move()` — the prepare_* tools only ARM the dock.
  * Booking stays where it belongs: the human's own key press, on the page, gated on a trusted event.
  *
@@ -57,28 +57,54 @@ export interface ClinicToolsProps {
    */
   onPrepareCancel?: (slotId: string) => boolean;
   onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
+  /** SPEC-V5: the queue verbs, present only on the shared board. Absent ⇒ the two tools are not registered. */
+  onJoinWaitlist?: (slotId: string) => boolean;
+  onLeaveWaitlist?: (slotId: string) => boolean;
   /** The act the dock is armed for right now — so clinic_hold_status never misdescribes the press. */
   armedAct?: 'cancel' | 'move' | null;
+  /** SPEC-V3: the server's wave start (session-clock units) and whether the board is shared. */
+  waveLandedAt?: number | null;
+  sharedBoard?: boolean;
+  /** How long hold/release wait for the fold. The live board is two network round trips. */
+  settleTimeoutMs?: number;
 }
 
-export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCancel, onPrepareMove, armedAct = null }: ClinicToolsProps) {
-  const [state, setState] = useState<ClinicRegistrationState>({ kind: 'unsupported' });
+export function ClinicTools({
+  driver,
+  session,
+  nextWaveAt = null,
+  onPrepareCancel,
+  onPrepareMove,
+  onJoinWaitlist,
+  onLeaveWaitlist,
+  armedAct = null,
+  waveLandedAt = null,
+  sharedBoard = false,
+  settleTimeoutMs,
+}: ClinicToolsProps) {
+  const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
 
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
-  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct });
-  const seams = useRef({ onPrepareCancel, onPrepareMove });
+  const waitlistAvailable = onJoinWaitlist !== undefined;
+  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable });
+  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs });
   useEffect(() => {
-    view.current = { driver, session, nextWaveAt, armedAct };
-    seams.current = { onPrepareCancel, onPrepareMove };
+    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable };
+    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs };
   });
 
+  // Every registration and disposal is queued on one promise chain. The surface can change after
+  // mount (the page learns it is live, which brings the queue verbs) and Chrome's model context
+  // refuses a name that is still registered — so the next registration must wait for the previous
+  // disposal to have actually run, never race it.
+  const chain = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
-    // Registration is async; if the effect is torn down before it resolves (StrictMode's
-    // double-invoke, or a fast navigation), dispose on arrival rather than leak nine tools.
     let disposed = false;
     let dispose: (() => void) | null = null;
-    void registerClinicTools(
+    chain.current = chain.current.then(async () => {
+      if (disposed) return;
+      dispose = await registerClinicTools(
       () => view.current,
       (s) => {
         if (!disposed) setState(s);
@@ -87,16 +113,32 @@ export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCance
         // Live seams: registration happens once, the page's callbacks change every render.
         onPrepareCancel: (slotId) => seams.current.onPrepareCancel?.(slotId) ?? false,
         onPrepareMove: (fromId, toId) => seams.current.onPrepareMove?.(fromId, toId) ?? false,
+        // Registered at mount only when the page is live: the seam's presence decides the surface.
+        ...(waitlistAvailable
+          ? {
+              onJoinWaitlist: (id: string) => seams.current.onJoinWaitlist?.(id) ?? false,
+              onLeaveWaitlist: (id: string) => seams.current.onLeaveWaitlist?.(id) ?? false,
+            }
+          : {}),
+        // Live too: the budget is read at each call, so the page may learn it after registration.
+        settleTimeoutMs: () => seams.current.settleTimeoutMs ?? 1200,
       },
-    ).then((d) => {
-      if (disposed) d();
-      else dispose = d;
+      );
+      if (disposed) {
+        dispose();
+        dispose = null;
+      }
     });
     return () => {
       disposed = true;
-      dispose?.();
+      chain.current = chain.current.then(() => {
+        dispose?.();
+        dispose = null;
+      });
     };
-  }, []);
+    // The surface itself (which tools exist) is the only dependency; every value the tools READ is
+    // a ref (view, seams, budget). A change here re-registers, serialised through the chain.
+  }, [waitlistAvailable]);
 
   // `hidden` rather than a class: this mount point has no stylesheet of its own, and the attribute
   // takes it out of the accessibility tree as well as the layout while leaving the hooks queryable.
@@ -105,6 +147,10 @@ export function ClinicTools({ driver, session, nextWaveAt = null, onPrepareCance
       hidden
       data-clinic-tools={state.kind}
       data-clinic-tool-count={state.kind === 'registered' ? state.names.length : 0}
+      // Diagnostics for the headless drive: what the page believes vs what it registered.
+      data-clinic-tools-live={state.kind === 'registered' ? state.names.join(' ') : ''}
+      data-clinic-booked={session.slots.some((s) => s.state === 'booked_yours') ? 'true' : 'false'}
+      data-clinic-tools-error={state.kind === 'error' ? state.message : undefined}
     />
   );
 }

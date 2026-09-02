@@ -17,6 +17,10 @@ import { createMockDriver, type MockDropDriver } from './mock-driver.ts';
 import type { ModelContext, ModelContextTool, RegisterToolOptions } from '../webmcp/types.ts';
 import {
   CLINIC_TOOL_NAMES,
+  BASE_TOOL_NAMES,
+  BOOKED_TOOL_NAMES,
+  WAITLIST_TOOL_NAMES,
+  WAITLIST_CHOREOGRAPHY,
   HOLD_CHOREOGRAPHY,
   CANCEL_CHOREOGRAPHY,
   MOVE_CHOREOGRAPHY,
@@ -161,9 +165,9 @@ test('THE THESIS: no registered tool offers to book or confirm anything', async 
   const { mc, live } = fakeMc();
   const restore = withModelContext(mc);
   try {
-    await registerClinicTools(ready().source, () => {});
+    await registerClinicTools(ready().source, () => {}, { watchMs: 5 });
     const names = live();
-    assert.equal(names.length, 9);
+    assert.equal(names.length, 9, 'before any booking: the base nine — the arming tools are always there');
     for (const name of names) {
       assert.ok(!/book/i.test(name), `${name} must not contain "book" — only the human books`);
       // The VERB is the thing under test: `clinic_explain_confirm` explains, it does not confirm.
@@ -173,8 +177,9 @@ test('THE THESIS: no registered tool offers to book or confirm anything', async 
         `${name} must not act like a booking tool`,
       );
     }
-    // Exhaustive, so a sixth tool cannot be added without this assertion being re-read.
-    assert.deepEqual(names, [...CLINIC_TOOL_NAMES]);
+    // Exhaustive, so a tenth base tool cannot be added without this assertion being re-read.
+    // (clinic_my_appointment is born later by the human's press; the queue verbs ride with a seam.)
+    assert.deepEqual(names, [...BASE_TOOL_NAMES]);
   } finally {
     restore();
   }
@@ -196,12 +201,13 @@ test('THE THESIS: no tool path ever calls driver.confirm()', async () => {
 
 // ── registration ────────────────────────────────────────────────────────────────────────────────
 
-test('exactly nine tools register, in a stable order, with stable names', async () => {
+test('nine tools register on load; clinic_my_appointment is born by the human press and dies with the booking', async () => {
   const { mc, regs, live } = fakeMc();
   const restore = withModelContext(mc);
   try {
     const states: unknown[] = [];
-    await registerClinicTools(ready().source, (s) => states.push(s));
+    const { driver, source } = ready();
+    const dispose = await registerClinicTools(source, (s) => states.push(s), { watchMs: 5 });
     assert.equal(regs.length, 9);
     assert.deepEqual(live(), [
       'clinic_list_drops',
@@ -214,8 +220,23 @@ test('exactly nine tools register, in a stable order, with stable names', async 
       'clinic_prepare_move',
       'clinic_explain_confirm',
     ]);
-    assert.deepEqual(live(), [...CLINIC_TOOL_NAMES]);
-    assert.deepEqual(states, [{ kind: 'registered', names: [...CLINIC_TOOL_NAMES] }]);
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES]);
+    assert.deepEqual(states, [{ kind: 'registered', names: [...BASE_TOOL_NAMES] }]);
+    // THE HUMAN BOOKS (directly on the driver — the test is the person) → one tool is born
+    const open = driver.snapshot().slots.find((s) => s.state === 'open')!;
+    driver.hold(open.id);
+    driver.book(open.id);
+    await new Promise((r) => setTimeout(r, 40));
+    // registration order: the base nine first, then the three the press created
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES], 'after the press: the full ten, clinic_my_appointment born');
+    assert.deepEqual([...live()].sort(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES].sort(), 'no waitlist seam ⇒ no waitlist tools');
+    assert.deepEqual(states.at(-1), { kind: 'registered', names: [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES] });
+    // THE HUMAN CANCELS → the three are unregistered again
+    driver.cancel(open.id);
+    await new Promise((r) => setTimeout(r, 40));
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES], 'no booking, no booked tools');
+    dispose();
+    assert.deepEqual(live(), [], 'dispose drops everything');
   } finally {
     restore();
   }
@@ -244,7 +265,7 @@ test('every registered tool carries a description and an input schema; annotatio
   }
 });
 
-test('schemas are stable: exactly three tools take input, everything else is a bare object', () => {
+test('schemas are stable: exactly five tools take input, everything else is a bare object', () => {
   const { defs, get } = defsFor(ready().source);
   const hold = get('clinic_hold_slot').inputSchema as { required: string[]; properties: Record<string, { type: string }> };
   assert.deepEqual(hold.required, ['slot_id']);
@@ -255,13 +276,16 @@ test('schemas are stable: exactly three tools take input, everything else is a b
   const find = get('clinic_find_slots').inputSchema as { required?: string[]; properties: Record<string, { type: string }> };
   assert.equal(find.required, undefined, 'every clinic_find_slots filter is optional — an empty query is a listing');
   assert.deepEqual(Object.keys(find.properties).sort(), ['after', 'before', 'clinician', 'kind']);
-  const WITH_INPUT = ['clinic_hold_slot', 'clinic_prepare_move', 'clinic_find_slots'];
+  const wait = get('clinic_join_waitlist').inputSchema as { required: string[] };
+  assert.deepEqual(wait.required, ['slot_id']);
+  assert.deepEqual((get('clinic_leave_waitlist').inputSchema as { required: string[] }).required, ['slot_id']);
+  const WITH_INPUT = ['clinic_hold_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist'];
   for (const def of defs.filter((d) => !WITH_INPUT.includes(d.name))) {
     assert.deepEqual(def.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
   }
 });
 
-test('abort unregisters all five (the returned dispose is the AbortController)', async () => {
+test('abort unregisters everything (the returned dispose drops every controller)', async () => {
   const { mc, live } = fakeMc();
   const restore = withModelContext(mc);
   try {
@@ -300,11 +324,11 @@ test('a registerTool that rejects is reported, never thrown at the page', async 
 
 // ── behaviour ───────────────────────────────────────────────────────────────────────────────────
 
-test('clinic_list_drops reports the live board, honestly labelled as a demo', async () => {
+test('clinic_list_drops reports the live board, honestly labelled as fictional', async () => {
   const { get } = defsFor(ready().source);
   const out = await callJson(get('clinic_list_drops'));
   assert.equal(out.ok, true);
-  assert.equal(out.demo, true);
+  assert.equal(out.fictional_clinic, true);
   assert.equal(out.booking, 'human_only');
   const slots = out.slots as { id: string; time: string; clinician: string; kind: string; state: string }[];
   assert.equal(slots.length, 6);
@@ -377,7 +401,8 @@ test('clinic_explain_confirm names the absent tool and what to say to the human'
   assert.equal(out.ok, true);
   assert.equal(out.tool_that_books, null);
   assert.equal(out.booking, 'human_only');
-  assert.deepEqual(out.tools_that_exist, [...CLINIC_TOOL_NAMES]);
+  assert.deepEqual(out.tools_that_exist, [...BASE_TOOL_NAMES], 'no booking yet: the base nine');
+  assert.deepEqual(out.tools_that_appear_after_your_human_books, [...BOOKED_TOOL_NAMES]);
   assert.equal(out.what_to_tell_your_human, HOLD_CHOREOGRAPHY);
   assert.match(String(out.reason), /trusted event|browser-trusted/i);
 });
@@ -473,7 +498,7 @@ const FORBIDDEN_TOOL_NAMES = [
 test('no booking tool exists — not in the names, not in the defs, not in any description', () => {
   const defs = clinicToolDefs(frozenSource([], []));
   const names = defs.map((d) => d.name);
-  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the registered defs are exactly the declared nine');
+  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the defs are exactly the declared twelve');
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
     assert.ok(!(names as string[]).includes(forbidden), `${forbidden} must never be on this page tool surface`);
     assert.ok(
@@ -541,7 +566,9 @@ test('parseClockText reads what a person would say', () => {
   assert.equal(parseClockText('12:15 pm'), 12 * 60 + 15);
   assert.equal(parseClockText('half past nine'), null);
   assert.equal(parseClockText('25:00'), null);
-  assert.equal(parseClockText(7), null);
+  assert.equal(parseClockText(7), 7 * 60, 'a bare number is an hour, as Chrome/agents sometimes send it');
+  assert.equal(parseClockText(Number.NaN), null);
+  assert.equal(parseClockText({}), null);
 });
 
 test('clinic_find_slots filters by clinician, kind and window — and names the killing constraint', async () => {
@@ -746,4 +773,119 @@ test('clinic_hold_status describes the press the dock will ACTUALLY perform', as
   const plain = holdStatus({ ...moveView(), armedAct: null });
   assert.equal(plain.next_step, HOLD_CHOREOGRAPHY);
   assert.equal('armed_act' in plain, false);
+});
+
+test('clinic_prepare_move refuses while a hold is live on a DIFFERENT slot (P1-2)', async () => {
+  const { driver, source } = ready();
+  const armed: Array<[string, string]> = [];
+  const defs = clinicToolDefs(source, { ...FAST, onPrepareMove: (a, b) => (armed.push([a, b]), true) });
+  const prep = defs.find((d) => d.name === 'clinic_prepare_move')!;
+  const open = driver.snapshot().slots.filter((s) => s.state === 'open');
+  driver.hold(open[0].id);
+  driver.book(open[0].id);
+  driver.hold(open[1].id); // the person may be mid-press on this book dock
+  const out = await callJson(prep, { new_slot_id: open[2].id });
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'hold_in_progress');
+  assert.deepEqual(armed, [], 'the dock was never swapped under the live hold');
+  assert.equal(driver.snapshot().hold?.slotId, open[1].id, 'the hold survives untouched');
+  // …but moving ONTO the held slot is the legitimate two-step flow and stays allowed.
+  const ok = await callJson(prep, { new_slot_id: open[1].id });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.armed, 'move');
+});
+
+// ── SPEC-V5: the waitlist cascade — the agent's reversible place in line ────────────────────────
+
+test('waitlist tools exist only when the page provides the queue seam (the shared board)', async () => {
+  const { mc, live } = fakeMc();
+  const restore = withModelContext(mc);
+  try {
+    const joined: string[] = [];
+    const dispose = await registerClinicTools(ready().source, () => {}, { watchMs: 5, onJoinWaitlist: (id) => (joined.push(id), true), onLeaveWaitlist: () => true });
+    assert.deepEqual([...live()].sort(), [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES].sort(), 'nine + the two queue verbs');
+    dispose();
+  } finally {
+    restore();
+  }
+});
+
+test('clinic_join_waitlist: refuses an OPEN slot (hold it instead), your own slot, and the unknown; queues a taken one', async () => {
+  const held: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'held_by_other', waiting: 1 };
+  const open: Slot = { id: 's2', timeLabel: '9:20 AM', clinician: 'Dr. B', kind: 'Consult', state: 'open' };
+  const mine: Slot = { id: 's3', timeLabel: '9:40 AM', clinician: 'Dr. C', kind: 'Consult', state: 'booked_yours' };
+  const src = frozenSource([held, open, mine], []);
+  const joined: string[] = [];
+  const defs = clinicToolDefs(src, {
+    ...FAST,
+    onJoinWaitlist: (id) => {
+      joined.push(id);
+      held.yourPosition = 2; // the board answers: second in line
+      held.waiting = 2;
+      return true;
+    },
+    onLeaveWaitlist: () => {
+      held.yourPosition = null; // the board answers: out of the line
+      return true;
+    },
+  });
+  const join = defs.find((d) => d.name === 'clinic_join_waitlist')!;
+  assert.equal((await callJson(join, { slot_id: 's2' })).error, 'slot_open');
+  assert.equal((await callJson(join, { slot_id: 's3' })).error, 'already_yours');
+  assert.equal((await callJson(join, { slot_id: 'nope' })).error, 'unknown_slot');
+  assert.deepEqual(joined, [], 'refusals never reach the seam');
+  const out = await callJson(join, { slot_id: 's1' });
+  assert.equal(out.ok, true);
+  assert.equal(out.waiting, true);
+  assert.equal(out.position, 2);
+  assert.equal(out.ahead_of_you, 1);
+  assert.equal(out.next_step, WAITLIST_CHOREOGRAPHY);
+  assert.deepEqual(joined, ['s1']);
+  // leaving: refused when not waiting, honoured when waiting
+  const leave = defs.find((d) => d.name === 'clinic_leave_waitlist')!;
+  assert.equal((await callJson(leave, { slot_id: 's2' })).error, 'not_waiting');
+  const left = await callJson(leave, { slot_id: 's1' });
+  assert.equal(left.ok, true);
+});
+
+test('hold_slot on a taken slot points the agent at the queue when the board has one', async () => {
+  const held: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'held_by_other' };
+  const calls: string[] = [];
+  const base = frozenSource([held], calls);
+  const withQueue: ClinicToolsSource = () => ({ ...base(), waitlistAvailable: true });
+  const out = await callJson(clinicToolDefs(withQueue, FAST).find((d) => d.name === 'clinic_hold_slot')!, { slot_id: 's1' });
+  assert.equal(out.ok, false);
+  assert.match(String(out.hint), /clinic_join_waitlist/);
+  const plain = await callJson(clinicToolDefs(base, FAST).find((d) => d.name === 'clinic_hold_slot')!, { slot_id: 's1' });
+  assert.equal('hint' in plain, false, 'the seeded board has no queue to suggest');
+});
+
+test('clinic_join_waitlist / leave believe only the board: a seam that never lands is waitlist_not_confirmed', async () => {
+  const held: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'held_by_other', waiting: 3 };
+  const src = frozenSource([held], []);
+  const defs = clinicToolDefs(src, { settleTimeoutMs: 30, settlePollMs: 1, onJoinWaitlist: () => true, onLeaveWaitlist: () => true });
+  const out = await callJson(defs.find((d) => d.name === 'clinic_join_waitlist')!, { slot_id: 's1' });
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'waitlist_not_confirmed', 'a refused join (cap, past wave, race) is never reported as a place in line');
+  held.yourPosition = 2;
+  const left = await callJson(defs.find((d) => d.name === 'clinic_leave_waitlist')!, { slot_id: 's1' });
+  assert.equal(left.error, 'waitlist_not_confirmed');
+});
+
+test('clinic_join_waitlist refuses a rival-taken slot: that line never moves this release', async () => {
+  const rival: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'taken_by_rival' };
+  const joined: string[] = [];
+  const defs = clinicToolDefs(frozenSource([rival], []), { ...FAST, onJoinWaitlist: (id) => (joined.push(id), true) });
+  const out = await callJson(defs.find((d) => d.name === 'clinic_join_waitlist')!, { slot_id: 's1' });
+  assert.equal(out.error, 'slot_unavailable');
+  assert.deepEqual(joined, []);
+});
+
+test('clinic_explain_confirm lists the queue verbs only where a queue exists', async () => {
+  const base = frozenSource([], []);
+  const withQueue: ClinicToolsSource = () => ({ ...base(), waitlistAvailable: true });
+  const plain = await callJson(clinicToolDefs(base, FAST).find((d) => d.name === 'clinic_explain_confirm')!);
+  assert.deepEqual(plain.tools_that_exist, [...BASE_TOOL_NAMES]);
+  const live = await callJson(clinicToolDefs(withQueue, FAST).find((d) => d.name === 'clinic_explain_confirm')!);
+  assert.deepEqual(live.tools_that_exist, [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES]);
 });

@@ -7,7 +7,7 @@
 **Tagline:** Your agent can hold it. Only you can take it.
 **Live URL:** https://rokan-terminal.vercel.app (the front door is the product; the booking page is `/clinic/book`)
 <!-- Deployed and verified 2026-08-31: node evals/verify-deployed.mjs --url=… — all checks green
-     (routes, five tools, no booking tool, synthetic press refused, trusted press books, hold
+     (routes, nine tools, no booking tool, synthetic press refused, trusted press books, hold
      lapses clean, agent edge cases, responsive, front door is the product, axe clean ×3).
      Evidence: docs/evidence/clinic/2026-08-31-deployed-verification.txt
      TODO: the origin still carries the pre-pivot project name — see DROP-STATUS. -->
@@ -32,13 +32,13 @@ reaches that step.
 
 1. Open the live URL in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or **Chrome 152+** with
    `chrome://flags/#enable-webmcp-testing`, then click **Book an appointment** (`/clinic/book`).
-2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): nine `clinic_*` tools —
-   and no booking, cancel, or move tool among them.
+2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): eleven `clinic_*` tools —
+   and no booking, cancel, or move tool among them. Watch the list again after step 5: one more appears.
 3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a 45-second bar and
    the dock at the bottom arms.
 4. Ask it to *"just book it."* It will explain that it can't, and why.
-5. **Press Enter.** Booked — and the receipt shows what the same task costs by hand versus the one
-   press it cost you.
+5. **Press Enter.** Booked — the receipt shows what the same task costs by hand versus the one
+   press it cost you, and **a new tool appears in your agent's list**, born by that press.
 
 Everything the description claims is also re-runnable from the repo in two commands (below).
 
@@ -74,10 +74,24 @@ Neither party can complete the task alone, and that is the design rather than a 
 
 ## Why WebMCP, specifically
 
-Nine tools are registered on `/clinic/book` with `document.modelContext.registerTool()`:
+Nine base tools are registered on `/clinic/book` when it loads (`document.modelContext.registerTool()`):
 `clinic_list_drops`, `clinic_find_slots`, `clinic_clinicians`, `clinic_hold_slot`,
 `clinic_hold_status`, `clinic_release_hold`, `clinic_prepare_cancel`, `clinic_prepare_move`,
-`clinic_explain_confirm`. The writes — hold, release, and the two prepare tools — are all
+`clinic_explain_confirm` — the arming tools included, on purpose, so a person with no booking always
+hears *"you have nothing booked"* rather than *"I have no such tool"*. **The tenth is born by the
+human's press**: the instant a person books, `clinic_my_appointment` is registered live —
+`toolchange` fires, the agent's list grows — and it is unregistered when the last booking is gone.
+What the press creates is purely additive: a client slow to notice `toolchange` loses nothing; a
+client that sees it watches a human act change the agent's surface.
+
+**And on the shared board — where every real visitor is — two more tools make eleven, and the race is gone.** `clinic_join_waitlist` and
+`clinic_leave_waitlist`, let an agent put its human *in line* for a slot someone else holds. When
+that slot comes back — a hold lapses, a cancellation, a move — the server hands it to the first in
+line as a fresh 45-second hold; the dock arms by itself (*"It came back to you"*) and one press
+books it. The agent does the watching a person with a switch cannot; the person does the one act
+that must stay theirs; the database keeps the order between strangers. In MCP-B's taxonomy (read ·
+navigation · human-approved write): read/arming tools, two reversible queue verbs, and zero write
+tools — the writes are the person's, at the page. The writes — hold, release, and the two prepare tools — are all
 reversible and self-expiring; `clinic_prepare_cancel` / `clinic_prepare_move` **arm** the page's
 dock and perform nothing: the cancel or the move happens only on a browser-trusted press, through
 the same gate as booking. A search that matches nothing names the constraint that eliminated
@@ -87,26 +101,34 @@ everything, so an agent on a voice call can say which filter to relax.
 gated on a browser-trusted event, which no tool call, no console `.click()` and no extension can
 produce. Every synthetic attempt is counted and shown on screen instead of being silently dropped.
 
-That is the honest answer to "could you do this without WebMCP?" — no. A REST endpoint would let
-anything holding the URL book the slot. A page's own tool surface is the only place you can hand an
-agent real capability while making the consequential act *inexpressible* in the API it is given. The
-fifth tool exists so the agent can explain that boundary in its own words when a user asks it to
-just book the thing.
+That is the honest answer to "could you do this without WebMCP?" — no. Behind the page a database
+enforces fairness between strangers — one hold each, hold-before-book, only your own booking
+cancels or moves, an atomic move — and it cannot enforce that a *human* pressed anything; no
+server can. A page's own tool surface is the only place you can hand an agent real capability
+while making the consequential act *inexpressible* in the API it is given, and the only place a
+trusted press can be told from a scripted one. `clinic_explain_confirm` exists so the agent can
+explain that boundary in its own words when a user asks it to just book the thing.
 
 ## Implementation
 
-Next.js 15 (App Router, TS strict) on Vercel. The board is a seeded in-page driver — no accounts, no
-database, no backend, **and no model call of our own anywhere in the product**: the reasoning is the
-visitor's own agent, in their own client. One `DropDriver` seam is the single place a real clinic
-backend would plug in; `hold()` is the agent's verb and the only one ever registered, while `book()`
-and `confirm()` are the human's and are unreachable from any tool — the unit-test fakes throw if a
-tool so much as reaches for them.
+Next.js 15 (App Router, TS strict) on Vercel. **The board is shared and live**: one Supabase
+Postgres inventory every visitor sees — open it in two windows and race yourself. An anonymous
+session per browser (no sign-up, no credentials), realtime updates with a poll fallback, and the
+integrity a page can never provide for two strangers at once enforced by the database as RLS +
+`SECURITY DEFINER` functions: one hold per visitor, hold-before-book, only your own booking cancels
+or moves, an atomic move, three bookings each at most. Waves release on a 90-second server clock
+for everyone at once. **No model call of our own anywhere in the product**: the reasoning is the
+visitor's own agent, in their own client. One `DropDriver` seam is where the backend plugs in
+(`supabase-driver.ts`; the seeded in-page driver behind `?test=1` is what every eval drives);
+`hold()` is the agent's verb and the only one ever registered, while `book()`, `confirm()`,
+`cancel()` and `move()` are the human's and are unreachable from any tool — the unit-test fakes
+throw if a tool so much as reaches for them.
 
 Verification is a first-class part of the repo, not a claim in a README:
 
 | Proof | Case |
 |---|---|
-| Nine tools registered; **no** booking/cancel/move tool (nine negative assertions) | `evals/cases/clinic-thesis.json` |
+| Nine tools at load, ten after the human books (one born live, additive only); **no** booking/cancel/move tool (nine negative assertions) | `evals/cases/clinic-thesis.json` |
 | A synthetic press is **blocked**; a browser-trusted press **books** — same page, same run | same case |
 | The agent path costs the person **1** interaction | same case |
 | A hold lapses after 45 s: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |
@@ -115,15 +137,19 @@ Verification is a first-class part of the repo, not a claim in a README:
 | Cancel/move are armed by the agent, performed only by a trusted press; a move swaps atomically | `clinic-cancel.json`, `clinic-move.json` |
 | The voice surface: searches, clinician listing, refusals readable aloud | `clinic-voice-tour.json` |
 | **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on all three routes | `node evals/a11y.mjs` |
+| The shared board is real: visitor B books, visitor A's open page shows "Another patient" with no reload; the database refuses B the slot A holds | `node evals/live-two-visitors.mjs` |
+| The cascade: A queues for B's held slot; B lets go; A's dock arms by itself — "It came back to you" — nobody raced | same command |
 
-Plus 432 unit tests. Traces and screenshots for every row are committed under
-`docs/evidence/clinic/`. Everything above re-runs from a clean clone in two commands.
+Plus 444 unit tests. Traces and screenshots for every row are committed under
+`docs/evidence/clinic/`. The seeded-board proofs above re-run from a clean clone in two commands;
+the live board's schema is committed under `supabase/migrations/`.
 
 ## What we are not claiming
 
-- **The inventory is fictional and the page says so on every screen.** Nothing real is booked, no
-  payment is taken, nothing is signed in. The rival is a seeded simulation, labelled as one wherever
-  it appears.
+- **The clinic is fictional and the page says so on every screen.** Nothing real is booked, no
+  payment is taken, no one signs up (an anonymous per-browser session only). The rival is a
+  labelled simulation; every other name on the board is a real visitor, labelled "Another patient",
+  never as the rival.
 - **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
   keyboard-accessible page — never "the accessible version". W3C's APA group is explicit that an
   agent route does not discharge a page's own obligations, and we agree with them.
@@ -148,7 +174,8 @@ Plus 432 unit tests. Traces and screenshots for every row are committed under
 
 ## What is next
 
-A real clinic backend behind the same `DropDriver` seam; the waitlist cascade, so that when a hold
+A real clinic's scheduling system behind the same `DropDriver` seam the live board already uses
+(the waitlist cascade shipped — see above); a longer queue window across releases, so that when a hold
 lapses the next person receives their own full window and nobody has to race at all; and a
 standards note to the WebMCP CG, whose accessibility section is currently an empty stub, proposing
 consequential acts as human-only affordances that a tool surface deliberately cannot express.

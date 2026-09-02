@@ -31,6 +31,7 @@ const STATE_WORD: Record<SlotState, string> = {
   held_by_you: 'Held for you',
   held_by_other: 'On hold',
   taken_by_rival: 'Taken',
+  taken_by_other: 'Taken',
   booked_yours: 'Booked — yours',
   expired_hold: 'Lapsed',
 };
@@ -118,8 +119,15 @@ export function SlotSheet({
                 </span>
               ) : slot.state === 'taken_by_rival' ? (
                 <span className="cl-row__tag">No longer available</span>
+              ) : slot.state === 'taken_by_other' ? (
+                <span className="cl-row__tag">Booked by another patient</span>
               ) : slot.state === 'expired_hold' ? (
                 <span className="cl-row__tag">Hold expired</span>
+              ) : null}
+              {slot.state !== 'open' && ((slot.waiting ?? 0) > 0 || slot.yourPosition) ? (
+                <span className="cl-row__tag" data-clinic-waiting={slot.waiting ?? 0} data-clinic-position={slot.yourPosition ?? undefined}>
+                  {slot.yourPosition ? `You're #${slot.yourPosition} in line` : `${slot.waiting} waiting`}
+                </span>
               ) : null}
             </>
           );

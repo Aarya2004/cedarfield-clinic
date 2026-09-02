@@ -7,9 +7,27 @@ const mono = Geist_Mono({ variable: '--font-mono', subsets: ['latin'] });
 const serif = Instrument_Serif({ variable: '--font-serif', subsets: ['latin'], weight: '400' });
 
 export const metadata: Metadata = {
-  title: 'Rokan Terminal',
+  metadataBase: new URL('https://rokan-terminal.vercel.app'),
+  // The clinic is the product and the front door; /terminal carries its own metadata.
+  title: {
+    default: 'Cedarfield Clinic — book an appointment',
+    template: '%s',
+  },
   description:
-    "Do it once. Now it's a tool. Now every agent can call it. A terminal where what you and your agent compose — across sites and your machine — becomes a live WebMCP tool, born at runtime, kept, callable by any agent.",
+    'Cancelled appointments at Cedarfield Clinic go back on the list at the next release. Book online in a minute, or call 01632 960 118.',
+  openGraph: {
+    title: 'Cedarfield Clinic — book an appointment',
+    description:
+      'Cancelled appointments go back on the list at the next release, so nobody has to refresh the page to catch one. Book online, or call 01632 960 118.',
+    images: ['/og.png'],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Cedarfield Clinic — book an appointment',
+    description: 'Cancelled appointments go back on the list at the next release. Book online, or call 01632 960 118.',
+    images: ['/og.png'],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

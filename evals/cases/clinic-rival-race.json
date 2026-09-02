@@ -16,7 +16,7 @@
   { "eval": "document.querySelectorAll('[data-slot-state=\"open\"]').length < window.__open0", "equals": true },
   { "shot": "docs/evidence/clinic/rival-took-it.png" },
 
-  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__gone" }, "outputMatches": "false|taken|gone|not open|unavailable" },
+  { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__gone" }, "outputMatches": "slot_state.{0,2}:.{0,2}taken_by_rival" },
   { "eval": "document.querySelector('[data-clinic-slot=\"' + window.__gone + '\"]')?.getAttribute('data-slot-state')", "equals": "taken_by_rival" },
   { "eval": "!!document.querySelector('[data-armed=\"true\"]')", "equals": false },
 

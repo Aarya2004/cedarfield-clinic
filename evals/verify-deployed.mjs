@@ -59,7 +59,7 @@ const cases = [
   ['clinic-phone-acts.json', '/clinic/book'],
   // clinic-soak.json is deliberately NOT here: its walk-away-and-wait beats (45s arm expiry, a
   // full deferred wave rollover) can exceed the per-case timeout. Run it by hand:
-  //   node evals/harness/webmcp-cdp.mjs <origin>/clinic/book evals/cases/clinic-soak.json
+  //   node evals/harness/webmcp-cdp.mjs '<origin>/clinic/book?test=1' evals/cases/clinic-soak.json
 ];
 for (const [file, path] of cases) {
   // `_doc` headers are prose (the harness skips them too) and `shot` steps write into the repo's
@@ -74,7 +74,10 @@ for (const [file, path] of cases) {
   }
   const tmp = join(work, file);
   writeFileSync(tmp, JSON.stringify(steps));
-  const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${origin}${path}`, tmp], {
+  // ?test=1 pins the seeded in-page board (SPEC-V3): these cases assert a deterministic world and
+  // must never mutate the shared live inventory real visitors are on.
+  const testPath = `${path}${path.includes('?') ? '&' : '?'}test=1`;
+  const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${origin}${testPath}`, tmp], {
     encoding: 'utf8',
     timeout: 240_000,
     maxBuffer: 32 * 1024 * 1024,

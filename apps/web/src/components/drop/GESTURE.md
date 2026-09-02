@@ -4,7 +4,7 @@
 > written against `/drop-spike`; the shipped module sits on `/clinic/book`'s confirm dock (book,
 > cancel, AND move — the copy follows the verb). Fastest real-hand test today:
 > `cd apps/web && pnpm build && pnpm start`, open `http://localhost:3000/clinic/book`, ask an agent
-> to hold a slot (or use `window.__CEDARFIELD_AGENT__.holdSlot(...)` in the console), click
+> to hold a slot (or invoke `clinic_hold_slot` from DevTools → Application → WebMCP), click
 > **Enable camera** on the dock, hold an open palm through the dwell — the row books. Then book one,
 > have the agent call `clinic_prepare_cancel`, and confirm the SAME palm cancels with the cancel
 > copy. What to film and the tremor/flicker checks below still apply unchanged. NEW 2026-09-01: the dock
@@ -29,8 +29,9 @@ cd apps/web && NEXT_PUBLIC_DROP_GESTURE=1 pnpm dev
 open http://localhost:3000/drop-spike            # act II ("By agent")
 ```
 
-With `NEXT_PUBLIC_DROP_GESTURE` unset, `DropBench` passes no `gestureSlot`, the module is unreachable
-from the page, MediaPipe is in no bundle, and the response headers are byte-identical to pre-T6.
+The build script defaults `NEXT_PUBLIC_DROP_GESTURE` to 1 (2026-09-01); with `=0` no `gestureSlot`
+is passed, the module is unreachable from the page, MediaPipe is in no bundle, and the response
+headers are byte-identical to pre-T6.
 
 ## The two doors the flag opens (`src/middleware.ts`)
 

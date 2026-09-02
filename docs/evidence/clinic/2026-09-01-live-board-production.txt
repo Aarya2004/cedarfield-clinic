@@ -1,0 +1,24 @@
+SPEC-V3 live board — production verification, 2026-09-01 (deploy by Arav; both proofs re-run by Engineer #4).
+
+$ curl -sI https://rokan-terminal.vercel.app/clinic/book | grep content-security-policy
+→ connect-src carries https://hxqpaquhkmnrnjfutuyu.supabase.co (the deployed build IS the live-board build)
+
+$ node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app   (seeded board, ?test=1 pinned)
+✔ GET / · /clinic · /clinic/book — 200
+✔ clinic-thesis 40 · voice-tour 10 · cancel 22 · move 23 · agent-edges 18 · responsive 8 · rival-race 9
+✔ hold-lapses 10 · receipt 10 · landing-frontdoor 4 · landing-phone 8 · chaos 48 · phone-acts 19 — 0 failed
+✔ axe on the deployed origin (0 violations × 3 routes)
+DEPLOYED AND VERIFIED — https://rokan-terminal.vercel.app
+
+$ node evals/live-two-visitors.mjs --url=https://rokan-terminal.vercel.app   (the SHARED board, no ?test=1)
+✔ visitor B signed in anonymously
+✔ visitor B reads the board — wave 19869997
+✔ at least two open slots to race over — 5 open
+✔ the page nominated the race — w19869997-s2 (B takes) · w19869997-s3 (A holds)
+✔ visitor B holds w19869997-s2
+✔ visitor B books w19869997-s2 (hold-before-book, server-enforced)
+✔ visitor B refused A's held slot by the database — slot_unavailable:held
+✔ visitor B cannot book A's hold — not_your_hold:held
+✔ visitor A's page: every step — 13 steps, 0 failed   (B's booking appeared on A's open page as "Another patient", no reload)
+✔ visitor B cancels its booking (cleanup)
+LIVE BOARD PROVEN WITH TWO VISITORS

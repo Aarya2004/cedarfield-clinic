@@ -63,6 +63,7 @@ size=$(wc -c < "$model" | tr -d '[:space:]')  # macOS wc pads with spaces; a str
 if [ "$size" != "$MODEL_BYTES" ]; then
   echo "✗ unexpected size: $size bytes, expected $MODEL_BYTES. Google may have re-published the" >&2
   echo "  model; check the model card, then update MODEL_BYTES/MODEL_SHA256 in this script." >&2
+  rm -f "$model"
   exit 1
 fi
 
@@ -71,17 +72,18 @@ if command -v sha256sum >/dev/null 2>&1; then
 elif command -v shasum >/dev/null 2>&1; then
   got=$(shasum -a 256 "$model" | cut -d' ' -f1)
 else
-  got=""
-  echo "! no sha256 tool found; size checked, checksum skipped" >&2
+  echo "✗ no sha256 tool found — refusing to ship an unverified model (security review P2-2)." >&2
+  exit 1
 fi
 
 if [ -n "$got" ]; then
   if [ "$MODEL_SHA256" = "__PIN_ME__" ]; then
     echo "! MODEL_SHA256 is unpinned. Observed: $got" >&2
   elif [ "$got" != "$MODEL_SHA256" ]; then
-    echo "✗ checksum mismatch." >&2
+    echo "✗ checksum mismatch — removing the file so it can never be served." >&2
     echo "  expected $MODEL_SHA256" >&2
     echo "  got      $got" >&2
+    rm -f "$model"
     exit 1
   else
     echo "✓ checksum ok"
@@ -90,5 +92,5 @@ fi
 
 echo "✓ model: $(du -h "$model" | cut -f1)"
 echo
-echo "Done. Now: NEXT_PUBLIC_DROP_GESTURE=1 pnpm dev  →  http://localhost:3000/drop-spike"
+echo "Done. The clinic dock offers Enable camera once a slot is held (see src/components/drop/GESTURE.md)."
 echo "See src/components/drop/GESTURE.md for the manual camera test."

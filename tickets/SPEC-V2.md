@@ -1,5 +1,7 @@
 # SPEC-V2 — The full conversation (voice-first tool surface + one-press acts)
 
+> **Status: SHIPPED 2026-08-31** (`clinic-voice-tour` / `clinic-cancel` / `clinic-move` green locally and on prod). The driver layer was superseded by SPEC-V3 (the shared live board, `supabase-driver.ts`) on 2026-09-01; the tool surface and the arming pattern here are unchanged. One live-board difference: the DB caps a visitor at three active bookings rather than one.
+
 Arav's direction 2026-08-31: the agent surface is too thin for a real voice conversation. A visitor
 should be able to *say* everything — "what doctors are there?", "anything with Dr. Boone after 9?",
 "cancel my appointment", "move me to 9:20" — and the agent should prepare ALL of it. What does not

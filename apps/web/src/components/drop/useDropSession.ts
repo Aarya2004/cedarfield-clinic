@@ -31,6 +31,8 @@ export interface HeldSlot {
   ttlSeconds: number;
   /** `at` of the `hold_started` event, in the session clock's units. */
   startedAt: number;
+  /** The waitlist cascade handed this hold over; the dock treats it like an agent-timed arm. */
+  granted?: true;
 }
 
 interface Fold {
@@ -98,7 +100,7 @@ function fold(state: Fold, event: DropEvent): Fold {
     case 'hold_started':
       return {
         slots: withState(state.slots, event.slotId, 'held_by_you'),
-        held: { slotId: event.slotId, ttlSeconds: event.ttlSeconds, startedAt: event.at },
+        held: { slotId: event.slotId, ttlSeconds: event.ttlSeconds, startedAt: event.at, ...(event.granted ? { granted: true as const } : {}) },
         log,
       };
 

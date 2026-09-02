@@ -62,7 +62,7 @@ export interface ConfirmDockProps {
   onRelease?: () => void;
   /** The parent scopes the agent-lane counter to this element. */
   measuredRef?: (element: HTMLDivElement | null) => void;
-  /** T6's camera dwell, when the flag is on. Absent by default (GESTURE.md). */
+  /** T6's camera dwell. On in the submitted build, opt-in per person at runtime (GESTURE.md). */
   gestureSlot?: React.ReactNode;
 }
 
@@ -145,17 +145,34 @@ export function ConfirmDock({
     if (next.armed && (prev === null || !prev.armed)) {
       setConfirmed(false);
       setPressed(false);
-      const active = typeof document === 'undefined' ? null : document.activeElement;
-      const typing =
-        active instanceof HTMLElement &&
-        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
-      if (!typing) capRef.current?.focus();
+      // P1-1: only the BOOK dock may take focus. A cancel/move dock is armed at a moment the agent
+      // chose — stealing focus would aim the person's in-flight Enter at a destructive act. Those
+      // docks announce themselves and wait to be reached deliberately (Tab, click, or gesture).
+      // A waitlist grant also arrives at a moment nobody at this keyboard chose (SPEC-V5).
+      if (act === 'book' && origin !== 'waitlist') {
+        const active = typeof document === 'undefined' ? null : document.activeElement;
+        const typing =
+          active instanceof HTMLElement &&
+          (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+        if (!typing) capRef.current?.focus();
+      }
     }
-  }, [armed, secondsLeft, slotLabel, audioOn, player, act]);
+  }, [armed, secondsLeft, slotLabel, audioOn, player, act, origin]);
+
+  // When this dock mounted — which, for the keyed act docks, is when it was armed (P1-1/P1-3).
+  const armedAtRef = useRef<number>(typeof performance === 'undefined' ? 0 : performance.now());
 
   const attempt = useCallback(
     (a: { isTrusted: boolean | undefined; source: 'key' | 'pointer'; key?: string; repeat?: boolean }) => {
-      const decision = decideConfirm({ ...a, disabled: !armed, secondsLeft, alreadyConfirmed: confirmed });
+      const decision = decideConfirm({
+        ...a,
+        disabled: !armed,
+        secondsLeft,
+        alreadyConfirmed: confirmed,
+        ...(act !== 'book' || origin === 'waitlist'
+          ? { msSinceArmed: (typeof performance === 'undefined' ? 0 : performance.now()) - armedAtRef.current }
+          : {}),
+      });
       if (decision.kind === 'blocked') {
         setUntrusted((n) => n + 1);
         return;
@@ -165,7 +182,7 @@ export function ConfirmDock({
         onConfirm();
       }
     },
-    [armed, confirmed, onConfirm, secondsLeft],
+    [armed, confirmed, onConfirm, secondsLeft, act, origin],
   );
 
   const copy = ACT_COPY[act];
@@ -207,13 +224,17 @@ export function ConfirmDock({
               line with the seconds in it; repeating that here, six inches from a numeral the size
               of a fist, would be the page saying the same thing twice. */}
           <p className="cl-dock__eyebrow" data-clinic-dock-eyebrow>
-            {copy.eyebrow}
+            {origin === 'waitlist' && act === 'book' ? 'This time came back to you' : copy.eyebrow}
             {via === null ? null : <span className="cl-dock__via"> · {via}</span>}
           </p>
           <p className="cl-dock__line">
             {copy.line} {slotLabel} <span className="cl-dock__detail">· {slotDetail}</span>
           </p>
-          <p className="cl-dock__note">{copy.note}</p>
+          <p className="cl-dock__note">
+            {origin === 'waitlist' && act === 'book'
+              ? 'You were next on the waiting list for this time, so it is yours to confirm. Let the hold run out and it passes to the next person in line.'
+              : copy.note}
+          </p>
         </div>
 
         <p className="cl-dock__clock">

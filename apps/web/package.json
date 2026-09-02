@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "bash scripts/fetch-gesture-model.sh && NEXT_PUBLIC_DROP_GESTURE=${NEXT_PUBLIC_DROP_GESTURE:-1} next build",
+    "build": "(bash scripts/fetch-gesture-model.sh || echo \"! gesture model not provisioned; the camera path reports unavailable\") && NEXT_PUBLIC_DROP_GESTURE=${NEXT_PUBLIC_DROP_GESTURE:-1} next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1",
+    "@supabase/supabase-js": "^2.112.4",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-webgl": "0.19.0",
     "@xterm/xterm": "6.0.0",

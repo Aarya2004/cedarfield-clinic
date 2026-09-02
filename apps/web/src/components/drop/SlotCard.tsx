@@ -29,6 +29,7 @@ const STATUS_WORD: Record<SlotState, string> = {
   held_by_you: 'Held — yours',
   held_by_other: 'Held',
   taken_by_rival: 'Taken',
+  taken_by_other: 'Taken',
   booked_yours: 'Booked — yours',
   expired_hold: 'Hold expired',
 };
@@ -39,12 +40,13 @@ const STATE_LABEL: Record<SlotState, string> = {
   held_by_you: 'held by you',
   held_by_other: 'held by someone else',
   taken_by_rival: 'taken',
+  taken_by_other: 'taken',
   booked_yours: 'booked, yours',
   expired_hold: 'hold expired',
 };
 
 /** States whose arrival gets the one-time claim beat. */
-const CLAIMED_STATES: ReadonlySet<SlotState> = new Set<SlotState>(['taken_by_rival', 'expired_hold']);
+const CLAIMED_STATES: ReadonlySet<SlotState> = new Set<SlotState>(['taken_by_rival', 'taken_by_other', 'expired_hold']);
 
 export interface SlotCardProps {
   slot: Slot;

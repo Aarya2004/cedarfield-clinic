@@ -142,6 +142,13 @@
   "timeout": 8000
  },
  {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
+  "timeout": 8000
+ },
+ {
+  "list": true
+ },
+ {
   "invoke": "clinic_prepare_cancel",
   "outputMatches": "armed.{0,2}:.{0,2}cancel"
  },
@@ -199,6 +206,9 @@
  {
   "waitFor": "document.querySelector('[data-clinic-act]')?.getAttribute('data-clinic-act') === 'move'",
   "timeout": 8000
+ },
+ {
+  "sleep": 700
  },
  {
   "focus": "[data-clinic-act=\"move\"] button[data-clinic-confirm]"

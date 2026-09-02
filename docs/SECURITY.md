@@ -122,7 +122,12 @@ generic errors.)
 - **Builder-mode pairing link is a bearer credential.** The link the bridge prints (`#ws=wss://<random>.trycloudflare.com&t=<token>`) is all that is needed to pair; the `*.trycloudflare.com` allowlist is a wildcard (quick-tunnel hostnames are random), so a user who pastes a *maliciously-crafted* pairing link would pair their tab to an attacker's bridge — keystrokes forwarded, screen spoofed. The token does not help (the attacker's bridge accepts any token), and no in-band check can, since everything needed is in the link. Treat a pairing link like any URL you paste: only use the one your own `rokan-terminal` prints. Judge mode is **not** affected — the host is our fixed Worker and only the HMAC-signed `/ws/<sid>` path is accepted. A future builder-mode hardening would show the target host for out-of-band confirmation before connecting.
 - Tool descriptions can still be ignored by a non-cooperative agent — by design nothing depends on them.
 - `hex_run` redaction hides git SHAs from the agent (not from the human).
-- CSP: per-request nonce + `'strict-dynamic'` for scripts (no `unsafe-inline`); `style-src` still allows inline styles (Tailwind); `connect-src` is the WebSocket allowlist.
+- CSP: per-request nonce + `'strict-dynamic'` for scripts (no `unsafe-inline`); `style-src` still allows inline styles (Tailwind).
+  With the live board on (the submitted default) `connect-src` also carries exactly the one Supabase project origin and
+  its `wss://` twin — never a wildcard over `*.supabase.co`.
+  With the gesture build flag on (the submitted default) the script-src additionally carries `'wasm-unsafe-eval'` — wasm
+  compilation only, it does not restore JS `eval` — and Permissions-Policy grants `camera=(self)`; with the flag off both
+  headers are byte-identical to the pre-gesture build (asserted by the middleware's own branch); `connect-src` is the WebSocket allowlist.
 - **Judge-container egress is open by design** (`enableInternet=true`): a stranger's session can make outbound HTTP/S requests — and drive a headless browser — from Cloudflare infrastructure. Bounded by the per-IP session caps, the 30-min TTL, the model-call caps and ephemeral disk; attribution is the `session sid= ip=` log line. Rokan's own HTTP path refuses private/link-local/metadata targets; the shell does not (a judge can `curl` them regardless).
 - **The model proxy's sid is a bearer credential inside the sandbox** (readable via `echo $ANTHROPIC_BASE_URL`). It expires with the session and spends at most the §9 per-session cap; `redactForAgent` redacts the sid shape so a shared screen never hands it to an agent.
 
@@ -190,21 +195,75 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   descriptions, and the test fakes throw if any tool reaches `driver.book()` or `driver.confirm()`). Booking runs only from an event the browser itself marked
   `isTrusted` (`confirm-logic.ts`) — which no tool call, no console `.click()` and no extension can
   produce. Every synthetic attempt is counted and shown on screen rather than silently dropped.
-- **Residual boundary, honestly:** the page itself is the trust boundary — a malicious script running IN the page
-  could dispatch nothing trusted (the browser owns `isTrusted`), but it could of course call the page's own
-  handlers directly. What the design forecloses is the realistic case: anything holding only the tool
-  surface — an agent, an extension, a script with the URL — cannot book, and its attempts are visible.
-- **Injection surface:** slot inventory, clinicians and wave copy are page-authored; no tool echoes
-  visitor-authored text, so nothing an outsider writes can reach a tool description or a tool result.
+- **Residual boundary, honestly (rewritten for the live board, SPEC-V3):** the trusted-event gate
+  lives in the page. The database (below) enforces *fairness between visitors* — one hold each,
+  hold-before-book, only-your-booking cancels and moves, an atomic move — and it **cannot and does
+  not** enforce that a human pressed anything: a script holding the publishable key (public, in
+  the bundle by design) can create an anonymous session and call `clinic_hold` then `clinic_book`
+  directly, for a slot of its own. What the design forecloses is the case that matters: the
+  **agent's** API — the WebMCP surface — cannot express booking, cancelling or moving, an agent
+  that tries is counted on screen, and no actor of any kind can take another visitor's hold or
+  booking. This is the same honest shape as every real booking system: the server guarantees
+  integrity, the client guarantees intent.
+- **The live board (SPEC-V3):** every visitor shares one inventory in a Supabase Postgres project.
+  Identity is an anonymous session per browser (`signInAnonymously`; no sign-up, no credentials,
+  no email — an `auth.users` row exists so RLS has a subject). RLS is on; the only policy is SELECT
+  for `authenticated`; there are no INSERT/UPDATE/DELETE policies — every write goes through six
+  `SECURITY DEFINER` functions (`clinic_board/hold/release/book/cancel/move`, `search_path`
+  pinned) whose checks are the invariants above plus a three-active-bookings cap per visitor. The
+  publishable key ships in the bundle and is public by design; secrecy authorises nothing. The
+  schema is committed at `supabase/migrations/*.sql`. Realtime is a `postgres_changes`
+  subscription on the one table, with a 2.5 s poll fallback; other visitors' UUIDs are not exposed
+  (`clinic_board` returns booleans `yours_held`/`yours_booked`, never the holder). The booking
+  form's fields (name, date of birth, phone, reason) are transmitted nowhere: every function takes
+  only a slot id. `?test=1` or `NEXT_PUBLIC_LIVE_BOARD=0` pins the seeded in-page board, which is
+  what every eval drives — nothing in CI mutates the shared inventory.
+- **The waitlist cascade (SPEC-V5):** `clinic_join_waitlist` / `clinic_leave_waitlist` are
+  reversible agent verbs (a place in line, never an appointment), capped at three lines per
+  visitor and three waiters per slot, current-wave only, refused for rival-taken slots (that line
+  never moves), registered only on the shared board. The hand-over happens inside `clinic_sweep`
+  in each slot's queue order (`joined_at`, then visitor id for ties), under a row lock with a
+  re-check that the slot is still open: a lost race keeps the waiter's place, a unique/deadlock
+  collision skips that waiter rather than failing anyone's board read, and a raw Postgres error
+  never reaches a client. One hold per visitor always — a waiter's other hold is given back only
+  when the grant actually lands. The simulated rival never takes a queued slot. A cascade grant
+  lands at a moment nobody at the keyboard chose, so the dock treats it exactly like an
+  agent-timed arm: it is a fresh dock keyed by slot and start time (never a relabelled one under
+  a finger in flight), it takes no focus, the 500 ms dead zone applies, and the origin is derived
+  in render so the mount-time focus rule can never read a previous origin. A hold this tab asked
+  for and was refused is forgotten at once (and any request after 15 s), so a later grant is never
+  mislabelled as your own hold. It is announced — the strip above the board and its live region
+  say "It came back to you from the line — nobody raced you." Booking still requires the trusted
+  press; the queue changes who gets the chance, never who can act. Residual, stated: idle waiters
+  cost a slot at most 3 × 45 s per wave; anonymous identities are rate-limited by the auth
+  provider, not by us.
+- **Injection surface:** slot inventory, clinicians and wave copy are server-generated
+  deterministically from the wave index (`clinic_sweep`) or page-authored; no tool echoes
+  text authored by anyone other than its own caller (refusals may quote the caller's slot id or
+  time string back to the same agent, length-capped and JSON-escaped), so nothing an outsider
+  writes can reach a tool description or a tool result.
+- **The arming attack class (SPEC-V2, closed 2026-09-01):** `clinic_prepare_cancel` /
+  `clinic_prepare_move` let the AGENT choose the moment a destructive dock appears — so a
+  prompt-injected agent could try to put a cancel key under a finger already in flight. Three
+  defenses, each tested: destructive docks **never take keyboard focus** (only the book dock does);
+  a trusted press within **500 ms of arming is ignored** as agent-timed (`ARM_DEAD_ZONE_MS`; a
+  synthetic press in that window is still counted as blocked); and a re-arm with a different
+  target is a **fresh dock** (keyed remount, fresh announcement, fresh counters). Arming is also
+  refused outright while a hold on a different slot is live — the dock's meaning is never swapped
+  while a person may be mid-press (`hold_in_progress`, both prepare tools).
 - **Camera:** the gesture path is **on in the submitted build** (`NEXT_PUBLIC_DROP_GESTURE` defaults
   to 1 in the build script; `=0` is the kill switch) and **strictly opt-in at runtime** — nothing
-  loads and no lens opens until the person clicks "Enable camera" on an armed dock. Frames never
+  loads and no lens opens until the person has clicked "Enable camera" on an armed dock. Once they
+  have, and the browser holds a standing camera grant, the lens DOES reopen on later armed docks in
+  later sessions until they switch it off — the pref is persisted, the reopening is double-gated on
+  that prior opt-in plus the browser's own grant, and the OS camera light is the indicator. Frames never
   leave the page and the runtime loads from `/models/mediapipe/` on our own origin — never a Google
   CDN — because the weights carry Google's MediaPipe model terms. Those ~42 MB are **provisioned at
   build time, not committed** (`apps/web/scripts/fetch-gesture-model.sh`, sha256-pinned;
   `public/models/` is gitignored): a clone that builds runs the fetch itself, and a missing model is
-  an honest on-screen failure plus the keyboard path. Keyboard/switch stays primary, and the dwell
-  resets on any flicker below the visible threshold so a tremor cannot fire it.
+  an honest on-screen failure plus the keyboard path. Keyboard/switch stays primary, and the dwell absorbs sub-250ms flicker
+  without progressing (the grace window) and resets when the gesture is lost beyond it — so a
+  tremor can neither fire it nor be punished by it.
 - **The gesture's trust root, stated exactly.** The keyboard confirm is gated on `isTrusted`, which
   no script, extension `.click()`, or tool call can forge. A completed camera dwell is a different,
   weaker root: **physical presence** — it requires a person's hand in front of a lens they opted
@@ -213,12 +272,15 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   the camera itself — an extension or OS-level actor substituting a fake video stream — which is
   the same actor class that could already forge trusted input via the debugger API. Voice is
   refused as a confirm channel for a sharper reason: the agent HAS a voice, and in a speakers+mic
-  demo could utter the confirmation itself. It does not have a hand.
-- **No model, no key, no PII, no server:** the product makes no LLM call of its own and has no backend —
-  the reasoning is the visitor's own agent in their own client, and the demo form is transmitted nowhere.
-  Every number on screen is measured by the code that shows it; the counter counts only trusted events.
-- **Fairness in the demo:** one live hold per visitor; the labelled simulated rival takes three of six slots
-  over the first forty seconds and never the last open one, so someone arriving late can always still book.
+  live showing could utter the confirmation itself. It does not have a hand.
+- **No model call, no PII:** the product makes no LLM call of its own — the reasoning is the
+  visitor's own agent in their own client — and stores no personal data: the form is transmitted
+  nowhere and the database holds slot states and anonymous session ids only. Every number on
+  screen is measured by the code that shows it; the counter counts only trusted events.
+- **Fairness:** one live hold per visitor (server-enforced), at most three active bookings per
+  visitor (server-enforced). The labelled simulated rival takes exactly three of six slots per
+  wave at +6/+20/+34 s, only slots still open, and never the last open one — so someone arriving
+  late can always still book. Other visitors can take the last open one; that is the point.
 - **Accessibility:** axe-core reports 0 violations on all three routes (WCAG 2.0/2.1/2.2 A + AA), gated by
   `node evals/a11y.mjs`. The camera gesture is opt-in per person, always beside a keyboard path.
 

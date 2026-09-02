@@ -7,12 +7,15 @@ This file is the single source of truth for what is green, what is blocking, and
 
 | Thing | State |
 |---|---|
-| `apps/web` gate | typecheck clean · **433/433 unit tests** · lint 0 errors · production build clean |
+| `apps/web` gate | typecheck clean · **444/444 unit tests** · lint 0 errors · production build clean |
+| **The waitlist cascade (SPEC-V5, 2026-09-01)** | On the shared board an agent can put its human IN LINE for a taken slot (`clinic_join_waitlist`, reversible, cap 3, current wave only). When the slot comes back the server hands it to the first in line as a fresh 45 s hold — the dock arms by itself ("It came back to you"; treated as an agent-timed arm: no focus steal, dead zone) and one press books it. The rival never takes a queued slot. Registered only when the queue seam exists (seeded board: 9/10 tools unchanged). Proven in `live-two-visitors.mjs` (cascade beat) — **and on production 2026-09-02, 25/25** (`docs/evidence/clinic/2026-09-02-cascade-production.txt`). |
+| **Tools born from the human act (SPEC-V4)** | Nine at load (arming tools always, so "nothing booked" is always sayable); `clinic_my_appointment` is born by the press and dies with the booking; `list_drops.your_bookings` tells the truth from an always-present tool. |
+| **The live board (SPEC-V3, 2026-09-01)** | ON by default: one shared Supabase inventory for every visitor, anonymous session per browser, realtime + poll, DB-enforced fairness (one hold, hold-before-book, own-booking cancel/move, atomic move, 3-booking cap, current-wave-only holds, no cross-visitor uuids, runtime kill switch `clinic_settings.live`). `?test=1` pins the seeded board — every eval drives that, none touch the shared world. Schema committed in `supabase/migrations/`. **Proven in a real browser 2026-09-01 (local build, anonymous sign-ins ON):** `node evals/live-two-visitors.mjs` — visitor B books mid-run, visitor A's open page shows "Another patient" with no reload, the database refuses B the slot A holds, 13/13 page steps; evidence `docs/evidence/clinic/live-another-patient.png`. **Re-run against PRODUCTION 2026-09-01 after Arav's deploy: green** (`docs/evidence/clinic/2026-09-01-live-board-production.txt`). |
 | Routes | **`/` is the product** (clinic landing) · `/clinic` same landing · `/clinic/book` the product · `/terminal` Rokan, kept and still evalled |
 | WebMCP tools | **nine** on `/clinic/book` (SPEC-V2, 2026-08-31): list, **find_slots**, **clinicians**, hold, status, release, **prepare_cancel**, **prepare_move**, explain_confirm. The prepare tools only ARM the dock — cancel/move are performed by a trusted press through the same gate as booking; a move swaps atomically with the target frozen |
-| **The invariant** | **no booking tool exists** — asserted by unit test (by name, in the defs, in the descriptions), by nine negative assertions in a live browser, and by test fakes that throw if a tool reaches `book()`/`confirm()`/`cancel()`/`move()` |
-| **Dynamic testing** (2026-08-31, per Arav: "real product, not a POC") | `clinic-chaos` (47 steps: garbage/injection inputs, double-arming, hold spam, re-hold refused `already_held_by_you`, reload recovery), `clinic-phone-acts` (cancel/move docks at 390px: no horizontal scroll, key reachable, press works), `clinic-soak` (~3 min: cancel arm expires at 45s WITHOUT cancelling, deferred wave rolls, tools coherent on the new board). **All three green locally AND against production.** Chaos+phone joined verify-deployed (now 20 checks); soak documented as manual (its waits exceed the per-case timeout) |
-| **Eval suite** | **25/25 cases pass locally, 0 failed** — 16 clinic (incl. voice-tour/cancel/move + the dynamic trio chaos/phone-acts/soak) + 9 legacy; the kept terminal also re-proven with a real PTY bridge (11/11, 4 judge-only skips) |
+| **The invariant** | **no booking tool exists** — asserted by unit test (by name and by verb, plus description budgets), by nine negative assertions in a live browser, and by test fakes that throw if a tool reaches `book()`/`confirm()`/`cancel()`/`move()` |
+| **Dynamic testing** (2026-08-31, per Arav: "real product, not a POC") | `clinic-chaos` (47 steps: garbage/injection inputs, double-arming, hold spam, re-hold refused `already_held_by_you`, reload recovery), `clinic-phone-acts` (cancel/move docks at 390px: no horizontal scroll, key reachable, press works), `clinic-soak` (~3 min: cancel arm expires at 45s WITHOUT cancelling, deferred wave rolls, tools coherent on the new board). **All three green locally AND against production.** Chaos+phone joined verify-deployed (17 checks: 3 routes + 13 cases + axe; axe prints its own three route lines); soak kept out of verify-deployed (its waits exceed the per-case timeout; run it via run-all or the harness with `?test=1`) |
+| **Eval suite** | **26/26 cases pass locally, 0 failed** — 17 clinic (incl. voice-tour/cancel/move, the dynamic trio chaos/phone-acts/soak, and gesture-boot) + 9 legacy; the kept terminal also re-proven with a real PTY bridge (11/11, 4 judge-only skips) |
 | `clinic-thesis` | 42 steps: tools listed → `clinic_hold_slot` holds → dock arms → **synthetic click blocked** → **trusted Enter books** → `hold_status` says `human_only`. Measured: **1** human input |
 | `clinic-manual-tax` | the same booking by keyboard: **36 measured** trusted inputs (case asserts ≥ 30) and the form is still not valid |
 | `clinic-hold-lapses` | full 45 s TTL with no keypress → slot returns, **nothing booked**, dock disarmed |
@@ -49,12 +52,12 @@ This file is the single source of truth for what is green, what is blocking, and
    rebuilding, and the verifier re-runs against the new origin in one command.
 4. **The name.** The fictional clinic is "Cedarfield Clinic"; the *product* has no name. Humans pick
    it (Devpost's own guidance). It is a string swap in `ClinicFrame.tsx` plus the two doc headers.
-5. **ChatGPT desktop verification.** The five tools are proven to register in Chrome against the live
-   origin. Sol/Terra is still unmeasured, and it is the client the challenge names: open
-   `https://rokan-terminal.vercel.app/clinic/book`, check the Site-tools arrow lists five `clinic_*`
+5. **ChatGPT desktop verification.** The tools are proven to register in Chrome against the live
+   origin (nine seeded, eleven on the shared board, twelve once booked). Sol/Terra is still unmeasured, and it is the client the challenge names: open
+   `https://rokan-terminal.vercel.app/clinic/book`, check the Site-tools arrow lists eleven `clinic_*`
    tools, say *"hold me the earliest appointment"*, then press Enter.
 6. **Video** (< 3 min, audio, YouTube). Script is shot-by-shot in `docs/VIDEO-SCRIPT.md`; ffmpeg on
-   the demo Mac needs fixing first.
+   the recording Mac needs fixing first.
 
 ## Mine, next, in order
 
@@ -65,7 +68,6 @@ This file is the single source of truth for what is green, what is blocking, and
 - [x] The front door: `/` is the product; Rokan kept at `/terminal`
 - [x] **Deployed-URL run** — all 13 checks green against production, evidence committed
 - [ ] The video's numbers pinned to the receipt the page itself shows (needs one manual browser run)
-- [ ] Optional if time: the waitlist cascade, so a lapsed hold offers the next person their own window
 
 ## UX proof sweep (2026-08-31, against production — the "prove it to yourself" pass)
 
@@ -90,6 +92,8 @@ Driven, photographed and asserted on the live origin, both widths:
   `.clinic` — Aarya had already handled the dark-shell leak).
 
 ## Rails that must not slip
-Fictional inventory and the simulated rival stay labelled on screen. Every number on screen is measured by
-the code that shows it. The accessibility framing is an *additional operable path*, never a conformance
-substitute. Keyboard/switch is the primary confirm; the camera is a flagged enhancement, off by default.
+The fictional clinic and the simulated rival stay labelled on screen, and another real visitor is
+labelled "Another patient", never as the rival. Every number on screen is measured by the code that
+shows it. The accessibility framing is an *additional operable path*, never a conformance
+substitute. Keyboard/switch is the primary confirm; the camera is on in the build and strictly
+opt-in per person.

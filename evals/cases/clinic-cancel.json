@@ -46,6 +46,13 @@
   "_doc": "Now the agent arms the cancel. The tool cancels NOTHING: the slot stays booked."
  },
  {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
+  "timeout": 8000
+ },
+ {
+  "list": true
+ },
+ {
   "invoke": "clinic_prepare_cancel",
   "outputMatches": "armed.{0,2}:.{0,2}cancel[\\s\\S]*human_only"
  },
@@ -86,6 +93,12 @@
   "_doc": "The human's Enter cancels it; the slot goes back to open."
  },
  {
+  "_doc": "ARM_DEAD_ZONE_MS: a press within 500ms of arming is ignored as agent-timed; the case waits like a person would."
+ },
+ {
+  "sleep": 700
+ },
+ {
   "focus": "[data-clinic-act=\"cancel\"] button[data-clinic-confirm]"
  },
  {
@@ -94,6 +107,21 @@
  {
   "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'open'",
   "timeout": 8000
+ },
+ {
+  "_doc": "SPEC-V4: the booking is gone, so the tool it created is gone \u2014 the surface tells the truth both ways."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '9'",
+  "timeout": 8000
+ },
+ {
+  "list": true
+ },
+ {
+  "expect": {
+   "noTool": "clinic_my_appointment"
+  }
  },
  {
   "eval": "document.querySelector('[data-clinic-act]') === null",

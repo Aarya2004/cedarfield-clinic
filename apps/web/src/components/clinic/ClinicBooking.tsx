@@ -43,8 +43,9 @@ import {
   type ManualFlowAction,
 } from '../../lib/drop/manual-flow.ts';
 import { createMockDriver } from '../../lib/drop/mock-driver.ts';
+import { createSupabaseDriver, refusalSentence, type LiveDriver } from '../../lib/drop/supabase-driver.ts';
 import { formatClock } from '../../lib/drop/time.ts';
-import type { DropDriver } from '../../lib/drop/types.ts';
+import type { DropDriver, Slot } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
@@ -53,7 +54,7 @@ import { AppointmentCard } from './AppointmentCard.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
 import { SlotSheet } from './SlotSheet.tsx';
-import { assistantTag, holdHeadline, holdOrigin, type HoldOrigin } from './hold-origin.ts';
+import { agentArrivalAnnouncement, assistantTag, holdHeadline, holdOrigin, type HoldOrigin } from './hold-origin.ts';
 import {
   HOLD_TTL_SECONDS,
   describeWaveAge,
@@ -86,7 +87,7 @@ const BOOKING_GRACE_MS = 25_000;
 const NO_COUNT: CounterSnapshot = { total: 0, breakdown: emptyBreakdown() };
 
 /**
- * T6's camera dwell, same flag as the bench. Off in the submitted build; when on, the SAME held
+ * T6's camera dwell, same flag as the bench. ON in the submitted build (opt-in at runtime); the SAME held
  * gesture that books also cancels and moves — one human act for every consequential verb, always
  * beside a keyboard alternative (WCAG 2.5.4). GestureConfirm degrades to 'unavailable' when the
  * script-provisioned weights are absent, so the flag alone can never break a page.
@@ -98,6 +99,32 @@ function noWrap(timeLabel: string): string {
   return timeLabel.replace(/ /g, '\u00A0');
 }
 
+/**
+ * SPEC-V3: the shared live board. ON by default; two kill switches, both honest:
+ *   · build-time: NEXT_PUBLIC_LIVE_BOARD=0 → every visitor gets the seeded in-page board;
+ *   · per-URL:   ?test=1 → same, so the eval harness always drives a deterministic world.
+ */
+const LIVE_BUILD = process.env.NEXT_PUBLIC_LIVE_BOARD !== '0';
+function isTestMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).has('test');
+}
+function wantsLiveBoard(): boolean {
+  return LIVE_BUILD && typeof window !== 'undefined' && !isTestMode();
+}
+
+/** What the page runs on for the frame(s) before the live driver exists. Does nothing, honestly. */
+const INERT_DRIVER: DropDriver & { snapshot(): { slots: Slot[]; hold: null } } = {
+  subscribe: () => () => {},
+  hold: () => {},
+  book: () => {},
+  confirm: () => {},
+  release: () => {},
+  cancel: () => {},
+  move: () => {},
+  snapshot: () => ({ slots: [], hold: null }),
+};
+
 /** How long a prepared cancel stays armed before the page quietly stands down. */
 const PENDING_ACT_TTL_SECONDS = 45;
 
@@ -108,20 +135,81 @@ type PendingAct =
 
 export function ClinicBooking() {
   // ── the wave ───────────────────────────────────────────────────────────────────────────────────
-  const mountedAt = useRef<number>(Date.now());
+  /**
+   * The seeded board's clock origin. Real visitors: the epoch, so this page and the landing
+   * countdown agree to the second and a fresh driver is advanced to where the wave already is
+   * (wave-clock.ts's contract). Under ?test=1: page load, so every eval sees a wave land on
+   * arrival with the rival exactly where the cases expect it.
+   */
+  const [clockOrigin] = useState<number>(() => (isTestMode() ? Date.now() : 0));
+  // Hydration rule: the server's HTML and the client's first render must be identical, and any
+  // text derived from the wall clock ("Released 12 s ago", the wave index) never is. So the first
+  // render is the neutral one — elapsed 0, wave 0 — and the real clock takes over after mount.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const [wave, setWave] = useState(0);
-  const driver = useMemo(
-    () => createMockDriver({ seed: waveSeed(wave), scenario: 'hold-and-book', overrides: WAVE_OVERRIDES }),
-    [wave],
-  );
-  const session = useDropSession(driver, { running: true, clock: driver });
+  // Decided once, on the client, before the first driver exists. SSR renders the seeded board and
+  // the live driver takes over on hydration — the page is identical either way until data arrives.
+  // Decided in an effect, never in the initial render: the server has no `window`, and a first
+  // client render that disagrees with the server's HTML is a hydration error on every visit.
+  const [wantLive, setWantLive] = useState<boolean>(false);
+  useEffect(() => setWantLive(wantsLiveBoard()), []);
+  // Fail toward a working product: if the live board has not produced a world within the grace
+  // (network trouble, an outage, a corporate proxy eating websockets), the visitor silently gets
+  // the seeded board — the same complete product, minus other people. Never a hung page.
+  const [liveFailed, setLiveFailed] = useState(false);
+  const live = wantLive && !liveFailed;
+  // The live driver is born in an effect, not in render: React may mount, unmount and remount a
+  // component (StrictMode does exactly that), and a driver disposed by the first unmount must not
+  // survive as a corpse in a ref. Until it exists the page runs on an inert driver — no slots, the
+  // "connecting" line — which is also what the server-rendered HTML shows.
+  const [liveDriver, setLiveDriver] = useState<LiveDriver | null>(null);
+  useEffect(() => {
+    if (!live) return;
+    const d = createSupabaseDriver();
+    setLiveDriver(d);
+    const giveUp = () => {
+      // One line in the console for whoever debugs it; the page itself just keeps working.
+      console.warn('[cedarfield] live board unavailable, using the seeded board:', d.meta().lastError);
+      setLiveFailed(true);
+    };
+    // A definitive answer (sign-in refused, board switched off) falls back at once; only a slow
+    // network gets the full grace.
+    const probe = setInterval(() => {
+      const m = d.meta();
+      if (m.ready) return;
+      if (m.offline || (m.lastError !== null && m.lastError.startsWith('sign_in:'))) giveUp();
+    }, 250);
+    const grace = setTimeout(() => {
+      if (!d.meta().ready) giveUp();
+    }, 6000);
+    return () => {
+      clearTimeout(grace);
+      clearInterval(probe);
+      d.dispose();
+      setLiveDriver(null);
+    };
+  }, [live]);
+  const mockDriver = useMemo(() => {
+    if (live) return null;
+    const d = createMockDriver({ seed: waveSeed(wave), scenario: 'hold-and-book', overrides: WAVE_OVERRIDES });
+    // Arriving mid-wave: advance to where the wave already is, so the board matches the countdown.
+    if (clockOrigin === 0) d.advance(msIntoWave(Date.now()));
+    return d;
+  }, [live, wave, clockOrigin]);
+  const driver: DropDriver & { snapshot(): { slots: Slot[]; hold: { slotId: string } | null } } = live
+    ? (liveDriver ?? INERT_DRIVER)
+    : mockDriver!;
+  // A real driver has no clock: events carry epoch `at` and `now` is Date.now() (useDropSession's
+  // own contract). The simulated driver still doubles as the clock it always was.
+  const session = useDropSession(driver, { running: true, clock: live ? null : (driver as ReturnType<typeof createMockDriver>) });
 
   /**
    * Elapsed page time. Read during render rather than held in state because the session already
    * re-renders this component every animation frame — a second rAF loop would buy nothing. It is
    * deliberately NOT `session.now`, which the seam resets to zero on every driver swap.
    */
-  const elapsed = Date.now() - mountedAt.current;
+  const elapsed = hydrated ? Date.now() - clockOrigin : 0;
 
   // ── the manual walk ────────────────────────────────────────────────────────────────────────────
   const [flow, dispatch] = useReducer(manualFlowReducer, [], initialManualFlowState);
@@ -155,13 +243,19 @@ export function ClinicBooking() {
 
   // ── who is holding ─────────────────────────────────────────────────────────────────────────────
   const lastLocalRequest = useRef<number | null>(null);
-  const [origin, setOrigin] = useState<HoldOrigin>('you');
   const heldSlotId = session.held?.slotId ?? null;
   const heldStartedAt = session.held?.startedAt ?? null;
+  // Derived in render, on purpose: the dock decides whether to take focus in ITS mount effect,
+  // which runs before this component's effects — an origin set in an effect would arrive one
+  // render late and a cascade grant would steal focus under the previous origin (security review).
+  const origin: HoldOrigin = session.held?.granted
+    ? 'waitlist'
+    : heldStartedAt === null
+      ? 'you'
+      : holdOrigin(heldStartedAt, lastLocalRequest.current);
 
   useEffect(() => {
     if (heldStartedAt === null || heldSlotId === null) return;
-    setOrigin(holdOrigin(heldStartedAt, lastLocalRequest.current));
     // A hold that arrived while you were reading further down the page is invisible unless the page
     // shows you where it landed. Scrolling is not an interaction the counter sees, so this costs the
     // reader nothing on the receipt.
@@ -182,25 +276,40 @@ export function ClinicBooking() {
   const frozenFor = useRef<string | null>(null);
   const bookedSlotId = flow.bookedSlotId;
   useEffect(() => {
-    if (bookedSlotId === null || frozenFor.current === bookedSlotId) return;
-    frozenFor.current = bookedSlotId;
+    // Seeded ids repeat every wave (slot-1…6), so the key carries the wave as well.
+    if (bookedSlotId === null) return;
+    const key = `${wave}:${bookedSlotId}`;
+    if (frozenFor.current === key) return;
+    frozenFor.current = key;
     setHandCount((pageCounter.current?.snapshot() ?? NO_COUNT).total);
-  }, [bookedSlotId]);
+  }, [bookedSlotId, wave]);
 
   // ── SPEC-V2: the prepared act ─────────────────────────────────────────────────────────────────
   // clinic_prepare_cancel / clinic_prepare_move arm ONE pending act; a trusted press performs it.
   // A cancel arm carries its own clock; a move arm lives exactly as long as the hold it placed on
   // the target slot — hold gone, arm gone. Either way the agent armed it and only a person fires it.
-  const [pendingAct, setPendingAct] = useState<PendingAct | null>(null);
+  const [pendingAct, setPendingActState] = useState<PendingAct | null>(null);
+  // P2-1: a gesture dwell (rAF) and a trusted keypress in the same frame both close over a stale
+  // non-null pendingAct. The ref is the synchronous truth: whoever nulls it first performs the act,
+  // the other call returns — so a real backend never sees a double cancel/move.
+  const pendingActRef = useRef<PendingAct | null>(null);
+  const setPendingAct = useCallback((next: PendingAct | null) => {
+    pendingActRef.current = next;
+    setPendingActState(next);
+  }, []);
 
   const prepareCancel = useCallback(
     (slotId: string): boolean => {
       const slot = driver.snapshot().slots.find((s) => s.id === slotId);
       if (!slot || slot.state !== 'booked_yours') return false;
+      const current = pendingActRef.current;
+      // Re-arming the same cancel keeps the original clock: an agent cannot keep a destructive
+      // dock alive indefinitely by re-calling every forty seconds.
+      if (current?.kind === 'cancel' && current.slotId === slotId) return true;
       setPendingAct({ kind: 'cancel', slotId, timeLabel: noWrap(slot.timeLabel), detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now() });
       return true;
     },
-    [driver],
+    [driver, setPendingAct],
   );
 
   const prepareMove = useCallback(
@@ -210,6 +319,10 @@ export function ClinicBooking() {
       const to = slots.find((s) => s.id === toId);
       if (!from || from.state !== 'booked_yours') return false;
       if (!to || (to.state !== 'open' && to.state !== 'held_by_you') || fromId === toId) return false;
+      // P1-2 defense in depth (the tool refuses first): never swap the dock out from under a live
+      // hold on a different slot — that hold may have the person's finger over its book key.
+      const held = driver.snapshot().hold;
+      if (held !== null && held.slotId !== toId) return false;
       // Freeze the target while the person decides — hold is the agent's verb, so this is allowed.
       driver.hold(toId);
       setPendingAct({
@@ -222,7 +335,7 @@ export function ClinicBooking() {
       });
       return true;
     },
-    [driver],
+    [driver, setPendingAct],
   );
 
   // A cancel arm expires on its own clock; the page re-renders every frame, so render-time math.
@@ -246,33 +359,35 @@ export function ClinicBooking() {
       const anchor = pendingAct.kind === 'cancel' ? pendingAct.slotId : pendingAct.fromId;
       if (session.slots.find((s) => s.id === anchor)?.state !== 'booked_yours') setPendingAct(null);
     }
-  }, [pendingAct, pendingSecondsLeft, session.held, session.slots]);
+  }, [pendingAct, pendingSecondsLeft, session.held, session.slots, setPendingAct]);
 
   // A new wave is a new driver and a new board: nothing prepared against the old one survives.
-  useEffect(() => setPendingAct(null), [driver]);
+  useEffect(() => setPendingAct(null), [driver, setPendingAct]);
 
   /** The trusted press. The ONLY call sites of driver.cancel / driver.move in the product. */
   const confirmPendingAct = useCallback(() => {
-    if (pendingAct === null) return;
-    if (pendingAct.kind === 'cancel') {
-      driver.cancel(pendingAct.slotId);
+    const act = pendingActRef.current;
+    if (act === null) return;
+    pendingActRef.current = null; // claim it synchronously; a same-frame second caller sees null
+    if (act.kind === 'cancel') {
+      driver.cancel(act.slotId);
       // A manually-booked slot leaves the flow sitting on its "booked" card; cancelling that slot
       // must take the card with it, or the page would show a booking the board no longer has.
-      if (flow.bookedSlotId === pendingAct.slotId) dispatch({ type: 'restart' });
+      if (flow.bookedSlotId === act.slotId) dispatch({ type: 'restart' });
     } else {
-      driver.move(pendingAct.fromId, pendingAct.toId);
+      driver.move(act.fromId, act.toId);
       // The move produced a booking; hold the board for the same grace a booking gets.
-      setLastBookedAt(Date.now() - mountedAt.current);
+      setLastBookedAt(Date.now() - clockOrigin);
     }
     setPendingAct(null);
-  }, [pendingAct, driver, flow.bookedSlotId]);
+  }, [driver, flow.bookedSlotId, setPendingAct, clockOrigin]);
 
   const dismissPendingAct = useCallback(() => {
     if (pendingAct?.kind === 'move' && session.held?.slotId === pendingAct.toId) {
       session.release(pendingAct.toId); // give the frozen target back
     }
     setPendingAct(null);
-  }, [pendingAct, session]);
+  }, [pendingAct, session, setPendingAct]);
 
   // ── acts ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -292,19 +407,36 @@ export function ClinicBooking() {
     lastLocalRequest.current = session.now;
     dispatch({ type: 'submit_booking' });
     manualDriver.confirm(flow.selectedSlotId);
-    lastLocalRequest.current = null;
-    setLastBookedAt(Date.now() - mountedAt.current);
-  }, [flow.selectedSlotId, manualDriver, session.now]);
+    // The seeded driver answers inside this call, so the claim can close at once. The live driver
+    // answers over the network: the claim must STAND so the hold that lands a moment later reads
+    // as yours, not your agent's (LOCAL_REQUEST_WINDOW_MS closes it).
+    if (!live) lastLocalRequest.current = null;
+    setLastBookedAt(Date.now() - clockOrigin);
+  }, [flow.selectedSlotId, manualDriver, session.now, live, clockOrigin]);
 
+  /** The press happened; the booking has not yet. The measurement waits for the `booked` event. */
+  const pendingAgentCount = useRef<{ slotId: string; count: number } | null>(null);
   const confirmHold = useCallback(() => {
     const slotId = session.held?.slotId;
     if (slotId === undefined) return;
-    // Frozen before the dock unmounts, so the number cannot drift after the booking it belongs to.
-    const snapshot = dockCounter.current?.snapshot() ?? NO_COUNT;
+    // Frozen before the dock unmounts, so the number cannot drift after the booking it belongs to —
+    // but only WRITTEN when the driver confirms the booking, so a refused press (hold expired at
+    // the boundary, on the live board) never records a measurement for an appointment nobody has.
+    pendingAgentCount.current = { slotId, count: (dockCounter.current?.snapshot() ?? NO_COUNT).total };
     session.confirm(slotId);
-    setAgentCount(snapshot.total);
-    setLastBookedAt(Date.now() - mountedAt.current);
   }, [session]);
+  useEffect(
+    () =>
+      driver.subscribe((event) => {
+        const pending = pendingAgentCount.current;
+        if (event.type === 'booked' && pending && event.slotId === pending.slotId) {
+          pendingAgentCount.current = null;
+          setAgentCount(pending.count);
+          setLastBookedAt(Date.now() - clockOrigin);
+        }
+      }),
+    [driver, clockOrigin],
+  );
 
   // Booking another appointment starts a new measurement, but it does not erase the last one: the
   // frozen total is a record of something that happened, not a live readout.
@@ -323,8 +455,10 @@ export function ClinicBooking() {
 
   const wantedWave = waveIndexAt(elapsed);
   useEffect(() => {
+    // Live board: the server rolls the waves for everyone at once; there is nothing to stage here.
+    if (live) return;
     if (!busy && wantedWave !== wave) setWave(wantedWave);
-  }, [busy, wantedWave, wave]);
+  }, [busy, wantedWave, wave, live]);
 
   /**
    * The agent seam, for the eval harness and for anyone reading the page with dev tools open. It
@@ -333,31 +467,29 @@ export function ClinicBooking() {
    * there are no such tools — the only thing that performs a consequential act is a keypress the
    * browser marked as trusted (the prepare_* tools go through the real tool surface, not this seam).
    */
-  useEffect(() => {
-    const w = window as unknown as { __CEDARFIELD_AGENT__?: unknown };
-    w.__CEDARFIELD_AGENT__ = {
-      listDrops: () => driver.snapshot().slots,
-      holdSlot: (slotId: string) => driver.hold(slotId),
-      holdStatus: () => driver.snapshot().hold,
-      releaseHold: (slotId: string) => driver.release(slotId),
-    };
-    return () => {
-      delete w.__CEDARFIELD_AGENT__;
-    };
-  }, [driver]);
-
   const heldSlot = session.held === null ? undefined : findSlot(session.slots, session.held.slotId);
-  const nextRelease = busy ? null : msUntilNextWave(elapsed);
+  // Live: the release schedule is the server's and it waits for nobody — anything booked is yours
+  // across waves, which is what the copy says. Seeded: the swap defers while this visitor is busy.
+  const liveMeta = live ? liveDriver?.meta() : undefined;
+  const nextRelease = live
+    ? liveMeta?.nextWaveAt != null
+      ? Math.max(0, liveMeta.nextWaveAt - Date.now())
+      : null
+    : busy
+      ? null
+      : msUntilNextWave(elapsed);
   const via = assistantTag(origin);
+  const arrival = (origin === 'agent' || origin === 'waitlist') && heldSlot ? agentArrivalAnnouncement(origin, heldSlot.timeLabel) : null;
+  const openCount = session.slots.filter((s) => s.state === 'open').length;
 
   // The card's reference is seeded on the instant the booking landed, so that instant has to be
-  // wall-clock and has to stay put. `lastBookedAt` is elapsed-since-mount by the same wall clock,
-  // so this addition is exactly the `Date.now()` of the booking — and it does not drift per frame.
+  // wall-clock and has to stay put. `lastBookedAt` is elapsed since `clockOrigin` by the same wall
+  // clock, so this addition is exactly the `Date.now()` of the booking — and it does not drift per frame.
   const bookedSlot = session.slots.find((s) => s.state === 'booked_yours');
-  const bookedAtWall = lastBookedAt === null ? null : mountedAt.current + lastBookedAt;
+  const bookedAtWall = lastBookedAt === null ? null : clockOrigin + lastBookedAt;
 
   return (
-    <div className="clinic" data-clinic-route="book" data-clinic-wave={wave}>
+    <div className="clinic" data-clinic-route="book" data-clinic-wave={wave} data-clinic-board={live ? 'live' : liveFailed ? 'fallback' : 'seeded'}>
       <main className="cl-shell">
         <h1 className="cl-sr">Book an appointment at {CLINIC_NAME}</h1>
         <Masthead
@@ -380,22 +512,39 @@ export function ClinicBooking() {
         >
           <Band label="Availability" open>
             <p className="cl-lead" data-clinic-wave-age>
-              {describeWaveAge(msIntoWave(elapsed))} · {session.slots.filter((s) => s.state === 'open').length} of{' '}
-              {session.slots.length} appointments still available
+              {live
+                ? liveMeta?.ready
+                  ? `${describeWaveAge(Math.max(0, Date.now() - (liveMeta.waveStartedAt ?? Date.now())))} · ${openCount} ${openCount === 1 ? 'appointment' : 'appointments'} still available`
+                  : 'Checking today’s availability…'
+                : `${describeWaveAge(msIntoWave(elapsed))} · ${openCount} of ${session.slots.length} appointments still available`}
             </p>
             <p className="cl-prose">
               {nextRelease === null
-                ? 'The next release is held back until you have finished — nothing on this board will change while you are booking.'
+                ? live
+                  ? 'Availability here updates as cancellations come in. Anything you have already booked stays yours.'
+                  : 'The next release is held back until you have finished — nothing on this board will change while you are booking.'
                 : `Cancelled appointments are released to this page as they come in. Next release in ${formatClock(nextRelease / 1000)}; anything you have already booked stays yours.`}
             </p>
           </Band>
 
-          {origin === 'agent' && heldSlot ? (
-            <p className="cl-agent" role="status" data-clinic-agent-strip data-clinic-hold-origin={origin}>
-              {holdHeadline(session.secondsLeft)}
-              <span>
+          {liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError ? (
+            <p className="cl-lost" role="status" data-clinic-refusal={liveMeta.errorSeq} key={liveMeta.errorSeq}>
+              {refusalSentence(liveMeta.lastError)}
+            </p>
+          ) : null}
+
+          {arrival !== null && heldSlot ? (
+            <p className="cl-agent" data-clinic-agent-strip data-clinic-hold-origin={origin}>
+              {/* The seconds tick every frame; a live region that re-reads them would speak forty-five
+                  times. Screen readers get the arrival sentence once, below; the dock's own regions
+                  carry the 30 s / 10 s marks. */}
+              <span aria-hidden="true">{holdHeadline(origin, session.secondsLeft)}</span>
+              <span aria-hidden="true">
                 {heldSlot.timeLabel} with {heldSlot.clinician}
                 {via === null ? null : <span className="cl-agent__via"> · {via}</span>}
+              </span>
+              <span className="cl-sr" role="status">
+                {arrival}
               </span>
             </p>
           ) : null}
@@ -475,7 +624,7 @@ export function ClinicBooking() {
             <ConfirmDock
               // Keyed apart from the hold dock: switching book→cancel/move must be a fresh dock —
               // fresh announcement, fresh untrusted counter, fresh agent-lane measurement.
-              key={`act-${pendingAct.kind}`}
+              key={`act-${pendingAct.kind}-${pendingAct.kind === 'move' ? pendingAct.toId : pendingAct.slotId}`}
               act={pendingAct.kind}
               secondsLeft={pendingSecondsLeft}
               ttlSeconds={pendingAct.kind === 'move' ? (session.held?.ttlSeconds ?? HOLD_TTL_SECONDS) : PENDING_ACT_TTL_SECONDS}
@@ -493,7 +642,10 @@ export function ClinicBooking() {
             />
           ) : session.held !== null && session.secondsLeft > 0 && heldSlot ? (
             <ConfirmDock
-              key="hold-dock"
+              // Keyed by slot: a cascade grant that replaces a live hold (the sweep gives your other
+              // hold back and hands you the queued slot) must be a fresh dock — fresh dead zone,
+              // fresh announcement — never a relabelled one under a finger already in flight.
+              key={`hold-dock-${session.held.slotId}-${session.held.startedAt}`}
               secondsLeft={session.secondsLeft}
               ttlSeconds={session.held.ttlSeconds}
               slotLabel={heldSlot.timeLabel}
@@ -521,10 +673,17 @@ export function ClinicBooking() {
         <ClinicTools
           driver={driver}
           session={session}
-          nextWaveAt={nextRelease === null ? null : session.now + nextRelease}
+          nextWaveAt={live ? (liveMeta?.nextWaveAt ?? null) : nextRelease === null ? null : session.now + nextRelease}
           onPrepareCancel={prepareCancel}
           onPrepareMove={prepareMove}
+          // SPEC-V5: the queue exists only on the shared board; the seeded board has no other people.
+          onJoinWaitlist={live && liveDriver ? (id) => (liveDriver.joinWaitlist(id), true) : undefined}
+          onLeaveWaitlist={live && liveDriver ? (id) => (liveDriver.leaveWaitlist(id), true) : undefined}
           armedAct={pendingAct?.kind ?? null}
+          waveLandedAt={live ? (liveMeta?.waveStartedAt ?? null) : null}
+          sharedBoard={live}
+          // Two network round trips (RPC + re-read) on a judge's hotel wifi is not 1.2 s.
+          settleTimeoutMs={live ? 8000 : undefined}
         />
       </main>
 

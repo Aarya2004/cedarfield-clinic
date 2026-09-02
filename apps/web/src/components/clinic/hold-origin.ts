@@ -14,7 +14,7 @@
  */
 import { formatClock } from '../../lib/drop/time.ts';
 
-export type HoldOrigin = 'you' | 'agent';
+export type HoldOrigin = 'you' | 'agent' | 'waitlist';
 
 /**
  * How recently a local click must have asked for the hold to own it. Generous on purpose: the
@@ -46,8 +46,11 @@ export function holdOrigin(
  * Origin-free on purpose — the hold reads the same to the visitor however it was asked for, and the
  * tag below is what names the assistant.
  */
-export function holdHeadline(secondsLeft: number): string {
-  return `This time is held for you — ${formatClock(secondsLeft)}`;
+export function holdHeadline(origin: HoldOrigin, secondsLeft: number): string {
+  const clock = formatClock(secondsLeft);
+  return origin === 'waitlist'
+    ? `This time came back to you — ${clock}`
+    : `This time is held for you — ${clock}`;
 }
 
 /**
@@ -59,4 +62,15 @@ export const ASSISTANT_TAG = 'via your assistant';
 /** The tag for this hold, or null when the visitor reserved the time themselves. */
 export function assistantTag(origin: HoldOrigin): string | null {
   return origin === 'agent' ? ASSISTANT_TAG : null;
+}
+
+/**
+ * The one sentence a screen reader hears when a hold lands that this visitor did not click for —
+ * their assistant asked for it, or it came back to them from the waiting list. Read once; the
+ * ticking clock is aria-hidden. Null for the visitor's own click, which needs no announcement.
+ */
+export function agentArrivalAnnouncement(origin: HoldOrigin, timeLabel: string): string | null {
+  if (origin === 'waitlist') return `${timeLabel} came back to you from the waiting list. Press Enter to book it.`;
+  if (origin !== 'agent') return null;
+  return `${timeLabel} is held for you via your assistant. Press Enter to book it.`;
 }

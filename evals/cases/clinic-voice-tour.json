@@ -56,7 +56,7 @@
   "outputMatches": "false[\\s\\S]*bad_time"
  },
  {
-  "_doc": "prepare_cancel with nothing booked refuses with a reason \u2014 no dock appears."
+  "_doc": "prepare_cancel with nothing booked refuses WITH A REASON the agent can say aloud \u2014 the arming tools are always present, so a voice user always hears 'nothing booked', never 'no such tool'."
  },
  {
   "invoke": "clinic_prepare_cancel",

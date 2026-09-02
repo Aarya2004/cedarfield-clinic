@@ -16,8 +16,9 @@ events the browser marked trusted.
 - [ ] Sound on the laptop **off** (the page has optional audio cues; they are off by default —
       leave them off, they add nothing on camera).
 - [ ] Browser at 1280×800, zoom 100 %. One display. Do-not-disturb on.
-- [ ] Dry-run the whole take three times before recording audio. The wave lands the moment the page
-      loads and the rival starts taking slots at six seconds — the timing below assumes that.
+- [ ] Dry-run the whole take three times before recording audio. On the live board waves land on
+      the shared 90-second clock; the seeded board (`?test=1`) lands on page load with the rival at
+      six seconds — the timing below assumes the seeded board.
 - [ ] Have a second tab already on `/clinic` (the landing) for the closing shot.
 - [ ] Screen recording at 60 fps if the machine can hold it; the TTL bar and the counter are the
       two things that must read cleanly.
@@ -85,15 +86,28 @@ Then press Enter. **BOOKED — YOURS.** Cut to the receipt: **by hand, N · with
 
 ---
 
+## THE BEAT TO ADD (SPEC-V5) · the race is gone — ~20 s, put it right after "With the agent"
+
+**Shot.** Two windows on the shared board. Window B holds 9:20. In window A, ask the agent:
+*"get me in line for 9:20."* The row reads **You're #1 in line**. In window B, click **Give it
+back**. Window A's dock arms **by itself**: *"It came back to you · you book it."* Press Enter.
+
+**Narration** (~45 words)
+> "Someone else has the time I want. My agent puts me in line — that's a tool, and it's
+> reversible. When the slot comes back, the clinic hands it to me first, as a fresh hold. Nobody
+> raced. And it still takes my key to book it."
+
 ## 2:00 – 2:28 · Why it cannot cheat
 
-**Shot.** Open the **Site tools** arrow in ChatGPT and scroll the list slowly: five tools, and no
-booking tool among them. Then, in DevTools console, run `document.querySelector('[data-armed] button').click()` —
+**Shot.** Open the **Site tools** arrow in ChatGPT and scroll the list slowly: eleven tools, and no
+booking, cancel or move tool among them. Then, in DevTools console, run
+`document.querySelector('[data-clinic-confirm]').click()` —
 nothing books, and the counter of **synthetic presses blocked** ticks up on screen.
 
 **Narration** (55 words)
-> "Here is the whole tool list this page gives an agent. Five tools — hold, release, status, list,
-> and one that exists only to explain the rule. Nothing that books. And booking is gated on an
+> "Here is the whole tool list this page gives an agent. Eleven tools — list, search, who's on,
+> hold, status, release, arm a cancel, arm a move, get in line, leave the line, and one that exists only to explain the rule.
+> Nothing that books, cancels or moves. And booking is gated on an
 > event only a browser can produce, so a script cannot fake it either. The page counts the attempts
 > in the open."
 
@@ -121,8 +135,12 @@ the same product.
 - No speed-ramping the TTL bar or the counter. If it takes 45 seconds, it takes 45 seconds; cut
   between beats instead.
 - Never cut in a way that implies the agent booked. If a take is ambiguous, reshoot it.
-- The banner (*demo inventory · simulated rival · nothing real is booked*) must be legible in at
-  least one full-width shot.
+- The banner (*Cedarfield is a fictional clinic. The rival is simulated and labelled. Nothing real
+  is booked…*) must be legible in at least one full-width shot.
 - Say "simulated rival" out loud the first time it appears. Do not let a viewer think it is a real
-  competing user.
+  competing user. If an **"Another patient"** row appears, that IS a real visitor on the shared
+  board — say so; it is the best thing that can happen on camera.
+- The board is shared and live: waves land on a 90-second server clock, not on page load. Record
+  on the live board for the two-window beat; use `?test=1` only if a take needs the seeded rival's
+  exact timing, and say so in the narration if you do.
 - If the numbers in the take differ from the ones above, the narration changes to match the take.

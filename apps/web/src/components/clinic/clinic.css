@@ -1012,6 +1012,11 @@ button.cl-row__inner:hover .cl-row__action {
    widths they have when the flag is off — turning the gesture on must not re-lay-out the one act.
    It paints from the dock's own family, like everything else inside the dark object. */
 .cl-dock__gesture {
+  /* GestureConfirm's sheet reads --drop-* expecting a dark stage; the clinic remaps those to paper
+     inks page-wide, which made the module dark-on-dark inside the dock (headline ~1.05:1). */
+  --drop-ink: var(--clinic-dock-ink);
+  --drop-muted: var(--clinic-dock-muted);
+  --drop-cap-edge: var(--clinic-dock-edge);
   flex: 1 0 100%;
   margin-top: 0.2rem;
   padding-top: 0.85rem;
