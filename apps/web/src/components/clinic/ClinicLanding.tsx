@@ -11,6 +11,7 @@
 import Link from 'next/link';
 import { Band, ClinicBanner, Masthead, ToolManifest } from './ClinicFrame.tsx';
 import { NextWaveClock } from './NextWaveClock.tsx';
+import { BoardPreview } from './BoardPreview.tsx';
 import { HOLD_TTL_SECONDS, WAVE_PERIOD_MS } from './wave-clock.ts';
 import './clinic-tokens.css';
 import './clinic.css';
@@ -44,6 +45,11 @@ export function ClinicLanding() {
               <span aria-hidden="true">→</span>
             </Link>
           </p>
+        </Band>
+
+        {/* The board itself, before the scroll: the same sheet the booking page shows, read-only. */}
+        <Band wide>
+          <BoardPreview />
         </Band>
 
         <Band label="Next release">

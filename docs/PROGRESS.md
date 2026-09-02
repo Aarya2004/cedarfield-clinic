@@ -28,6 +28,10 @@ Last update: **2026-09-02 (Engineer #4, Fable 5.1)** Branch `main`.
   "N waiting" on your own booking, title lists registered names. Docs: counts are 9 seeded / 11
   shared / 12 booked everywhere; SECURITY cascade bullet exactly true; tables fixed; 444→448.
   Still owed by humans: redeploy; ChatGPT desktop hour; Aarya's real-hand test.
+- **SPEC-V6 shipped (declarative form)** and **SPEC-V7 (the board in the hero)**: `BoardPreview`
+  mounts the same board the booking page shows (live for real visitors, seeded under `?test=1` or
+  on fallback), read-only and compact, as the landing hero's aside — proof before the scroll. Row
+  click → `/clinic/book`. `taken_by_other` rows now strike like rival rows.
 - **Physical test through Chrome's own registry (2026-09-02, Claude-in-Chrome on prod):**
   `document.modelContext.getTools()` returns exactly our 11; `executeTool(list_drops)` and
   `executeTool(hold_slot, '{"slot_id":…}')` worked and the page reacted (slot held_by_you, dock
