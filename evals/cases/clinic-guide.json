@@ -1,0 +1,18 @@
+[
+  {"_doc": ["clinic-guide — the guide for a visitor with an assistant (2026-09-02).",
+            "Present on first visit with three sayable sentences (copy buttons with unique names), names the",
+            "press that is the person's, hides on Hide and stays hidden across a reload (per browser)."]},
+  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
+  {"waitFor": "document.querySelector('[data-clinic-guide]') !== null", "timeout": 8000},
+  {"eval": "document.querySelectorAll('[data-clinic-guide-say]').length", "equals": 3},
+  {"eval": "new Set([...document.querySelectorAll('[data-clinic-guide-say]')].map(b => b.getAttribute('aria-label'))).size", "equals": 3},
+  {"eval": "(document.querySelector('[data-clinic-guide]')?.textContent ?? '')", "matches": "Hold me the earliest appointment"},
+  {"eval": "(document.querySelector('[data-clinic-guide]')?.textContent ?? '')", "matches": "Enter"},
+  {"eval": "(() => { document.querySelector('[data-clinic-guide]')?.scrollIntoView({ block: 'start' }); return true; })()", "equals": true},
+  {"sleep": 300},
+  {"shot": "docs/evidence/clinic/assistant-guide.png"},
+  {"focus": "[data-clinic-guide-dismiss]"},
+  {"type": "\r"},
+  {"waitFor": "document.querySelector('[data-clinic-guide]') === null", "timeout": 4000},
+  {"eval": "window.localStorage.getItem('cedarfield.assistant-guide.dismissed')", "equals": "1"}
+]
