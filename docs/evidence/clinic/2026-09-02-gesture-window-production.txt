@@ -1,0 +1,18 @@
+Production verification — main @ 1218547 (the camera is a window: live "Seeing:" reading, 120px porthole).
+Deployed and verified by Engineer #4 ~05:35, 2026-09-02 (first deploy run under Arav's permission).
+
+verify-deployed: 17 cases 0 failed · axe 0 violations ×3 routes · DEPLOYED AND VERIFIED.
+live-two-visitors: 25 steps 0 failed — LIVE BOARD PROVEN WITH TWO VISITORS.
+
+Physical camera test on Arav's Mac, Chrome 152, driven by Engineer #4 through the browser tools:
+  · permission card's "Enable camera to let your assistant book" → camera prompt → allowed by Arav →
+    MacBook Pro Camera live (320×240, track live, video advancing), model loaded, state `ready`,
+    face visible in the window.
+  · OLD build: `data-gesture-seen` sat on a stale "None 0.90" for a minute — the reading only updated
+    when a hand was present. FIXED in this build: every real frame writes it, `no_hand` included, and
+    the panel prints "Seeing: …" in words.
+  · NEW build: 15 s sampled → `no_hand` on every frame (Arav's hand was not in the window during the
+    sample). MediaPipe's hand-landmark logs at 22:20:25 show the graph does run when a hand appears.
+  · Observed: the page's main thread is saturated while the camera is on (a 100 ms poll ran at ~1 s
+    intervals) — inference runs on every fresh frame at camera rate on CPU/XNNPACK. Candidate fix:
+    cap inference at ~12–15 fps.
