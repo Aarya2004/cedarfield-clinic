@@ -52,6 +52,7 @@ import { DELEGATION_MS, type Delegation } from '../../lib/drop/clinic-tools.ts';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
 import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { AppointmentCard } from './AppointmentCard.tsx';
+import { AssistantGuide } from './AssistantGuide.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
 import { SlotSheet } from './SlotSheet.tsx';
@@ -592,6 +593,11 @@ export function ClinicBooking() {
                   : 'The next release is held back until you have finished — nothing on this board will change while you are booking.'
                 : `Cancelled appointments are released to this page as they come in. Next release in ${formatClock(nextRelease / 1000)}; anything you have already booked stays yours.`}
             </p>
+          </Band>
+
+          {/* What to say, for a first visitor with an assistant (Arav, 2026-09-02). Dismissible. */}
+          <Band flush wide>
+            <AssistantGuide />
           </Band>
 
           {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (

@@ -35,15 +35,23 @@ the tool dies with the booking. Your hand roots every booking, pressed once, ear
 
 ## How to test it — 60 seconds, no login, nothing to install
 
-1. Open the live URL in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or **Chrome 152+** with
-   `chrome://flags/#enable-webmcp-testing`, then click **Book an appointment** (`/clinic/book`).
-2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): eleven `clinic_*` tools —
-   and no booking, cancel, or move tool among them. Watch the list again after step 5: one more appears.
-3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a three-minute bar, and the page's **Agent activity** log records the call in its own words ("held 8:40 AM with Dr. Fanning · 180 s, your press books it") — you never have to trust the chat's narration, and
-   the dock at the bottom arms.
-4. Ask it to *"just book it."* It will explain that it can't, and why.
-5. **Press Enter.** Booked — an appointment card with a reference, calendar, move and cancel, and
-   **a new tool appears in your agent's list**, born by that press.
+1. Open the live URL inside your agent's browser — the **Codex desktop app**'s browser pane (the
+   client we tested against, model 5.6 Terra) or **Chrome 152+** with
+   `chrome://flags/#enable-webmcp-testing` — then click **Book an appointment** (`/clinic/book`).
+   The page carries its own guide at the top: three sentences to say, each with a copy button.
+2. Check your agent's tool list (or DevTools → Application → WebMCP): eleven `clinic_*` tools —
+   and no booking, cancel, or move tool among them. Watch the list again after steps 5 and 6.
+3. Say: *"hold me the earliest appointment."* A slot freezes with a three-minute bar, the confirm
+   bar rises, and **What your assistant has done** under the times records the call in the page's
+   own words ("held 8:40 AM with Dr. Fanning · 180 s, your press books it").
+4. Say: *"just book it."* It will explain that it can't, and why.
+5. **Press Enter**, or hold an open palm to the camera. Booked — an appointment card with a
+   reference, calendar, move and cancel, and **a new tool appears in your agent's list**, born by
+   that press.
+6. **Hand it the booking, with your hand.** Under the list, press **Let my assistant book for me**
+   (or show the palm there): `clinic_book_slot` appears. Say *"yes, book it."* It books; the card
+   reads *"Booked by your assistant under the permission you gave — 0 interactions from you"*; the
+   tool is gone again.
 
 Everything the description claims is also re-runnable from the repo in two commands (below).
 
