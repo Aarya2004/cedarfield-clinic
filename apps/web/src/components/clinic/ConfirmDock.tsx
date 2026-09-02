@@ -283,35 +283,37 @@ export function ConfirmDock({
             ) : null}
           </div>
 
-          <p className="cl-dock__hint" id="cl-dock-hint">
-            or press Enter
-          </p>
+          <div className="cl-dock__minor">
+            <p className="cl-dock__hint" id="cl-dock-hint">
+              or press Enter
+            </p>
+
+            <button
+              type="button"
+              className="cl-dock__toggle"
+              data-clinic-audio
+              aria-pressed={audioOn}
+              title="Two short tones: one when a hold arrives, one at ten seconds left. Off until you turn it on."
+              onClick={() => {
+                const next = !audioOn;
+                setAudioOn(next);
+                saveAudioPref(typeof window === 'undefined' ? null : window.localStorage, next);
+                if (next) {
+                  // This click is the gesture the browser requires before a context may start.
+                  player().unlock();
+                  player().play('armed');
+                }
+              }}
+            >
+              Sound {audioOn ? 'on' : 'off'}
+            </button>
+          </div>
 
           {/* One act, several ways in. Named on screen rather than left for someone to discover:
               a person who cannot use a keyboard should not have to guess that the button is one. */}
           <p className="cl-dock__ways" data-clinic-dock-ways>
             You can also select the button, use a switch{gestureSlot ? ', or hold the gesture below' : ''}.
           </p>
-
-          <button
-            type="button"
-            className="cl-dock__toggle"
-            data-clinic-audio
-            aria-pressed={audioOn}
-            title="Two short tones: one when a hold arrives, one at ten seconds left. Off until you turn it on."
-            onClick={() => {
-              const next = !audioOn;
-              setAudioOn(next);
-              saveAudioPref(typeof window === 'undefined' ? null : window.localStorage, next);
-              if (next) {
-                // This click is the gesture the browser requires before a context may start.
-                player().unlock();
-                player().play('armed');
-              }
-            }}
-          >
-            Sound {audioOn ? 'on' : 'off'}
-          </button>
         </div>
 
         {gestureSlot ? <div className="cl-dock__gesture">{gestureSlot}</div> : null}
