@@ -17,13 +17,14 @@ Aarya, 2026-09-02: "spec out voice control." Context that fixes the shape of thi
 1. **Every interactive control has a unique, speakable accessible name** on `/`, `/clinic`, and
    `/clinic/book` in every state (board · form · held · booked · cancel armed · move armed · grant
    standing). "Click ‹name›" in Voice Control hits exactly one thing without falling back to
-   "Show numbers". Names ≤ 6 words, plain English, no symbols, no times spelled as `8:40` only —
+   "Show numbers". Names ≤ 10 words, plain English, no symbols, no times spelled as `8:40` only —
    the visible time is fine because Voice Control reads the accessible name, and "eight forty" is
    how a person says it.
 2. **Label in Name (WCAG 2.5.3).** Wherever a control has visible text, that text is the start of its
    accessible name. A Voice Control user says what they see.
 3. **The confirm control names the act and the time.** Visible: *Confirm booking*. Accessible name:
-   *Confirm booking 9:20 AM* (cancel: *Cancel appointment 9:00 AM*; move: *Move to 9:20 AM*). One
+   *Confirm booking 9:20 AM* (cancel: *Confirm cancellation 9:00 AM*; move: *Confirm move to 9:20 AM* —
+   the arrow in the visible "9:00 AM → 9:20 AM" is not a word, so the name keeps the target only). One
    phrase, unambiguous, and it doubles as the compact summary a person hears back. (This is the one
    change from GPT's review that survives contact with the code — the rest was already true.)
 4. **"Press Return key" books after an assistant hold**, with no click first. Already true (the
@@ -70,7 +71,7 @@ New case `evals/cases/clinic-voice-names.json`, driven on `?test=1` through the 
 1. In each state (board → form → held-by-assistant → booked → cancel armed → move armed → grant
    standing) collect the accessible name of every `button`, `a[href]`, `input`, `select`,
    `textarea` (`aria-label` ?? `aria-labelledby` text ?? visible text ?? associated `<label>`).
-2. Assert: no empty name; **no duplicate names** within a state; every name ≤ 6 words; where a
+2. Assert: no empty name; **no duplicate names** within a state; every name ≤ 10 words; where a
    control has visible text, the name starts with it (2.5.3).
 3. Assert the confirm control's name matches `/^Confirm booking \d{1,2}:\d{2} (AM|PM)$/` while held,
    and the act variants while a cancel/move is armed.

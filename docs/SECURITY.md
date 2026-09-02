@@ -341,8 +341,19 @@ per act:
 - **Cancel and move never delegate.** The grant is booking-only. What the agent books, only the
   person can cancel or move — same docks, same trusted press, same gesture.
 - **It is written down.** The activity row reads "booked 8:40 AM with Dr. Boone — under the
-  permission you gave"; the appointment card reads "0 interactions — your assistant booked it under
-  the permission you gave"; the tool's answer carries `under_permission_granted_at`.
+  permission you gave"; the appointment card carries `data-clinic-booked-under-permission="true"`
+  (the page shows a patient no measurement sentence — SPEC-V3; the hook is what the evals assert);
+  the tool's answer carries `under_permission_granted_at`.
+- **Hands-free is the operating system's, never the page's (SPEC-V10).** The page has no
+  microphone and no speech recognition, ever: the assistant has a voice, and so does anyone in the
+  room, and an injected "yes" is byte-identical to a real one. macOS Voice Control drives the page
+  the way a switch does — its clicks and key presses are OS input events the browser marks
+  `isTrusted`, the same root every assistive technology has and the one the confirm gate was built
+  for. A voice in the room saying "press Return" is therefore the operating system's boundary, not
+  this page's; the page's own mitigations apply unchanged (the 500 ms arming dead zone, no focus
+  steal onto a destructive dock, one hold per visitor). What the page contributes is names: every
+  control has a unique speakable accessible name, and the confirm control's name carries the act
+  and the time, so "Click Confirm booking nine twenty" is one unambiguous phrase.
 - **Residual, stated.** Within the ten-minute window a prompt-injected agent could book a slot the
   person did not mean — bounded to one appointment, visible on the page and in the log, reversible
   by the person's press, and only after the person deliberately created the window.

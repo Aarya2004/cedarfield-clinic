@@ -188,6 +188,12 @@ Traces and screenshots for every one of these are committed under `docs/evidence
 - **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
   keyboard-accessible page — not "the accessible version". W3C's APA group and WCAG are explicit
   that an agent route does not discharge a page's own obligations, and we agree.
+- **Hands-free is the operating system's job, and the page is built for it.** No microphone, no
+  speech recognition in the page — ever (the assistant has a voice too). macOS Voice Control drives
+  the page the way a switch does, as trusted OS input: every control has a unique speakable name,
+  the confirm control is named with the act and the time ("Confirm booking 9:20 AM"), and the book
+  bar takes focus when an assistant hold arrives so *"Press Return key"* books. Asserted in
+  `clinic-voice-names.json` across seven page states; the manual script is `tickets/SPEC-V10.md`.
 - **Keyboard and switch are the primary confirm.** The camera gesture is **live in the submitted
   build and strictly opt-in**: the dock offers "Enable camera"; nothing loads and no lens opens until
   a person clicks it. It runs entirely on-device from our own origin (the ~42 MB of MediaPipe assets
