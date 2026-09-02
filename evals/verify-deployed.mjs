@@ -57,7 +57,7 @@ const cases = [
   ['clinic-landing-phone.json', '/clinic'],
   ['clinic-chaos.json', '/clinic/book'],
   ['clinic-phone-acts.json', '/clinic/book'],
-  // clinic-soak.json is deliberately NOT here: its walk-away-and-wait beats (45s arm expiry, a
+  // clinic-soak.json is deliberately NOT here: its walk-away-and-wait beats (180 s arm expiry, a
   // full deferred wave rollover) can exceed the per-case timeout. Run it by hand:
   //   node evals/harness/webmcp-cdp.mjs '<origin>/clinic/book?test=1' evals/cases/clinic-soak.json
 ];
@@ -79,7 +79,7 @@ for (const [file, path] of cases) {
   const testPath = `${path}${path.includes('?') ? '&' : '?'}test=1`;
   const run = spawnSync('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${origin}${testPath}`, tmp], {
     encoding: 'utf8',
-    timeout: 240_000,
+    timeout: 360_000,
     maxBuffer: 32 * 1024 * 1024,
   });
   const summary = (run.stdout ?? '')

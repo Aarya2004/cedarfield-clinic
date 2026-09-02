@@ -17,7 +17,7 @@ events the browser marked trusted.
       leave them off, they add nothing on camera).
 - [ ] Browser at 1280×800, zoom 100 %. One display. Do-not-disturb on.
 - [ ] Dry-run the whole take three times before recording audio. On the live board waves land on
-      the shared 90-second clock; the seeded board (`?test=1`) lands on page load with the rival at
+      the shared six-minute clock; the seeded board (`?test=1`) lands on page load with the rival at
       six seconds — the timing below assumes the seeded board.
 - [ ] Have a second tab already on `/clinic` (the landing) for the closing shot.
 - [ ] Screen recording at 60 fps if the machine can hold it; the TTL bar and the counter are the
@@ -132,7 +132,7 @@ the same product.
 
 ## Rules for the edit
 
-- No speed-ramping the TTL bar or the counter. If it takes 45 seconds, it takes 45 seconds; cut
+- No speed-ramping the TTL bar or the counter. If the bar takes a minute, it takes a minute; cut
   between beats instead.
 - Never cut in a way that implies the agent booked. If a take is ambiguous, reshoot it.
 - The banner (*Cedarfield is a fictional clinic. The rival is simulated and labelled. Nothing real
@@ -140,7 +140,7 @@ the same product.
 - Say "simulated rival" out loud the first time it appears. Do not let a viewer think it is a real
   competing user. If an **"Another patient"** row appears, that IS a real visitor on the shared
   board — say so; it is the best thing that can happen on camera.
-- The board is shared and live: waves land on a 90-second server clock, not on page load. Record
+- The board is shared and live: waves land on a six-minute server clock, not on page load. Record
   on the live board for the two-window beat; use `?test=1` only if a take needs the seeded rival's
   exact timing, and say so in the narration if you do.
 - If the numbers in the take differ from the ones above, the narration changes to match the take.

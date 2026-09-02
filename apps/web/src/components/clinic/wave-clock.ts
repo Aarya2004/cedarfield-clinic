@@ -17,14 +17,16 @@
  */
 
 /**
- * How long a wave owns the board. 90 seconds is a compromise with teeth: long enough that a
- * 45-second hold fits inside one wave with room either side, short enough that a visitor who lands
- * just after a release only waits a minute and a half to watch the next one arrive.
+ * How long a wave owns the board. Retuned 2026-09-02 for the judged client: ChatGPT desktop's
+ * per-call latency measured 10–39 s, so a 45 s hold had 31 s left by the time the agent finished
+ * reporting it and a 90 s wave rolled between two answers. A hold is now three minutes (a person
+ * on voice, a slow client, a real decision) and a wave six, so a hold always fits inside the wave
+ * it was placed in with room either side. The seeded rival still moves in the first 40 seconds.
  */
-export const WAVE_PERIOD_MS = 90_000;
+export const WAVE_PERIOD_MS = 360_000;
 
 /** Seconds a hold survives. Named here because the landing page promises it and the board burns it. */
-export const HOLD_TTL_SECONDS = 45;
+export const HOLD_TTL_SECONDS = 180;
 
 function period(periodMs: number): number {
   return Number.isFinite(periodMs) && periodMs > 0 ? periodMs : WAVE_PERIOD_MS;

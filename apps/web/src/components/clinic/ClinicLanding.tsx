@@ -101,7 +101,7 @@ export function ClinicLanding() {
         <Band label="Honestly">
           <p className="cl-prose">
             The appointments come from one shared board every visitor sees, released on a
-            90-second clock; the rival is a labelled simulation, and every other name on the board is
+            six-minute clock; the rival is a labelled simulation, and every other name on the board is
             a real visitor, labelled &ldquo;Another patient&rdquo;. Every interaction count on the booking page was
             measured by the page while you used it — no number here was written by hand. Nothing
             books a real appointment and nothing takes a payment.

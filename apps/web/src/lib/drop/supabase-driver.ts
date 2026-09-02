@@ -25,7 +25,7 @@ import type { DropDriver, DropEvent, Slot, SlotState } from './types.ts';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://hxqpaquhkmnrnjfutuyu.supabase.co';
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY ?? 'sb_publishable_5vuucxEB_4VUDmspqoqAJA_YtN22qUK';
 
-const HOLD_TTL_SECONDS = 45;
+const HOLD_TTL_SECONDS = 180; // must match interval '3 minutes' in clinic_hold / clinic_sweep
 const POLL_MS = 2500;
 const LOCAL_SWEEP_MS = 500;
 
