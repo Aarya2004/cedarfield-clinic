@@ -221,7 +221,8 @@ test('nine tools register on load; clinic_my_appointment is born by the human pr
       'clinic_explain_confirm',
     ]);
     assert.deepEqual(live(), [...BASE_TOOL_NAMES]);
-    assert.deepEqual(states, [{ kind: 'registered', names: [...BASE_TOOL_NAMES] }]);
+    assert.deepEqual(states.map((st) => (st as { names?: string[] }).names), [[...BASE_TOOL_NAMES]]);
+    assert.equal((states[0] as { browserCount?: number }).browserCount, 9, 'the fake platform confirms nine');
     // THE HUMAN BOOKS (directly on the driver — the test is the person) → one tool is born
     const open = driver.snapshot().slots.find((s) => s.state === 'open')!;
     driver.hold(open.id);
@@ -230,7 +231,8 @@ test('nine tools register on load; clinic_my_appointment is born by the human pr
     // registration order: the base nine first, then the three the press created
     assert.deepEqual(live(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES], 'after the press: the full ten, clinic_my_appointment born');
     assert.deepEqual([...live()].sort(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES].sort(), 'no waitlist seam ⇒ no waitlist tools');
-    assert.deepEqual(states.at(-1), { kind: 'registered', names: [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES] });
+    assert.deepEqual((states.at(-1) as { names: string[] }).names, [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES]);
+    assert.equal((states.at(-1) as { browserCount?: number }).browserCount, 10, 'the fake platform confirms ten after the press');
     // THE HUMAN CANCELS → the three are unregistered again
     driver.cancel(open.id);
     await new Promise((r) => setTimeout(r, 40));
@@ -888,4 +890,21 @@ test('clinic_explain_confirm lists the queue verbs only where a queue exists', a
   assert.deepEqual(plain.tools_that_exist, [...BASE_TOOL_NAMES]);
   const live = await callJson(clinicToolDefs(withQueue, FAST).find((d) => d.name === 'clinic_explain_confirm')!);
   assert.deepEqual(live.tools_that_exist, [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES]);
+});
+
+test("execute honours the platform's AbortSignal: a cancelled hold stops settling and answers with what is true", async () => {
+  const calls: string[] = [];
+  const open: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'open' };
+  const src = frozenSource([open], calls); // the board never moves: without a signal this would wait the whole budget
+  const def = clinicToolDefs(src, { settleTimeoutMs: 5000, settlePollMs: 5 }).find((d) => d.name === 'clinic_hold_slot')!;
+  const ac = new AbortController();
+  const t0 = Date.now();
+  const pending = def.execute({ slot_id: 's1' }, { signal: ac.signal });
+  setTimeout(() => ac.abort(), 30);
+  const res = await pending;
+  const out = JSON.parse(res.content[0].text) as { ok: boolean; error?: string };
+  assert.ok(Date.now() - t0 < 2000, 'returned promptly on abort, not after the 5 s budget');
+  assert.equal(out.ok, false);
+  assert.equal(out.error, 'hold_not_confirmed');
+  assert.deepEqual(calls, ['hold:s1'], 'the verb still ran once; the WAIT was cancelled, not the act');
 });

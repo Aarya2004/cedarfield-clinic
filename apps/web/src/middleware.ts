@@ -52,7 +52,11 @@ export function middleware(request: NextRequest) {
   res.headers.set('referrer-policy', 'no-referrer');
   res.headers.set('x-content-type-options', 'nosniff');
   res.headers.set('x-frame-options', 'DENY');
-  res.headers.set('permissions-policy', `camera=${gesture ? '(self)' : '()'}, microphone=(), geolocation=()`);
+  // `tools=(self)`: WebMCP's own Permissions-Policy feature — only this origin may register tools
+  // (no embedded third party ever could). Unknown to older browsers, harmlessly ignored.
+  res.headers.set('permissions-policy', `tools=(self), camera=${gesture ? '(self)' : '()'}, microphone=(), geolocation=()`);
+  // Chrome disables WebMCP under `Origin-Agent-Cluster: ?0`; state the opposite explicitly.
+  res.headers.set('origin-agent-cluster', '?1');
   return res;
 }
 

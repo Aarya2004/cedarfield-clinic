@@ -42,6 +42,17 @@ reaches that step.
 
 Everything the description claims is also re-runnable from the repo in two commands (below).
 
+## What the standards bodies are asking for — and what this page answers
+
+The W3C APA (accessibility) working group reviewed WebMCP on 5 August 2026 and recorded that they
+are "excited for the possibilities of this technology" but "concerned about the API in its current
+form", asking for designs that keep "review by the user" in the loop and never interfere with the
+accessibility tree. The specification's own *Accessibility considerations* section is, at
+submission time, empty (WebMCP issue #277). This page is one concrete answer: the agent does
+everything a person with a switch cannot — watch, search, hold, queue — and the one act that
+must stay the person's is gated on the browser's own notion of a real keypress, with a keyboard
+path first, a camera gesture as an opt-in, and every synthetic attempt counted in the open.
+
 ## The problem, and who has it
 
 Every task on the web costs a number of interactions. For a mouse user that number is invisible. For

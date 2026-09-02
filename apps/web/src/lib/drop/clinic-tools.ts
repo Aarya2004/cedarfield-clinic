@@ -361,10 +361,18 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * would report the state from before its own call. Returns false on timeout; the caller then says
  * so honestly instead of claiming a hold nobody has.
  */
-async function settle(source: ClinicToolsSource, predicate: (v: ClinicToolsView) => boolean, timeoutMs: number, pollMs: number): Promise<boolean> {
+async function settle(
+  source: ClinicToolsSource,
+  predicate: (v: ClinicToolsView) => boolean,
+  timeoutMs: number,
+  pollMs: number,
+  signal?: AbortSignal,
+): Promise<boolean> {
   const deadline = Date.now() + Math.max(0, timeoutMs);
   for (;;) {
     if (predicate(source())) return true;
+    // The agent (or the platform) cancelled the call: stop waiting and answer with what is true now.
+    if (signal?.aborted) return predicate(source());
     if (Date.now() >= deadline) return predicate(source());
     await sleep(Math.max(1, pollMs));
   }
@@ -409,7 +417,8 @@ export interface ClinicToolDef {
   description: string;
   inputSchema: Record<string, unknown>;
   annotations: { readOnlyHint: boolean; untrustedContentHint?: boolean };
-  execute: (input?: unknown) => Promise<ToolTextResult>;
+  /** `signal` is the platform's cancellation (spec: execute(input, {signal})); every settle honours it. */
+  execute: (input?: unknown, ctx?: { signal?: AbortSignal }) => Promise<ToolTextResult>;
 }
 
 const NO_INPUT_SCHEMA = { type: 'object', properties: {}, additionalProperties: false } as const;
@@ -644,7 +653,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       description: HOLD_SLOT_DESCRIPTION,
       inputSchema: holdSlotSchema,
       annotations: { readOnlyHint: false },
-      async execute(raw) {
+      async execute(raw, ctx) {
         const input = coerceInput(raw);
         const slotId = typeof input.slot_id === 'string' ? input.slot_id.trim() : '';
         const before = source();
@@ -689,7 +698,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         const previous = before.session.held?.slotId ?? null;
         // The one verb. `driver.confirm` is one property away and is never touched here.
         before.driver.hold(slotId);
-        const settled = await settle(source, (v) => v.session.held?.slotId === slotId, settleBudget(), pollMs);
+        const settled = await settle(source, (v) => v.session.held?.slotId === slotId, settleBudget(), pollMs, ctx?.signal);
         const after = source();
         if (!settled) {
           const now = after.session.slots.find((s) => s.id === slotId);
@@ -729,7 +738,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       description: RELEASE_HOLD_DESCRIPTION,
       inputSchema: NO_INPUT_SCHEMA,
       annotations: { readOnlyHint: false },
-      async execute() {
+      async execute(_raw, ctx) {
         const before = source();
         const held = before.session.held;
         if (!held) {
@@ -741,7 +750,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           } satisfies ErrorResult);
         }
         before.driver.release(held.slotId);
-        const settled = await settle(source, (v) => v.session.held === null, settleBudget(), pollMs);
+        const settled = await settle(source, (v) => v.session.held === null, settleBudget(), pollMs, ctx?.signal);
         const after = source();
         if (!settled) {
           return asToolResult({
@@ -818,7 +827,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       description: PREPARE_MOVE_DESCRIPTION,
       inputSchema: prepareMoveSchema,
       annotations: { readOnlyHint: false },
-      async execute(raw) {
+      async execute(raw, ctx) {
         const input = coerceInput(raw);
         const toId = typeof input.new_slot_id === 'string' ? input.new_slot_id.trim() : '';
         const view = source();
@@ -898,7 +907,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           } satisfies ErrorResult);
         }
         // The freeze lands through React state; answer with the target as it IS, not as it was.
-        await settle(source, (v) => v.session.held?.slotId === target.id, settleBudget(), pollMs);
+        await settle(source, (v) => v.session.held?.slotId === target.id, settleBudget(), pollMs, ctx?.signal);
         const after = source();
         const targetNow = after.session.slots.find((s) => s.id === target.id) ?? target;
         return asToolResult({
@@ -918,7 +927,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       description: JOIN_WAITLIST_DESCRIPTION,
       inputSchema: waitlistSchema,
       annotations: { readOnlyHint: false },
-      async execute(raw) {
+      async execute(raw, ctx) {
         const input = coerceInput(raw);
         const slotId = typeof input.slot_id === 'string' ? input.slot_id.trim() : '';
         const view = source();
@@ -942,7 +951,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         if (!options.onJoinWaitlist || !options.onJoinWaitlist(slotId)) {
           return asToolResult({ ok: false, error: 'waitlist_unavailable', detail: 'This board has no waitlist.' } satisfies ErrorResult);
         }
-        const settled = await settle(source, (v) => (v.session.slots.find((s) => s.id === slotId)?.yourPosition ?? 0) > 0, settleBudget(), pollMs);
+        const settled = await settle(source, (v) => (v.session.slots.find((s) => s.id === slotId)?.yourPosition ?? 0) > 0, settleBudget(), pollMs, ctx?.signal);
         const now = source().session.slots.find((s) => s.id === slotId);
         if (!settled) {
           // The seam is fire-and-forget; the board is the truth. A refused join (cap, a past wave, a
@@ -966,7 +975,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       description: LEAVE_WAITLIST_DESCRIPTION,
       inputSchema: waitlistSchema,
       annotations: { readOnlyHint: false },
-      async execute(raw) {
+      async execute(raw, ctx) {
         const input = coerceInput(raw);
         const slotId = typeof input.slot_id === 'string' ? input.slot_id.trim() : '';
         const view = source();
@@ -980,7 +989,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         if (!options.onLeaveWaitlist || !options.onLeaveWaitlist(slotId)) {
           return asToolResult({ ok: false, error: 'waitlist_unavailable', detail: 'This board has no waitlist.' } satisfies ErrorResult);
         }
-        const left = await settle(source, (v) => !(v.session.slots.find((s) => s.id === slotId)?.yourPosition), settleBudget(), pollMs);
+        const left = await settle(source, (v) => !(v.session.slots.find((s) => s.id === slotId)?.yourPosition), settleBudget(), pollMs, ctx?.signal);
         if (!left) {
           return asToolResult({ ok: false, error: 'waitlist_not_confirmed', detail: 'The board still shows your human in that line. Call clinic_list_drops and try again.' } satisfies ErrorResult);
         }
@@ -1045,7 +1054,12 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
 
 export type ClinicRegistrationState =
   | { kind: 'unsupported' }
-  | { kind: 'registered'; names: ClinicToolName[] }
+  | {
+      kind: 'registered';
+      names: ClinicToolName[];
+      /** What the BROWSER says it has for this origin, when it can be asked — proof, not our claim. */
+      browserCount?: number;
+    }
   | { kind: 'pending' }
   | { kind: 'error'; message: string };
 
@@ -1072,7 +1086,7 @@ export async function registerClinicTools(
     description: def.description,
     inputSchema: def.inputSchema,
     annotations: def.annotations,
-    execute: def.execute,
+    execute: (input, options) => def.execute(input, options ? { signal: options.signal } : undefined),
   });
   const registerSet = async (names: readonly ClinicToolName[], signal: AbortSignal) => {
     for (const def of defs) {
@@ -1085,10 +1099,22 @@ export async function registerClinicTools(
   let disposed = false;
   const loadSet: ClinicToolName[] = [...BASE_TOOL_NAMES, ...(options.onJoinWaitlist ? WAITLIST_TOOL_NAMES : [])];
   const liveNames = (): ClinicToolName[] => (booked ? [...loadSet, ...BOOKED_TOOL_NAMES] : [...loadSet]);
+  // Ask the platform for its own count after each change. Not every client exposes getTools; when
+  // it does, the page can show "the browser confirms N" instead of only its own belief.
+  const report = async () => {
+    let browserCount: number | undefined;
+    try {
+      const mine = await mc.getTools?.();
+      if (Array.isArray(mine)) browserCount = mine.filter((t) => (CLINIC_TOOL_NAMES as readonly string[]).includes(t.name)).length;
+    } catch {
+      browserCount = undefined;
+    }
+    if (!disposed) onState({ kind: 'registered', names: liveNames(), ...(browserCount !== undefined ? { browserCount } : {}) });
+  };
 
   try {
     await registerSet(loadSet, base.signal);
-    onState({ kind: 'registered', names: liveNames() });
+    await report();
   } catch (e) {
     // Half a surface is worse than none: a throw mid-loop must not leave the earlier tools live
     // under a label that says registration failed.
@@ -1121,7 +1147,7 @@ export async function registerClinicTools(
           booked = null;
           return;
         }
-        if (!disposed) onState({ kind: 'registered', names: liveNames() });
+        await report();
       } else if (!want && booked !== null) {
         // The state settles no matter what the platform does with the abort: a throwing unregister
         // must never leave the page claiming a tool that has no booking behind it.
@@ -1132,7 +1158,7 @@ export async function registerClinicTools(
         } catch {
           /* the model context refused to unregister; the count is still the truth we can keep */
         }
-        if (!disposed) onState({ kind: 'registered', names: liveNames() });
+        await report();
       }
     } finally {
       busy = false;

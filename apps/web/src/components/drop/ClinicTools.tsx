@@ -75,7 +75,11 @@ const MONO = 'var(--drop-font-mono, var(--font-mono), ui-monospace, monospace)';
 function label(state: ClinicRegistrationState): string {
   switch (state.kind) {
     case 'registered':
-      return `Site tools · ${state.names.length}`;
+      // Two numbers when the platform can be asked: what this page registered, and what the
+      // browser itself reports for this origin. They must agree, on screen, in public.
+      return state.browserCount !== undefined
+        ? `Site tools · ${state.names.length} · browser confirms ${state.browserCount}`
+        : `Site tools · ${state.names.length}`;
     case 'pending':
       return 'Site tools · registering…';
     case 'unsupported':
@@ -161,6 +165,7 @@ export function ClinicTools({
     <p
       data-clinic-tools={state.kind}
       data-clinic-tool-count={state.kind === 'registered' ? state.names.length : 0}
+      data-clinic-browser-count={state.kind === 'registered' && state.browserCount !== undefined ? state.browserCount : undefined}
       // Diagnostics for the headless drive: what the page believes vs what it registered.
       data-clinic-tools-live={state.kind === 'registered' ? state.names.join(' ') : ''}
       data-clinic-booked={session.slots.some((s) => s.state === 'booked_yours') ? 'true' : 'false'}
