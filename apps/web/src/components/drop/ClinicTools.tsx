@@ -38,8 +38,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DropDriver } from '../../lib/drop/types.ts';
 import {
+  clinicToolDefs,
   registerClinicTools,
+  summariseToolAnswer,
   type ClinicRegistrationState,
+  type ClinicToolDef,
+  type ClinicToolsOptions,
   type ClinicToolsView,
   type ToolCallRecord,
   type Delegation,
@@ -77,6 +81,11 @@ export interface ClinicToolsProps {
   onCall?: (record: ToolCallRecord) => void;
   /** Whether the page has a patient on file — the tools say so, and the booking tool refuses without. */
   patientOnFile?: boolean;
+  /**
+   * The page's own voice client (VoiceAgent) consumes the same tools through the same execute
+   * path. Called with the live list after every registration change, and with null on unmount.
+   */
+  onExecutor?: (executor: { tools: { name: string; description: string; inputSchema: Record<string, unknown> }[]; execute: (name: string, input: unknown) => Promise<string> } | null) => void;
 }
 
 export function ClinicTools({
@@ -95,6 +104,7 @@ export function ClinicTools({
   onBook,
   onCall,
   patientOnFile = false,
+  onExecutor,
 }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
   // SPEC-V8: the page's own record of the agent's calls, newest first. Eight is a screenful; the
@@ -106,11 +116,39 @@ export function ClinicTools({
   // ref that each render refreshes, never the values captured when they were registered.
   const waitlistAvailable = onJoinWaitlist !== undefined;
   const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile });
-  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall });
+  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall, onExecutor });
   useEffect(() => {
     view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile };
-    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall };
+    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall, onExecutor };
   });
+
+  // The voice client's view of the tools: the same defs, filtered to what is live right now, and an
+  // execute that records the call like any other client's. Rebuilt whenever the live list changes.
+  const defsRef = useRef<ClinicToolDef[] | null>(null);
+  useEffect(() => {
+    const names = state.kind === 'registered' ? state.names : [];
+    const cb = seams.current.onExecutor;
+    if (!cb) return;
+    if (names.length === 0 || defsRef.current === null) {
+      cb(null);
+      return;
+    }
+    const live = defsRef.current.filter((d) => (names as readonly string[]).includes(d.name));
+    cb({
+      tools: live.map((d) => ({ name: d.name, description: d.description, inputSchema: d.inputSchema })),
+      execute: async (name, input) => {
+        const def = defsRef.current?.find((d) => d.name === name && (names as readonly string[]).includes(d.name));
+        if (!def) return JSON.stringify({ ok: false, error: 'no_such_tool', detail: `No tool named ${name} exists right now.` });
+        const at = Date.now();
+        const res = await def.execute(input);
+        const record = { at, name: def.name, ms: Date.now() - at, ...summariseToolAnswer(def.name, res) };
+        seams.current.onCall?.(record);
+        setCalls((prev) => [record, ...prev].slice(0, ACTIVITY_ROWS));
+        setCallCount((n) => n + 1);
+        return res.content[0].text;
+      },
+    });
+  }, [state]);
 
   // Every registration and disposal is queued on one promise chain. The surface can change after
   // mount (the page learns it is live, which brings the queue verbs) and Chrome's model context
@@ -122,12 +160,7 @@ export function ClinicTools({
     let dispose: (() => void) | null = null;
     chain.current = chain.current.then(async () => {
       if (disposed) return;
-      dispose = await registerClinicTools(
-      () => view.current,
-      (s) => {
-        if (!disposed) setState(s);
-      },
-      {
+      const options: ClinicToolsOptions = {
         // Live seams: registration happens once, the page's callbacks change every render.
         onPrepareCancel: (slotId) => seams.current.onPrepareCancel?.(slotId) ?? false,
         onPrepareMove: (fromId, toId) => seams.current.onPrepareMove?.(fromId, toId) ?? false,
@@ -142,13 +175,22 @@ export function ClinicTools({
         settleTimeoutMs: () => seams.current.settleTimeoutMs ?? 1200,
         // SPEC-V9: the booking verb — the tool refuses unless the grant stands; the page re-checks.
         onBook: (id: string) => seams.current.onBook?.(id) ?? false,
-        onCall: (record) => {
+        onCall: (record: ToolCallRecord) => {
           if (disposed) return;
           seams.current.onCall?.(record);
           setCalls((prev) => [record, ...prev].slice(0, ACTIVITY_ROWS));
           setCallCount((n) => n + 1);
         },
-      },
+      };
+      // The same defs the registration uses, kept for the page's own voice client (no double
+      // registration: this copy is never handed to the model context).
+      defsRef.current = clinicToolDefs(() => view.current, options);
+      dispose = await registerClinicTools(
+        () => view.current,
+        (s) => {
+          if (!disposed) setState(s);
+        },
+        options,
       );
       if (disposed) {
         dispose();

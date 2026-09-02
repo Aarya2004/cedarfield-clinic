@@ -1,0 +1,17 @@
+[
+  {"_doc": ["clinic-voice-unavailable — 'Talk to Cedarfield' degrades honestly (2026-09-02).",
+            "On a deployment without OPENAI_API_KEY (every local eval run) the route answers 503 and the",
+            "panel says so in words; the page is otherwise unchanged, the tools still register, nothing",
+            "throws. The live path (secret → WebRTC → tools over the data channel) is a manual check:",
+            "evals/manual/README.md."]},
+  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
+  {"waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", "timeout": 15000},
+  {"waitFor": "document.querySelector('[data-clinic-voice]')?.getAttribute('data-clinic-voice') === 'idle'", "timeout": 8000},
+  {"eval": "document.querySelector('[data-clinic-voice-start]')?.hasAttribute('disabled')", "equals": false},
+  {"eval": "(document.querySelector('[data-clinic-voice-status]')?.textContent ?? '')", "matches": "allow the microphone"},
+  {"eval": "(() => { document.querySelector('[data-clinic-voice-start]')?.click(); return true; })()", "equals": true},
+  {"waitFor": "document.querySelector('[data-clinic-voice]')?.getAttribute('data-clinic-voice') === 'unavailable'", "timeout": 10000},
+  {"eval": "(document.querySelector('[data-clinic-voice-status]')?.textContent ?? '')", "matches": "Voice is not set up on this deployment"},
+  {"eval": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools')", "equals": "registered"},
+  {"shot": "docs/evidence/clinic/voice-unavailable.png"}
+]

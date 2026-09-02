@@ -38,7 +38,9 @@ the tool dies with the booking. Your hand roots every booking, pressed once, ear
 1. Open the live URL inside your agent's browser — the **Codex desktop app**'s browser pane (the
    client we tested against, model 5.6 Terra) or **Chrome 152+** with
    `chrome://flags/#enable-webmcp-testing` — then click **Book an appointment** (`/clinic/book`).
-   The page carries its own guide at the top: three sentences to say, each with a copy button.
+   The page carries its own guide at the top: three sentences to say, each with a copy button — and
+   asks once who the appointment is for (name, date of birth, phone; kept in your browser only).
+   No path books for nobody: the confirm bar and the booking tool both refuse until it is there.
 2. Check your agent's tool list (or DevTools → Application → WebMCP): eleven `clinic_*` tools —
    and no booking, cancel, or move tool among them. Watch the list again after steps 5 and 6.
 3. Say: *"hold me the earliest appointment."* A slot freezes with a three-minute bar, the confirm

@@ -22,6 +22,10 @@ const bridgeHosts = (process.env.NEXT_PUBLIC_BRIDGE_HOSTS ?? '')
  *     this origin outright, so without this the module could only ever report `unavailable`.
  */
 const gesture = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
+// "Talk to Cedarfield": the page's own voice client (OpenAI Realtime over WebRTC). Same rule —
+// the microphone door and the api.openai.com connect target exist only when the build asked.
+const voice = process.env.NEXT_PUBLIC_DROP_VOICE === '1';
+const voiceHosts = voice ? ' https://api.openai.com' : '';
 // SPEC-V3: the shared live board. Same rule as the gesture doors: present only when the build
 // asked for it, and scoped to the one project origin — never a wildcard over all of Supabase.
 const liveBoard = process.env.NEXT_PUBLIC_LIVE_BOARD !== '0';
@@ -39,7 +43,7 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    `connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss://*.trycloudflare.com${bridgeHosts}${liveHosts}`,
+    `connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss://*.trycloudflare.com${bridgeHosts}${liveHosts}${voiceHosts}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -54,7 +58,7 @@ export function middleware(request: NextRequest) {
   res.headers.set('x-frame-options', 'DENY');
   // `tools=(self)`: WebMCP's own Permissions-Policy feature — only this origin may register tools
   // (no embedded third party ever could). Unknown to older browsers, harmlessly ignored.
-  res.headers.set('permissions-policy', `tools=(self), camera=${gesture ? '(self)' : '()'}, microphone=(), geolocation=()`);
+  res.headers.set('permissions-policy', `tools=(self), camera=${gesture ? '(self)' : '()'}, microphone=${voice ? '(self)' : '()'}, geolocation=()`);
   // Chrome disables WebMCP under `Origin-Agent-Cluster: ?0`; state the opposite explicitly.
   res.headers.set('origin-agent-cluster', '?1');
   return res;

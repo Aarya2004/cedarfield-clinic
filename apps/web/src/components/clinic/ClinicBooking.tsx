@@ -55,6 +55,7 @@ import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx'
 import { AppointmentCard } from './AppointmentCard.tsx';
 import { AssistantGuide } from './AssistantGuide.tsx';
 import { PatientOnFile, validate as validatePatient, writePatient, type PatientOnFileRecord } from './PatientOnFile.tsx';
+import { VoiceAgent, type VoiceExecutor } from './VoiceAgent.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
 import { SlotSheet } from './SlotSheet.tsx';
@@ -97,6 +98,8 @@ const NO_COUNT: CounterSnapshot = { total: 0, breakdown: emptyBreakdown() };
  * script-provisioned weights are absent, so the flag alone can never break a page.
  */
 const GESTURE_ENABLED = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
+/** "Talk to Cedarfield": the page's own voice client. Same flag rule; the route says if no key is set. */
+const VOICE_ENABLED = process.env.NEXT_PUBLIC_DROP_VOICE === '1';
 
 /** "2:24 PM" — when a standing permission ends, in the visitor's own clock. */
 function formatWallClock(ms: number): string {
@@ -514,6 +517,9 @@ export function ClinicBooking() {
     return () => clearTimeout(t);
   }, [lastCall]);
 
+  /** The page's own voice client gets the live tool list and execute path from ClinicTools. */
+  const [voiceExecutor, setVoiceExecutor] = useState<VoiceExecutor | null>(null);
+
   const [delegation, setDelegationState] = useState<Delegation | null>(null);
   const delegationRef = useRef<Delegation | null>(null);
   const setDelegation = useCallback((next: Delegation | null) => {
@@ -710,6 +716,7 @@ export function ClinicBooking() {
           <Band flush wide>
             <PatientOnFile sample={clockOrigin !== 0} onChange={onPatientChange} />
             <AssistantGuide />
+            {VOICE_ENABLED ? <VoiceAgent executor={voiceExecutor} /> : null}
           </Band>
 
           {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (
@@ -851,6 +858,7 @@ export function ClinicBooking() {
               onBook={bookByAgent}
               onCall={noteCall}
               patientOnFile={patient !== null}
+              onExecutor={VOICE_ENABLED ? setVoiceExecutor : undefined}
             />
           </Band>
 

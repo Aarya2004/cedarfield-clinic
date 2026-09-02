@@ -22,6 +22,26 @@ self-verifying.
       node evals/harness/webmcp-cdp.mjs 'http://localhost:3000/clinic/book?test=1' \
       evals/manual/clinic-gesture-fires.json
 
+## Talk to Cedarfield — the live voice loop (needs OPENAI_API_KEY on the deployment)
+
+CI proves the honest degrade (`clinic-voice-unavailable.json`: no key → the panel says so, tools
+still register). The spoken loop itself needs a real key, a real microphone and a person:
+
+1. On a deployment with `OPENAI_API_KEY` set (and `NEXT_PUBLIC_DROP_VOICE=1`, the build default),
+   open `/clinic/book`, press **Talk to Cedarfield**, allow the microphone. `data-clinic-voice`
+   goes `connecting` → `live`; the status line reads "Listening…".
+2. Say "what appointments are open today?" — the agent answers aloud; the strip at the top shows
+   "Your assistant: N open of 6"; `data-clinic-voice-calls` ticks to 1.
+3. Say "hold me the earliest appointment" — a row turns to *Held for you · via your assistant*, the
+   confirm bar rises, the agent says the slot is held and that only you can book it.
+4. Say "book it" — the agent must refuse (no `clinic_book_slot` in its list) and tell you to press.
+   Press **Let my assistant book for me** (or show a palm there): the tool list is re-sent with
+   `clinic_book_slot`. Say "yes, book it" — booked; the card reads "0 interactions from you".
+5. **Stop listening** ends the session; five minutes ends it on its own.
+
+Write the run down in `docs/evidence/clinic/` with the date, the client secret's model name from the
+route's JSON (`model`), and what the agent said at each step.
+
 ## clinic-soak.json — time-driven paths (~3 min)
 
 Lives in `evals/cases/` and runs in `run-all`, but is deliberately NOT in `verify-deployed`: its

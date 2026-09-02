@@ -12,6 +12,12 @@ thing that books an appointment is one act from the person the appointment is fo
 switch press, or one held gesture.** Nothing an agent can call, and nothing a script can fake,
 reaches that step.
 
+**One tool surface, three clients.** Codex consumes these tools from its browser pane. Chrome 152
+exposes them to any agent. And the page hosts its own voice client — **Talk to Cedarfield** — an
+OpenAI Realtime agent that consumes the same eleven tools through the same execute path, speaks its
+answers, and cannot press either. A person with no hands says "hold me the earliest appointment"
+to the page, hears the answer, and books with a palm or with the permission they granted once.
+
 **The booking tool is born by your hand.** One trusted press on the page — *Let my assistant book
 for me* — or one open palm to the camera grants your agent **one booking for ten minutes**. That
 press births `clinic_book_slot` (Chrome fires `toolchange`); *"yes, book it"* in your chat then

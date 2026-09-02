@@ -315,6 +315,31 @@ tool itself returned, and React renders it as text (no HTML sink). It is a **rec
 consent channel**: a row saying "dock armed" still needs the person's press. A refusal quotes the
 tool's `detail`, truncated at 110 characters.
 
+### "Talk to Cedarfield" — the page's own voice client (2026-09-02)
+
+The one bounded exception to "no model call, no key". The page can host a voice agent (OpenAI
+Realtime over WebRTC) that consumes the page's own WebMCP tools — the same definitions Codex and
+Chrome consume, through the same execute path, so its calls land in the strip and the record like
+any other client's. Stated plainly:
+
+- **The key never reaches the browser.** `POST /api/voice/session` holds `OPENAI_API_KEY` server-side
+  and mints a client secret that expires in ten minutes. Without the variable the route answers
+  503 and the panel says "Voice is not set up on this deployment"; the page is otherwise unchanged.
+- **Spend is capped in the database.** `clinic_voice_ticket(p_cap)` counts sessions per day (200) and
+  refuses over the cap; a database error is a refusal. Each session is cut at five minutes by the
+  page. Upstream error bodies are never relayed.
+- **Instructions are fixed on the server**, not by the client: speak briefly, use the tools, never
+  claim what a tool did not answer, you cannot book.
+- **The gate is untouched.** The voice agent can hold, search, queue and arm. It cannot press.
+  `clinic_book_slot` exists for it only under the same grant (a press or a palm) and refuses without
+  a patient on file. The page never listens to its own speakers for a confirm: voice remains not a
+  confirm channel.
+- **What leaves the page**: the person's microphone audio to OpenAI for the session's duration, and
+  the tools' answers (slot ids, times, clinician names, the patient-on-file flag — never the name,
+  date of birth or phone). The panel says the microphone is in use and has a Stop control.
+- **Residual**: a prompt-injected instruction reaching the voice agent could make it hold or queue
+  the wrong slot — reversible, visible, and bounded exactly as for any other client.
+
 ### The booking tool born by your hand (SPEC-V9, 2026-09-02)
 
 Arav's decision after testing with the Codex desktop app: "yes, book it" in the chat must be able
