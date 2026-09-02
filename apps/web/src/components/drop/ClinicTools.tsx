@@ -75,6 +75,8 @@ export interface ClinicToolsProps {
   onBook?: (slotId: string) => boolean;
   /** Every served call, as it lands — so the page can show it where the person is looking. */
   onCall?: (record: ToolCallRecord) => void;
+  /** Whether the page has a patient on file — the tools say so, and the booking tool refuses without. */
+  patientOnFile?: boolean;
 }
 
 export function ClinicTools({
@@ -92,6 +94,7 @@ export function ClinicTools({
   delegation = null,
   onBook,
   onCall,
+  patientOnFile = false,
 }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
   // SPEC-V8: the page's own record of the agent's calls, newest first. Eight is a screenful; the
@@ -102,10 +105,10 @@ export function ClinicTools({
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
   const waitlistAvailable = onJoinWaitlist !== undefined;
-  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation });
+  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile });
   const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall });
   useEffect(() => {
-    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation };
+    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation, patientOnFile };
     seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall };
   });
 

@@ -166,6 +166,8 @@ export interface ClinicToolsView {
   waitlistAvailable?: boolean;
   /** SPEC-V9: the human's standing permission to book, if any. Set only from a trusted event on the page. */
   delegation?: Delegation | null;
+  /** Whether the page has a patient on file (name, date of birth, phone). No path books without one. */
+  patientOnFile?: boolean;
   /** The verbs. `hold` / `release` are called here; `confirm` is the human path and never is. */
   driver: DropDriver;
   /** The fold the UI renders: slots, held, secondsLeft, now, log. */
@@ -350,6 +352,8 @@ export interface ListDropsResult {
   your_hold: HoldSummary | null;
   /** The visitor's booked slots, newest first — so "cancel my appointment" can be answered without any born tool. */
   your_bookings: AgentSlot[];
+  /** False ⇒ the page will refuse every booking until the person adds name, date of birth and phone once. */
+  patient_on_file: boolean;
   booking: 'human_only';
 }
 
@@ -435,6 +439,7 @@ export function listDrops(view: ClinicToolsView): ListDropsResult {
     ...(view.sharedBoard ? { shared_board: true as const } : {}),
     your_hold: holdSummary(view),
     your_bookings: [...session.slots].reverse().filter((s) => s.state === 'booked_yours').map(toAgentSlot),
+    patient_on_file: view.patientOnFile !== false,
     booking: 'human_only',
   };
 }
@@ -828,8 +833,12 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           your_hold: hold,
           ...(previous && previous !== slotId ? { released_previous_hold: previous } : {}),
           booking: 'human_only' as const,
+          patient_on_file: after.patientOnFile !== false,
           // Verbatim, so the agent can read it out without paraphrasing the one line that matters.
-          next_step: HOLD_CHOREOGRAPHY,
+          next_step:
+            after.patientOnFile === false
+              ? `${HOLD_CHOREOGRAPHY} First they must add the patient's name, date of birth and phone once, at the top of the page — the press is refused until then.`
+              : HOLD_CHOREOGRAPHY,
         });
       },
     },
@@ -892,6 +901,16 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
               open_slot_ids: openIds(source().session.slots),
             } satisfies ErrorResult);
           }
+        }
+        // `false` is the page saying "nobody on file"; `undefined` is a view that has no such notion
+        // (the bench, the unit fakes) and is not gated.
+        if (before.patientOnFile === false) {
+          return asToolResult({
+            ok: false,
+            error: 'patient_details_required',
+            detail:
+              'The page has no patient on file. Your human adds their name, date of birth and phone once, at the top of the page — then say "yes, book it" again.',
+          } satisfies ErrorResult);
         }
         const grantedAt = before.delegation?.grantedAt ?? 0;
         // The page's verb, behind the page's own re-check of the grant. This is the ONE place in

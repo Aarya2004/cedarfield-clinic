@@ -1715,3 +1715,81 @@ html:has(.cl-dock) {
 .cl-now[data-clinic-now-ok='false'] .cl-now__who {
   color: var(--clinic-alert);
 }
+
+/* --- the patient on file (2026-09-02) -------------------------------------------------------- */
+
+.cl-patient {
+  max-width: 44rem;
+  margin: 0 0 1rem;
+}
+
+.cl-patient__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1.25rem;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.cl-patient__line {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cl-patient__label,
+.cl-patient__sample {
+  color: var(--clinic-muted);
+}
+
+.cl-patient__form {
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--clinic-ink);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.cl-patient__head {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.cl-patient__intro {
+  margin: 0.5rem 0 1rem;
+}
+
+.cl-patient__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* --- "it happened here": a pulse on what the assistant changed (2026-09-02) ----------------- */
+
+@keyframes cl-flash {
+  0% { box-shadow: 0 0 0 0 rgba(30, 64, 175, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(30, 64, 175, 0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-clinic-flash='true'] {
+    animation: cl-flash 0.9s ease-out 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-clinic-flash='true'] {
+    outline: 3px solid var(--clinic-ink);
+    outline-offset: 3px;
+  }
+}
+
+.cl-patient__actions-inline {
+  display: inline-flex;
+  gap: 1rem;
+  flex: none;
+}

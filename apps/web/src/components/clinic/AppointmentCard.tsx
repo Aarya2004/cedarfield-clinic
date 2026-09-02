@@ -73,6 +73,8 @@ export interface AppointmentCardProps {
    * `delegated`: the agent booked under a standing permission — the person's cost was zero.
    */
   interactions?: { hand: number | null; agent: number | null; delegated?: boolean };
+  /** Who it is for — the patient on file. A clinic never books a time for nobody. */
+  patientName?: string;
 }
 
 export function AppointmentCard({
@@ -86,6 +88,7 @@ export function AppointmentCard({
   onMove,
   armed = false,
   interactions,
+  patientName,
 }: AppointmentCardProps) {
   const reference = useMemo(() => appointmentReference(`${slotId}|${bookedAt}`), [slotId, bookedAt]);
   const bookedDate = useMemo(() => new Date(bookedAt), [bookedAt]);
@@ -146,6 +149,11 @@ export function AppointmentCard({
       </p>
 
       <p className="cl-appt__ref">
+        {patientName ? (
+          <>
+            For <b data-clinic-appointment-for>{patientName}</b> ·{' '}
+          </>
+        ) : null}
         Reference <b data-clinic-reference={reference}>{reference}</b>
       </p>
 

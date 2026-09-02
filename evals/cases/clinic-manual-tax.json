@@ -16,6 +16,21 @@
   "timeout": 25000
  },
  {
+  "_doc": "A FIRST-TIME patient: the labelled sample on file (?test=1) is removed first, so every field below is typed and counted."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'on-file'",
+  "timeout": 8000
+ },
+ {
+  "eval": "(() => { document.querySelector('[data-clinic-patient-clear]')?.click(); return true; })()",
+  "equals": true
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'none'",
+  "timeout": 4000
+ },
+ {
   "eval": "(() => { window.__t0 = Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter') ?? -1); return window.__t0 >= 0; })()",
   "equals": true
  },

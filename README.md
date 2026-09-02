@@ -37,12 +37,17 @@ per act. An injected "yes" is bounded to one visible appointment that only you c
 3. **Now open the same page inside your agent's browser** — the **Codex desktop app**'s browser pane
    (the client we tested against, model 5.6 Terra) or **Chrome 152+** with
    `chrome://flags/#enable-webmcp-testing`. The page carries its own guide at the top: three
-   sentences to say, each with a copy button. Say the second: *"hold me the earliest appointment."*
+   sentences to say, each with a copy button — and asks once who the appointment is for (name, date
+   of birth, phone; kept in your browser only; no path books without it). Say the second sentence:
+   *"hold me the earliest appointment."*
    It calls `clinic_hold_slot`. A slot freezes with a three-minute bar (three minutes because chat
    clients take 10–39 s per call — measured, `docs/evidence/clinic/2026-09-02-chatgpt-desktop-transcript.md`),
-   the confirm bar rises, and the page says who holds it. Your agent cannot finish. **Press Enter**,
-   or hold an open palm to the camera. Booked — one interaction. Under the times, **What your
-   assistant has done** lists the call in the page's own words.
+   the strip at the top of the page announces it the moment it lands ("Your assistant: held 9:00 AM
+   with Dr. Duarte · 180 s, your press books it"), the page scrolls to the row and pulses it, the
+   confirm bar rises, and with sound on the page says the same line aloud. Your agent cannot finish.
+   **Press Enter**, or hold an open palm to the camera — the window shows your hand and prints what
+   the model sees. Booked — one interaction. Under the times, **What your assistant has done** lists
+   every call in the page's own words.
 4. Ask it to book one *without* you: *"just book it."* It will tell you it can't, and why — that
    answer comes from `clinic_explain_confirm`, a tool whose only job is to explain the boundary.
 5. **Hand it the booking, with your hand.** Under the list, press **Let my assistant book for me**

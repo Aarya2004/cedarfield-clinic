@@ -97,37 +97,28 @@
   "_doc": "The person fills it (trusted keystrokes) and presses Review \u2014 the form moves for them, not for a script."
  },
  {
-  "focus": "[data-clinic-field=\"fullName\"]"
+  "_doc": "Name, date of birth and phone arrive from the patient on file (PatientOnFile; the labelled sample under ?test=1). The form starts from them \u2014 nothing is retyped."
  },
  {
-  "type": "Ada Okonkwo"
+  "waitFor": "document.querySelector('[data-clinic-field=\"fullName\"]')?.value === 'Ada Okonkwo'",
+  "timeout": 4000
  },
  {
-  "focus": "[data-clinic-field=\"dateOfBirth\"]"
+  "eval": "document.querySelector('[data-clinic-field=\"dateOfBirth\"]')?.value",
+  "equals": "1988-04-12"
+ },
+ {
+  "eval": "(document.querySelector('[data-clinic-field=\"phone\"]')?.value ?? '').replace(/\\D/g, '')",
+  "equals": "4165550100"
  },
  {
   "key": "Home"
- },
- {
-  "type": "04"
- },
- {
-  "type": "02"
- },
- {
-  "type": "1971"
  },
  {
   "focus": "[data-clinic-field=\"reason\"]"
  },
  {
   "type": "New"
- },
- {
-  "focus": "[data-clinic-field=\"phone\"]"
- },
- {
-  "type": "4165550100"
  },
  {
   "eval": "document.querySelector('[data-clinic-field=\"fullName\"]')?.value",
@@ -140,13 +131,13 @@
   "type": "\r"
  },
  {
-  "_doc": "Headless Chrome cannot enter a native date over CDP (the manual-tax case documents the same floor), so the review step is out of reach here. What is provable: the TRUSTED press ran the real path \u2014 the blocked counter did not move \u2014 and the only thing holding the form is validation of the date the harness could not type."
+  "_doc": "The TRUSTED press ran the real path: with the date of birth on file the form reaches Review (headless Chrome cannot type a native date, but it no longer has to). Either way the blocked counter never moved for a real press \u2014 it stays at the one synthetic attempt."
  },
  {
   "sleep": 400
  },
  {
-  "waitFor": "document.querySelector('form[data-clinic-step=\"details\"]')?.getAttribute('data-clinic-agent-submits-blocked') === '1'",
+  "waitFor": "document.querySelector('[data-clinic-flow]')?.getAttribute('data-clinic-flow') === 'review' || document.querySelector('form[data-clinic-step=\"details\"]')?.getAttribute('data-clinic-agent-submits-blocked') === '1'",
   "timeout": 4000
  },
  {

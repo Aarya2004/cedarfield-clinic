@@ -2,6 +2,29 @@
 
 Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, 05:00–07:00) — the seat of the person: Arav's physical tests, six fixes, each deployed
+- Arav, in Chrome 152 and the Codex app, as the user we build for: "nothing happens", "I can't see
+  my camera", "doing everything manually", "how do I know anything happened". Root causes, in order
+  found: (1) the camera reading only updated with a hand present → stale; (2) Chrome stops the loop
+  for a hidden tab (his tab sat behind Codex) → "no hand" for a minute; (3) the booking landed below
+  the fold with nothing announcing it; (4) no guide on what to say; (5) the assistant paths booked
+  for nobody; (6) he was on Chrome, which has no assistant — the assistant is only in Codex.
+- Shipped, each proven (targeted cases + axe) and deployed by me under Arav's standing permission:
+  `AssistantGuide` · `GestureConfirm` window + "Seeing:" line + hidden-tab line + ~12/s inference cap
+  · the strip (`cl-now`) + scroll + pulse (`data-clinic-flash`) + spoken line (speechSynthesis behind
+  the existing sound preference) · `PatientOnFile` (+ `validate`, `writePatient`, "Not you? Remove";
+  the by-hand form prefills from it and saves back at review; `AppointmentCard.patientName`;
+  `ClinicToolsView.patientOnFile`; `clinic_book_slot` refuses `patient_details_required`;
+  `clinic_hold_slot.next_step` says it) · `docs/PERSONAS.md`.
+- Evals: `clinic-guide` (13 steps) new; `clinic-declarative` re-pointed (name/DOB/phone arrive from
+  the patient on file); `clinic-manual-tax` starts from nobody on file ("Not you? Remove") so the
+  by-hand count still measures a first-time patient. verify-deployed runs 17 cases.
+- Proof of the whole SPEC-V9 loop with Arav's real hand on the live board
+  (`docs/evidence/clinic/2026-09-02-palm-grant-books-live.txt`).
+- Client facts for the video: Codex desktop has NO Voice Mode (dictation + Send); hands-free is macOS
+  Voice Control ("press Return", "Click Confirm booking 9:00 AM"). ChatGPT desktop has Voice Mode; whether
+  its pane exposes site tools is Arav's two-minute check.
+
 ## Build log — Engineer #4 (2026-09-02, ~04:00) — Aarya's eight commits gated; two rulings; production verify widened
 - **Gated Aarya's `2fe4d8d` on this machine:** typecheck 0 · lint 0 · 474/474 unit · **clinic suite
   21/21** (incl. `clinic-voice-names` 42 steps, `clinic-delegation` 34, the 10-minute soak) · axe 0×3.

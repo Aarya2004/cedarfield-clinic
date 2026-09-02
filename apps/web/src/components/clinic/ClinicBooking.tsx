@@ -45,6 +45,7 @@ import {
 import { createMockDriver } from '../../lib/drop/mock-driver.ts';
 import { createSupabaseDriver, refusalSentence, type LiveDriver } from '../../lib/drop/supabase-driver.ts';
 import { formatClock } from '../../lib/drop/time.ts';
+import { loadAudioPref } from '../../lib/drop/audio-cues.ts';
 import type { DropDriver, Slot } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
@@ -53,6 +54,7 @@ import { GestureConfirm } from '../drop/GestureConfirm.tsx';
 import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { AppointmentCard } from './AppointmentCard.tsx';
 import { AssistantGuide } from './AssistantGuide.tsx';
+import { PatientOnFile, validate as validatePatient, writePatient, type PatientOnFileRecord } from './PatientOnFile.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
 import { SlotSheet } from './SlotSheet.tsx';
@@ -424,17 +426,42 @@ export function ClinicBooking() {
     setLastBookedAt(Date.now() - clockOrigin);
   }, [flow.selectedSlotId, manualDriver, session.now, live, clockOrigin]);
 
+  // ── who the appointment is for ────────────────────────────────────────────────────────────────
+  // One patient on file per browser (PatientOnFile). No path books without it: the by-hand form
+  // always asked; the assistant paths now refuse until it exists, and say so where the eye is.
+  const [patient, setPatientState] = useState<PatientOnFileRecord | null>(null);
+  const patientRef = useRef<PatientOnFileRecord | null>(null);
+  const onPatientChange = useCallback((p: PatientOnFileRecord | null) => {
+    patientRef.current = p;
+    setPatientState(p);
+  }, []);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (notice === null) return;
+    const t = setTimeout(() => setNotice(null), 9000);
+    return () => clearTimeout(t);
+  }, [notice]);
+  /** True when the page may book for someone. False ⇒ the card is brought into view with the reason. */
+  const requirePatient = useCallback((): boolean => {
+    if (patientRef.current !== null) return true;
+    setNotice('Add the patient’s name, date of birth and phone first — once, at the top of the page.');
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    document.querySelector('[data-clinic-patient]')?.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+    return false;
+  }, []);
+
   /** The press happened; the booking has not yet. The measurement waits for the `booked` event. */
   const pendingAgentCount = useRef<{ slotId: string; count: number; delegated: boolean } | null>(null);
   const confirmHold = useCallback(() => {
     const slotId = session.held?.slotId;
     if (slotId === undefined) return;
+    if (!requirePatient()) return;
     // Frozen before the dock unmounts, so the number cannot drift after the booking it belongs to —
     // but only WRITTEN when the driver confirms the booking, so a refused press (hold expired at
     // the boundary, on the live board) never records a measurement for an appointment nobody has.
     pendingAgentCount.current = { slotId, count: (dockCounter.current?.snapshot() ?? NO_COUNT).total, delegated: false };
     session.confirm(slotId);
-  }, [session]);
+  }, [session, requirePatient]);
 
   // ── SPEC-V9: the booking tool is born by your hand ─────────────────────────────────────────────
   // One trusted press here ("Let my agent book for me") grants a delegation: one booking, ten
@@ -448,6 +475,19 @@ export function ClinicBooking() {
   const [lastCall, setLastCall] = useState<ToolCallRecord | null>(null);
   const noteCall = useCallback((record: ToolCallRecord) => {
     setLastCall(record);
+    // Said out loud too, when the person has turned sound on (the same preference as the confirm
+    // bar's cues): a person who cannot watch the page still hears that the assistant acted, and
+    // what it did. The page speaks its own record — never the assistant's words.
+    try {
+      if (loadAudioPref(window.localStorage) && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(`Your assistant${record.ok ? '' : ' was refused'}: ${record.summary.replace(/ — /g, '. ').replace(/ · /g, ', ')}`);
+        u.rate = 1.05;
+        window.speechSynthesis.speak(u);
+      }
+    } catch {
+      /* no voices, or storage refused: the strip and the record still stand */
+    }
     // Bring the thing that changed into view: a booking → the appointment card; anything else that
     // succeeded → the record under the times, so the person sees the row appear.
     const target =
@@ -458,7 +498,15 @@ export function ClinicBooking() {
           : null;
     if (target === null) return;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    setTimeout(() => document.querySelector(target)?.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' }), 250);
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(target);
+      if (el === null) return;
+      el.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+      // A visible pulse on the thing the assistant changed — "it happened HERE" — honouring
+      // reduced motion (the CSS rule is behind the media query).
+      el.setAttribute('data-clinic-flash', 'true');
+      setTimeout(() => el.removeAttribute('data-clinic-flash'), 1800);
+    }, 250);
   }, []);
   useEffect(() => {
     if (lastCall === null) return;
@@ -504,12 +552,13 @@ export function ClinicBooking() {
     (slotId: string): boolean => {
       const grant = delegationRef.current;
       if (grant === null || grant.until <= Date.now()) return false;
+      if (!requirePatient()) return false;
       // Zero interactions: the person pressed once, earlier, to grant — the booking itself cost none.
       pendingAgentCount.current = { slotId, count: 0, delegated: true };
       session.confirm(slotId);
       return true;
     },
-    [session],
+    [session, requirePatient],
   );
 
   useEffect(
@@ -529,6 +578,32 @@ export function ClinicBooking() {
 
   // Booking another appointment starts a new measurement, but it does not erase the last one: the
   // frozen total is a record of something that happened, not a live readout.
+  // The by-hand form starts from the patient on file: a person who told the page who they are
+  // once is not asked to type it again. Only empty fields are filled; nothing typed is overwritten.
+  useEffect(() => {
+    if (flow.step !== 'details' || patient === null) return;
+    const fill: Array<['fullName' | 'dateOfBirth' | 'phone', string]> = [
+      ['fullName', patient.fullName],
+      ['dateOfBirth', patient.dateOfBirth],
+      ['phone', patient.phone],
+    ];
+    for (const [field, value] of fill) {
+      if (flow.details[field].trim() === '' && value !== '') dispatch({ type: 'set_field', field, value });
+    }
+    // Runs when the step opens; the details themselves are read once, deliberately.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flow.step, patient]);
+  // …and what the by-hand form collects becomes the patient on file, so the next booking — by hand
+  // or by the assistant — does not ask again. Saved at review (the details have passed validation).
+  useEffect(() => {
+    if (flow.step !== 'review') return;
+    const next = { fullName: flow.details.fullName.trim(), dateOfBirth: flow.details.dateOfBirth.trim(), phone: flow.details.phone.trim() };
+    if (validatePatient(next) !== null) return;
+    if (patientRef.current && patientRef.current.fullName === next.fullName && patientRef.current.dateOfBirth === next.dateOfBirth && patientRef.current.phone === next.phone) return;
+    writePatient(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flow.step]);
+
   const restart = useCallback(() => {
     pageCounter.current?.reset();
     setReviewAttempt(0);
@@ -592,7 +667,11 @@ export function ClinicBooking() {
           }
         />
 
-        {lastCall !== null ? (
+        {notice !== null ? (
+          <div className="cl-now" role="status" data-clinic-notice data-clinic-now-ok="false">
+            <span className="cl-now__who">Not booked yet:</span> <span className="cl-now__what">{notice}</span>
+          </div>
+        ) : lastCall !== null ? (
           <div className="cl-now" role="status" data-clinic-now={lastCall.name} data-clinic-now-ok={lastCall.ok ? 'true' : 'false'}>
             <span className="cl-now__who">Your assistant{lastCall.ok ? '' : ' was refused'}:</span>{' '}
             <span className="cl-now__what">{lastCall.summary}</span>
@@ -629,6 +708,7 @@ export function ClinicBooking() {
 
           {/* What to say, for a first visitor with an assistant (Arav, 2026-09-02). Dismissible. */}
           <Band flush wide>
+            <PatientOnFile sample={clockOrigin !== 0} onChange={onPatientChange} />
             <AssistantGuide />
           </Band>
 
@@ -770,6 +850,7 @@ export function ClinicBooking() {
               delegation={delegation}
               onBook={bookByAgent}
               onCall={noteCall}
+              patientOnFile={patient !== null}
             />
           </Band>
 
@@ -794,6 +875,7 @@ export function ClinicBooking() {
                 onMove={(toId) => prepareMove(bookedSlot.id, toId, 'you')}
                 armed={pendingAct !== null}
                 interactions={{ hand: handCount, agent: agentCount, delegated: lastBookingDelegated }}
+                patientName={patient?.fullName}
               />
             </Band>
           ) : null}
