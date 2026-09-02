@@ -18,8 +18,8 @@
  * The mock driver simulates one release per instance, so continuous releases are a driver per wave,
  * swapped on the period in `wave-clock.ts` and seeded from the wave index. The swap is DEFERRED
  * while anything is in play — a live hold, a half-filled form, a booking still on screen — because
- * a release replaces the board, and clearing a burning 45-second hold out from under a visitor to
- * satisfy a timer would be the page breaking its own promise.
+ * a new wave clears the board and yanking a burning three-minute hold out from under a visitor to
+ * satisfy a timer would be the page contradicting its own promise.
  *
  * ── THE INSTRUMENTS ARE INVISIBLE (SPEC-V3 §1) ──────────────────────────────────────────────────
  * Two interaction counters still run — one scoped to the booking region from arrival, one born with
@@ -126,7 +126,7 @@ const INERT_DRIVER: DropDriver & { snapshot(): { slots: Slot[]; hold: null } } =
 };
 
 /** How long a prepared cancel stays armed before the page quietly stands down. */
-const PENDING_ACT_TTL_SECONDS = 45;
+const PENDING_ACT_TTL_SECONDS = 180;
 
 /** SPEC-V2 §3: what clinic_prepare_cancel / clinic_prepare_move arm. One at a time, human-fired. */
 type PendingAct =

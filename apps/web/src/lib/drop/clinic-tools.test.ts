@@ -28,6 +28,7 @@ import {
   parseClockText,
   clinicToolDefs,
   registerClinicTools,
+  type ToolCallRecord,
   type ClinicToolsView,
   type ClinicToolsSource,
 } from './clinic-tools.ts';
@@ -907,4 +908,28 @@ test("execute honours the platform's AbortSignal: a cancelled hold stops settlin
   assert.equal(out.ok, false);
   assert.equal(out.error, 'hold_not_confirmed');
   assert.deepEqual(calls, ['hold:s1'], 'the verb still ran once; the WAIT was cancelled, not the act');
+});
+
+test('SPEC-V8: onCall records every call with an honest line from the answer itself', async () => {
+  const { mc, regs } = fakeMc();
+  const restore = withModelContext(mc);
+  const calls: ToolCallRecord[] = [];
+  try {
+    const dispose = await registerClinicTools(ready().source, () => {}, { onCall: (r) => calls.push(r) });
+    const get = (n: string) => regs.find((r) => r.tool.name === n)!.tool;
+    await get('clinic_hold_slot').execute({ slot_id: 'slot-1' });
+    await get('clinic_hold_slot').execute({ slot_id: 'no-such-slot' });
+    await get('clinic_explain_confirm').execute({});
+    dispose();
+  } finally {
+    restore();
+  }
+  assert.equal(calls.length, 3);
+  assert.equal(calls[0].name, 'clinic_hold_slot');
+  assert.equal(calls[0].ok, true);
+  assert.match(calls[0].summary, /^held .+ with .+ · \d+ s, your press books it$/);
+  assert.equal(calls[1].ok, false);
+  assert.match(calls[1].summary, /^refused — /);
+  assert.equal(calls[2].summary, 'explained: no tool books; you do');
+  for (const c of calls) assert.ok(c.ms >= 0 && c.at > 0);
 });

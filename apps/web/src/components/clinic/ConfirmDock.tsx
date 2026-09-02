@@ -36,6 +36,7 @@ import {
   type CuePlayer,
 } from '../../lib/drop/audio-cues.ts';
 import { displaySeconds, fractionLeft } from '../../lib/drop/time.ts';
+import { formatClock } from '../../lib/drop/time.ts';
 import { assistantTag, type HoldOrigin } from './hold-origin.ts';
 
 /** SPEC-V2: which consequential act one trusted press performs. The dock never performs two. */
@@ -236,9 +237,9 @@ export function ConfirmDock({
           </p>
           <p className="cl-dock__clock">
             <span className="cl-dock__seconds" data-clinic-dock-seconds={displaySeconds(secondsLeft)}>
-              {displaySeconds(secondsLeft)}
+              {displaySeconds(secondsLeft) >= 60 ? formatClock(displaySeconds(secondsLeft)) : displaySeconds(secondsLeft)}
             </span>{' '}
-            <span className="cl-dock__unit">seconds left to confirm</span>
+            <span className="cl-dock__unit">{displaySeconds(secondsLeft) >= 60 ? 'left to confirm' : 'seconds left to confirm'}</span>
           </p>
           <p className="cl-dock__note">
             {origin === 'waitlist' && act === 'book'

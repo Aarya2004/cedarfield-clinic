@@ -1526,3 +1526,53 @@ html:has(.cl-dock) {
   border-radius: 0.5rem;
   background: var(--clinic-band);
 }
+
+/* --- what your assistant has done ---------------------------------------------------------- */
+/* A plain record, newest first, in the same card language as everything else. Nothing here is
+   an instrument readout: it is a list of things that happened, in words. */
+
+.cl-assistant {
+  max-width: 44rem;
+  margin: 2rem 0 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 0.5rem;
+  background: var(--clinic-band);
+}
+
+.cl-assistant__head {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.cl-assistant__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-assistant__row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--clinic-rule);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.cl-assistant__row:first-child {
+  border-top: 0;
+}
+
+.cl-assistant__time {
+  color: var(--clinic-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-assistant__refused {
+  color: var(--clinic-alert);
+  font-weight: 600;
+}

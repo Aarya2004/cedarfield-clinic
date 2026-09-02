@@ -59,7 +59,7 @@
  },
  {
   "waitFor": "document.querySelector('[data-clinic-act]') === null",
-  "timeout": 55000
+  "timeout": 200000
  },
  {
   "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
@@ -70,7 +70,7 @@
  },
  {
   "waitFor": "document.querySelector('[data-clinic-wave]')?.getAttribute('data-clinic-wave') !== window.__wave0",
-  "timeout": 150000
+  "timeout": 400000
  },
  {
   "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",

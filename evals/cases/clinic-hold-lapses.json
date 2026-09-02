@@ -34,7 +34,7 @@
  },
  {
   "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') !== 'held_by_you'",
-  "timeout": 60000
+  "timeout": 200000
  },
  {
   "eval": "['open','expired_hold','taken_by_rival'].includes(document.querySelector('[data-clinic-slot=\"' + window.__s + '\"]')?.getAttribute('data-slot-state') ?? '')",

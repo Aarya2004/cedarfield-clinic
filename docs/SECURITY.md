@@ -235,7 +235,7 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   mislabelled as your own hold. It is announced — the strip above the board and its live region
   say "It came back to you from the line — nobody raced you." Booking still requires the trusted
   press; the queue changes who gets the chance, never who can act. Residual, stated: idle waiters
-  cost a slot at most 3 × 45 s per wave; anonymous identities are rate-limited by the auth
+  cost a slot at most 3 × 3 min per wave; anonymous identities are rate-limited by the auth
   provider, not by us.
 - **The declarative form (SPEC-V6):** the details form carries `toolname`/`tooldescription`/
   `toolparamdescription` and NO `toolautosubmit`. Filling is the browser's; submitting is the
@@ -306,3 +306,11 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
 - **Accessibility:** axe-core reports 0 violations on all three routes (WCAG 2.0/2.1/2.2 A + AA), gated by
   `node evals/a11y.mjs`. The camera gesture is opt-in per person, always beside a keyboard path.
 
+### The agent activity log (SPEC-V8, 2026-09-02)
+
+The page lists every tool call it served: tool name, a one-line summary derived from the tool's
+own JSON answer (`summariseToolAnswer`), and the measured duration. Nothing in the row comes from
+the agent's free text — the name is the registered tool name, the summary is built from fields the
+tool itself returned, and React renders it as text (no HTML sink). It is a **record, not a
+consent channel**: a row saying "dock armed" still needs the person's press. A refusal quotes the
+tool's `detail`, truncated at 110 characters.

@@ -2,6 +2,24 @@
 
 Last update: **2026-09-02 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, late) — SPEC-V8 agent activity log + the clock retuned for chat clients
+- **Physical test with ChatGPT desktop** (transcript in `docs/evidence/clinic/2026-09-02-chatgpt-desktop-transcript.md`):
+  the judged client listed clinicians, refused to book unprompted, held, relayed the choreography,
+  and said synthetic gestures are rejected. It exposed two things, both fixed the same night:
+  1. **10–39 s per call** vs a 45 s hold / 90 s wave (31 s left after reporting; a wave rolled between
+     two answers). Holds → **3 minutes**, waves → **6 minutes**, armed cancel/move → 3 minutes
+     (`wave-clock.ts`, `supabase-driver.ts`, `ClinicBooking.tsx`; migration
+     `20260902040000_cedarfield_clock_for_agents.sql`, applied to the live project). Copy, README,
+     SUBMISSION, SECURITY, VIDEO-SCRIPT and every eval wait retuned with it.
+  2. **No on-page record of what the agent did** (Arav: "how am I supposed to tell if these commands
+     have happened"). `registerClinicTools` gains `onCall`; `ClinicTools` renders an **Agent
+     activity** log (`role=log`, polite live region): time · tool · one line derived from the
+     answer by `summariseToolAnswer` · measured ms. Asserted in `clinic-thesis`; unit-tested.
+- Answered in chat, not in code: the agent must not book on a spoken "yes" (the page cannot see the
+  chat; an injected "yes" is byte-identical to a real one — Chrome's own `agentInvoked` flag exists
+  so pages can tell the two apart). Voice: ChatGPT Voice Mode alongside the page, or macOS Voice
+  Control's "press Return" for dictation.
+
 ## Build log — Engineer #4 (2026-09-02) — SPEC-V4 + SPEC-V5: the surface answers the human's act; the race is gone
 - **SPEC-V4** tools born from the human act — after Arav's review, ADDITIVE ONLY: the nine base
   tools (arming tools included, so a voice user always hears "nothing booked") register on load;

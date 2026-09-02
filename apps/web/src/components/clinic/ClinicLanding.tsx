@@ -16,6 +16,15 @@ import { ClinicianRoster } from './ClinicianRoster.tsx';
 import { NextWaveClock } from './NextWaveClock.tsx';
 import { HOLD_TTL_SECONDS } from './wave-clock.ts';
 import './clinic-tokens.css';
+
+/** "3 minutes" rather than "180 seconds": the hold is read by a patient, not a stopwatch. */
+function holdLength(): string {
+  if (HOLD_TTL_SECONDS % 60 === 0) {
+    const m = HOLD_TTL_SECONDS / 60;
+    return m === 1 ? 'a minute' : `${m} minutes`;
+  }
+  return `${HOLD_TTL_SECONDS} seconds`;
+}
 import './clinic.css';
 
 export function ClinicLanding() {
@@ -40,7 +49,7 @@ export function ClinicLanding() {
           <h1 className="cl-thesis">Book a cancelled appointment today</h1>
           <p className="cl-thesis__tail">
             When a patient cancels, their appointment goes back on our list at the next release.
-            Choose a time and we hold it for you for {HOLD_TTL_SECONDS} seconds while you check the
+            Choose a time and we hold it for you for {holdLength()} while you check the
             date.
           </p>
           <p className="cl-hero-cta">

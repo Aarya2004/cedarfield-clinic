@@ -241,7 +241,7 @@ for (const f of cases) {
   const runCase = () => spawnSync('node', [`${root}evals/harness/webmcp-cdp.mjs`, url, `${root}evals/cases/${f}`], {
     encoding: 'utf8',
     // A hung case used to hang the suite: the harness has its own per-send timeout, this is the backstop.
-    timeout: 180000,
+    timeout: 900000,
     env: {
       ...process.env,
       ...shotEnv,
