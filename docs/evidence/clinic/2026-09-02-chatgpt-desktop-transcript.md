@@ -33,3 +33,12 @@ holds, and relays the human-only step.
    different waves). The clock was tuned for a person at a keyboard, not a chat client mid-turn.
 2. **Nothing on the page says what the agent just did.** The person watching the page saw rows
    change but had no on-page record that a tool ran, which tool, or what it returned.
+
+## Follow-up, 02:01 — Voice Mode
+
+Arav checked the composer while the clinic page was open in ChatGPT desktop's in-app browser:
+**there is no Voice Mode control in that session** (screenshot taken; lost to the temp folder).
+Dictation (microphone icon) exists but still needs a Send click. Consequence for the product and
+the video: the honest voice story is *dictation + one press*, or macOS Voice Control ("press
+Return") for a fully hands-free send. The page never claimed Voice Mode; the tools are voice-ready
+in the sense that every answer is readable aloud in one sentence (`next_step`, `refusalSentence`).
