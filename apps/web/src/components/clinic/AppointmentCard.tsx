@@ -3,10 +3,10 @@
 /**
  * Your appointment — what a person has after they book (SPEC-V3 §3).
  *
- * It is the only place on the site that is unambiguously the visitor's, so it is the only plate
- * that carries cedar: a cedar edge, and the time set in cedar at display scale. Everything it shows
+ * A white card with a blue top edge — the one plate on the site that is unambiguously the
+ * visitor's, and the only one that carries the practice blue. Everything it shows
  * is derived from the booking itself — the reference from the slot and the instant it was made, the
- * date from the board's own time label — so the card cannot disagree with the row it came from.
+ * date from the list's own time label — so the card cannot disagree with the row it came from.
  *
  * ── HOW TO MOUNT IT (for whoever owns `ClinicBooking.tsx`) ──────────────────────────────────────
  * The card performs nothing. `onCancel` and `onMove` are the page's existing arming callbacks —
@@ -121,7 +121,7 @@ export function AppointmentCard({
 
   return (
     <div className="cl-appt" data-clinic-appointment={reference} data-clinic-slot-booked={slotId}>
-      <p className="cl-appt__eyebrow">Your appointment</p>
+      <h2 className="cl-appt__head">Your appointment</h2>
 
       <p className="cl-appt__time">{timeLabel}</p>
       <p className="cl-appt__detail">
@@ -147,7 +147,7 @@ export function AppointmentCard({
             aria-disabled={armed}
             onClick={() => (armed ? setNotice('Finish the change in the bar below first.') : setShowMoves((open) => !open))}
           >
-            Move to another time
+            Move appointment
           </button>
         ) : null}
         {onCancel ? (

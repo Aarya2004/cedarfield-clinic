@@ -6,7 +6,7 @@
  * It reads rather than describes. Releases land on a fixed period from the epoch (`wave-clock.ts`)
  * and the board for a release is generated from that release's seed, so building the same driver
  * the booking page builds and reading its board gives the roster the same times a visitor will see
- * one click later. Nothing here is typed by hand; a clinician with nothing left prints an absence.
+ * one click later. Nothing here is typed by hand; a clinician with nothing left says so in words.
  *
  * Hydration: the server cannot know what second it is on the visitor's machine, so the first paint
  * ships the dash and the times arrive on mount — the same contract `NextWaveClock` keeps, and the
@@ -47,13 +47,17 @@ export function ClinicianRoster() {
         const time = times === null ? undefined : times[clinician.name];
         return (
           <li className="cl-roster__row" key={clinician.name} data-clinic-clinician={clinician.name}>
-            <p className="cl-roster__name">{clinician.name}</p>
+            <h3 className="cl-roster__name">{clinician.name}</h3>
             <p className="cl-roster__spec">{clinician.specialty}</p>
             <p className="cl-roster__next" data-clinic-next={time ?? ''}>
-              <span className="cl-roster__time">{time ?? '—'}</span>
               <span className="cl-roster__unit">
-                {time === null ? 'none in this release' : 'next available'}
+                {time === undefined
+                  ? 'Checking availability'
+                  : time === null
+                    ? 'No appointments left today'
+                    : 'Next available'}
               </span>
+              {time === null || time === undefined ? null : <span className="cl-roster__time">{time}</span>}
             </p>
           </li>
         );

@@ -49,7 +49,7 @@ import type { DropDriver, Slot } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
-import { Band, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
+import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { AppointmentCard } from './AppointmentCard.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
@@ -494,12 +494,15 @@ export function ClinicBooking() {
   return (
     <div className="clinic" data-clinic-route="book" data-clinic-wave={wave} data-clinic-board={live ? 'live' : liveFailed ? 'fallback' : 'seeded'}>
       <main className="cl-shell">
-        <h1 className="cl-sr">Book an appointment at {CLINIC_NAME}</h1>
         <Masthead
+          bar
           aside={
-            <Link className="cl-quiet" href="/clinic" data-clinic-nav="landing">
-              Clinic home
-            </Link>
+            <>
+              <ClinicPhoneLink />
+              <Link className="cl-quiet cl-quiet--sm" href="/clinic" data-clinic-nav="landing">
+                Clinic home
+              </Link>
+            </>
           }
         />
 
@@ -514,7 +517,8 @@ export function ClinicBooking() {
           data-clinic-receipt={`${handCount ?? '-'}:${agentCount ?? '-'}`}
         >
           <Band label="Availability" open>
-            <p className="cl-lead" data-clinic-wave-age>
+            <h1 className="cl-thesis cl-thesis--book">Book an appointment</h1>
+            <p className="cl-prose cl-prose--lead" data-clinic-wave-age>
               {live
                 ? liveMeta?.ready
                   ? `${describeWaveAge(Math.max(0, Date.now() - (liveMeta.waveStartedAt ?? Date.now())))} · ${openCount} ${openCount === 1 ? 'appointment' : 'appointments'} still available`
@@ -530,26 +534,30 @@ export function ClinicBooking() {
             </p>
           </Band>
 
-          {liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError ? (
-            <p className="cl-lost" role="status" data-clinic-refusal={liveMeta.errorSeq} key={liveMeta.errorSeq}>
-              {refusalSentence(liveMeta.lastError)}
-            </p>
-          ) : null}
+          {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (
+            <Band flush wide>
+              {liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError ? (
+                <p className="cl-lost" role="status" data-clinic-refusal={liveMeta.errorSeq} key={liveMeta.errorSeq}>
+                  {refusalSentence(liveMeta.lastError)}
+                </p>
+              ) : null}
 
-          {arrival !== null && heldSlot ? (
-            <p className="cl-agent" data-clinic-agent-strip data-clinic-hold-origin={origin}>
-              {/* The seconds tick every frame; a live region that re-reads them would speak forty-five
-                  times. Screen readers get the arrival sentence once, below; the dock's own regions
-                  carry the 30 s / 10 s marks. */}
-              <span aria-hidden="true">{holdHeadline(origin, session.secondsLeft)}</span>
-              <span aria-hidden="true">
-                {heldSlot.timeLabel} with {heldSlot.clinician}
-                {via === null ? null : <span className="cl-agent__via"> · {via}</span>}
-              </span>
-              <span className="cl-sr" role="status">
-                {arrival}
-              </span>
-            </p>
+              {arrival !== null && heldSlot ? (
+                <p className="cl-agent" data-clinic-agent-strip data-clinic-hold-origin={origin}>
+                  {/* The seconds tick every frame; a live region that re-reads them would speak forty-five
+                      times. Screen readers get the arrival sentence once, below; the confirm bar's own
+                      regions carry the 30 s / 10 s marks. */}
+                  <span aria-hidden="true">{holdHeadline(origin, session.secondsLeft)}</span>
+                  <span aria-hidden="true">
+                    {heldSlot.timeLabel} with {heldSlot.clinician}
+                    {via === null ? null : <span className="cl-agent__via"> · {via}</span>}
+                  </span>
+                  <span className="cl-sr" role="status">
+                    {arrival}
+                  </span>
+                </p>
+              ) : null}
+            </Band>
           ) : null}
 
           {/* On the board step the band carries no label of its own: each ROW's gutter is the
@@ -574,7 +582,9 @@ export function ClinicBooking() {
 
             {flow.step === 'board' ? (
               <>
-                <h2 className="cl-sr">Appointments available now</h2>
+                <h2 className="cl-lead">
+                  Available now<span className="cl-sr"> at {CLINIC_NAME}</span>
+                </h2>
                 <SlotSheet
                   slots={session.slots}
                   onOpen={(slotId) => dispatch({ type: 'open_slot', slotId })}

@@ -1,10 +1,14 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
+import { Geist, Geist_Mono, Instrument_Serif, Public_Sans } from 'next/font/google';
 import './globals.css';
 
 const sans = Geist({ variable: '--font-sans', subsets: ['latin'] });
 const mono = Geist_Mono({ variable: '--font-mono', subsets: ['latin'] });
 const serif = Instrument_Serif({ variable: '--font-serif', subsets: ['latin'], weight: '400' });
+// The clinic routes set everything — headings, body, times, buttons — in one face. Public Sans is a
+// UK public-service face: plain, wide-apertured, and legible at 15px for a patient reading it on a
+// phone. It is scoped to `.clinic` through `--clinic-sans`; the rest of the app keeps Geist.
+const clinicSans = Public_Sans({ variable: '--font-clinic-sans', subsets: ['latin'], weight: ['400', '600', '700'] });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://rokan-terminal.vercel.app'),
@@ -35,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // stored 'light' choice is applied post-hydration by initTheme() — no inline script (nonce CSP).
   return (
     <html lang="en" data-theme="dark">
-      <body className={`${sans.variable} ${mono.variable} ${serif.variable} antialiased`}>{children}</body>
+      <body className={`${sans.variable} ${mono.variable} ${serif.variable} ${clinicSans.variable} antialiased`}>{children}</body>
     </html>
   );
 }

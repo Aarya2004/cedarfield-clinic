@@ -111,15 +111,20 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
 
   return (
     <div className="cl-panel" data-clinic-flow={state.step} data-clinic-slots-lost={state.slotsLost}>
-      <p className="cl-band__label cl-band__label--flush">
-        {position === null ? STEP_TITLE[state.step] : `Step ${position} of ${STEP_ORDER.length}`}
-      </p>
+      {/* Only while the walk has numbered steps. On the terminal steps the heading already says
+          where you are, and printing it twice is the page stuttering. */}
+      {position === null ? null : (
+        <p className="cl-step" data-clinic-step-position={position}>
+          Step {position} of {STEP_ORDER.length}
+        </p>
+      )}
       <h2 className="cl-lead cl-panel__lead" ref={headingRef} tabIndex={-1}>
         {STEP_TITLE[state.step]}
       </h2>
 
       {selected !== undefined && state.step !== 'booked' ? (
         <div className="cl-chosen cl-panel__block">
+          <span className="cl-chosen__label">Appointment</span>
           <span className="cl-chosen__time">{selected.timeLabel}</span>
           <span className="cl-chosen__who">
             {selected.clinician} · {selected.kind}
@@ -214,12 +219,6 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
                       {meta.hint}
                     </p>
                   ) : null}
-                  {error ? (
-                    <p className="cl-field__error" id={`${id}-error`}>
-                      {error}
-                    </p>
-                  ) : null}
-
                   {meta.control === 'select' ? (
                     <select {...shared}>
                       <option value="">Choose one</option>
@@ -241,6 +240,13 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
                       inputMode={meta.control === 'tel' ? 'tel' : undefined}
                     />
                   )}
+
+                  {/* Under the control, where the eye lands after trying to fill it in. */}
+                  {error ? (
+                    <p className="cl-field__error" id={`${id}-error`}>
+                      {error}
+                    </p>
+                  ) : null}
                 </div>
               );
             })}

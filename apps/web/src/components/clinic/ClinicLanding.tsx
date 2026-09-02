@@ -1,17 +1,16 @@
 /**
- * `/` and `/clinic` — the practice's home page (SPEC-V3 §3).
+ * `/` and `/clinic` — the practice's home page.
  *
  * A server component with two client islands, because the only things here that move are the two
  * things that are actually true right now: the countdown to the next release, and the times the
  * roster reads out of it. Everything else is set once.
  *
- * The page keeps the site's one grid — `[gutter][body]` — and spends the gutter on the three words
- * the nav offers, so the column a visitor learns here is the same column that names the state of
- * every row on the booking board. The hero is one sentence at display size; the only cedar on the
- * page is the clause that is the visitor's ("held for you") and the one button that acts.
+ * The page is one column of stacked sections — hero, what you can book, the doctors, how released
+ * appointments work, getting here — with every other section on a light grey field. Nothing on it
+ * is decorative: if a line of type is on this page, a patient needs it to book or to get here.
  */
 import Link from 'next/link';
-import { Band, ClinicFooter, ClinicNav, Masthead } from './ClinicFrame.tsx';
+import { Band, ClinicFooter, ClinicNav, ClinicPhoneLink, Masthead, PracticeCard, CLINIC_PHONE } from './ClinicFrame.tsx';
 import { ClinicianRoster } from './ClinicianRoster.tsx';
 import { NextWaveClock } from './NextWaveClock.tsx';
 import { HOLD_TTL_SECONDS } from './wave-clock.ts';
@@ -22,70 +21,99 @@ export function ClinicLanding() {
   return (
     <div className="clinic" data-clinic-route="landing">
       {/* Outside <main>, so this <header> is the page's banner landmark. */}
-      <Masthead bar nav={<ClinicNav />} />
+      <Masthead
+        bar
+        nav={<ClinicNav />}
+        aside={
+          <>
+            <ClinicPhoneLink />
+            <Link className="cl-cta cl-cta--sm" href="/clinic/book" data-clinic-cta="header">
+              Book an appointment
+            </Link>
+          </>
+        }
+      />
 
       <main className="cl-shell">
-        <Band open>
-          <h1 className="cl-thesis cl-rise" data-step="1">
-            Same-day cancellations, released fairly.
-          </h1>
-          <p className="cl-thesis__tail cl-rise" data-step="2">
-            When a patient cancels, their time goes back on the list at the next release — not to
-            whoever happens to be refreshing the page. Choose one and it is <em>held for you</em> for{' '}
-            {HOLD_TTL_SECONDS} seconds while you check the date.
+        <Band open aside={<PracticeCard />}>
+          <h1 className="cl-thesis">Book a cancelled appointment today</h1>
+          <p className="cl-thesis__tail">
+            When a patient cancels, their appointment goes back on our list at the next release.
+            Choose a time and we hold it for you for {HOLD_TTL_SECONDS} seconds while you check the
+            date.
           </p>
-          <p className="cl-rise cl-hero-cta" data-step="3">
+          <p className="cl-hero-cta">
             <Link className="cl-cta" href="/clinic/book" data-clinic-cta="hero">
               Book an appointment
-              <span aria-hidden="true">→</span>
             </Link>
+          </p>
+          <p className="cl-prose cl-prose--sm">
+            Or call reception on{' '}
+            <a className="cl-link" href={`tel:+44${CLINIC_PHONE.replace(/\D/g, '').slice(1)}`}>
+              {CLINIC_PHONE}
+            </a>
+            , Monday to Friday from 8:00.
           </p>
         </Band>
 
-        <Band label="Appointments" id="appointments">
-          <h2 className="cl-lead">What you can book yourself.</h2>
+        <Band label="Appointments" id="appointments" tone="grey" wide>
+          <h2 className="cl-lead">Appointments you can book online</h2>
           <ul className="cl-strip">
             <li>
-              <b>General practice</b>
-              <span>Something new — an illness, a pain, or a worry you want looked at today.</span>
+              <h3>General practice</h3>
+              <p>Something new — an illness, a pain, or a worry you want looked at today.</p>
             </li>
             <li>
-              <b>Follow-ups</b>
-              <span>A review after treatment, your test results, or a question about a repeat prescription.</span>
+              <h3>Follow-ups</h3>
+              <p>A review after treatment, your test results, or a question about a repeat prescription.</p>
             </li>
             <li>
-              <b>New patients</b>
-              <span>Your first appointment with us. Bring photo ID and something with your address on it.</span>
+              <h3>New patients</h3>
+              <p>Your first appointment with us. Bring photo ID and something with your address on it.</p>
             </li>
           </ul>
           <p className="cl-prose">
-            Vaccinations, the travel clinic and minor surgery are booked by phone on 01632 960 118.
-            If you need help today and the list is empty, call 111.
+            Vaccinations, the travel clinic and minor surgery are booked by phone on {CLINIC_PHONE}. If
+            you need help today and the list is empty, call 111.
           </p>
         </Band>
 
         <Band label="Clinicians" id="clinicians" wide>
-          <h2 className="cl-lead">The doctors taking appointments.</h2>
+          <h2 className="cl-lead">Our doctors</h2>
           <ClinicianRoster />
           <p className="cl-prose">
-            Times are read from the release that is on the board now. Any of our doctors can see you
-            about anything — a special interest is what they are the one to ask about.
+            Times are read from the list as it stands now. Any of our doctors can see you about
+            anything — a special interest is what they are the one to ask about.
           </p>
         </Band>
 
-        <Band label="Releases">
-          <h2 className="cl-lead">Cancellations go back on the list.</h2>
+        <Band label="Releases" tone="grey">
+          <h2 className="cl-lead">How released appointments work</h2>
+          <ol className="cl-steps">
+            <li>
+              <h3>A patient cancels</h3>
+              <p>Their appointment comes off the book and waits for the next release.</p>
+            </li>
+            <li>
+              <h3>Everything free goes back at once</h3>
+              <p>
+                Cancellations are released together, on the clock, so nobody has to sit refreshing
+                the page to catch one. What is on the list is first come.
+              </p>
+            </li>
+            <li>
+              <h3>You choose a time and confirm it</h3>
+              <p>
+                The time you choose is held while you confirm — long enough to check the date, not
+                long enough to sit on.
+              </p>
+            </li>
+          </ol>
           <NextWaveClock />
-          <p className="cl-prose">
-            Every time that came free since the last release goes back at the same moment, so nobody
-            has to sit refreshing the page to catch one. What is on the list is first come. The time
-            you choose is held while you confirm it — long enough to check the date, not long enough
-            to sit on.
-          </p>
         </Band>
 
         <Band label="Access">
-          <h2 className="cl-lead">Getting here, and getting in.</h2>
+          <h2 className="cl-lead">Getting here, and getting in</h2>
           <p className="cl-prose">
             Step-free entrance on Marlow Row, a hearing loop at reception, and an accessible toilet
             on the ground floor. Tell us when you book if you need an interpreter — we can arrange
@@ -93,8 +121,8 @@ export function ClinicLanding() {
           </p>
           <p className="cl-prose">
             Booking works from the keyboard alone: every control has a visible focus ring, and the
-            confirm key answers Space as well as Enter. With reduced motion turned on, the page keeps
-            its countdowns and drops everything else.
+            confirm button answers Space as well as Enter. With reduced motion turned on, the page
+            keeps its countdowns and drops everything else.
           </p>
         </Band>
       </main>
@@ -102,7 +130,7 @@ export function ClinicLanding() {
       <ClinicFooter
         aside={
           <p className="cl-footer__cta">
-            <Link className="cl-quiet" href="/clinic/book" data-clinic-cta="foot">
+            <Link className="cl-cta cl-cta--sm" href="/clinic/book" data-clinic-cta="foot">
               Book an appointment
             </Link>
           </p>
