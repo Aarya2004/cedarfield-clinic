@@ -1,0 +1,22 @@
+The full SPEC-V9 loop with a REAL hand, on the LIVE board, on Arav's Mac — 2026-09-02 ~05:55 (Chrome 152, WebMCP flag).
+Driven by Engineer #4 through the Claude-in-Chrome tools on the production tab; Arav's hand, Arav's camera.
+
+1. Permission card → "Enable camera to let your assistant book" → macOS camera prompt (Arav: Allow).
+   MacBook Pro Camera live, hand model loaded, window shows the face; "Seeing: no hand yet".
+2. Arav holds an open palm in the window (tab visible, front) → the dwell fires:
+   data-clinic-delegation none → granted · Site tools 11 → 12 (clinic_book_slot born; toolchange).
+3. The agent half, invoked exactly as a client would (document.modelContext.getTools() →
+   executeTool(<RegisteredTool clinic_book_slot>, '{"slot_id":"w4967746-s2"}')):
+   {"ok":true,"booked":true,"slot":{"id":"w4967746-s2","time":"9:00 AM","clinician":"Dr. Duarte",
+    "kind":"Follow-up","state":"booked_yours"},"under_permission_granted_at":"2026-09-02T22:36:21.435Z",
+    "permission_now":"spent — this tool is gone until your human grants it again", …}
+4. Page after: row w4967746-s2 booked_yours · card "Booked by your assistant under the permission you
+   gave — 0 interactions from you." · record "18:37:43 booked 9:00 AM with Dr. Duarte — under the
+   permission you gave" · delegation none · tools 12 = 11 + clinic_my_appointment (book tool dead).
+
+What this run also found (both fixed the same hour):
+  · Chrome stops requestAnimationFrame for a hidden tab → the camera loop stops → "no hand" for a
+    minute while the tab sat behind the Codex window. Page now says "Paused: bring this window to the
+    front" (46aca0c). Inside the Codex pane the page is visible, so this does not occur there.
+  · The booking landed below the fold; Arav, looking at the top: "looks like a non-functioning webapp".
+    → the top-of-page strip "Your assistant: booked 9:00 AM with Dr. Duarte — …" + scroll to the change.

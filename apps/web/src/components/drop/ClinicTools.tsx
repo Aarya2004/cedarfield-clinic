@@ -73,6 +73,8 @@ export interface ClinicToolsProps {
   /** SPEC-V9: the human's standing permission (births `clinic_book_slot`) and the page's booking verb. */
   delegation?: Delegation | null;
   onBook?: (slotId: string) => boolean;
+  /** Every served call, as it lands — so the page can show it where the person is looking. */
+  onCall?: (record: ToolCallRecord) => void;
 }
 
 export function ClinicTools({
@@ -89,6 +91,7 @@ export function ClinicTools({
   settleTimeoutMs,
   delegation = null,
   onBook,
+  onCall,
 }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
   // SPEC-V8: the page's own record of the agent's calls, newest first. Eight is a screenful; the
@@ -100,10 +103,10 @@ export function ClinicTools({
   // ref that each render refreshes, never the values captured when they were registered.
   const waitlistAvailable = onJoinWaitlist !== undefined;
   const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation });
-  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook });
+  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall });
   useEffect(() => {
     view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation };
-    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook };
+    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook, onCall };
   });
 
   // Every registration and disposal is queued on one promise chain. The surface can change after
@@ -138,6 +141,7 @@ export function ClinicTools({
         onBook: (id: string) => seams.current.onBook?.(id) ?? false,
         onCall: (record) => {
           if (disposed) return;
+          seams.current.onCall?.(record);
           setCalls((prev) => [record, ...prev].slice(0, ACTIVITY_ROWS));
           setCallCount((n) => n + 1);
         },

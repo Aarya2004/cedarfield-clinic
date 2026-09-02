@@ -1690,3 +1690,28 @@ html:has(.cl-dock) {
   color: var(--clinic-muted);
   line-height: 1.5;
 }
+
+/* --- the latest assistant call, at the top of the page (2026-09-02) ------------------------- */
+/* Sticky under the masthead so it is where the eye is while a chat client works; gone in nine
+   seconds; the full record stays under the times. Quiet ink on the band colour, alert ink on a
+   refusal. */
+
+.cl-now {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--clinic-rule);
+  background: var(--clinic-band);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.cl-now__who {
+  font-weight: 600;
+}
+
+.cl-now[data-clinic-now-ok='false'] .cl-now__who {
+  color: var(--clinic-alert);
+}

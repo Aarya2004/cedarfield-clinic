@@ -48,7 +48,7 @@ import { formatClock } from '../../lib/drop/time.ts';
 import type { DropDriver, Slot } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
-import { DELEGATION_MS, type Delegation } from '../../lib/drop/clinic-tools.ts';
+import { DELEGATION_MS, type Delegation, type ToolCallRecord } from '../../lib/drop/clinic-tools.ts';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
 import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { AppointmentCard } from './AppointmentCard.tsx';
@@ -441,6 +441,31 @@ export function ClinicBooking() {
   // minutes. While it stands, `clinic_book_slot` is registered and the agent may book on "yes".
   // The grant is set from a trusted event ONLY — a synthetic click is counted and ignored, the same
   // rule as the dock. The booking spends it; a revoke or the clock ends it.
+  // The latest assistant call, shown at the top of the page for a few seconds — where a person
+  // watching a chat client work is actually looking (Arav, 2026-09-02 05:50: the booking landed
+  // below the fold and the page "looked like a non-functioning webapp"). The full record stays
+  // under the times; this is the same line, brought to the eye.
+  const [lastCall, setLastCall] = useState<ToolCallRecord | null>(null);
+  const noteCall = useCallback((record: ToolCallRecord) => {
+    setLastCall(record);
+    // Bring the thing that changed into view: a booking → the appointment card; anything else that
+    // succeeded → the record under the times, so the person sees the row appear.
+    const target =
+      record.name === 'clinic_book_slot' && record.ok
+        ? '[data-clinic-appointment]'
+        : record.name === 'clinic_hold_slot' && record.ok
+          ? '[data-slot-state="held_by_you"]'
+          : null;
+    if (target === null) return;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    setTimeout(() => document.querySelector(target)?.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' }), 250);
+  }, []);
+  useEffect(() => {
+    if (lastCall === null) return;
+    const t = setTimeout(() => setLastCall((c) => (c === lastCall ? null : c)), 9000);
+    return () => clearTimeout(t);
+  }, [lastCall]);
+
   const [delegation, setDelegationState] = useState<Delegation | null>(null);
   const delegationRef = useRef<Delegation | null>(null);
   const setDelegation = useCallback((next: Delegation | null) => {
@@ -566,6 +591,13 @@ export function ClinicBooking() {
             </>
           }
         />
+
+        {lastCall !== null ? (
+          <div className="cl-now" role="status" data-clinic-now={lastCall.name} data-clinic-now-ok={lastCall.ok ? 'true' : 'false'}>
+            <span className="cl-now__who">Your assistant{lastCall.ok ? '' : ' was refused'}:</span>{' '}
+            <span className="cl-now__what">{lastCall.summary}</span>
+          </div>
+        ) : null}
 
         {/* ══ The measured region. Everything a person does to book is inside it — and the counts
             leave the page only as attributes, never as pixels (SPEC-V3 §1). ══ */}
@@ -737,6 +769,7 @@ export function ClinicBooking() {
               settleTimeoutMs={live ? 8000 : undefined}
               delegation={delegation}
               onBook={bookByAgent}
+              onCall={noteCall}
             />
           </Band>
 
