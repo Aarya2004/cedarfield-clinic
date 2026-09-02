@@ -1,0 +1,18 @@
+SPEC-V4 + SPEC-V5 on production, 2026-09-02 (deploy + both proofs run by Arav; recorded verbatim).
+
+$ node evals/verify-deployed.mjs --url=https://rokan-terminal.vercel.app   (seeded board, ?test=1 pinned)
+✔ GET / · /clinic · /clinic/book — 200
+✔ thesis 45 · voice-tour 10 · cancel 27 · move 25 · agent-edges 18 · responsive 8 · rival-race 9
+✔ hold-lapses 10 · receipt 10 · landing-frontdoor 4 · landing-phone 8 · chaos 50 · phone-acts 21 — 0 failed
+✔ axe 0 violations × 3 routes
+DEPLOYED AND VERIFIED — https://rokan-terminal.vercel.app
+
+$ node evals/live-two-visitors.mjs --url=https://rokan-terminal.vercel.app   (the SHARED board)
+✔ visitor B books w19870131-s1 → A's open page shows "Another patient" in 629 ms, no reload
+✔ A holds w19870131-s2 via clinic_hold_slot; the database refuses B (slot_unavailable:held / not_your_hold:held)
+✔ A gives it back; B holds it; A's agent calls clinic_join_waitlist → position 1, "You're #1 in line" on the sheet
+✔ B gives it back → THE CASCADE: A's page shows held_by_you in 359 ms, the dock arms by itself,
+   data-origin="waitlist", eyebrow "It came back to you · you book it"
+✔ visitor A's page: 25 steps, 0 failed · tools registered on the live board: 11
+✔ visitor B cancels its booking (cleanup)
+LIVE BOARD PROVEN WITH TWO VISITORS
