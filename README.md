@@ -190,7 +190,8 @@ Traces and screenshots for every one of these are committed under `docs/evidence
   CDN), with a visible threshold, an adjustable dwell that resets on any flicker so a tremor cannot
   fire it, and a keyboard alternative always present (WCAG 2.5.4). The boot pipeline — wasm under
   the production CSP, streamed model, camera grant, clean teardown — is asserted headlessly in
-  `clinic-gesture-boot.json`; the dwell firing on a real hand is a filmed human test.
+  `clinic-gesture-boot.json`; the dwell firing on a real hand was confirmed by hand on 2026-09-02
+  in Chrome 152 against the live board (`apps/web/src/components/drop/GESTURE.md`).
 - **A gesture is not a browser-trusted event, and we say so.** The keyboard gate is `isTrusted` —
   unforgeable by any script. The camera gate is *physical presence*: a completed dwell requires a
   hand in front of a real lens the person opted into. Different trust root, stated honestly in

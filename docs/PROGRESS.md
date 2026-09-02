@@ -1,6 +1,27 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-09-02 (Engineer #4, Fable 5.1)** Branch `main`.
+Last update: **2026-09-02 (Aarya's Claude, Fable 5.1)** Branch `main`.
+
+## Build log — Aarya's Claude (2026-09-02) — clinic-production merged; the palm books on a real hand
+- **`clinic-production` merged into `main` and pushed** (`bd1e95c`): the practice-website restyle
+  (Public Sans, white page, one blue, section headings, address + hours, appointment/clinician
+  modules with tests). Gate on the merged tree: typecheck/lint clean · 466/466 unit tests ·
+  verify-deployed **13/15** against a local dev server · axe clean ×3. The two red checks were
+  design choices on the branch (`clinic-thesis`: the assistant-activity row dropped the tool name
+  and ms; `clinic-receipt`: the by-hand vs agent receipt was no longer drawn). **Resolved by Arav
+  in SPEC-V9 the same hour** (activity log moved under the board, receipt line restored): on the
+  rebased tree `clinic-thesis` 49/49, `clinic-receipt` 11/11, `clinic-delegation` 33/33,
+  `clinic-gesture-boot` 16/16, 467/467 unit tests, typecheck/lint clean. Not deployed yet —
+  production still serves the broadsheet until Arav runs `vercel --prod`.
+- **Real-hand gesture test DONE** (Aarya, Chrome 152, live board): hold via
+  `document.modelContext.executeTool(tool, json)` → Enable camera → open palm ≈1 s → booked from
+  the palm. Details and what is still open in `components/drop/GESTURE.md` (top note). The
+  "keep the gesture out of the video" line is lifted for Chrome shots; ChatGPT desktop camera
+  remains unverified.
+- Field notes: this Chrome's `executeTool` takes the `RegisteredTool` object (not the name);
+  the dwell slider persists (`drop.gesture.dwellMs`) — a 0.4 s setting makes the palm feel instant;
+  MediaPipe used the CPU delegate in real Chrome and was fast enough; macOS blocks the camera for
+  terminal-spawned processes, so a real-hand test cannot be automated from a harness.
 
 ## Build log — Engineer #4 (2026-09-02, ~03:00) — SPEC-V9: the booking tool is born by your hand
 - **Arav's decision** (asked three times after the Codex desktop test): "yes, book it" must book.

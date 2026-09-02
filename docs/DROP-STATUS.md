@@ -43,8 +43,9 @@ This file is the single source of truth for what is green, what is blocking, and
    **GESTURE build deployed and re-verified 2026-09-01:** Arav ran the 20-check verifier — all
    green (incl. chaos + phone-acts). Gesture assets confirmed ON the origin (model 8,373,440 bytes,
    wasm 200s) and the full boot pipeline proven AGAINST PRODUCTION with a fake camera: wasm under
-   prod CSP → model streamed → getUserMedia → `ready` → clean opt-out teardown. Still owed: Aarya's
-   real-hand dwell test (GESTURE.md).
+   prod CSP → model streamed → getUserMedia → `ready` → clean opt-out teardown. **Aarya's real-hand
+   dwell test: DONE 2026-09-02** — the palm booked a live-board slot in Chrome 152 (GESTURE.md);
+   flicker/tremor checks, the cancel-verb palm and the filming are still open.
    **SPEC-V2 redeployed and re-verified 2026-08-31 evening:** Arav shipped the nine-tool build and
    ran the verifier himself from the repo root — **18/18 checks green** against the live origin,
    including `clinic-voice-tour`, `clinic-cancel`, `clinic-move` and axe ×3. Evidence:

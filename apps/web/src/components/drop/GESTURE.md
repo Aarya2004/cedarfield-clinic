@@ -13,6 +13,17 @@
 > itself. CI already proves everything up to the classifier (`clinic-gesture-boot`); your hand
 > closes the last inch (`evals/manual/README.md` has the full story).
 
+> **2026-09-02 — real-hand test DONE (Aarya, Chrome 152, the merged practice-website design).**
+> On `/clinic/book` against the live shared board: `clinic_hold_slot` invoked through Chrome's own
+> registry (`document.modelContext.getTools()` → `executeTool(tool, jsonString)` — this Chrome build
+> takes the `RegisteredTool` object, not its name), **Enable camera**, own face in the ring, open
+> palm held ≈1 s → the row booked from the palm (reference CF-Z4Y5, "Booked — yours"). The dwell was
+> the slider's remembered 0.4 s (`drop.gesture.dwellMs`), which is why it felt instant; 1.0–1.5 s is
+> the demo setting. MediaPipe reported the XNNPACK **CPU** delegate in this Chrome (the GPU delegate
+> fell back) and was still fast enough. Not yet done: the flicker/tremor checks in step 4 below, the
+> cancel-verb palm, and filming it. Still unverified: the camera inside ChatGPT desktop (see the open
+> question at the end).
+
 An open palm held in front of the lens for a configurable dwell (default 1000ms) calls the **same**
 `onConfirm` the Enter key calls. It plugs into `ConfirmSurface`'s `gestureSlot` and it is never the
 primary path: WCAG 2.5.4 requires motion actuation to have a UI alternative and to be disableable,
@@ -141,8 +152,9 @@ neither is allowed to matter:
   keyboard still books it. **Nothing is blocked and nothing looks broken** — the module degrades
   invisibly, which is the whole requirement.
 
-Somebody with the desktop app should run step 2 there and write the answer into this file. Until
-then, do not put the gesture in the demo script or the video.
+Somebody with the desktop app should run step 2 there and write the answer into this file. The
+gesture is proven on a real hand in Chrome (2026-09-02, top of this file), so it may appear in the
+video **in a Chrome shot**; keep it out of any ChatGPT-desktop shot until that answer is written.
 
 ## Where the logic lives
 
