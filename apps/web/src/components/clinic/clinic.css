@@ -1576,3 +1576,37 @@ html:has(.cl-dock) {
   color: var(--clinic-alert);
   font-weight: 600;
 }
+
+/* --- the permission (SPEC-V9) ---------------------------------------------------------------- */
+/* One card, same language as the record below it. Granted state reads as a quiet status, not a
+   warning: the person chose it. The gesture module mounts under the button when the build has it. */
+
+.cl-delegate {
+  max-width: 44rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 0.5rem;
+  background: var(--clinic-band);
+}
+
+.cl-delegate .cl-prose {
+  margin: 0 0 0.875rem;
+}
+
+.cl-delegate[data-clinic-delegation='granted'] {
+  border-color: var(--clinic-ink);
+}
+
+.cl-delegate .rk-g {
+  margin-top: 1rem;
+}
+
+.cl-appt__cost {
+  margin: 1rem 0 0;
+  font-size: var(--clinic-small);
+  line-height: 1.5;
+}
+
+.cl-appt__cost [data-lane='agent'] {
+  font-weight: 600;
+}

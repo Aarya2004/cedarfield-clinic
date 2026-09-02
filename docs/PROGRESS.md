@@ -2,6 +2,26 @@
 
 Last update: **2026-09-02 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, ~03:00) — SPEC-V9: the booking tool is born by your hand
+- **Arav's decision** (asked three times after the Codex desktop test): "yes, book it" must book.
+  Built as delegation-by-trusted-press, not as a standing tool: *Let my assistant book for me*
+  (trusted press; synthetic clicks counted) or an open palm (`GestureConfirm verb="grant"`) grants
+  one booking for ten minutes; the grant births `clinic_book_slot`; the tool holds-then-books
+  through the page's `onBook` (re-checks the grant); the booking spends the grant and kills the
+  tool; the card records **0 interactions — under the permission you gave**. Cancel/move never
+  delegate. Files: `clinic-tools.ts` (tool, `DELEGATED_TOOL_NAMES`, `hasDelegation`, two born
+  sets in one reconcile loop), `ClinicTools.tsx` (seams), `ClinicBooking.tsx` (grant state, control
+  band under the board with the activity log moved into it, `bookByAgent`), `AppointmentCard.tsx`
+  (the cost line — restored in Aarya's restyle, which had dropped the receipt's pixels),
+  `gesture-logic.ts`/`GestureConfirm.tsx` (`GestureVerb` incl. `grant`, `verbForms`), CSS,
+  `clinic-delegation.json`, two unit tests rewritten + one added, README/SUBMISSION/SECURITY/
+  VIDEO-SCRIPT.
+- **Aarya's merge, gated:** `pnpm dev` now fetches the gesture weights and sets the camera flag
+  (his "MediaPipe isn't working" was the dev env); his restyle passed the clinic suite except my
+  own zero-calls assertion (aligned) and the receipt case (his card dropped the numbers; restored).
+- **The judged client is the Codex desktop app** (in-app browser, model 5.6 Terra): no Voice
+  Mode, dictation + Send only. Voice story = dictation + one press, or macOS Voice Control.
+
 ## Build log — Engineer #4 (2026-09-02, late) — SPEC-V8 agent activity log + the clock retuned for chat clients
 - **Physical test with ChatGPT desktop** (transcript in `docs/evidence/clinic/2026-09-02-chatgpt-desktop-transcript.md`):
   the judged client listed clinicians, refused to book unprompted, held, relayed the choreography,

@@ -210,9 +210,35 @@ export const FAILURE_COPY: Record<GestureFailure, string> = {
   error: 'The camera did not start.',
 };
 
-export function failureCopy(failure: GestureFailure, verb: 'book' | 'cancel' | 'move' = 'book'): string {
-  const does = verb === 'book' ? 'books' : verb === 'cancel' ? 'cancels' : 'moves';
-  return `${FAILURE_COPY[failure]} The keyboard still ${does} this — press Enter.`;
+/**
+ * The four acts one held palm can perform (SPEC-V2, SPEC-V9): book, cancel, move — and `grant`,
+ * which gives the assistant standing permission to book (births `clinic_book_slot`).
+ */
+export type GestureVerb = 'book' | 'cancel' | 'move' | 'grant';
+
+/** Every sentence the module says, conjugated once here so no verb is ever misdescribed. */
+export function verbForms(verb: GestureVerb): { infinitive: string; does: string; done: string; keyboard: string } {
+  switch (verb) {
+    case 'cancel':
+      return { infinitive: 'cancel it', does: 'cancels it', done: 'Cancelled', keyboard: 'press Enter' };
+    case 'move':
+      return { infinitive: 'move it', does: 'moves it', done: 'Moved', keyboard: 'press Enter' };
+    case 'grant':
+      return {
+        infinitive: 'let your assistant book',
+        does: 'grants it',
+        done: 'Permission given',
+        keyboard: 'press the button',
+      };
+    case 'book':
+    default:
+      return { infinitive: 'book it', does: 'books it', done: 'Booked', keyboard: 'press Enter' };
+  }
+}
+
+export function failureCopy(failure: GestureFailure, verb: GestureVerb = 'book'): string {
+  const f = verbForms(verb);
+  return `${FAILURE_COPY[failure]} The keyboard still ${f.does.replace(/ it$/, ' this')} — ${f.keyboard}.`;
 }
 
 // ---------------------------------------------------------------------------

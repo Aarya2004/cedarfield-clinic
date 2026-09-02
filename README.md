@@ -7,9 +7,17 @@
 
 A clinic releases cancelled appointments in waves. They are gone in seconds. On this page your
 agent does the fast, expensive part — watch the drop, compare, **hold** a slot the instant it
-appears — and then it stops, because **there is no booking tool**. The only thing that books an
-appointment is one act from the person the appointment is for: **one key, one switch press, or one
-held gesture.** Nothing an agent can call, and nothing a script can fake, reaches that step.
+appears — and then it stops, because **there is no booking tool when the page loads**. The only
+thing that books an appointment is one act from the person the appointment is for: **one key, one
+switch press, or one held gesture.** Nothing an agent can call, and nothing a script can fake,
+reaches that step.
+
+**The booking tool is born by your hand.** One trusted press on the page — *Let my assistant book
+for me* — or one open palm to the camera grants your agent **one booking for ten minutes**. That
+press births `clinic_book_slot` (Chrome fires `toolchange`); *"yes, book it"* in your chat then
+books, the page records it as **0 interactions — under the permission you gave**, and the tool dies
+with the booking. Your hand still roots every booking; it is pressed once, earlier, instead of once
+per act. An injected "yes" is bounded to one visible appointment that only you can cancel.
 
 **Live:** **https://rokan-terminal.vercel.app** — the front door is the product. Open it in **ChatGPT desktop** (GPT-5.6 Sol or Terra) or in
 **Chrome 152+** with `chrome://flags/#enable-webmcp-testing`.
@@ -85,13 +93,15 @@ is always one trusted press from you.
 | `clinic_prepare_cancel` | ❌ | **Arms** the dock to cancel your booking. Cancels nothing — your key does. Always present, so "nothing booked" is always sayable |
 | `clinic_prepare_move` | ❌ | Freezes the target slot and **arms** the dock. One trusted press swaps atomically |
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists, what exists now, and what your press will create |
+| *born by your grant:* `clinic_book_slot` | ❌ | Books **one** slot for you — exists only while the permission you pressed for stands (ten minutes), and dies with the booking |
 | *born by your press:* `clinic_my_appointment` | ✅ | Your booking(s), newest first — exists only while you have one |
 | *shared board only:* `clinic_join_waitlist` | ❌ | Puts your human **in line** for a taken slot. If it comes back, it is theirs first — as a fresh hold, in order. Reversible |
 | *shared board only:* `clinic_leave_waitlist` | ❌ | Takes them out of the line |
 
 **Counted honestly:** nine tools on the seeded board (`?test=1`), **eleven on the shared board** every
-real visitor is on (the two queue verbs), **twelve once you have booked** — exactly the
-twelve-tool cap we set ourselves.
+real visitor is on (the two queue verbs), **twelve while your permission stands, twelve once you
+have booked** — the booking tool and the appointment tool never coexist, so the twelve-tool cap we
+set ourselves holds. Thirteen names in the vocabulary.
 
 **Both halves of WebMCP, each doing the job it is for.** The tools above are the *imperative* API.
 The patient-details form is also published *declaratively* — `toolname="clinic_booking_form"`,

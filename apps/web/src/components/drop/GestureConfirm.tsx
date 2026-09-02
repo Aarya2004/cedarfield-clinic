@@ -50,6 +50,8 @@ import {
   classifyCameraError,
   dwellProgress,
   failureCopy,
+  verbForms,
+  type GestureVerb,
   gestureUiState,
   initialDwellState,
   isHolding,
@@ -72,8 +74,8 @@ export const MODEL_PATH = '/models/mediapipe/gesture_recognizer.task';
 export interface GestureConfirmProps {
   /** The same callback the keycap fires. Called once per completed dwell. */
   onConfirm: () => void;
-  /** SPEC-V2: the act one completed dwell performs. Every sentence this module says uses it. */
-  verb?: 'book' | 'cancel' | 'move';
+  /** SPEC-V2/V9: the act one completed dwell performs. Every sentence this module says uses it. */
+  verb?: GestureVerb;
   /** Is there a live hold to confirm? A dwell over an idle surface accumulates nothing. */
   armed: boolean;
   /** Override for tests or a different deployment layout. */
@@ -96,7 +98,8 @@ export function GestureConfirm({
   wasmBasePath = WASM_BASE_PATH,
   modelPath = MODEL_PATH,
 }: GestureConfirmProps) {
-  const done = verb === 'book' ? 'Booked.' : verb === 'cancel' ? 'Cancelled.' : 'Moved.';
+  const forms = verbForms(verb);
+  const done = `${forms.done}.`;
   const [enabled, setEnabled] = useState(false);
   const [phase, setPhase] = useState<LoadPhase>(null);
   const [modelPct, setModelPct] = useState(0);
@@ -260,7 +263,7 @@ export function GestureConfirm({
       lastVideoTime.current = -1;
       setPhase(null);
       setRunning(true);
-      setLive(`Camera on. Hold an open palm for ${(dwellMs / 1000).toFixed(1)} seconds to ${verb}.`);
+      setLive(`Camera on. Hold an open palm for ${(dwellMs / 1000).toFixed(1)} seconds to ${forms.infinitive}.`);
       rafRef.current = requestAnimationFrame(loop);
     } catch (err) {
       // Two failure families, told apart honestly: the assets did not arrive, or the camera did not.
@@ -270,7 +273,7 @@ export function GestureConfirm({
       setFailure(kind);
       setLive(failureCopy(kind, verb));
     }
-  }, [dwellMs, loop, modelPath, teardown, wasmBasePath, verb]);
+  }, [dwellMs, loop, modelPath, teardown, wasmBasePath, verb, forms.infinitive]);
 
   // ---- the switch, persisted ---------------------------------------------------
   const enable = useCallback(() => {
@@ -285,8 +288,8 @@ export function GestureConfirm({
     setFailure(null);
     setPhase(null);
     teardown();
-    setLive(`Camera off. Enter still ${verb === 'book' ? 'books' : verb === 'cancel' ? 'cancels' : 'moves'} it.`);
-  }, [teardown, verb]);
+    setLive(`Camera off. The keyboard still ${forms.does} — ${forms.keyboard}.`);
+  }, [teardown, forms.does, forms.keyboard]);
 
   // ---- mount: read the prefs; reopen the lens only where a grant already stands ----
   const startedOnce = useRef(false);
@@ -367,7 +370,7 @@ export function GestureConfirm({
           <p className="rk-g-sub" data-gesture-note>
             {failure !== null
               ? failureCopy(failure, verb)
-              : `Optional. Enter ${verb === 'book' ? 'books' : verb === 'cancel' ? 'cancels' : 'moves'} it either way, and the camera never leaves this page.`}
+              : `Optional. The keyboard ${forms.does} either way, and the camera never leaves this page.`}
           </p>
         </div>
 
@@ -426,11 +429,12 @@ function copyFor(
   seconds: string,
   phase: LoadPhase,
   pct: number,
-  verb: 'book' | 'cancel' | 'move',
+  verb: GestureVerb,
 ): string {
+  const forms = verbForms(verb);
   switch (state) {
     case 'disabled':
-      return `Or ${verb} it with an open palm.`;
+      return `Or ${forms.infinitive} with an open palm.`;
     case 'loading':
       return phase === 'model'
         ? `Loading the hand model — ${pct}%`
@@ -442,7 +446,7 @@ function copyFor(
     case 'held':
       return 'Holding — keep it up.';
     case 'fired':
-      return `${verb === 'book' ? 'Booked' : verb === 'cancel' ? 'Cancelled' : 'Moved'}, from your palm.`;
+      return `${forms.done}, from your palm.`;
     case 'unavailable':
     default:
       return 'Camera unavailable.';

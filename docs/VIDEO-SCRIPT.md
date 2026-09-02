@@ -84,6 +84,18 @@ Then press Enter. **BOOKED — YOURS.** Cut to the receipt: **by hand, N · with
 > why. I ask it to book anyway. It can't. There is no booking tool on this page. One key from me,
 > and it's done."
 
+## THE BEAT TO ADD (SPEC-V9) · the booking tool is born by my hand — ~25 s, after the first booking
+
+**Shot.** Scroll to **Your assistant**. Press **Let my assistant book for me** (or show an open
+palm to the camera). The Site tools count ticks 9 → 10; the list now has `clinic_book_slot`. In
+the chat: *"yes, book me the earliest one."* The row flips to booked; the card reads **0
+interactions — your assistant booked it under the permission you gave**; the count ticks back.
+
+**Narration** (~50 words)
+> "I can hand it the booking — with my hand. One press creates a booking tool that did not exist a
+> second ago, for one booking, for ten minutes. Now 'yes' is enough. The page records that it
+> booked under my permission, and the tool is gone again. My hand still roots every booking."
+
 ---
 
 ## THE BEAT TO ADD (SPEC-V5) · the race is gone — ~20 s, put it right after "With the agent"
@@ -107,9 +119,9 @@ nothing books, and the counter of **synthetic presses blocked** ticks up on scre
 **Narration** (55 words)
 > "Here is the whole tool list this page gives an agent. Eleven tools — list, search, who's on,
 > hold, status, release, arm a cancel, arm a move, get in line, leave the line, and one that exists only to explain the rule.
-> Nothing that books, cancels or moves. And booking is gated on an
-> event only a browser can produce, so a script cannot fake it either. The page counts the attempts
-> in the open."
+> Nothing that books, cancels or moves — until my hand creates the one that books. And that press is
+> gated on an event only a browser can produce, so a script cannot fake it either. The page counts
+> the attempts in the open."
 
 ---
 

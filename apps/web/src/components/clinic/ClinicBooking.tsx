@@ -48,6 +48,7 @@ import { formatClock } from '../../lib/drop/time.ts';
 import type { DropDriver, Slot } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
+import { DELEGATION_MS, type Delegation } from '../../lib/drop/clinic-tools.ts';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
 import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { AppointmentCard } from './AppointmentCard.tsx';
@@ -93,6 +94,11 @@ const NO_COUNT: CounterSnapshot = { total: 0, breakdown: emptyBreakdown() };
  * script-provisioned weights are absent, so the flag alone can never break a page.
  */
 const GESTURE_ENABLED = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
+
+/** "2:24 PM" — when a standing permission ends, in the visitor's own clock. */
+function formatWallClock(ms: number): string {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
 
 /** "9:00 AM" must never break across a line inside the dock's headline ("Move 8:40 AM → 9:00 | AM"). */
 function noWrap(timeLabel: string): string {
@@ -418,16 +424,68 @@ export function ClinicBooking() {
   }, [flow.selectedSlotId, manualDriver, session.now, live, clockOrigin]);
 
   /** The press happened; the booking has not yet. The measurement waits for the `booked` event. */
-  const pendingAgentCount = useRef<{ slotId: string; count: number } | null>(null);
+  const pendingAgentCount = useRef<{ slotId: string; count: number; delegated: boolean } | null>(null);
   const confirmHold = useCallback(() => {
     const slotId = session.held?.slotId;
     if (slotId === undefined) return;
     // Frozen before the dock unmounts, so the number cannot drift after the booking it belongs to —
     // but only WRITTEN when the driver confirms the booking, so a refused press (hold expired at
     // the boundary, on the live board) never records a measurement for an appointment nobody has.
-    pendingAgentCount.current = { slotId, count: (dockCounter.current?.snapshot() ?? NO_COUNT).total };
+    pendingAgentCount.current = { slotId, count: (dockCounter.current?.snapshot() ?? NO_COUNT).total, delegated: false };
     session.confirm(slotId);
   }, [session]);
+
+  // ── SPEC-V9: the booking tool is born by your hand ─────────────────────────────────────────────
+  // One trusted press here ("Let my agent book for me") grants a delegation: one booking, ten
+  // minutes. While it stands, `clinic_book_slot` is registered and the agent may book on "yes".
+  // The grant is set from a trusted event ONLY — a synthetic click is counted and ignored, the same
+  // rule as the dock. The booking spends it; a revoke or the clock ends it.
+  const [delegation, setDelegationState] = useState<Delegation | null>(null);
+  const delegationRef = useRef<Delegation | null>(null);
+  const setDelegation = useCallback((next: Delegation | null) => {
+    delegationRef.current = next;
+    setDelegationState(next);
+  }, []);
+  const [syntheticGrants, setSyntheticGrants] = useState(0);
+  const [lastBookingDelegated, setLastBookingDelegated] = useState(false);
+  const grantDelegation = useCallback(
+    (e: { nativeEvent: Event }) => {
+      if (!e.nativeEvent.isTrusted) {
+        setSyntheticGrants((n) => n + 1);
+        return;
+      }
+      const now = Date.now();
+      setDelegation({ grantedAt: now, until: now + DELEGATION_MS });
+    },
+    [setDelegation],
+  );
+  /** The open palm, held: the camera dwell is a physical-presence root, not a DOM event, so no isTrusted to read. */
+  const grantByGesture = useCallback(() => {
+    if (delegationRef.current !== null) return;
+    const now = Date.now();
+    setDelegation({ grantedAt: now, until: now + DELEGATION_MS });
+  }, [setDelegation]);
+  const revokeDelegation = useCallback(() => setDelegation(null), [setDelegation]);
+  useEffect(() => {
+    if (delegation === null) return;
+    const t = setTimeout(() => {
+      if (delegationRef.current === delegation) setDelegation(null);
+    }, Math.max(0, delegation.until - Date.now()));
+    return () => clearTimeout(t);
+  }, [delegation, setDelegation]);
+  /** The agent's booking verb. Only `clinic_book_slot` reaches it, and only while the grant stands. */
+  const bookByAgent = useCallback(
+    (slotId: string): boolean => {
+      const grant = delegationRef.current;
+      if (grant === null || grant.until <= Date.now()) return false;
+      // Zero interactions: the person pressed once, earlier, to grant — the booking itself cost none.
+      pendingAgentCount.current = { slotId, count: 0, delegated: true };
+      session.confirm(slotId);
+      return true;
+    },
+    [session],
+  );
+
   useEffect(
     () =>
       driver.subscribe((event) => {
@@ -435,10 +493,12 @@ export function ClinicBooking() {
         if (event.type === 'booked' && pending && event.slotId === pending.slotId) {
           pendingAgentCount.current = null;
           setAgentCount(pending.count);
+          setLastBookingDelegated(pending.delegated);
           setLastBookedAt(Date.now() - clockOrigin);
+          if (pending.delegated) setDelegation(null); // one booking per grant
         }
       }),
-    [driver, clockOrigin],
+    [driver, clockOrigin, setDelegation],
   );
 
   // Booking another appointment starts a new measurement, but it does not erase the last one: the
@@ -607,6 +667,73 @@ export function ClinicBooking() {
             )}
           </Band>
 
+          {/* SPEC-V9: the permission control and the assistant's own record, directly under the
+              board — where a person watching a chat client work looks for proof (Arav, 2026-09-02:
+              "how am I supposed to tell if these commands have happened"). The grant is the one
+              trusted press that births the booking tool; a synthetic click is counted, not obeyed. */}
+          <Band label="Your assistant" wide>
+            <div
+              className="cl-delegate"
+              data-clinic-delegation={delegation !== null ? 'granted' : 'none'}
+              data-clinic-synthetic-grants={syntheticGrants}
+            >
+              {delegation === null ? (
+                <>
+                  <p className="cl-prose">
+                    Your assistant can search, hold and queue for you, but no tool on this page can book. One press
+                    here lets it book <b>one</b> appointment in the next ten minutes, when you say yes to it.
+                  </p>
+                  <button
+                    type="button"
+                    className="cl-quiet"
+                    data-clinic-delegate
+                    onClick={grantDelegation}
+                    // A trusted Enter or Space on the focused control grants as well (a switch user's
+                    // press arrives as a key, and some drivers never synthesise the click).
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        grantDelegation(e);
+                      }
+                    }}
+                  >
+                    Let my assistant book for me
+                  </button>
+                  {/* The open palm grants too: the camera is a physical-presence root, the same one
+                      that books, cancels and moves on the docks. Never on by itself — opt-in per visit. */}
+                  {GESTURE_ENABLED ? <GestureConfirm verb="grant" onConfirm={grantByGesture} armed /> : null}
+                </>
+              ) : (
+                <>
+                  <p className="cl-prose" role="status">
+                    Your assistant may book <b>one</b> appointment until {formatWallClock(delegation.until)}. Tell it
+                    “yes, book it”. You can still cancel or move anything it books; it cannot.
+                  </p>
+                  <button type="button" className="cl-quiet" data-clinic-revoke onClick={revokeDelegation}>
+                    Take that back
+                  </button>
+                </>
+              )}
+            </div>
+            <ClinicTools
+              driver={driver}
+              session={session}
+              nextWaveAt={live ? (liveMeta?.nextWaveAt ?? null) : nextRelease === null ? null : session.now + nextRelease}
+              onPrepareCancel={prepareCancel}
+              onPrepareMove={prepareMove}
+              // SPEC-V5: the queue exists only on the shared board; the seeded board has no other people.
+              onJoinWaitlist={live && liveDriver ? (id) => (liveDriver.joinWaitlist(id), true) : undefined}
+              onLeaveWaitlist={live && liveDriver ? (id) => (liveDriver.leaveWaitlist(id), true) : undefined}
+              armedAct={pendingAct?.kind ?? null}
+              waveLandedAt={live ? (liveMeta?.waveStartedAt ?? null) : null}
+              sharedBoard={live}
+              // Two network round trips (RPC + re-read) on a judge's hotel wifi is not 1.2 s.
+              settleTimeoutMs={live ? 8000 : undefined}
+              delegation={delegation}
+              onBook={bookByAgent}
+            />
+          </Band>
+
           {/* Your appointment (SPEC-V3 §3). Rendered off the BOARD's state, not the manual flow's,
               so a booking the assistant set up gets the same reference, the same calendar file and
               the same cancel/move controls as one walked through by hand. The card arms; the dock
@@ -627,6 +754,7 @@ export function ClinicBooking() {
                 onCancel={() => prepareCancel(bookedSlot.id, 'you')}
                 onMove={(toId) => prepareMove(bookedSlot.id, toId, 'you')}
                 armed={pendingAct !== null}
+                interactions={{ hand: handCount, agent: agentCount, delegated: lastBookingDelegated }}
               />
             </Band>
           ) : null}
@@ -676,28 +804,6 @@ export function ClinicBooking() {
           ) : null}
         </div>
 
-        {/* nextWaveAt travels in session.now (driver-clock) units — the tool computes seconds
-            from it. `nextRelease` is wall-ms from now, and the driver clock ticks 1:1 with wall
-            time while running, so now + nextRelease is the wave's driver-clock timestamp. Null
-            while a booking holds the board (the release really is postponed — never invented).
-            Unwired until 2026-08-31: the page showed the human a live countdown while
-            clinic_list_drops told the agent null — the agent was blinder than the person for no
-            reason (self-review against SPEC-V1 §3). */}
-        <ClinicTools
-          driver={driver}
-          session={session}
-          nextWaveAt={live ? (liveMeta?.nextWaveAt ?? null) : nextRelease === null ? null : session.now + nextRelease}
-          onPrepareCancel={prepareCancel}
-          onPrepareMove={prepareMove}
-          // SPEC-V5: the queue exists only on the shared board; the seeded board has no other people.
-          onJoinWaitlist={live && liveDriver ? (id) => (liveDriver.joinWaitlist(id), true) : undefined}
-          onLeaveWaitlist={live && liveDriver ? (id) => (liveDriver.leaveWaitlist(id), true) : undefined}
-          armedAct={pendingAct?.kind ?? null}
-          waveLandedAt={live ? (liveMeta?.waveStartedAt ?? null) : null}
-          sharedBoard={live}
-          // Two network round trips (RPC + re-read) on a judge's hotel wifi is not 1.2 s.
-          settleTimeoutMs={live ? 8000 : undefined}
-        />
       </main>
 
       {session.held !== null || pendingAct !== null ? <div className="cl-dock-spacer" aria-hidden="true" /> : null}

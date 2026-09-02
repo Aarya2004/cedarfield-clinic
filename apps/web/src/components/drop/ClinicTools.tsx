@@ -42,6 +42,7 @@ import {
   type ClinicRegistrationState,
   type ClinicToolsView,
   type ToolCallRecord,
+  type Delegation,
 } from '../../lib/drop/clinic-tools.ts';
 import type { DropSession } from './useDropSession.ts';
 
@@ -69,6 +70,9 @@ export interface ClinicToolsProps {
   sharedBoard?: boolean;
   /** How long hold/release wait for the fold. The live board is two network round trips. */
   settleTimeoutMs?: number;
+  /** SPEC-V9: the human's standing permission (births `clinic_book_slot`) and the page's booking verb. */
+  delegation?: Delegation | null;
+  onBook?: (slotId: string) => boolean;
 }
 
 export function ClinicTools({
@@ -83,6 +87,8 @@ export function ClinicTools({
   waveLandedAt = null,
   sharedBoard = false,
   settleTimeoutMs,
+  delegation = null,
+  onBook,
 }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
   // SPEC-V8: the page's own record of the agent's calls, newest first. Eight is a screenful; the
@@ -93,11 +99,11 @@ export function ClinicTools({
   // The tools must read the LIVE board, and `session` is a new object every frame — so they read a
   // ref that each render refreshes, never the values captured when they were registered.
   const waitlistAvailable = onJoinWaitlist !== undefined;
-  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable });
-  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs });
+  const view = useRef<ClinicToolsView>({ driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation });
+  const seams = useRef({ onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook });
   useEffect(() => {
-    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable };
-    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs };
+    view.current = { driver, session, nextWaveAt, armedAct, waveLandedAt, sharedBoard, waitlistAvailable, delegation };
+    seams.current = { onPrepareCancel, onPrepareMove, onJoinWaitlist, onLeaveWaitlist, settleTimeoutMs, onBook };
   });
 
   // Every registration and disposal is queued on one promise chain. The surface can change after
@@ -128,6 +134,8 @@ export function ClinicTools({
           : {}),
         // Live too: the budget is read at each call, so the page may learn it after registration.
         settleTimeoutMs: () => seams.current.settleTimeoutMs ?? 1200,
+        // SPEC-V9: the booking verb — the tool refuses unless the grant stands; the page re-checks.
+        onBook: (id: string) => seams.current.onBook?.(id) ?? false,
         onCall: (record) => {
           if (disposed) return;
           setCalls((prev) => [record, ...prev].slice(0, ACTIVITY_ROWS));

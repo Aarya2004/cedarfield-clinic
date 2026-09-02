@@ -314,3 +314,35 @@ the agent's free text — the name is the registered tool name, the summary is b
 tool itself returned, and React renders it as text (no HTML sink). It is a **record, not a
 consent channel**: a row saying "dock armed" still needs the person's press. A refusal quotes the
 tool's `detail`, truncated at 110 characters.
+
+### The booking tool born by your hand (SPEC-V9, 2026-09-02)
+
+Arav's decision after testing with the Codex desktop app: "yes, book it" in the chat must be able
+to book. The page cannot see the chat, and an injected "yes" is byte-identical to a real one — so
+the trust root stays where it was, the person's hand, pressed **once, earlier**, instead of once
+per act:
+
+- **The grant is a trusted event only.** `grantDelegation` reads `nativeEvent.isTrusted`; a
+  synthetic `.click()` increments `data-clinic-synthetic-grants` and grants nothing (asserted in
+  `clinic-delegation.json`). The open palm grants too — the camera dwell is the same
+  physical-presence root that books, cancels and moves on the docks; it is opt-in per visit.
+- **The grant is bounded.** One booking, ten minutes (`DELEGATION_MS`). The booking spends it, a
+  press revokes it, the clock ends it. There is never a standing "agent may book" state that
+  survives a reload.
+- **The tool exists only inside the grant.** `clinic_book_slot` is registered by the same reconcile
+  loop that births `clinic_my_appointment` — `hasDelegation(view)` true → registered (toolchange),
+  false → unregistered. At load, on the seeded board, on the shared board: not there. The unit test
+  "no booking tool exists AT LOAD" asserts no set the page registers on its own contains a name with
+  "book"; the browser case asserts the tool is absent, then born, then gone.
+- **Two checks, not one.** The tool refuses `permission_required` when the view carries no grant;
+  the page's `onBook` re-reads the grant ref and returns false if it lapsed — the tool answers
+  `permission_lapsed`. Hold-before-book still applies: the tool takes the hold through the same
+  driver verb, and the database (`clinic_book`) still refuses a book without the caller's hold.
+- **Cancel and move never delegate.** The grant is booking-only. What the agent books, only the
+  person can cancel or move — same docks, same trusted press, same gesture.
+- **It is written down.** The activity row reads "booked 8:40 AM with Dr. Boone — under the
+  permission you gave"; the appointment card reads "0 interactions — your assistant booked it under
+  the permission you gave"; the tool's answer carries `under_permission_granted_at`.
+- **Residual, stated.** Within the ten-minute window a prompt-injected agent could book a slot the
+  person did not mean — bounded to one appointment, visible on the page and in the log, reversible
+  by the person's press, and only after the person deliberately created the window.

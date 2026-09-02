@@ -149,7 +149,7 @@
   },
   {
     "eval": "(document.querySelector('[data-clinic-call=\"ok\"]')?.textContent ?? '')",
-    "matches": "hold_slot.*held .* with .* your press books it"
+    "matches": "held .* with .* your press books it"
   },
   {
     "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",

@@ -23,10 +23,15 @@
 A clinic releases cancelled appointments in waves. They are gone in seconds.
 
 On this page your agent does the fast, expensive part — watch the drop, compare, **hold** a slot the
-instant it appears — and then it stops, because **the page publishes no booking tool**. The only
-thing that books an appointment is one act from the person the appointment is for: **one key press,
-one switch press, or one held gesture.** Nothing an agent can call, and nothing a script can fake,
-reaches that step.
+instant it appears — and then it stops, because **the page publishes no booking tool at load**. The
+only thing that books an appointment is one act from the person the appointment is for: **one key
+press, one switch press, or one held gesture.** Nothing an agent can call, and nothing a script can
+fake, reaches that step.
+
+**The booking tool is born by your hand.** Press *Let my assistant book for me* (or hold an open
+palm to the camera) and the page births `clinic_book_slot` — one booking, ten minutes. Say *"yes,
+book it"* and the agent books; the page records **0 interactions — under the permission you gave**;
+the tool dies with the booking. Your hand roots every booking, pressed once, earlier.
 
 ## How to test it — 60 seconds, no login, nothing to install
 
@@ -115,9 +120,11 @@ dock and perform nothing: the cancel or the move happens only on a browser-trust
 the same gate as booking. A search that matches nothing names the constraint that eliminated
 everything, so an agent on a voice call can say which filter to relax.
 
-**The tenth tool is the design.** There is no booking tool — and no cancel or move tool: booking is
-gated on a browser-trusted event, which no tool call, no console `.click()` and no extension can
-produce. Every synthetic attempt is counted and shown on screen instead of being silently dropped.
+**The missing tool is the design.** There is no booking tool at load — and no cancel or move tool,
+ever: those acts are gated on a browser-trusted event, which no tool call, no console `.click()` and
+no extension can produce. Every synthetic attempt is counted and shown on screen instead of being
+silently dropped. The one booking tool that can exist is created by that same trusted event: the
+person's press births it, for one booking, and the booking kills it.
 
 That is the honest answer to "could you do this without WebMCP?" — no. Behind the page a database
 enforces fairness between strangers — one hold each, hold-before-book, only your own booking

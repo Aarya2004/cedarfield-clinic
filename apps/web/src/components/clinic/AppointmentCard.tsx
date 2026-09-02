@@ -67,6 +67,12 @@ export interface AppointmentCardProps {
   onMove?: (toSlotId: string) => boolean;
   /** True while a dock is already armed: the card stands down and points at it. */
   armed?: boolean;
+  /**
+   * What this booking cost, measured by the page (SPEC-V1 §7.2): interactions by hand from arrival
+   * to confirmation, and interactions with the agent from the confirm bar's arrival to the press.
+   * `delegated`: the agent booked under a standing permission — the person's cost was zero.
+   */
+  interactions?: { hand: number | null; agent: number | null; delegated?: boolean };
 }
 
 export function AppointmentCard({
@@ -79,6 +85,7 @@ export function AppointmentCard({
   moveOptions = [],
   onMove,
   armed = false,
+  interactions,
 }: AppointmentCardProps) {
   const reference = useMemo(() => appointmentReference(`${slotId}|${bookedAt}`), [slotId, bookedAt]);
   const bookedDate = useMemo(() => new Date(bookedAt), [bookedAt]);
@@ -173,6 +180,24 @@ export function AppointmentCard({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {interactions && (interactions.hand !== null || interactions.agent !== null) ? (
+        <p className="cl-appt__cost" data-clinic-cost>
+          {interactions.agent !== null ? (
+            <span data-lane="agent">
+              {interactions.delegated
+                ? '0 interactions — your assistant booked it under the permission you gave.'
+                : `${interactions.agent} ${interactions.agent === 1 ? 'interaction' : 'interactions'} with your assistant, from the confirm bar arriving to your press.`}
+            </span>
+          ) : null}
+          {interactions.agent !== null && interactions.hand !== null ? ' ' : null}
+          {interactions.hand !== null ? (
+            <span data-lane="hand">
+              {interactions.hand} {interactions.hand === 1 ? 'interaction' : 'interactions'} by hand, counted from arriving on this page.
+            </span>
+          ) : null}
+        </p>
       ) : null}
 
       <p className="cl-appt__note" role="status" data-clinic-appointment-notice>

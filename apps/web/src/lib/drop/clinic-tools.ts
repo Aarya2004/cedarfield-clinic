@@ -8,13 +8,17 @@
  * The WebMCP tools of the Cedarfield Clinic booking page (SPEC-V1 §3, V2, V4, V5). Registered top-level,
  * imperatively, feature-detected, under ONE AbortController — the idiom of lib/webmcp/register.ts.
  *
- * ── THE THESIS, IN WHAT IS ABSENT ───────────────────────────────────────────────────────────────
- * There is no booking tool. No `clinic_book`, no `clinic_confirm`, no `confirm: true` argument on
- * anything here. The agent can see the drop, take a slot out of the race, watch the clock and give
- * the slot back — every expensive interaction — and then it stops, because the last act belongs to
- * the human. `DropDriver.confirm()` (types.ts) exists and is wired to the page's own keypress
- * handler; this module never calls it and never exposes it. `clinic-tools.test.ts` asserts that no
- * registered name contains "book" or "confirm", so the day someone adds one, the suite says no.
+ * ── THE THESIS, IN WHAT IS ABSENT AT LOAD ───────────────────────────────────────────────────────
+ * There is no booking tool when the page loads. No `clinic_book`, no `clinic_confirm`, no
+ * `confirm: true` argument on anything here. The agent can see the drop, take a slot out of the
+ * race, watch the clock and give the slot back — every expensive interaction — and then it stops,
+ * because the last act belongs to the human. SPEC-V9 (2026-09-02) adds the one exception, and it
+ * proves the rule: `clinic_book_slot` is BORN by a trusted press on the page ("Let my assistant
+ * book for me") or an open palm — one booking, ten minutes — and dies with the booking. The hand
+ * still roots every booking; it is pressed once, earlier, instead of once per act. This module
+ * never calls `DropDriver.confirm()` itself: the delegated tool goes through the page's `onBook`,
+ * which re-checks the grant. `clinic-tools.test.ts` asserts no set the page registers on its own
+ * contains a name with "book", so the day someone adds one, the suite says no.
  *
  * ── THE SEAM ────────────────────────────────────────────────────────────────────────────────────
  * These tools read and write through exactly the same two objects the UI uses: the `DropDriver`
@@ -45,6 +49,7 @@ export const CLINIC_TOOL_NAMES = [
   'clinic_find_slots',
   'clinic_clinicians',
   'clinic_hold_slot',
+  'clinic_book_slot',
   'clinic_hold_status',
   'clinic_release_hold',
   'clinic_prepare_cancel',
@@ -82,6 +87,33 @@ export const BASE_TOOL_NAMES = [
   'clinic_explain_confirm',
 ] as const satisfies readonly ClinicToolName[];
 export const BOOKED_TOOL_NAMES = ['clinic_my_appointment'] as const satisfies readonly ClinicToolName[];
+
+/**
+ * SPEC-V9 (2026-09-02, Arav's decision): THE BOOKING TOOL IS BORN BY THE HUMAN'S HAND. It does not
+ * exist at load. A trusted press on the page ("Let my agent book for me") — or an open palm —
+ * grants a delegation: one booking, ten minutes. That grant births `clinic_book_slot` (Chrome
+ * fires toolchange); the booking, a revoke, or the clock kills it. An injected "yes" during the
+ * window is bounded to one visible appointment that only the person can cancel.
+ */
+export const DELEGATED_TOOL_NAMES = ['clinic_book_slot'] as const satisfies readonly ClinicToolName[];
+export const DELEGATION_MS = 10 * 60_000;
+
+/** The human's standing permission, as the page holds it (wall-clock ms). */
+export interface Delegation {
+  grantedAt: number;
+  until: number;
+}
+
+export function hasDelegation(view: ClinicToolsView, now: number = Date.now()): boolean {
+  return view.delegation != null && view.delegation.until > now;
+}
+
+const BOOK_SLOT_DESCRIPTION =
+  'Books ONE slot for your human — exists only while their permission stands. They grant it on the ' +
+  "page with a trusted press ('Let my agent book for me') or an open palm: one booking, ten minutes. " +
+  'Pass slot_id (an open slot, or the one you hold; the hold is taken for you). Call it when your ' +
+  "human says 'yes, book it'. If this tool is not registered, ask them to press the control on the " +
+  'page — you cannot press it.';
 
 /** Pure: does this view carry a booking of the visitor's — the condition that births the booked set. */
 export function hasOwnBooking(view: ClinicToolsView): boolean {
@@ -132,6 +164,8 @@ export interface ClinicToolsView {
   sharedBoard?: boolean;
   /** SPEC-V5: the queue exists (shared board). Decides which tools exist and what refusals suggest. */
   waitlistAvailable?: boolean;
+  /** SPEC-V9: the human's standing permission to book, if any. Set only from a trusted event on the page. */
+  delegation?: Delegation | null;
   /** The verbs. `hold` / `release` are called here; `confirm` is the human path and never is. */
   driver: DropDriver;
   /** The fold the UI renders: slots, held, secondsLeft, now, log. */
@@ -178,6 +212,11 @@ export interface ClinicToolsOptions {
    * reader) learns "held 8:40 AM with Dr. Fanning" without trusting the chat window's narration.
    */
   onCall?: (record: ToolCallRecord) => void;
+  /**
+   * SPEC-V9: the page's booking verb, callable ONLY while `view.delegation` stands. The page checks
+   * the grant again itself and returns false if it has lapsed; the tool then answers honestly.
+   */
+  onBook?: (slotId: string) => boolean;
 }
 
 /** One agent call as the page saw it. `summary` is derived from the tool's JSON answer, never invented. */
@@ -253,6 +292,8 @@ export function summariseToolAnswer(name: ClinicToolName, result: ToolTextResult
       return { ok: true, summary: `left the line for ${str(r.slot_id)}` };
     case 'clinic_my_appointment':
       return { ok: true, summary: plural(len(r.appointments), 'appointment') };
+    case 'clinic_book_slot':
+      return { ok: true, summary: `booked ${str(slot.time)} with ${str(slot.clinician)} — under the permission you gave` };
     default:
       return { ok: true, summary: 'ok' };
   }
@@ -793,6 +834,103 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       },
     },
     {
+      name: 'clinic_book_slot',
+      title: "Book a slot — only while your human's permission stands",
+      description: BOOK_SLOT_DESCRIPTION,
+      inputSchema: holdSlotSchema,
+      annotations: { readOnlyHint: false },
+      async execute(raw, ctx) {
+        const input = coerceInput(raw);
+        const before = source();
+        if (!hasDelegation(before) || !options.onBook) {
+          return asToolResult({
+            ok: false,
+            error: 'permission_required',
+            detail:
+              'No permission stands. Your human grants it on the page with a trusted press ("Let my assistant book for me") or an open palm — one booking, ten minutes. You cannot press it.',
+          } satisfies ErrorResult);
+        }
+        const slotId = (typeof input.slot_id === 'string' && input.slot_id.trim()) || before.session.held?.slotId || '';
+        if (!slotId) {
+          return asToolResult({
+            ok: false,
+            error: 'slot_id_required',
+            detail: 'Pass the id of an open slot from clinic_list_drops (or hold one first).',
+            open_slot_ids: openIds(before.session.slots),
+          } satisfies ErrorResult);
+        }
+        const slot = before.session.slots.find((s) => s.id === slotId);
+        if (!slot) {
+          return asToolResult({
+            ok: false,
+            error: 'unknown_slot',
+            detail: `This drop has no slot "${slotId}".`,
+            open_slot_ids: openIds(before.session.slots),
+          } satisfies ErrorResult);
+        }
+        if (slot.state === 'booked_yours') {
+          return asToolResult({ ok: false, error: 'already_booked', detail: 'Your human already has this appointment.' } satisfies ErrorResult);
+        }
+        if (before.session.held?.slotId !== slotId) {
+          if (slot.state !== 'open') {
+            return asToolResult({
+              ok: false,
+              error: 'slot_not_open',
+              detail: `Slot "${slotId}" is ${slot.state}. Pick another id from open_slot_ids.`,
+              slot_state: slot.state,
+              open_slot_ids: openIds(before.session.slots),
+            } satisfies ErrorResult);
+          }
+          // Hold-before-book, the same rule the person lives by: the server refuses a book without it.
+          before.driver.hold(slotId);
+          const held = await settle(source, (v) => v.session.held?.slotId === slotId, settleBudget(), pollMs, ctx?.signal);
+          if (!held) {
+            return asToolResult({
+              ok: false,
+              error: 'hold_not_confirmed',
+              detail: 'The page did not report the hold. Call clinic_list_drops and try again.',
+              open_slot_ids: openIds(source().session.slots),
+            } satisfies ErrorResult);
+          }
+        }
+        const grantedAt = before.delegation?.grantedAt ?? 0;
+        // The page's verb, behind the page's own re-check of the grant. This is the ONE place in
+        // this module that can lead to a booking, and it is unreachable without the human's press.
+        if (!options.onBook(slotId)) {
+          return asToolResult({
+            ok: false,
+            error: 'permission_lapsed',
+            detail: 'The page declined: the permission has expired or was revoked. Ask your human to press the control again.',
+          } satisfies ErrorResult);
+        }
+        const booked = await settle(
+          source,
+          (v) => v.session.slots.find((s) => s.id === slotId)?.state === 'booked_yours',
+          settleBudget(),
+          pollMs,
+          ctx?.signal,
+        );
+        const now = source().session.slots.find((s) => s.id === slotId);
+        if (!booked) {
+          return asToolResult({
+            ok: false,
+            error: 'booking_not_confirmed',
+            detail: 'The board did not report the booking. Call clinic_list_drops to see what stands.',
+            slot_state: now?.state ?? slot.state,
+          } satisfies ErrorResult);
+        }
+        return asToolResult({
+          ok: true,
+          booked: true,
+          slot: toAgentSlot(now ?? slot),
+          under_permission_granted_at: new Date(grantedAt).toISOString(),
+          permission_now: 'spent — this tool is gone until your human grants it again',
+          next_step:
+            'Tell your human it is booked. The page shows the appointment, its reference and an add-to-calendar button; cancelling or moving it is theirs alone.',
+        });
+      },
+    },
+    {
       name: 'clinic_hold_status',
       title: 'Time left on your hold',
       description: HOLD_STATUS_DESCRIPTION,
@@ -1108,9 +1246,17 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             ...BASE_TOOL_NAMES,
             ...(view.waitlistAvailable ? WAITLIST_TOOL_NAMES : []),
             ...(hasOwnBooking(view) ? BOOKED_TOOL_NAMES : []),
+            ...(hasDelegation(view) ? DELEGATED_TOOL_NAMES : []),
           ],
           ...(hasOwnBooking(view) ? {} : { tools_that_appear_after_your_human_books: [...BOOKED_TOOL_NAMES] }),
-          tool_that_books: null,
+          ...(hasDelegation(view)
+            ? { tool_that_books: 'clinic_book_slot' as const, permission_until: new Date(view.delegation!.until).toISOString() }
+            : {
+                tool_that_books: null,
+                tool_born_by_your_humans_permission: 'clinic_book_slot' as const,
+                how_they_grant_it:
+                  'a trusted press on the page ("Let my agent book for me") or an open palm — one booking, ten minutes; you cannot press it',
+              }),
           human_only_acts: ['book', 'cancel', 'move'],
           what_to_tell_your_human: HOLD_CHOREOGRAPHY,
           your_hold: holdSummary(view),
@@ -1176,10 +1322,20 @@ export async function registerClinicTools(
   };
 
   const base = new AbortController();
-  let booked: AbortController | null = null;
+  // The two sets born by the human's hand: `booked` by the press that books, `delegated` by the
+  // press that grants permission (SPEC-V4, SPEC-V9). Each lives on its own AbortController.
+  const BORN = {
+    delegated: { names: DELEGATED_TOOL_NAMES, want: (v: ClinicToolsView) => hasDelegation(v) },
+    booked: { names: BOOKED_TOOL_NAMES, want: (v: ClinicToolsView) => hasOwnBooking(v) },
+  } as const;
+  const born = new Map<keyof typeof BORN, AbortController>();
   let disposed = false;
   const loadSet: ClinicToolName[] = [...BASE_TOOL_NAMES, ...(options.onJoinWaitlist ? WAITLIST_TOOL_NAMES : [])];
-  const liveNames = (): ClinicToolName[] => (booked ? [...loadSet, ...BOOKED_TOOL_NAMES] : [...loadSet]);
+  const liveNames = (): ClinicToolName[] => [
+    ...loadSet,
+    ...(born.has('delegated') ? DELEGATED_TOOL_NAMES : []),
+    ...(born.has('booked') ? BOOKED_TOOL_NAMES : []),
+  ];
   // Ask the platform for its own count after each change. Not every client exposes getTools; when
   // it does, the page can show "the browser confirms N" instead of only its own belief.
   const report = async () => {
@@ -1217,30 +1373,34 @@ export async function registerClinicTools(
     }
     busy = true;
     try {
-      const want = hasOwnBooking(source());
-      if (want && booked === null) {
-        const ac = new AbortController();
-        booked = ac;
-        try {
-          await registerSet(BOOKED_TOOL_NAMES, ac.signal);
-        } catch {
-          ac.abort();
-          booked = null;
-          return;
+      const view = source();
+      let changed = false;
+      for (const key of Object.keys(BORN) as (keyof typeof BORN)[]) {
+        const want = BORN[key].want(view);
+        const alive = born.get(key) ?? null;
+        if (want && alive === null) {
+          const ac = new AbortController();
+          born.set(key, ac);
+          try {
+            await registerSet(BORN[key].names, ac.signal);
+            changed = true;
+          } catch {
+            ac.abort();
+            born.delete(key);
+          }
+        } else if (!want && alive !== null) {
+          // The state settles no matter what the platform does with the abort: a throwing unregister
+          // must never leave the page claiming a tool that has no grant or booking behind it.
+          born.delete(key);
+          try {
+            alive.abort();
+          } catch {
+            /* the model context refused to unregister; the count is still the truth we can keep */
+          }
+          changed = true;
         }
-        await report();
-      } else if (!want && booked !== null) {
-        // The state settles no matter what the platform does with the abort: a throwing unregister
-        // must never leave the page claiming a tool that has no booking behind it.
-        const dying = booked;
-        booked = null;
-        try {
-          dying.abort();
-        } catch {
-          /* the model context refused to unregister; the count is still the truth we can keep */
-        }
-        await report();
       }
+      if (changed) await report();
     } finally {
       busy = false;
       if (again && !disposed) {
@@ -1258,7 +1418,8 @@ export async function registerClinicTools(
   return () => {
     disposed = true;
     clearInterval(watch);
-    booked?.abort();
+    for (const ac of born.values()) ac.abort();
+    born.clear();
     base.abort();
   };
 }

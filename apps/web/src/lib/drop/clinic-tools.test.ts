@@ -29,6 +29,7 @@ import {
   clinicToolDefs,
   registerClinicTools,
   type ToolCallRecord,
+  DELEGATED_TOOL_NAMES,
   type ClinicToolsView,
   type ClinicToolsSource,
 } from './clinic-tools.ts';
@@ -268,7 +269,7 @@ test('every registered tool carries a description and an input schema; annotatio
   }
 });
 
-test('schemas are stable: exactly five tools take input, everything else is a bare object', () => {
+test('schemas are stable: exactly six tools take input, everything else is a bare object', () => {
   const { defs, get } = defsFor(ready().source);
   const hold = get('clinic_hold_slot').inputSchema as { required: string[]; properties: Record<string, { type: string }> };
   assert.deepEqual(hold.required, ['slot_id']);
@@ -282,7 +283,8 @@ test('schemas are stable: exactly five tools take input, everything else is a ba
   const wait = get('clinic_join_waitlist').inputSchema as { required: string[] };
   assert.deepEqual(wait.required, ['slot_id']);
   assert.deepEqual((get('clinic_leave_waitlist').inputSchema as { required: string[] }).required, ['slot_id']);
-  const WITH_INPUT = ['clinic_hold_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist'];
+  assert.deepEqual((get('clinic_book_slot').inputSchema as { required: string[] }).required, ['slot_id']);
+  const WITH_INPUT = ['clinic_hold_slot', 'clinic_book_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist'];
   for (const def of defs.filter((d) => !WITH_INPUT.includes(d.name))) {
     assert.deepEqual(def.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
   }
@@ -498,23 +500,69 @@ const FORBIDDEN_TOOL_NAMES = [
   'move_booking',
 ];
 
-test('no booking tool exists — not in the names, not in the defs, not in any description', () => {
+test('no booking tool exists AT LOAD — the one that can book is born only by the human grant (SPEC-V9)', () => {
   const defs = clinicToolDefs(frozenSource([], []));
   const names = defs.map((d) => d.name);
-  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the defs are exactly the declared twelve');
+  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the defs are exactly the declared thirteen');
+  const atLoad: readonly string[] = [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES, ...BOOKED_TOOL_NAMES];
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
-    assert.ok(!(names as string[]).includes(forbidden), `${forbidden} must never be on this page tool surface`);
-    assert.ok(
-      !(CLINIC_TOOL_NAMES as readonly string[]).includes(forbidden),
-      `${forbidden} must never be declared`,
-    );
+    assert.ok(!atLoad.includes(forbidden), `${forbidden} must never be registered without a grant`);
   }
+  // The ONLY name in the vocabulary that books is the delegated one, and it is not in any set a
+  // page registers on its own: it exists solely while `hasDelegation` is true.
+  const booking = (CLINIC_TOOL_NAMES as readonly string[]).filter((n) => /book/.test(n));
+  assert.deepEqual(booking, [...DELEGATED_TOOL_NAMES]);
+  assert.ok(!atLoad.some((n) => (DELEGATED_TOOL_NAMES as readonly string[]).includes(n)));
   // and nothing may advertise a booking capability the page does not grant an agent
   for (const d of defs) {
     assert.ok(
       !/\byou (can|may) (now )?book\b/i.test(d.description),
       `${d.name} must not tell an agent it can book`,
     );
+  }
+});
+
+test('SPEC-V9: the grant births clinic_book_slot, the tool books through the page verb, the spent grant kills it', async () => {
+  const { mc, regs, live } = fakeMc();
+  const restore = withModelContext(mc);
+  try {
+    const { driver, source } = ready();
+    let delegation: { grantedAt: number; until: number } | null = null;
+    const src = () => ({ ...source(), delegation });
+    const booked: string[] = [];
+    const onBook = (id: string) => {
+      if (delegation === null) return false;
+      driver.book(id);
+      booked.push(id);
+      delegation = null; // the page spends the grant on the booking
+      return true;
+    };
+    const dispose = await registerClinicTools(src, () => {}, { watchMs: 5, onBook });
+    assert.ok(!live().includes('clinic_book_slot'), 'no grant, no booking tool');
+    // Calling the def directly without a grant refuses — even with the verb wired.
+    const def = clinicToolDefs(src, { onBook }).find((d) => d.name === 'clinic_book_slot')!;
+    const refused = JSON.parse((await def.execute({ slot_id: 'slot-1' })).content[0].text) as { ok: boolean; error: string };
+    assert.equal(refused.ok, false);
+    assert.equal(refused.error, 'permission_required');
+    assert.deepEqual(booked, []);
+    // THE HUMAN GRANTS (a trusted press on the page) → the tool is born
+    delegation = { grantedAt: Date.now(), until: Date.now() + 600_000 };
+    await new Promise((r) => setTimeout(r, 40));
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES, 'clinic_book_slot'], 'born, after the base nine');
+    const tool = regs.find((r) => r.tool.name === 'clinic_book_slot' && !r.signal?.aborted)!.tool;
+    const open = driver.snapshot().slots.find((s) => s.state === 'open')!;
+    const res = (await tool.execute({ slot_id: open.id })) as { content: [{ text: string }] };
+    const out = JSON.parse(res.content[0].text) as Record<string, unknown>;
+    assert.equal(out.ok, true, JSON.stringify(out));
+    assert.equal(out.booked, true);
+    assert.deepEqual(booked, [open.id], 'the page verb ran exactly once');
+    assert.equal(driver.snapshot().slots.find((s) => s.id === open.id)?.state, 'booked_yours');
+    // THE GRANT IS SPENT → the booking tool dies; the booked set is born instead
+    await new Promise((r) => setTimeout(r, 40));
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES]);
+    dispose();
+  } finally {
+    restore();
   }
 });
 
