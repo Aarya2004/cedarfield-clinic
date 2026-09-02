@@ -11,8 +11,9 @@
     "timeout": 15000
   },
   {
-    "eval": "Number(document.querySelector('[data-clinic-agent-log]')?.getAttribute('data-clinic-agent-log'))",
-    "equals": 0
+    "_doc": "Absent until the first call (Aarya's restyle: a patient booking by hand is not shown an empty ledger).",
+    "eval": "document.querySelector('[data-clinic-agent-log]') === null",
+    "equals": true
   },
   {
     "invoke": "clinic_clinicians",

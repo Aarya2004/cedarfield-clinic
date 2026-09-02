@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "(bash scripts/fetch-gesture-model.sh || echo \"gesture model not fetched — camera confirm will report unavailable\") && NEXT_PUBLIC_DROP_GESTURE=${NEXT_PUBLIC_DROP_GESTURE:-1} next dev --turbopack",
     "build": "(bash scripts/fetch-gesture-model.sh || echo \"! gesture model not provisioned; the camera path reports unavailable\") && NEXT_PUBLIC_DROP_GESTURE=${NEXT_PUBLIC_DROP_GESTURE:-1} next build",
     "start": "next start",
     "lint": "eslint .",
