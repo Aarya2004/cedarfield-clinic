@@ -29,3 +29,15 @@ walk-away beats (a 45 s cancel arm expiring, a full 90 s wave rollover) exceed t
 Against an origin, run it by hand on the seeded board:
 
     node evals/harness/webmcp-cdp.mjs '<origin>/clinic/book?test=1' evals/cases/clinic-soak.json
+
+## clinic_booking_form — the declarative half (Chrome only, by hand)
+
+Open `/clinic/book` in Chrome 152+ with `chrome://flags/#enable-webmcp-testing`, click a slot,
+then **Start** — the patient-details form is now published by the browser itself as the tool
+`clinic_booking_form` (DevTools → Application → WebMCP, or the Model Context Tool Inspector
+extension). Invoke it from the Inspector with a name, date of birth (YYYY-MM-DD), reason, phone:
+the browser fills the fields, the page shows **"Filled in by your agent. Read it over — nothing is
+sent until you press Review, then Book."** There is deliberately no `toolautosubmit`; a submit the
+browser attributes to an agent is refused and counted on the form. The CI case
+(`clinic-declarative.json`) proves registration, the absence of autosubmit, the refused synthetic
+submit and the person's trusted path; the fill itself is Chrome's and is checked here.

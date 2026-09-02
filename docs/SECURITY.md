@@ -237,6 +237,12 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   press; the queue changes who gets the chance, never who can act. Residual, stated: idle waiters
   cost a slot at most 3 × 45 s per wave; anonymous identities are rate-limited by the auth
   provider, not by us.
+- **The declarative form (SPEC-V6):** the details form carries `toolname`/`tooldescription`/
+  `toolparamdescription` and NO `toolautosubmit`. Filling is the browser's; submitting is the
+  person's: the submit handler refuses any event the browser attributes to an agent
+  (`SubmitEvent.agentInvoked`) or that is not `isTrusted`, and counts it on the form. An
+  agent-filled form is labelled as such before the person reviews it. Nothing the form holds
+  leaves the page (the live board takes slot ids only).
 - **Spec primitives, used or deliberately not (WebMCP CG issues cited):**
   `execute(input, {signal})` — every tool honours the platform's AbortSignal: a cancelled call stops
   waiting on the board and answers with what is true at that instant (the verb it already sent is

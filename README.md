@@ -93,6 +93,16 @@ is always one trusted press from you.
 real visitor is on (the two queue verbs), **twelve once you have booked** — exactly the
 twelve-tool cap we set ourselves.
 
+**Both halves of WebMCP, each doing the job it is for.** The tools above are the *imperative* API.
+The patient-details form is also published *declaratively* — `toolname="clinic_booking_form"`,
+a `tooldescription`, a `toolparamdescription` on every field — so in Chrome the browser itself
+lists the form as a tool an agent can **fill**. It carries no `toolautosubmit` on purpose: the
+agent fills, the page says *"Filled in by your agent. Read it over — nothing is sent until you
+press Review, then Book"*, and a submit the browser attributes to an agent (or a script) is
+refused and counted, exactly like a synthetic keypress on the dock. That is the model the W3C APA
+group asked for on 5 Aug 2026 — "review by the user" — in the platform's own vocabulary. (ChatGPT
+ignores declarative forms; the page is unchanged there.)
+
 **The waitlist cascade — the race is gone.** On the shared board an agent can queue its human for
 a slot that is held or booked by someone else. When that slot comes back — a hold lapses, a
 cancellation, a move — the *server* hands it to the first in line as a fresh 45-second hold; the

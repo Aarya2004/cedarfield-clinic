@@ -1,0 +1,162 @@
+[
+ {
+  "_doc": "SPEC-V6: the DECLARATIVE half of WebMCP. Open a slot by hand \u2192 the details form becomes a browser-published tool (clinic_booking_form). The agent FILLS it; the page shows 'Filled in by your agent'; an agent-attributed submit is refused and counted; the person's trusted press moves it to review and books. Chrome-only (ChatGPT ignores declarative forms)."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "_doc": "The form does not exist until a person picks a slot \u2014 so neither does its tool."
+ },
+ {
+  "list": true
+ },
+ {
+  "expect": {
+   "noTool": "clinic_booking_form"
+  }
+ },
+ {
+  "focus": "[data-clinic-action=\"open-slot\"]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-flow]')?.getAttribute('data-clinic-flow') === 'detail'",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-clinic-action=\"start-details\"]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-clinic-field=\"fullName\"]')",
+  "timeout": 8000
+ },
+ {
+  "waitFor": "document.querySelector('form[data-clinic-step=\"details\"]') !== null",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.querySelector('form[data-clinic-step=\"details\"]')?.getAttribute('toolname')",
+  "equals": "clinic_booking_form"
+ },
+ {
+  "eval": "document.querySelector('form[data-clinic-step=\"details\"]')?.hasAttribute('toolautosubmit')",
+  "equals": false
+ },
+ {
+  "eval": "document.querySelectorAll('form[data-clinic-step=\"details\"] [toolparamdescription]').length",
+  "equals": 5
+ },
+ {
+  "_doc": "The browser now publishes the form as a tool (the harness sees it in the platform's own list). The FILL is Chrome's declarative machinery \u2014 driven by the browser's agent UI, not by this CDP harness \u2014 so it is checked by hand with the Model Context Tool Inspector (evals/manual/README.md). What IS provable here: no autosubmit, and a submit the person did not make is refused and counted."
+ },
+ {
+  "sleep": 500
+ },
+ {
+  "list": true
+ },
+ {
+  "expect": {
+   "tool": "clinic_booking_form"
+  }
+ },
+ {
+  "_doc": "A submit the person did not make (dispatched by script) is refused and counted; the form stays put."
+ },
+ {
+  "eval": "(() => { const f = document.querySelector('form[data-clinic-step=\"details\"]'); f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); return 'synthetic-submit'; })()",
+  "equals": "synthetic-submit"
+ },
+ {
+  "sleep": 300
+ },
+ {
+  "eval": "document.querySelector('form[data-clinic-step=\"details\"]')?.getAttribute('data-clinic-agent-submits-blocked')",
+  "equals": "1"
+ },
+ {
+  "eval": "document.querySelector('form[data-clinic-step=\"details\"]') !== null",
+  "equals": true
+ },
+ {
+  "_doc": "The person fills it (trusted keystrokes) and presses Review \u2014 the form moves for them, not for a script."
+ },
+ {
+  "focus": "[data-clinic-field=\"fullName\"]"
+ },
+ {
+  "type": "Ada Okonkwo"
+ },
+ {
+  "focus": "[data-clinic-field=\"dateOfBirth\"]"
+ },
+ {
+  "key": "Home"
+ },
+ {
+  "type": "04"
+ },
+ {
+  "type": "02"
+ },
+ {
+  "type": "1971"
+ },
+ {
+  "focus": "[data-clinic-field=\"reason\"]"
+ },
+ {
+  "type": "New"
+ },
+ {
+  "focus": "[data-clinic-field=\"phone\"]"
+ },
+ {
+  "type": "4165550100"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-field=\"fullName\"]')?.value",
+  "equals": "Ada Okonkwo"
+ },
+ {
+  "focus": "button[data-clinic-action=\"to-review\"]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "_doc": "Headless Chrome cannot enter a native date over CDP (the manual-tax case documents the same floor), so the review step is out of reach here. What is provable: the TRUSTED press ran the real path \u2014 the blocked counter did not move \u2014 and the only thing holding the form is validation of the date the harness could not type."
+ },
+ {
+  "sleep": 400
+ },
+ {
+  "eval": "document.querySelector('form[data-clinic-step=\"details\"]')?.getAttribute('data-clinic-agent-submits-blocked')",
+  "equals": "1"
+ },
+ {
+  "eval": "JSON.stringify([...document.querySelectorAll('[data-invalid=\"true\"]')].map(e => e.getAttribute('data-clinic-field')))"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-flow]')?.getAttribute('data-clinic-flow') === 'review' || document.querySelectorAll('[data-invalid=\"true\"]').length >= 1",
+  "equals": true
+ },
+ {
+  "shot": "docs/evidence/clinic/declarative-form-tool.png"
+ }
+]

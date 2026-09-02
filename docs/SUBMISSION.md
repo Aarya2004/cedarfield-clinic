@@ -95,6 +95,13 @@ human's press**: the instant a person books, `clinic_my_appointment` is register
 What the press creates is purely additive: a client slow to notice `toolchange` loses nothing; a
 client that sees it watches a human act change the agent's surface.
 
+**Both halves of the API.** The patient-details form is also published *declaratively*
+(`toolname`, `tooldescription`, a `toolparamdescription` per field) so Chrome lists it as a tool an
+agent can fill — with no `toolautosubmit`: the agent fills, the person reads it over and presses
+Review, then Book; a submit attributed to an agent or a script is refused and counted. This is the
+"review by the user" model the W3C APA group asked for on 5 August 2026, built with the primitive
+the platform provides for exactly that.
+
 **And on the shared board — where every real visitor is — two more tools make eleven, and the race is gone.** `clinic_join_waitlist` and
 `clinic_leave_waitlist`, let an agent put its human *in line* for a slot someone else holds. When
 that slot comes back — a hold lapses, a cancellation, a move — the server hands it to the first in
