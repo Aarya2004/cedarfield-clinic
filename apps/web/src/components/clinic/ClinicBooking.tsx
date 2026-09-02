@@ -130,8 +130,8 @@ const PENDING_ACT_TTL_SECONDS = 45;
 
 /** SPEC-V2 §3: what clinic_prepare_cancel / clinic_prepare_move arm. One at a time, human-fired. */
 type PendingAct =
-  | { kind: 'cancel'; slotId: string; timeLabel: string; detail: string; armedAt: number }
-  | { kind: 'move'; fromId: string; toId: string; timeLabel: string; detail: string; armedAt: number };
+  | { kind: 'cancel'; slotId: string; timeLabel: string; detail: string; armedAt: number; by: HoldOrigin }
+  | { kind: 'move'; fromId: string; toId: string; timeLabel: string; detail: string; armedAt: number; by: HoldOrigin };
 
 export function ClinicBooking() {
   // ── the wave ───────────────────────────────────────────────────────────────────────────────────
@@ -298,22 +298,24 @@ export function ClinicBooking() {
     setPendingActState(next);
   }, []);
 
+  // `by`: who armed it. The tools arm as 'agent' (the dock says "via your assistant"); the
+  // appointment card's own Cancel/Move buttons arm as 'you' and the dock says nothing about it.
   const prepareCancel = useCallback(
-    (slotId: string): boolean => {
+    (slotId: string, by: HoldOrigin = 'agent'): boolean => {
       const slot = driver.snapshot().slots.find((s) => s.id === slotId);
       if (!slot || slot.state !== 'booked_yours') return false;
       const current = pendingActRef.current;
       // Re-arming the same cancel keeps the original clock: an agent cannot keep a destructive
       // dock alive indefinitely by re-calling every forty seconds.
       if (current?.kind === 'cancel' && current.slotId === slotId) return true;
-      setPendingAct({ kind: 'cancel', slotId, timeLabel: noWrap(slot.timeLabel), detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now() });
+      setPendingAct({ kind: 'cancel', slotId, timeLabel: noWrap(slot.timeLabel), detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now(), by });
       return true;
     },
     [driver, setPendingAct],
   );
 
   const prepareMove = useCallback(
-    (fromId: string, toId: string): boolean => {
+    (fromId: string, toId: string, by: HoldOrigin = 'agent'): boolean => {
       const slots = driver.snapshot().slots;
       const from = slots.find((s) => s.id === fromId);
       const to = slots.find((s) => s.id === toId);
@@ -332,6 +334,7 @@ export function ClinicBooking() {
         timeLabel: `${noWrap(from.timeLabel)} → ${noWrap(to.timeLabel)}`,
         detail: `${to.clinician} · ${to.kind}`,
         armedAt: Date.now(),
+        by,
       });
       return true;
     },
@@ -611,8 +614,8 @@ export function ClinicBooking() {
                 moveOptions={session.slots
                   .filter((s) => s.state === 'open')
                   .map((s) => ({ slotId: s.id, timeLabel: s.timeLabel, clinician: s.clinician }))}
-                onCancel={() => prepareCancel(bookedSlot.id)}
-                onMove={(toId) => prepareMove(bookedSlot.id, toId)}
+                onCancel={() => prepareCancel(bookedSlot.id, 'you')}
+                onMove={(toId) => prepareMove(bookedSlot.id, toId, 'you')}
                 armed={pendingAct !== null}
               />
             </Band>
@@ -630,7 +633,7 @@ export function ClinicBooking() {
               ttlSeconds={pendingAct.kind === 'move' ? (session.held?.ttlSeconds ?? HOLD_TTL_SECONDS) : PENDING_ACT_TTL_SECONDS}
               slotLabel={pendingAct.timeLabel}
               slotDetail={pendingAct.detail}
-              origin="agent"
+              origin={pendingAct.by}
               onConfirm={confirmPendingAct}
               onRelease={dismissPendingAct}
               measuredRef={attachDock}
