@@ -139,9 +139,14 @@ in Firefox/Safari — no camera permission descriptor — the answer is `unknown
 click. To test: set `drop.gesture.enabled=on` with a standing grant and reload; the camera should
 come up on its own. Clear it, grant nothing, reload: nothing should happen.
 
-## Open question — ChatGPT desktop: UNVERIFIED
+## Open question — the Codex desktop app's browser pane: REPORTED WORKING, not yet evidenced
 
-**We do not know whether `getUserMedia` resolves inside ChatGPT desktop's embedded view.** It is an
+> **2026-09-02, Aarya:** "I think the camera did work in the Codex in-app browser." Treat as a
+> positive report pending one screenshot of the pane with the ring showing a face and
+> `data-gesture-state="ready"` (or a filmed palm booking in that pane). Until that lands in
+> `docs/evidence/clinic/`, the video's palm beat is shot in Chrome, where it is proven.
+
+**Before that report we did not know whether `getUserMedia` resolves inside the desktop app's embedded view.** It is an
 Electron-class host; camera access there depends on the host's permission handler and its own
 Permissions-Policy, neither of which we control or have tested. Both outcomes are handled and
 neither is allowed to matter:
