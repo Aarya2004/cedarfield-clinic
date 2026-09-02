@@ -2,6 +2,25 @@
 
 Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, ~07:30–08:30) — "Talk to Cedarfield": the page's own voice client
+- Arav's decision after the Codex test: a person with no hands must be able to speak to the page
+  and hear it. Codex has no Voice Mode; so the page hosts its own voice agent (OpenAI Realtime over
+  WebRTC) that consumes the SAME WebMCP tool definitions through the SAME execute path — the third
+  client of one tool surface (Codex pane · Chrome 152 · the page's voice). It speaks; it cannot
+  press; the grant, the key and the palm are unchanged.
+- Files: `app/api/voice/session/route.ts` (ten-minute client secret, `OPENAI_API_KEY` server-side
+  only, fixed instructions, no upstream bodies relayed), migration `20260902120000_cedarfield_voice_quota.sql`
+  (`clinic_voice_ticket`, 200/day, applied), `components/clinic/VoiceAgent.tsx` (WebRTC, `oai-events`
+  data channel, `session.update` with the live tool list on every change, `response.done` →
+  `function_call_output` → `response.create`, five-minute cap, Stop), `ClinicTools.onExecutor`
+  (same defs via `clinicToolDefs`, filtered to the live names; calls recorded like any client's),
+  middleware (`api.openai.com` in connect-src and `microphone=(self)` only under
+  `NEXT_PUBLIC_DROP_VOICE=1`, the build default), `clinic-voice-unavailable.json`, SECURITY §10,
+  manual README, README "one tool surface, three clients".
+- Verified: API contract read from developers.openai.com the same hour (model `gpt-realtime-2.1`,
+  `/v1/realtime/client_secrets`, `/v1/realtime/calls`); six cases + axe green; deployed. **Owed by
+  Arav:** `OPENAI_API_KEY` (capped) in Vercel production, then the manual spoken loop.
+
 ## Build log — Engineer #4 (2026-09-02, 05:00–07:00) — the seat of the person: Arav's physical tests, six fixes, each deployed
 - Arav, in Chrome 152 and the Codex app, as the user we build for: "nothing happens", "I can't see
   my camera", "doing everything manually", "how do I know anything happened". Root causes, in order
