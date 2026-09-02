@@ -42,3 +42,12 @@ Dictation (microphone icon) exists but still needs a Send click. Consequence for
 the video: the honest voice story is *dictation + one press*, or macOS Voice Control ("press
 Return") for a fully hands-free send. The page never claimed Voice Mode; the tools are voice-ready
 in the sense that every answer is readable aloud in one sentence (`next_step`, `refusalSentence`).
+
+## Correction, 02:10 — the client is the Codex desktop app
+
+Arav's screenshot (02:10) shows the window title "Codex", the in-app browser tab
+`rokan-terminal.vercel.app`, model picker "5.6 Terra Medium", and a composer with a microphone
+(dictation) and a Send arrow only. Everywhere this file and DROP-STATUS say "ChatGPT desktop",
+read: **the Codex desktop app's in-app browser**. The transcript above is that client. The page
+shown was the pre-restyle build with the live board preview ("8:40 AM open · 9:00 AM taken,
+simulated rival") — the shared board, live, inside the agent's own browser pane.
