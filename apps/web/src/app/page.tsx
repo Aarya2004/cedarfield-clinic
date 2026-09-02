@@ -17,9 +17,9 @@ import { ClinicLanding } from '@/components/clinic/ClinicLanding';
  * Reverting is one `git revert` of this commit if the founders want the old front door back.
  */
 export const metadata: Metadata = {
-  title: 'Cedarfield Clinic — appointments released in waves',
+  title: 'Cedarfield Clinic — book a same-day appointment',
   description:
-    'Your agent can hold an appointment. Only you can take it: booking is gated on one act by the person, and no tool can perform it.',
+    'Cancelled appointments at Cedarfield Clinic go back on the list at the next release, so nobody has to refresh the page to catch one. Book online, or call 01632 960 118.',
 };
 
 export default function Home() {

@@ -1,13 +1,12 @@
 'use client';
 
 /**
- * `/clinic/book` — the product (SPEC-V1 §2, §5).
+ * `/clinic/book` — booking at Cedarfield Clinic (SPEC-V3 §3).
  *
- * One page, one board, one clock. A visitor can book an appointment here entirely by hand — click a
- * time, fill the form, confirm — and the page counts what that costs while they do it. An agent can
- * do everything except the last step: it lists the wave and takes a hold through the tools mounted
- * below, the dock arrives saying who held it, and the appointment is made by a keypress the browser
- * marks as trusted. Both costs end up side by side, both measured.
+ * One page, one board, one clock. A visitor books entirely by hand — choose a time, give their
+ * details, confirm — or their assistant reserves a time for them through the tools mounted below and
+ * the confirm step arrives with it. Either way the appointment is made by a keypress the browser
+ * marks as trusted, so nothing books an appointment on the visitor's behalf.
  *
  * ── WHAT IS REUSED VERBATIM (SPEC-V1 §4) ────────────────────────────────────────────────────────
  * The mock driver, the `useDropSession` fold, the manual-flow reducer, the interaction counter, the
@@ -15,17 +14,19 @@
  * unchanged from `lib/drop/` and `components/drop/useDropSession.ts`. Everything visual is new; the
  * bench's `DropBench` / `SlotBoard` / `ConfirmSurface` / `drop-bench.css` are not referenced.
  *
- * ── WAVE STAGING ────────────────────────────────────────────────────────────────────────────────
- * The mock driver simulates one wave per instance, so continuous releases are a driver per wave,
+ * ── RELEASE STAGING ─────────────────────────────────────────────────────────────────────────────
+ * The mock driver simulates one release per instance, so continuous releases are a driver per wave,
  * swapped on the period in `wave-clock.ts` and seeded from the wave index. The swap is DEFERRED
  * while anything is in play — a live hold, a half-filled form, a booking still on screen — because
  * a new wave clears the board and yanking a burning three-minute hold out from under a visitor to
  * satisfy a timer would be the page contradicting its own promise.
  *
- * ── THE TWO COUNTERS ────────────────────────────────────────────────────────────────────────────
- * The page counter is scoped to the booking region and runs from arrival: that is the by-hand cost.
- * The dock counter is created when the dock mounts, which is the instant a hold appears: that is the
- * with-an-agent cost. Neither can be written to; both only move when a trusted event arrives.
+ * ── THE INSTRUMENTS ARE INVISIBLE (SPEC-V3 §1) ──────────────────────────────────────────────────
+ * Two interaction counters still run — one scoped to the booking region from arrival, one born with
+ * the confirm dock — and their totals are written to `data-clinic-counter`, `data-clinic-count-hand`
+ * and `data-clinic-count-agent` on the measured region. Nothing about them is drawn: a patient
+ * booking an appointment is not an experiment and the page must not read like one. Neither counter
+ * can be written to; both only move when a trusted event arrives.
  */
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -48,12 +49,12 @@ import type { DropDriver, Slot } from '../../lib/drop/types.ts';
 import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
-import { Band, ClinicBanner, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
+import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
+import { AppointmentCard } from './AppointmentCard.tsx';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
-import { ReceiptCompare, type LaneReceipt } from './ReceiptCompare.tsx';
 import { SlotSheet } from './SlotSheet.tsx';
-import { agentArrivalAnnouncement, holdHeadline, holdOrigin, type HoldOrigin } from './hold-origin.ts';
+import { agentArrivalAnnouncement, assistantTag, holdHeadline, holdOrigin, type HoldOrigin } from './hold-origin.ts';
 import {
   HOLD_TTL_SECONDS,
   describeWaveAge,
@@ -66,10 +67,9 @@ import './clinic-tokens.css';
 import './clinic.css';
 
 /**
- * Six appointments, three of which the rival clears over the first forty seconds — aggressive
- * early and tapering, the shape of a real drop. Three are left standing for the rest of the wave so
- * a visitor who arrives late still has something to book; the rival is never given a smaller budget
- * than its own preset, only a slower clock, because a rival tuned to let you win is not evidence.
+ * Six appointments, three of which go over the first forty seconds — fast early and tapering, the
+ * shape of a real release. Three are left standing for the rest of the release so a visitor who
+ * arrives late still has something to book.
  */
 const WAVE_OVERRIDES = {
   slotCount: 6,
@@ -130,8 +130,8 @@ const PENDING_ACT_TTL_SECONDS = 180;
 
 /** SPEC-V2 §3: what clinic_prepare_cancel / clinic_prepare_move arm. One at a time, human-fired. */
 type PendingAct =
-  | { kind: 'cancel'; slotId: string; timeLabel: string; detail: string; armedAt: number }
-  | { kind: 'move'; fromId: string; toId: string; timeLabel: string; detail: string; armedAt: number };
+  | { kind: 'cancel'; slotId: string; timeLabel: string; detail: string; armedAt: number; by: HoldOrigin }
+  | { kind: 'move'; fromId: string; toId: string; timeLabel: string; detail: string; armedAt: number; by: HoldOrigin };
 
 export function ClinicBooking() {
   // ── the wave ───────────────────────────────────────────────────────────────────────────────────
@@ -265,12 +265,14 @@ export function ClinicBooking() {
     row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
   }, [heldStartedAt, heldSlotId]);
 
-  // ── receipts ───────────────────────────────────────────────────────────────────────────────────
-  const [handReceipt, setHandReceipt] = useState<LaneReceipt | null>(null);
-  const [agentReceipt, setAgentReceipt] = useState<LaneReceipt | null>(null);
+  // ── what each route cost, frozen at the booking and never drawn ────────────────────────────────
+  // Both totals are real measurements from the counters above. They reach the outside world only as
+  // data-* attributes on the measured region (SPEC-V3 §1) — nothing on screen reads them.
+  const [handCount, setHandCount] = useState<number | null>(null);
+  const [agentCount, setAgentCount] = useState<number | null>(null);
   const [lastBookedAt, setLastBookedAt] = useState<number | null>(null);
 
-  /** Which booking the by-hand receipt is frozen for, so "book another" cannot refreeze the old one. */
+  /** Which booking the by-hand total is frozen for, so "book another" cannot refreeze the old one. */
   const frozenFor = useRef<string | null>(null);
   const bookedSlotId = flow.bookedSlotId;
   useEffect(() => {
@@ -279,14 +281,8 @@ export function ClinicBooking() {
     const key = `${wave}:${bookedSlotId}`;
     if (frozenFor.current === key) return;
     frozenFor.current = key;
-    const snapshot = pageCounter.current?.snapshot() ?? NO_COUNT;
-    setHandReceipt({
-      slotLabel: findSlot(flow.slots, bookedSlotId)?.timeLabel ?? bookedSlotId,
-      count: snapshot.total,
-      breakdown: snapshot.breakdown,
-      slotsLost: flow.slotsLost,
-    });
-  }, [bookedSlotId, flow.slots, flow.slotsLost, wave]);
+    setHandCount((pageCounter.current?.snapshot() ?? NO_COUNT).total);
+  }, [bookedSlotId, wave]);
 
   // ── SPEC-V2: the prepared act ─────────────────────────────────────────────────────────────────
   // clinic_prepare_cancel / clinic_prepare_move arm ONE pending act; a trusted press performs it.
@@ -302,22 +298,24 @@ export function ClinicBooking() {
     setPendingActState(next);
   }, []);
 
+  // `by`: who armed it. The tools arm as 'agent' (the dock says "via your assistant"); the
+  // appointment card's own Cancel/Move buttons arm as 'you' and the dock says nothing about it.
   const prepareCancel = useCallback(
-    (slotId: string): boolean => {
+    (slotId: string, by: HoldOrigin = 'agent'): boolean => {
       const slot = driver.snapshot().slots.find((s) => s.id === slotId);
       if (!slot || slot.state !== 'booked_yours') return false;
       const current = pendingActRef.current;
       // Re-arming the same cancel keeps the original clock: an agent cannot keep a destructive
       // dock alive indefinitely by re-calling every forty seconds.
       if (current?.kind === 'cancel' && current.slotId === slotId) return true;
-      setPendingAct({ kind: 'cancel', slotId, timeLabel: noWrap(slot.timeLabel), detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now() });
+      setPendingAct({ kind: 'cancel', slotId, timeLabel: noWrap(slot.timeLabel), detail: `${slot.clinician} · ${slot.kind}`, armedAt: Date.now(), by });
       return true;
     },
     [driver, setPendingAct],
   );
 
   const prepareMove = useCallback(
-    (fromId: string, toId: string): boolean => {
+    (fromId: string, toId: string, by: HoldOrigin = 'agent'): boolean => {
       const slots = driver.snapshot().slots;
       const from = slots.find((s) => s.id === fromId);
       const to = slots.find((s) => s.id === toId);
@@ -336,6 +334,7 @@ export function ClinicBooking() {
         timeLabel: `${noWrap(from.timeLabel)} → ${noWrap(to.timeLabel)}`,
         detail: `${to.clinician} · ${to.kind}`,
         armedAt: Date.now(),
+        by,
       });
       return true;
     },
@@ -418,33 +417,24 @@ export function ClinicBooking() {
     setLastBookedAt(Date.now() - clockOrigin);
   }, [flow.selectedSlotId, manualDriver, session.now, live, clockOrigin]);
 
-  /** The press happened; the booking has not yet. The receipt waits for the `booked` event. */
-  const pendingAgentReceipt = useRef<{ slotId: string; receipt: LaneReceipt } | null>(null);
+  /** The press happened; the booking has not yet. The measurement waits for the `booked` event. */
+  const pendingAgentCount = useRef<{ slotId: string; count: number } | null>(null);
   const confirmHold = useCallback(() => {
     const slotId = session.held?.slotId;
     if (slotId === undefined) return;
-    // Frozen before the dock unmounts, so the number cannot drift while the receipt is on screen —
+    // Frozen before the dock unmounts, so the number cannot drift after the booking it belongs to —
     // but only WRITTEN when the driver confirms the booking, so a refused press (hold expired at
-    // the boundary, on the live board) never produces a receipt for an appointment nobody has.
-    const snapshot = dockCounter.current?.snapshot() ?? NO_COUNT;
-    pendingAgentReceipt.current = {
-      slotId,
-      receipt: {
-        slotLabel: findSlot(session.slots, slotId)?.timeLabel ?? slotId,
-        count: snapshot.total,
-        breakdown: snapshot.breakdown,
-        slotsLost: 0,
-      },
-    };
+    // the boundary, on the live board) never records a measurement for an appointment nobody has.
+    pendingAgentCount.current = { slotId, count: (dockCounter.current?.snapshot() ?? NO_COUNT).total };
     session.confirm(slotId);
   }, [session]);
   useEffect(
     () =>
       driver.subscribe((event) => {
-        const pending = pendingAgentReceipt.current;
+        const pending = pendingAgentCount.current;
         if (event.type === 'booked' && pending && event.slotId === pending.slotId) {
-          pendingAgentReceipt.current = null;
-          setAgentReceipt(pending.receipt);
+          pendingAgentCount.current = null;
+          setAgentCount(pending.count);
           setLastBookedAt(Date.now() - clockOrigin);
         }
       }),
@@ -452,7 +442,7 @@ export function ClinicBooking() {
   );
 
   // Booking another appointment starts a new measurement, but it does not erase the last one: the
-  // receipt is a record of something that happened, not a live readout.
+  // frozen total is a record of something that happened, not a live readout.
   const restart = useCallback(() => {
     pageCounter.current?.reset();
     setReviewAttempt(0);
@@ -491,68 +481,83 @@ export function ClinicBooking() {
     : busy
       ? null
       : msUntilNextWave(elapsed);
+  const via = assistantTag(origin);
   const arrival = (origin === 'agent' || origin === 'waitlist') && heldSlot ? agentArrivalAnnouncement(origin, heldSlot.timeLabel) : null;
+  const openCount = session.slots.filter((s) => s.state === 'open').length;
+
+  // The card's reference is seeded on the instant the booking landed, so that instant has to be
+  // wall-clock and has to stay put. `lastBookedAt` is elapsed since `clockOrigin` by the same wall
+  // clock, so this addition is exactly the `Date.now()` of the booking — and it does not drift per frame.
+  const bookedSlot = session.slots.find((s) => s.state === 'booked_yours');
+  const bookedAtWall = lastBookedAt === null ? null : clockOrigin + lastBookedAt;
 
   return (
-    <div className="clinic" data-clinic-route="book" data-clinic-wave={wave}>
-      <ClinicBanner />
+    <div className="clinic" data-clinic-route="book" data-clinic-wave={wave} data-clinic-board={live ? 'live' : liveFailed ? 'fallback' : 'seeded'}>
       <main className="cl-shell">
-        <h1 className="cl-sr">Book an appointment at {CLINIC_NAME}</h1>
         <Masthead
+          bar
           aside={
             <>
-              <p className="cl-counter" data-clinic-counter={tally.total}>
-                <b>{tally.total}</b>
-                <span>interactions on this page, counted</span>
-              </p>
-              <Link className="cl-quiet" href="/clinic" data-clinic-nav="landing">
-                How this works
+              <ClinicPhoneLink />
+              <Link className="cl-quiet cl-quiet--sm" href="/clinic" data-clinic-nav="landing">
+                Clinic home
               </Link>
             </>
           }
         />
 
-        {/* ══ The measured region. Everything a person does to book is inside it. ══ */}
-        <div ref={regionRef} data-clinic-measured="booking">
-          <Band label="This wave" open>
-            <p className="cl-lead" data-clinic-wave-age>
+        {/* ══ The measured region. Everything a person does to book is inside it — and the counts
+            leave the page only as attributes, never as pixels (SPEC-V3 §1). ══ */}
+        <div
+          ref={regionRef}
+          data-clinic-measured="booking"
+          data-clinic-counter={tally.total}
+          data-clinic-count-hand={handCount ?? ''}
+          data-clinic-count-agent={agentCount ?? ''}
+          data-clinic-receipt={`${handCount ?? '-'}:${agentCount ?? '-'}`}
+        >
+          <Band label="Availability" open>
+            <h1 className="cl-thesis cl-thesis--book">Book an appointment</h1>
+            <p className="cl-prose cl-prose--lead" data-clinic-wave-age>
               {live
                 ? liveMeta?.ready
-                  ? `${describeWaveAge(Math.max(0, Date.now() - (liveMeta.waveStartedAt ?? Date.now())))} · ${session.slots.filter((s) => s.state === 'open').length} open · live for every visitor`
-                  : 'Connecting to the live board…'
-                : `${describeWaveAge(msIntoWave(elapsed))} · ${session.slots.filter((s) => s.state === 'open').length} of ${session.slots.length} still open${liveFailed ? ' · live board unreachable, showing the seeded board' : ''}`}
+                  ? `${describeWaveAge(Math.max(0, Date.now() - (liveMeta.waveStartedAt ?? Date.now())))} · ${openCount} ${openCount === 1 ? 'appointment' : 'appointments'} still available`
+                  : 'Checking today’s availability…'
+                : `${describeWaveAge(msIntoWave(elapsed))} · ${openCount} of ${session.slots.length} appointments still available`}
             </p>
             <p className="cl-prose">
-              {live
-                ? nextRelease === null
-                  ? 'This board is shared by everyone here right now. Anything you book stays yours.'
-                  : `Next release in ${formatClock(nextRelease / 1000)} — for everyone at once. This board is shared: when another patient books a time, you watch it go. Anything you book stays yours.`
-                : nextRelease === null
-                  ? 'The next release is held back while this booking is in play — nothing on the board will be cleared out from under you.'
-                  : `Next release in ${formatClock(nextRelease / 1000)}. A release replaces the board; anything you have booked is already yours.`}
+              {nextRelease === null
+                ? live
+                  ? 'Availability here updates as cancellations come in. Anything you have already booked stays yours.'
+                  : 'The next release is held back until you have finished — nothing on this board will change while you are booking.'
+                : `Cancelled appointments are released to this page as they come in. Next release in ${formatClock(nextRelease / 1000)}; anything you have already booked stays yours.`}
             </p>
           </Band>
 
-          {liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError ? (
-            <p className="cl-lost" role="status" data-clinic-refusal={liveMeta.errorSeq} key={liveMeta.errorSeq}>
-              {refusalSentence(liveMeta.lastError)}
-            </p>
-          ) : null}
+          {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (
+            <Band flush wide>
+              {liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError ? (
+                <p className="cl-lost" role="status" data-clinic-refusal={liveMeta.errorSeq} key={liveMeta.errorSeq}>
+                  {refusalSentence(liveMeta.lastError)}
+                </p>
+              ) : null}
 
-          {arrival !== null && heldSlot ? (
-            <p className="cl-agent" data-clinic-agent-strip>
-              {/* The seconds tick every frame; a live region that re-reads them would speak forty-five
-                  times. Screen readers get the arrival sentence once, below; the dock's own regions
-                  carry the 30 s / 10 s marks. */}
-              <span aria-hidden="true">{holdHeadline(origin, session.secondsLeft)}</span>
-              <span aria-hidden="true">
-                {heldSlot.timeLabel} with {heldSlot.clinician}.{' '}
-                {origin === 'waitlist' ? 'It came back to you from the line — nobody raced you.' : 'Your agent cannot press the key.'}
-              </span>
-              <span className="cl-sr" role="status">
-                {arrival}
-              </span>
-            </p>
+              {arrival !== null && heldSlot ? (
+                <p className="cl-agent" data-clinic-agent-strip data-clinic-hold-origin={origin}>
+                  {/* The seconds tick every frame; a live region that re-reads them would speak forty-five
+                      times. Screen readers get the arrival sentence once, below; the confirm bar's own
+                      regions carry the 30 s / 10 s marks. */}
+                  <span aria-hidden="true">{holdHeadline(origin, session.secondsLeft)}</span>
+                  <span aria-hidden="true">
+                    {heldSlot.timeLabel} with {heldSlot.clinician}
+                    {via === null ? null : <span className="cl-agent__via"> · {via}</span>}
+                  </span>
+                  <span className="cl-sr" role="status">
+                    {arrival}
+                  </span>
+                </p>
+              ) : null}
+            </Band>
           ) : null}
 
           {/* On the board step the band carries no label of its own: each ROW's gutter is the
@@ -561,9 +566,9 @@ export function ClinicBooking() {
           <Band label={flow.step === 'board' ? undefined : 'Booking'} wide>
             {flow.lost !== null ? (
               <div className="cl-lost" role="alert" data-clinic-lost={flow.lost.slotId}>
-                <b>{flow.lost.timeLabel}</b> was taken by someone else while you were{' '}
+                <b>{flow.lost.timeLabel}</b> is no longer available — it was booked while you were{' '}
                 {flow.lost.atStep === 'booking' ? 'confirming' : 'filling this in'}. Everything you
-                typed is still here — choose another time.{' '}
+                entered is still here — choose another time.{' '}
                 <button
                   type="button"
                   className="cl-link"
@@ -577,7 +582,9 @@ export function ClinicBooking() {
 
             {flow.step === 'board' ? (
               <>
-                <h2 className="cl-sr">Appointments in this release</h2>
+                <h2 className="cl-lead">
+                  Available now<span className="cl-sr"> at {CLINIC_NAME}</span>
+                </h2>
                 <SlotSheet
                   slots={session.slots}
                   onOpen={(slotId) => dispatch({ type: 'open_slot', slotId })}
@@ -600,14 +607,29 @@ export function ClinicBooking() {
             )}
           </Band>
 
-          <Band label="What it cost" wide>
-            <ReceiptCompare hand={handReceipt} agent={agentReceipt} />
-            <p className="cl-note">
-              Both numbers were counted by this page while you used it, under the rules in
-              lib/drop/COUNTING.md. Synthetic events are excluded, held keys count once, and a flick
-              of the scroll wheel is one interaction rather than twelve.
-            </p>
-          </Band>
+          {/* Your appointment (SPEC-V3 §3). Rendered off the BOARD's state, not the manual flow's,
+              so a booking the assistant set up gets the same reference, the same calendar file and
+              the same cancel/move controls as one walked through by hand. The card arms; the dock
+              below is still the only thing that performs.
+              The gutter names the state and the card names the object: a band labelled "Your
+              appointment" above a card whose own eyebrow says the same is the page stuttering. */}
+          {bookedSlot !== undefined && bookedAtWall !== null ? (
+            <Band label="Booked" wide>
+              <AppointmentCard
+                slotId={bookedSlot.id}
+                bookedAt={bookedAtWall}
+                timeLabel={bookedSlot.timeLabel}
+                clinician={bookedSlot.clinician}
+                kind={bookedSlot.kind}
+                moveOptions={session.slots
+                  .filter((s) => s.state === 'open')
+                  .map((s) => ({ slotId: s.id, timeLabel: s.timeLabel, clinician: s.clinician }))}
+                onCancel={() => prepareCancel(bookedSlot.id, 'you')}
+                onMove={(toId) => prepareMove(bookedSlot.id, toId, 'you')}
+                armed={pendingAct !== null}
+              />
+            </Band>
+          ) : null}
 
           {/* The dock lives inside the measured region on purpose: pressing Enter to book is a real
               interaction in the booking area and belongs in the by-hand number too. */}
@@ -621,7 +643,7 @@ export function ClinicBooking() {
               ttlSeconds={pendingAct.kind === 'move' ? (session.held?.ttlSeconds ?? HOLD_TTL_SECONDS) : PENDING_ACT_TTL_SECONDS}
               slotLabel={pendingAct.timeLabel}
               slotDetail={pendingAct.detail}
-              origin="agent"
+              origin={pendingAct.by}
               onConfirm={confirmPendingAct}
               onRelease={dismissPendingAct}
               measuredRef={attachDock}
@@ -676,16 +698,6 @@ export function ClinicBooking() {
           // Two network round trips (RPC + re-read) on a judge's hotel wifi is not 1.2 s.
           settleTimeoutMs={live ? 8000 : undefined}
         />
-
-        <Band label="Honestly">
-          <p className="cl-prose">
-            {live
-              ? 'Cedarfield is a fictional clinic. This board is shared and live: every visitor sees the same slots, your holds and bookings go to a database as slot ids only, and your name, date of birth and phone never leave this page. The rival is a labelled simulation; "Another patient" is a real visitor. Nothing here books a real appointment or takes a payment. There is no tool on this page that books — the verb was never registered.'
-              : liveFailed
-                ? 'The live board could not be reached, so this is the seeded board: generated on your machine, the same product minus other people. The rival is a seeded simulation, labelled as one everywhere it appears. Nothing here books a real appointment, takes a payment, or leaves this browser. There is no tool on this page that books — the verb was never registered.'
-                : 'Cedarfield is a fictional clinic and this inventory is generated on your machine. The rival is a seeded simulation and is labelled as one everywhere it appears. Nothing here books a real appointment, takes a payment, or leaves this browser. There is no tool on this page that books — the verb was never registered.'}
-          </p>
-        </Band>
       </main>
 
       {session.held !== null || pendingAct !== null ? <div className="cl-dock-spacer" aria-hidden="true" /> : null}

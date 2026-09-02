@@ -78,10 +78,8 @@ export function BoardPreview() {
   const ready = showLive ? (liveDriver?.meta().ready ?? false) : session.slots.length > 0;
 
   return (
-    <section className="cl-preview" aria-label="The board right now" data-clinic-preview={showLive ? 'live' : 'seeded'} data-clinic-preview-ready={ready ? 'true' : 'false'}>
-      <p className="cl-preview__eyebrow">
-        {showLive ? (ready ? 'Right now · live for every visitor' : 'Connecting to the live board…') : 'Right now'}
-      </p>
+    <section className="cl-preview" aria-label="Appointments available now" data-clinic-preview={showLive ? 'live' : 'seeded'} data-clinic-preview-ready={ready ? 'true' : 'false'}>
+      {showLive && !ready ? <p className="cl-preview__eyebrow">Checking today’s availability…</p> : null}
       {ready ? (
         <SlotSheet
           slots={session.slots}
@@ -99,7 +97,7 @@ export function BoardPreview() {
           ))}
         </ul>
       )}
-      <p className="cl-preview__note">Tap a time to open the booking page. Nothing here books.</p>
+      <p className="cl-preview__note">Choose a time to book it. Cancelled appointments are added as they come in.</p>
     </section>
   );
 }

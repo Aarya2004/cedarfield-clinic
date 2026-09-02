@@ -1,28 +1,27 @@
 'use client';
 
 /**
- * The confirm dock — the one human act, redesigned for paper (SPEC-V1 §2, §5).
+ * The confirm step — the last thing between a held time and a booking.
  *
- * WHY IT IS A DOCK. The bench drew this as an oversized mechanical keycap on its own dark stage,
- * always present, saying "nothing held" for most of the demo. Two problems, both fatal to a product
- * surface: a control that is disabled 90% of the time trains you to ignore it, and a dark panel
- * dropped into a paper page collided with the app's `--ink` (bench findings #2 / #3, 1.2:1). So:
- * the dock does not exist until a slot is held for you. It arrives from the bottom of the viewport
- * the moment the hold lands, it is the only dark object on the page, and it carries its own
- * complete `--clinic-dock-*` ink family so it can never read a token meant for paper.
+ * WHY IT IS A BAR AT THE BOTTOM. A confirm control that is disabled most of the session trains
+ * people to ignore it, so this one does not exist until there is something to confirm. It is a
+ * light raised panel — white, a hairline along its top edge, a soft shadow — pinned to the bottom
+ * of the viewport for as long as a hold or a prepared change is live. It carries its own complete
+ * `--clinic-dock-*` ink family because reused modules mounted into it (the gesture control) paint
+ * from those names, and a panel whose ink came from the app shell's dark theme would be 1.2:1.
  *
- * The keycap survives, shrunk. The physical argument — booking is an act a body performs — is worth
- * one object, but on the bench the cap WAS the design and the page read as a rig. Here the sentence
- * is the hero, the seconds are the counterweight, and the cap is the evidence.
+ * What it shows, in the order a person needs it: what is held, for what, how long is left as plain
+ * words over a thin progress bar, then a primary button that does the thing and a secondary that
+ * gives the time back. `or press Enter` is a hint under the button, not a picture of a key.
  *
  * The gate is `lib/drop/confirm-logic.ts`, unchanged: `onConfirm` fires only for a native event the
- * browser marked `isTrusted`. A press dispatched by a tool, an extension or the console is counted
- * into `data-untrusted-attempts` and printed on screen. That number is measured, never scripted.
+ * browser marked `isTrusted`, so nothing books an appointment on the visitor's behalf. Presses that
+ * fail the gate are counted into `data-untrusted-attempts` / `data-clinic-blocked` for the harness
+ * and are silent on screen.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   announcementFor,
-  blockedAnnouncement,
   decideConfirm,
   isConfirmKey,
   surfaceUrgency,
@@ -37,7 +36,8 @@ import {
   type CuePlayer,
 } from '../../lib/drop/audio-cues.ts';
 import { displaySeconds, fractionLeft } from '../../lib/drop/time.ts';
-import type { HoldOrigin } from './hold-origin.ts';
+import { formatClock } from '../../lib/drop/time.ts';
+import { assistantTag, type HoldOrigin } from './hold-origin.ts';
 
 /** SPEC-V2: which consequential act one trusted press performs. The dock never performs two. */
 export type DockAct = 'book' | 'cancel' | 'move';
@@ -57,7 +57,7 @@ export interface ConfirmDockProps {
   slotLabel: string;
   /** "Dr. Alvarez · New patient". */
   slotDetail: string;
-  /** Who took the hold. Changes one sentence and nothing else — see `hold-origin.ts`. */
+  /** Who asked for the hold. Adds the "via your assistant" tag and nothing else — `hold-origin.ts`. */
   origin: HoldOrigin;
   onConfirm: () => void;
   onRelease?: () => void;
@@ -67,28 +67,42 @@ export interface ConfirmDockProps {
   gestureSlot?: React.ReactNode;
 }
 
-const ACT_COPY: Record<DockAct, { eyebrowAgent: string; eyebrowYou: string; line: string; key: string; region: string }> = {
+/**
+ * The clinic's words for the one act, in the order a person meets them: what state this is in, what
+ * will happen, what to press, and what it costs to walk away. An action keeps its name all the way
+ * through — the dock says `Confirm this booking`, the line says `Book 8:40 AM`.
+ */
+const ACT_COPY: Record<DockAct, { eyebrow: string; line: string; key: string; note: string; region: string }> = {
   book: {
-    eyebrowAgent: 'Held by your agent · you book it',
-    eyebrowYou: 'Held for you · you book it',
+    // Short on purpose: the line under it carries the time and the clinician, and the list above
+    // already says what is held.
+    eyebrow: 'Held for you',
     line: 'Book',
-    key: 'Press Enter to book',
+    key: 'Confirm booking',
+    note: 'Confirm and this appointment goes in the book. Let the hold run out and the time goes back on the list.',
     region: 'Confirm your appointment',
   },
   cancel: {
-    eyebrowAgent: 'Your agent prepared this cancel · you decide',
-    eyebrowYou: 'Ready to cancel · you decide',
+    eyebrow: 'Cancelling this appointment',
     line: 'Cancel',
-    key: 'Press Enter to cancel',
+    key: 'Confirm cancellation',
+    note: 'Confirm and this time is released for someone else. Do nothing and the appointment stands.',
     region: 'Confirm the cancellation',
   },
   move: {
-    eyebrowAgent: 'Your agent prepared this move · you decide',
-    eyebrowYou: 'Ready to move · you decide',
+    eyebrow: 'Moving this appointment',
     line: 'Move',
-    key: 'Press Enter to move',
+    key: 'Confirm move',
+    note: 'Confirm and both times change in one step — the new one is held until you do. Do nothing and the appointment stands.',
     region: 'Confirm the move',
   },
+};
+
+/** What the secondary button gives back, per act. */
+const RELEASE_COPY: Record<DockAct, string> = {
+  book: 'Release this time',
+  cancel: 'Keep the appointment',
+  move: 'Keep the original time',
 };
 
 export function ConfirmDock({
@@ -179,9 +193,13 @@ export function ConfirmDock({
     [armed, confirmed, onConfirm, secondsLeft, act, origin],
   );
 
-  const blocked = blockedAnnouncement(untrusted, act);
   const copy = ACT_COPY[act];
+  const via = assistantTag(origin);
   const fraction = fractionLeft(ttlSeconds, secondsLeft);
+  // A press the browser did not mark as trusted books nothing. Saying so on screen would be noise
+  // for a visitor who never made one, so the count lives in `data-clinic-blocked` and the only human
+  // feedback is this polite line — and only once it has actually happened.
+  const blocked = untrusted > 0 ? 'That did not confirm. Press Enter, or select the confirm button.' : '';
 
   return (
     <div
@@ -195,11 +213,12 @@ export function ConfirmDock({
       data-urgency={urgency}
       data-confirmed={confirmed ? 'true' : 'false'}
       data-untrusted-attempts={untrusted}
+      data-clinic-blocked={untrusted}
       data-audio-cues={audioOn ? 'on' : 'off'}
       ref={measuredRef}
     >
-      {/* The hold's clock, run edge to edge. Written per frame, never transitioned — a CSS
-          transition here would make the rule lag the number it belongs to. */}
+      {/* The hold's clock, run edge to edge along the top of the panel. Written per frame, never
+          transitioned — a CSS transition here would make the bar lag the number it belongs to. */}
       <span
         className="cl-dock__ttl"
         aria-hidden="true"
@@ -209,96 +228,93 @@ export function ConfirmDock({
 
       <div className="cl-dock__inner">
         <div className="cl-dock__main">
-          {/* Deliberately not the board's sentence. The strip above the sheet carries the full
-              line with the seconds in it; repeating that here, six inches from a numeral the size
-              of a fist, would be the page saying the same thing twice. */}
           <p className="cl-dock__eyebrow" data-clinic-dock-eyebrow>
-            {origin === 'waitlist' && act === 'book' ? 'It came back to you · you book it' : origin === 'agent' ? copy.eyebrowAgent : copy.eyebrowYou}
+            {origin === 'waitlist' && act === 'book' ? 'This time came back to you' : copy.eyebrow}
+            {via === null ? null : <span className="cl-dock__via"> · {via}</span>}
           </p>
           <p className="cl-dock__line">
             {copy.line} {slotLabel} <span className="cl-dock__detail">· {slotDetail}</span>
           </p>
+          <p className="cl-dock__clock">
+            <span className="cl-dock__seconds" data-clinic-dock-seconds={displaySeconds(secondsLeft)}>
+              {displaySeconds(secondsLeft) >= 60 ? formatClock(displaySeconds(secondsLeft)) : displaySeconds(secondsLeft)}
+            </span>{' '}
+            <span className="cl-dock__unit">{displaySeconds(secondsLeft) >= 60 ? 'left to confirm' : 'seconds left to confirm'}</span>
+          </p>
           <p className="cl-dock__note">
-            {act === 'book'
-              ? origin === 'waitlist'
-                ? 'This time was taken; you were next in line, and it came back to you — nobody raced you for it. Only a keypress the browser marks as trusted books it.'
-                : origin === 'agent'
-                  ? 'Your agent took this hold and cannot take the next step. Only a keypress the browser marks as trusted books it.'
-                  : 'The hold is yours for now. Only a keypress the browser marks as trusted books it.'
-              : act === 'cancel'
-                ? 'Your agent armed this and cannot press the key. Only a keypress the browser marks as trusted cancels it — or ignore it and nothing changes.'
-                : 'Your agent armed this and cannot press the key. One trusted keypress swaps the appointments atomically — or ignore it and nothing changes.'}
+            {origin === 'waitlist' && act === 'book'
+              ? 'You were next on the waiting list for this time, so it is yours to confirm. Let the hold run out and it passes to the next person in line.'
+              : copy.note}
           </p>
         </div>
 
-        <p className="cl-dock__clock">
-          <span className="cl-dock__seconds" data-clinic-dock-seconds={displaySeconds(secondsLeft)}>
-            {displaySeconds(secondsLeft)}
-          </span>
-          <span className="cl-dock__unit">seconds left</span>
-        </p>
-
         <div className="cl-dock__aside">
-          <button
-            type="button"
-            ref={capRef}
-            className="cl-key"
-            data-clinic-confirm
-            data-pressed={pressed ? 'true' : 'false'}
-            data-untrusted-attempts={untrusted}
-            aria-disabled={!armed}
-            onKeyDown={(e) => {
-              if (!isConfirmKey(e.key)) return;
-              // Cancels the page scroll on Space and the UA's synthetic activation click, so one
-              // press is one attempt rather than two.
-              e.preventDefault();
-              if (armed && !e.repeat) setPressed(true);
-              attempt({ isTrusted: e.nativeEvent.isTrusted, source: 'key', key: e.key, repeat: e.repeat });
-            }}
-            onKeyUp={() => setPressed(false)}
-            onBlur={() => setPressed(false)}
-            onPointerDown={() => armed && setPressed(true)}
-            onPointerUp={() => setPressed(false)}
-            onPointerLeave={() => setPressed(false)}
-            onClick={(e) => attempt({ isTrusted: e.nativeEvent.isTrusted, source: 'pointer' })}
-          >
-            <span className="cl-key__glyph" aria-hidden="true">
-              ⏎
-            </span>
-            {copy.key}
-          </button>
+          <div className="cl-dock__buttons">
+            <button
+              type="button"
+              ref={capRef}
+              className="cl-key"
+              data-clinic-confirm
+              data-pressed={pressed ? 'true' : 'false'}
+              data-untrusted-attempts={untrusted}
+              aria-disabled={!armed}
+              aria-describedby="cl-dock-hint"
+              onKeyDown={(e) => {
+                if (!isConfirmKey(e.key)) return;
+                // Cancels the page scroll on Space and the UA's synthetic activation click, so one
+                // press is one attempt rather than two.
+                e.preventDefault();
+                if (armed && !e.repeat) setPressed(true);
+                attempt({ isTrusted: e.nativeEvent.isTrusted, source: 'key', key: e.key, repeat: e.repeat });
+              }}
+              onKeyUp={() => setPressed(false)}
+              onBlur={() => setPressed(false)}
+              onPointerDown={() => armed && setPressed(true)}
+              onPointerUp={() => setPressed(false)}
+              onPointerLeave={() => setPressed(false)}
+              onClick={(e) => attempt({ isTrusted: e.nativeEvent.isTrusted, source: 'pointer' })}
+            >
+              {copy.key}
+            </button>
+
+            {onRelease ? (
+              <button type="button" className="cl-quiet" data-clinic-release onClick={onRelease}>
+                {RELEASE_COPY[act]}
+              </button>
+            ) : null}
+          </div>
 
           <div className="cl-dock__minor">
-          <button
-            type="button"
-            className="cl-dock__toggle"
-            data-clinic-audio
-            aria-pressed={audioOn}
-            title="Two short tones: one when a hold arrives, one at ten seconds left. Off until you turn it on."
-            onClick={() => {
-              const next = !audioOn;
-              setAudioOn(next);
-              saveAudioPref(typeof window === 'undefined' ? null : window.localStorage, next);
-              if (next) {
-                // This click is the gesture the browser requires before a context may start.
-                player().unlock();
-                player().play('armed');
-              }
-            }}
-          >
-            Sound {audioOn ? 'on' : 'off'}
-          </button>
+            <p className="cl-dock__hint" id="cl-dock-hint">
+              or press Enter
+            </p>
 
-          {onRelease ? (
-            <button type="button" className="cl-dock__toggle" data-clinic-release onClick={onRelease}>
-              {act === 'book' ? 'Give it back' : 'Never mind'}
+            <button
+              type="button"
+              className="cl-dock__toggle"
+              data-clinic-audio
+              aria-pressed={audioOn}
+              title="Two short tones: one when a hold arrives, one at ten seconds left. Off until you turn it on."
+              onClick={() => {
+                const next = !audioOn;
+                setAudioOn(next);
+                saveAudioPref(typeof window === 'undefined' ? null : window.localStorage, next);
+                if (next) {
+                  // This click is the gesture the browser requires before a context may start.
+                  player().unlock();
+                  player().play('armed');
+                }
+              }}
+            >
+              Sound {audioOn ? 'on' : 'off'}
             </button>
-          ) : null}
-
-          <p className="cl-dock__blocked" data-hot={untrusted > 0 ? 'true' : 'false'} data-clinic-blocked={untrusted}>
-            {untrusted} synthetic {untrusted === 1 ? 'press' : 'presses'} blocked
-          </p>
           </div>
+
+          {/* One act, several ways in. Named on screen rather than left for someone to discover:
+              a person who cannot use a keyboard should not have to guess that the button is one. */}
+          <p className="cl-dock__ways" data-clinic-dock-ways>
+            You can also select the button, use a switch{gestureSlot ? ', or hold the gesture below' : ''}.
+          </p>
         </div>
 
         {gestureSlot ? <div className="cl-dock__gesture">{gestureSlot}</div> : null}
@@ -308,9 +324,9 @@ export function ConfirmDock({
       <div className="cl-sr" role="status" aria-live="assertive" data-clinic-dock-live>
         {live}
       </div>
-      {/* Polite: a blocked press is proof, not an emergency. */}
+      {/* Polite: a press that did not land is worth saying once, not worth interrupting for. */}
       <div className="cl-sr" aria-live="polite">
-        {blocked ?? ''}
+        {blocked}
       </div>
     </div>
   );

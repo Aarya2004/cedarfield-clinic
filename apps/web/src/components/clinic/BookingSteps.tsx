@@ -5,10 +5,8 @@
  *
  * The reducer, the validation and the slot-loss rules are `lib/drop/manual-flow.ts` verbatim: real
  * fields and not one more, validation only when you ask to move on, Back that never discards what
- * you typed, and — the rule with teeth — a slot taken out from under you returns you to the board
- * with every character still in the form. The honesty of the comparison depends on this being a
- * GOOD booking flow rather than a strawman built to lose, so nothing here was padded to inflate the
- * count. It still costs dozens of interactions. That is the finding, not the trick.
+ * you typed, and — the rule with teeth — a time booked out from under you returns you to the board
+ * with every character still in the form.
  *
  * Presentation only below: the bench's `ManualBookingFlow` and its module CSS are not referenced.
  * One correction carried over from it, because it was found by driving a browser and not by any
@@ -141,15 +139,20 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
 
   return (
     <div className="cl-panel" data-clinic-flow={state.step} data-clinic-slots-lost={state.slotsLost}>
-      <p className="cl-band__label cl-band__label--flush">
-        {position === null ? STEP_TITLE[state.step] : `Step ${position} of ${STEP_ORDER.length}`}
-      </p>
+      {/* Only while the walk has numbered steps. On the terminal steps the heading already says
+          where you are, and printing it twice is the page stuttering. */}
+      {position === null ? null : (
+        <p className="cl-step" data-clinic-step-position={position}>
+          Step {position} of {STEP_ORDER.length}
+        </p>
+      )}
       <h2 className="cl-lead cl-panel__lead" ref={headingRef} tabIndex={-1}>
         {STEP_TITLE[state.step]}
       </h2>
 
       {selected !== undefined && state.step !== 'booked' ? (
         <div className="cl-chosen cl-panel__block">
+          <span className="cl-chosen__label">Appointment</span>
           <span className="cl-chosen__time">{selected.timeLabel}</span>
           <span className="cl-chosen__who">
             {selected.clinician} · {selected.kind}
@@ -209,12 +212,12 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
         >
           {agentFilled ? (
             <p className="cl-agent" role="status" data-clinic-agent-filled-banner>
-              Filled in by your agent. Read it over — nothing is sent until you press Review, then Book.
+              Filled in by your assistant. Check it over — nothing is sent until you press Review, then Book.
             </p>
           ) : null}
           {agentSubmitBlocked > 0 ? (
             <p className="cl-lost" role="status" data-clinic-agent-submit-blocked={agentSubmitBlocked}>
-              {agentSubmitBlocked === 1 ? 'One' : agentSubmitBlocked} agent submit{agentSubmitBlocked === 1 ? '' : 's'} blocked — the form only moves when you press.
+              This form is only sent when you press Review yourself.
             </p>
           ) : null}
           {errorFields.length > 0 ? (
@@ -267,12 +270,6 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
                       {meta.hint}
                     </p>
                   ) : null}
-                  {error ? (
-                    <p className="cl-field__error" id={`${id}-error`}>
-                      {error}
-                    </p>
-                  ) : null}
-
                   {meta.control === 'select' ? (
                     <select {...shared}>
                       <option value="">Choose one</option>
@@ -294,6 +291,13 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
                       inputMode={meta.control === 'tel' ? 'tel' : undefined}
                     />
                   )}
+
+                  {/* Under the control, where the eye lands after trying to fill it in. */}
+                  {error ? (
+                    <p className="cl-field__error" id={`${id}-error`}>
+                      {error}
+                    </p>
+                  ) : null}
                 </div>
               );
             })}
@@ -361,6 +365,9 @@ export function BookingSteps({ state, dispatch, reviewAttempt, onAttemptReview, 
 
       {state.step === 'booked' ? (
         <div data-clinic-step="booked">
+          {/* The reference, the date, add-to-calendar and the cancel/move controls are the
+              `AppointmentCard` band `ClinicBooking` renders under this panel — a booking made by
+              the assistant never walks through these steps and must get the same card. */}
           <p className="cl-prose cl-panel__block">
             {state.details.fullName.trim() === '' ? 'The patient' : state.details.fullName} is booked
             in. Cedarfield asks that you arrive ten minutes early, and calls the number you gave if

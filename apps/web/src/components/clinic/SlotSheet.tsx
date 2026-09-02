@@ -1,44 +1,44 @@
 'use client';
 
 /**
- * The appointment sheet — the board, rebuilt as a schedule rather than a grid of cards.
+ * The appointment list — one white card per released time, in time order.
  *
- * Appointments are ordered in time, so the sheet is a column and time is the axis. Each row keeps
- * the site's one grid: a gutter that says WHOSE this is, the appointment time set at display size
- * with tabular figures, the clinician, and the act available to you. A row you can book is a
- * button; a row that is gone is the same box with the button taken away, so nothing reflows when
- * the rival takes one out from under you.
+ * Each card is a row: the time, the clinician and the kind of appointment under it, and the act
+ * available to you on the right. A row you can book is a card with a Book button; a row that has
+ * gone is the same card with the button replaced by a line of text, so nothing on the page reflows
+ * when a time is taken while you are reading.
  *
- * Colour carries exactly one meaning: cedar is yours. A slot the rival took is not red — it is
- * grey and struck through and labelled `Simulated rival`, because a loss is an absence. That leaves
- * your held row as the only coloured object on the page, and it is the row that swells: its time
- * doubles in size and the hairline beneath the numeral retracts as the hold burns. That rule IS the
- * TTL bar (see clinic.css) — the countdown is set in type, not drawn beside it.
+ * Colour carries one meaning: the practice blue is an action, or the appointment that is yours. A
+ * time somebody else booked is grey and says `No longer available` — a loss is an absence, not a
+ * warning. The one card that is yours takes a 2px blue border, a pale blue fill, the words
+ * `Held for you · 0:41`, and a progress bar that drains as the hold burns. `--cl-fraction` is
+ * written per frame from `fractionLeft()`; never put a CSS transition on it or the bar lags the
+ * number beside it.
  *
  * Announcements come from `lib/drop/board-announce.ts` unchanged: one polite live region, throttled
- * to a line every ~900 ms, newest lines kept when a wave outruns it.
+ * to a line every ~900 ms, newest lines kept when a release outruns it.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BoardAnnouncer, diffAnnouncements, waveAnnouncement } from '../../lib/drop/board-announce.ts';
 import { isBookable } from '../../lib/drop/manual-flow.ts';
-import { RIVAL_LABEL } from '../../lib/drop/mock-driver.ts';
-import { fractionLeft } from '../../lib/drop/time.ts';
+import { formatClock, fractionLeft } from '../../lib/drop/time.ts';
 import type { Slot, SlotState } from '../../lib/drop/types.ts';
-import { holdGutterLabel, type HoldOrigin } from './hold-origin.ts';
+import { assistantTag, type HoldOrigin } from './hold-origin.ts';
 
+/** How the practice names the state of a time on its own list, for the states that need saying. */
 const STATE_WORD: Record<SlotState, string> = {
-  open: 'Open',
-  held_by_you: 'Held — yours',
-  held_by_other: 'Held by someone else',
-  taken_by_rival: 'Taken',
-  taken_by_other: 'Taken',
+  open: 'Available',
+  held_by_you: 'Held for you',
+  held_by_other: 'Being booked by someone else',
+  taken_by_rival: 'No longer available',
+  taken_by_other: 'Booked by another patient',
   booked_yours: 'Booked — yours',
-  expired_hold: 'Lapsed',
+  expired_hold: 'Hold expired',
 };
 
 export interface SlotSheetProps {
   slots: readonly Slot[];
-  /** Clicking a row opens the booking flow for it — the page is simply a bookable clinic. */
+  /** Choosing a row opens the booking flow for it — the page is simply a bookable clinic. */
   onOpen: (slotId: string) => void;
   heldSlotId: string | null;
   holdOrigin: HoldOrigin;
@@ -72,8 +72,8 @@ export function SlotSheet({
   if (slots.length === 0) {
     return (
       <p className="cl-note" data-clinic-sheet="empty">
-        No appointments on the board yet. The next release lands on the clock above — nothing here is
-        held back for you, and nothing is reserved before it is shown.
+        No appointments available right now. Cancellations are released to this page as they come
+        in — the next release is on the clock above.
       </p>
     );
   }
@@ -83,44 +83,54 @@ export function SlotSheet({
       <ul className="cl-sheet" data-clinic-sheet={slots.length}>
         {slots.map((slot) => {
           const held = slot.id === heldSlotId && slot.state === 'held_by_you';
-          const stateWord = held ? holdGutterLabel(holdOrigin) : STATE_WORD[slot.state];
+          const via = held ? assistantTag(holdOrigin) : null;
+          const gone = slot.state === 'taken_by_rival' || slot.state === 'taken_by_other' || slot.state === 'expired_hold';
           const body = (
             <>
-              <span className="cl-row__state">{stateWord}</span>
               <span className="cl-row__main">
-                <span className="cl-row__time">
-                  {slot.timeLabel}
-                  <span className="cl-row__strike" aria-hidden="true" />
-                </span>
+                <span className="cl-row__time">{slot.timeLabel}</span>
                 <span className="cl-row__who">
                   {slot.clinician} · {slot.kind}
                 </span>
                 {held ? (
-                  <span
-                    className="cl-ttl__track"
-                    aria-hidden="true"
-                    data-clinic-row-ttl={fractionLeft(holdTtlSeconds, holdSecondsLeft).toFixed(3)}
-                  >
+                  <>
+                    <span className="cl-row__hold">
+                      Held for you · {formatClock(holdSecondsLeft)}
+                      {via === null ? null : (
+                        <span className="cl-row__via" data-clinic-hold-origin="agent">
+                          {' '}· {via}
+                        </span>
+                      )}
+                    </span>
                     <span
-                      className="cl-ttl"
-                      style={{ ['--cl-fraction' as string]: fractionLeft(holdTtlSeconds, holdSecondsLeft) }}
-                    />
-                  </span>
+                      className="cl-ttl__track"
+                      aria-hidden="true"
+                      data-clinic-row-ttl={fractionLeft(holdTtlSeconds, holdSecondsLeft).toFixed(3)}
+                    >
+                      <span
+                        className="cl-ttl"
+                        style={{ ['--cl-fraction' as string]: fractionLeft(holdTtlSeconds, holdSecondsLeft) }}
+                      />
+                    </span>
+                  </>
                 ) : null}
               </span>
+
               {slot.state === 'open' ? (
                 <span className="cl-row__action" aria-hidden="true">
-                  Book →
+                  Book
                 </span>
-              ) : slot.state === 'taken_by_rival' ? (
-                <span className="cl-row__tag">{RIVAL_LABEL}</span>
-              ) : slot.state === 'taken_by_other' ? (
-                <span className="cl-row__tag">Another patient</span>
-              ) : slot.state === 'expired_hold' ? (
-                <span className="cl-row__tag">Hold ran out</span>
-              ) : null}
+              ) : held ? null : (
+                <span className="cl-row__tag" data-slot-word={slot.state}>
+                  {STATE_WORD[slot.state]}
+                </span>
+              )}
               {slot.state !== 'open' && ((slot.waiting ?? 0) > 0 || slot.yourPosition) ? (
-                <span className="cl-row__tag" data-clinic-waiting={slot.waiting ?? 0} data-clinic-position={slot.yourPosition ?? undefined}>
+                <span
+                  className="cl-row__tag cl-row__tag--queue"
+                  data-clinic-waiting={slot.waiting ?? 0}
+                  data-clinic-position={slot.yourPosition ?? undefined}
+                >
                   {slot.yourPosition ? `You're #${slot.yourPosition} in line` : `${slot.waiting} waiting`}
                 </span>
               ) : null}
@@ -128,7 +138,7 @@ export function SlotSheet({
           );
 
           return (
-            <li key={slot.id} className="cl-row" data-slot-state={slot.state} data-clinic-slot={slot.id}>
+            <li key={slot.id} className={`cl-row${gone ? ' cl-row--gone' : ''}`} data-slot-state={slot.state} data-clinic-slot={slot.id}>
               {isBookable(slot) ? (
                 <button
                   type="button"

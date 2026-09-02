@@ -1,128 +1,156 @@
 /**
- * `/clinic` — the landing (SPEC-V1 §2).
+ * `/` and `/clinic` — the practice's home page.
  *
- * A server component with one client island (the countdown), because the only thing on this page
- * that moves is the clock. The argument is carried by type: one sentence at display size, then a
- * three-band ladder whose gutter names WHO ACTS at each step — your agent, the clock, you. The
- * third label is the only cedar word above the fold, which is the whole thesis in one word in the
- * margin. There are no illustrations (§6) and no numbered markers: the steps are a cast, not a
- * checklist, and the actor changing is the information.
+ * A server component with two client islands, because the only things here that move are the two
+ * things that are actually true right now: the countdown to the next release, and the times the
+ * roster reads out of it. Everything else is set once.
+ *
+ * The page is one column of stacked sections — hero, what you can book, the doctors, how released
+ * appointments work, getting here — with every other section on a light grey field. Nothing on it
+ * is decorative: if a line of type is on this page, a patient needs it to book or to get here.
  */
 import Link from 'next/link';
-import { Band, ClinicBanner, Masthead, ToolManifest } from './ClinicFrame.tsx';
-import { NextWaveClock } from './NextWaveClock.tsx';
+import { Band, ClinicFooter, ClinicNav, ClinicPhoneLink, Masthead, PracticeCard, CLINIC_PHONE } from './ClinicFrame.tsx';
 import { BoardPreview } from './BoardPreview.tsx';
-import { HOLD_TTL_SECONDS, WAVE_PERIOD_MS } from './wave-clock.ts';
+import { ClinicianRoster } from './ClinicianRoster.tsx';
+import { NextWaveClock } from './NextWaveClock.tsx';
+import { HOLD_TTL_SECONDS } from './wave-clock.ts';
 import './clinic-tokens.css';
-import './clinic.css';
 
-const WAVE_SECONDS = WAVE_PERIOD_MS / 1000;
+/** "3 minutes" rather than "180 seconds": the hold is read by a patient, not a stopwatch. */
+function holdLength(): string {
+  if (HOLD_TTL_SECONDS % 60 === 0) {
+    const m = HOLD_TTL_SECONDS / 60;
+    return m === 1 ? 'a minute' : `${m} minutes`;
+  }
+  return `${HOLD_TTL_SECONDS} seconds`;
+}
+import './clinic.css';
 
 export function ClinicLanding() {
   return (
     <div className="clinic" data-clinic-route="landing">
-      <ClinicBanner />
-      <main className="cl-shell">
-        <Masthead
-          aside={
-            <Link className="cl-quiet" href="/clinic/book" data-clinic-nav="book">
+      {/* Outside <main>, so this <header> is the page's banner landmark. */}
+      <Masthead
+        bar
+        nav={<ClinicNav />}
+        aside={
+          <>
+            <ClinicPhoneLink />
+            <Link className="cl-cta cl-cta--sm" href="/clinic/book" data-clinic-cta="header">
               Book an appointment
             </Link>
-          }
-        />
+          </>
+        }
+      />
 
-        <Band open>
-          <h1 className="cl-thesis cl-rise" data-step="1">
-            Every task on the web is a number of interactions.
-          </h1>
-          <p className="cl-thesis__tail cl-rise" data-step="2">
-            For millions of people, each one is expensive. This page hands the structure to your
-            agent — and leaves you <em>the one act that must stay yours</em>.
+      <main className="cl-shell">
+        <Band open aside={<PracticeCard />}>
+          <h1 className="cl-thesis">Book a cancelled appointment today</h1>
+          <p className="cl-thesis__tail">
+            When a patient cancels, their appointment goes back on our list at the next release.
+            Choose a time and we hold it for you for {holdLength()} while you check the
+            date.
           </p>
-          <p className="cl-rise cl-hero-cta" data-step="3">
+          <p className="cl-hero-cta">
             <Link className="cl-cta" href="/clinic/book" data-clinic-cta="hero">
-              Open the booking page
-              <span aria-hidden="true">→</span>
+              Book an appointment
             </Link>
+          </p>
+          <p className="cl-prose cl-prose--sm">
+            Or call reception on{' '}
+            <a className="cl-link" href={`tel:+44${CLINIC_PHONE.replace(/\D/g, '').slice(1)}`}>
+              {CLINIC_PHONE}
+            </a>
+            , Monday to Friday from 8:00.
           </p>
         </Band>
 
-        {/* The board itself, before the scroll: the same sheet the booking page shows, read-only. */}
-        <Band wide>
+        <Band label="Available now" id="available" wide>
+          <h2 className="cl-lead">Available now</h2>
           <BoardPreview />
         </Band>
 
-        <Band label="Next release">
-          <NextWaveClock />
-          <p className="cl-prose">
-            Cedarfield releases its cancellations in waves. Six appointments land every{' '}
-            {WAVE_SECONDS} seconds and the fastest bookers clear the good ones first — which is why
-            a page like this one is worth handing to an agent at all.
-          </p>
-        </Band>
-
-        <Band label="Your agent" aside={<ToolManifest />}>
-          <p className="cl-lead">It finds the slot and holds it.</p>
-          <p className="cl-prose">
-            The booking page publishes its appointments as tools your agent can call — list what is
-            open, search by clinician or time, hold one, check the hold, give it back, arm a cancel
-            or a move for you to confirm. Your agent takes a{' '}
-            <strong>{HOLD_TTL_SECONDS}-second hold</strong> on the time you asked for. No sign-up,
-            no scraping, no form.
-          </p>
-        </Band>
-
-        <Band label="The clock">
-          <p className="cl-lead">The hold burns in the open.</p>
-          <p className="cl-prose">
-            The seconds run under the appointment time on the page and along the top of the dock —
-            one rule, retreating. Let it lapse and the hold is gone; the appointment is anyone&rsquo;s
-            again at the next release. Nothing is reserved quietly and nothing is held on your behalf
-            without the page saying so.
-          </p>
-        </Band>
-
-        <Band label="You" actor="you" aside={<ToolManifest absent />}>
-          <p className="cl-lead">One keypress books it.</p>
-          <p className="cl-prose">
-            There is <strong>no booking tool on this site</strong> — there is nothing for an agent to
-            call. An appointment is made only by a keypress the browser marks as trusted, which no
-            script, extension or tool can forge. The page counts every synthetic press that tries and
-            shows you the number.
-          </p>
-          <ul className="cl-trust" data-clinic-trust>
-            <li>Your own agent</li>
-            <li>Your own booking</li>
-            <li>No resale</li>
-            <li>Only a human books</li>
+        <Band label="Appointments" id="appointments" tone="grey" wide>
+          <h2 className="cl-lead">Appointments you can book online</h2>
+          <ul className="cl-strip">
+            <li>
+              <h3>General practice</h3>
+              <p>Something new — an illness, a pain, or a worry you want looked at today.</p>
+            </li>
+            <li>
+              <h3>Follow-ups</h3>
+              <p>A review after treatment, your test results, or a question about a repeat prescription.</p>
+            </li>
+            <li>
+              <h3>New patients</h3>
+              <p>Your first appointment with us. Bring photo ID and something with your address on it.</p>
+            </li>
           </ul>
+          <p className="cl-prose">
+            Vaccinations, the travel clinic and minor surgery are booked by phone on {CLINIC_PHONE}. If
+            you need help today and the list is empty, call 111.
+          </p>
         </Band>
 
-        <Band label="Honestly">
+        <Band label="Clinicians" id="clinicians" wide>
+          <h2 className="cl-lead">Our doctors</h2>
+          <ClinicianRoster />
           <p className="cl-prose">
-            The appointments come from one shared board every visitor sees, released on a
-            six-minute clock; the rival is a labelled simulation, and every other name on the board is
-            a real visitor, labelled &ldquo;Another patient&rdquo;. Every interaction count on the booking page was
-            measured by the page while you used it — no number here was written by hand. Nothing
-            books a real appointment and nothing takes a payment.
+            Times are read from the list as it stands now. Any of our doctors can see you about
+            anything — a special interest is what they are the one to ask about.
           </p>
+        </Band>
+
+        <Band label="Releases" tone="grey">
+          <h2 className="cl-lead">How released appointments work</h2>
+          <ol className="cl-steps">
+            <li>
+              <h3>A patient cancels</h3>
+              <p>Their appointment comes off the book and waits for the next release.</p>
+            </li>
+            <li>
+              <h3>Everything free goes back at once</h3>
+              <p>
+                Cancellations are released together, on the clock, so nobody has to sit refreshing
+                the page to catch one. What is on the list is first come.
+              </p>
+            </li>
+            <li>
+              <h3>You choose a time and confirm it</h3>
+              <p>
+                The time you choose is held while you confirm — long enough to check the date, not
+                long enough to sit on.
+              </p>
+            </li>
+          </ol>
+          <NextWaveClock />
         </Band>
 
         <Band label="Access">
+          <h2 className="cl-lead">Getting here, and getting in</h2>
           <p className="cl-prose">
-            Every control is reachable by keyboard with a visible focus ring, and the confirm key
-            answers Space as well as Enter so switch access works. A hold announces itself when it
-            arrives and again at 30 and 10 seconds — never on every tick. With reduced motion turned
-            on, the page drops the animation and keeps the countdown, because the countdown is
-            information.
+            Step-free entrance on Marlow Row, a hearing loop at reception, and an accessible toilet
+            on the ground floor. Tell us when you book if you need an interpreter — we can arrange
+            one for most languages with a day&rsquo;s notice.
           </p>
-          <p>
-            <Link className="cl-quiet" href="/clinic/book" data-clinic-cta="foot">
-              Open the booking page
-            </Link>
+          <p className="cl-prose">
+            Booking works from the keyboard alone: every control has a visible focus ring, and the
+            confirm button answers Space as well as Enter. With reduced motion turned on, the page
+            keeps its countdowns and drops everything else.
           </p>
         </Band>
       </main>
+
+      <ClinicFooter
+        aside={
+          <p className="cl-footer__cta">
+            <Link className="cl-cta cl-cta--sm" href="/clinic/book" data-clinic-cta="foot">
+              Book an appointment
+            </Link>
+          </p>
+        }
+      />
     </div>
   );
 }

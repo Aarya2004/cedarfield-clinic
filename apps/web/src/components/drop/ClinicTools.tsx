@@ -28,9 +28,11 @@
  * `driver.confirm()`, `driver.cancel()` or `driver.move()` — the prepare_* tools only ARM the dock.
  * Booking stays where it belongs: the human's own key press, on the page, gated on a trusted event.
  *
- * The indicator is intentionally quiet — one muted mono line, `data-clinic-tools` on it for the
- * headless drive, `title` carrying the tool names for a curious human. It says what is true: the
- * count when registration succeeded, and plain language when this browser has no model context.
+ * ── WHY IT RENDERS NOTHING (SPEC-V3 §1) ─────────────────────────────────────────────────────────
+ * It used to print "Site tools · N" in the masthead. A clinic booking page does not narrate its own
+ * integrations to a patient, so the line is gone. The element stays — hidden, empty — because the
+ * registration state is still worth exposing to the harness and to anyone with dev tools open:
+ * `data-clinic-tools` (registered | unsupported | error) and `data-clinic-tool-count`.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -67,29 +69,6 @@ export interface ClinicToolsProps {
   sharedBoard?: boolean;
   /** How long hold/release wait for the fold. The live board is two network round trips. */
   settleTimeoutMs?: number;
-}
-
-// Same fallbacks as the rest of the drop skin (components/drop/drop-tokens.css), so this line is
-// legible with or without that stylesheet and identical to the board when both are present.
-const MUTED = 'var(--drop-muted, #555c62)';
-const MONO = 'var(--drop-font-mono, var(--font-mono), ui-monospace, monospace)';
-
-function label(state: ClinicRegistrationState): string {
-  switch (state.kind) {
-    case 'registered':
-      // Two numbers when the platform can be asked: what this page registered, and what the
-      // browser itself reports for this origin. They must agree, on screen, in public.
-      return state.browserCount !== undefined
-        ? `Site tools · ${state.names.length} · browser confirms ${state.browserCount}`
-        : `Site tools · ${state.names.length}`;
-    case 'pending':
-      return 'Site tools · registering…';
-    case 'unsupported':
-      // Honest: nothing is listening, so we do not print a count as if something were.
-      return 'Site tools · not offered by this browser';
-    case 'error':
-      return 'Site tools · registration failed';
-  }
 }
 
 export function ClinicTools({
@@ -172,56 +151,41 @@ export function ClinicTools({
     // a ref (view, seams, budget). A change here re-registers, serialised through the chain.
   }, [waitlistAvailable]);
 
+  // `hidden` rather than a class: this mount point has no stylesheet of its own, and the attribute
+  // takes it out of the accessibility tree as well as the layout while leaving the hooks queryable.
   return (
     <>
-    <p
+    <span
+      hidden
       data-clinic-tools={state.kind}
       data-clinic-tool-count={state.kind === 'registered' ? state.names.length : 0}
-      data-clinic-browser-count={state.kind === 'registered' && state.browserCount !== undefined ? state.browserCount : undefined}
       // Diagnostics for the headless drive: what the page believes vs what it registered.
       data-clinic-tools-live={state.kind === 'registered' ? state.names.join(' ') : ''}
       data-clinic-booked={session.slots.some((s) => s.state === 'booked_yours') ? 'true' : 'false'}
-      title={
-        `WebMCP tools published by this page: ${state.kind === 'registered' ? state.names.join(', ') : 'none yet'}. ` +
-        'None of them can book — only you can.' +
-        (state.kind === 'error' ? ` Registration failed: ${state.message}` : '')
-      }
-      style={{
-        margin: 0,
-        font: `400 0.75rem/1.4 ${MONO}`,
-        letterSpacing: '0.02em',
-        color: MUTED,
-      }}
-    >
-      {label(state)}
-    </p>
-    <section
-      className="cl-agent-log"
-      aria-label="Agent activity on this page"
-      data-clinic-agent-log={callCount}
-      style={{ margin: '0.75rem 0 0', font: `400 0.8rem/1.45 ${MONO}`, color: MUTED }}
-    >
-      <h3 style={{ margin: '0 0 0.35rem', font: 'inherit', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '0.7rem' }}>
-        Agent activity{callCount > 0 ? ` · ${callCount} call${callCount === 1 ? '' : 's'}` : ''}
-      </h3>
-      {calls.length === 0 ? (
-        <p style={{ margin: 0 }}>Every call your agent makes to this page will be listed here, with what it actually did.</p>
-      ) : (
-        <ol role="log" aria-live="polite" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+      data-clinic-tools-error={state.kind === 'error' ? state.message : undefined}
+      data-clinic-browser-count={state.kind === 'registered' && state.browserCount !== undefined ? state.browserCount : undefined}
+    />
+    {/* SPEC-V8: the page's own record of what the assistant did here — a person watching rows
+        change while a chat client works has no other way to know a call happened. Absent until
+        the first call: a patient booking by hand is not shown an empty ledger. */}
+    {callCount > 0 ? (
+      <section className="cl-assistant" aria-label="What your assistant has done on this page" data-clinic-agent-log={callCount}>
+        <h2 className="cl-assistant__head">What your assistant has done</h2>
+        <ol className="cl-assistant__list" role="log" aria-live="polite">
           {calls.map((c) => (
-            <li
-              key={`${c.at}-${c.name}-${c.ms}`}
-              data-clinic-call={c.ok ? 'ok' : 'refused'}
-              style={{ display: 'grid', gridTemplateColumns: 'auto auto 1fr', gap: '0 0.6rem', padding: '0.2rem 0', borderTop: '1px dashed rgba(0,0,0,0.12)' }}
-            >
-              <time dateTime={new Date(c.at).toISOString()} style={{ fontVariantNumeric: 'tabular-nums' }}>{clockText(c.at)}</time>
-              <code style={{ font: 'inherit', color: c.ok ? 'inherit' : 'var(--drop-danger, #b42318)' }}>{c.name.replace(/^clinic_/, '')}</code>
-              <span style={{ color: 'var(--drop-ink, #18181b)' }}>{c.summary} <span style={{ color: MUTED }}>· {c.ms} ms</span></span>
+            <li key={`${c.at}-${c.name}-${c.ms}`} className="cl-assistant__row" data-clinic-call={c.ok ? 'ok' : 'refused'}>
+              <time className="cl-assistant__time" dateTime={new Date(c.at).toISOString()}>
+                {clockText(c.at)}
+              </time>
+              <span className="cl-assistant__what">
+                {c.summary}
+                {c.ok ? null : <span className="cl-assistant__refused"> · not done</span>}
+              </span>
             </li>
           ))}
         </ol>
-      )}
-    </section>
+      </section>
+    ) : null}
     </>
   );
 }

@@ -30,14 +30,14 @@ export function NextWaveClock({ periodMs = WAVE_PERIOD_MS }: { periodMs?: number
     return () => cancelAnimationFrame(handle);
   }, [periodMs]);
 
-  const shown = seconds === null ? '—:——' : formatClock(seconds);
+  const shown = seconds === null ? null : formatClock(seconds);
   // Milestone-only: a live region that read every tick would never finish a sentence.
   const said = seconds === null ? '' : dropAnnouncement(seconds);
 
   return (
     <p className="cl-clock" data-clinic-clock={seconds === null ? 'pending' : formatClock(seconds)}>
-      <span className="cl-clock__value">{shown}</span>
-      <span className="cl-clock__unit">until the next release</span>
+      <span className="cl-clock__unit">Next release</span>
+      <span className="cl-clock__value">{shown === null ? 'checking\u2026' : `in ${shown}`}</span>
       <span className="cl-sr" role="status" aria-live="polite">
         {said}
       </span>
