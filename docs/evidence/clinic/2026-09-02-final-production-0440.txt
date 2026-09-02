@@ -1,0 +1,13 @@
+Production verification — main @ 728b26d (Aarya's restyle + SPEC-V9 delegation + SPEC-V10 voice names +
+Arav's ruling: simulated demand labelled, one quiet cost line). Deploy 9pq8EiaJ37eCBhhKG2L7uU8gMmjj →
+https://rokan-terminal.vercel.app. Run by Arav ~04:40, 2026-09-02.
+
+verify-deployed: GET / /clinic /clinic/book 200 · 16 cases 0 failed (thesis 47 · voice-tour 10 ·
+  cancel 27 · move 25 · agent-edges 18 · responsive 8 · rival-race 9 · hold-lapses 10 · receipt 10 ·
+  landing-frontdoor 4 · landing-phone 8 · chaos 50 · phone-acts 21 · delegation 32 · activity-log 15 ·
+  voice-names 42) · axe 0 violations ×3 routes.
+live-two-visitors: 25 steps 0 failed — wave 4967725 (the proof waited 8 s for a fresh wave); B books s1,
+  A's row reads "Booked by another patient" with no reload; DB refuses B (slot_unavailable:held,
+  not_your_hold:held); A's live hold ttl_seconds 180; A queues #1; B gives it back; cascade hands it to A
+  — dock eyebrow "This time came back to you"; B cancels (cleanup).
+Local, same commit: clinic suite 21/21 incl. the 10-minute soak; axe 0×3; unit 474/474; typecheck 0; lint 0.
