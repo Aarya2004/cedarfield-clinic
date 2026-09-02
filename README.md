@@ -27,7 +27,7 @@ held gesture.** Nothing an agent can call, and nothing a script can fake, reache
    same board**, labelled "Another patient". Open it in two windows and race yourself: this board is
    one world for everyone. That is the web most people use.
 3. **Now ask your agent**, in ChatGPT's side panel: *"hold me the earliest appointment."* It calls
-   `clinic_hold_slot`. A slot freezes with a 45-second bar, the dock at the bottom arms, and the
+   `clinic_hold_slot`. A slot freezes with a three-minute bar (three minutes because chat clients take 10–39 s per call — measured on ChatGPT desktop, `docs/evidence/clinic/2026-09-02-chatgpt-desktop-transcript.md`), the dock at the bottom arms, and the
    page says who holds it. Your agent cannot finish. **Press Enter.** Booked — one interaction.
 4. Ask it to book one *without* you: *"just book it."* It will tell you it can't, and why — that
    answer comes from `clinic_explain_confirm`, a tool whose only job is to explain the boundary.
@@ -79,7 +79,7 @@ is always one trusted press from you.
 | `clinic_list_drops` | ✅ | The next wave and the open slots |
 | `clinic_find_slots` | ✅ | Search by clinician, kind, time window — a miss names the constraint that killed it |
 | `clinic_clinicians` | ✅ | Who is on the board, with their open times and kinds |
-| `clinic_hold_slot` | ❌ | Holds one slot for 45 s for **this** visitor. Books nothing, auto-releases |
+| `clinic_hold_slot` | ❌ | Holds one slot for 3 min for **this** visitor. Books nothing, auto-releases |
 | `clinic_hold_status` | ✅ | Seconds left, and what the person must do |
 | `clinic_release_hold` | ❌ | Gives the hold back early (a write — it mutates the board) |
 | `clinic_prepare_cancel` | ❌ | **Arms** the dock to cancel your booking. Cancels nothing — your key does. Always present, so "nothing booked" is always sayable |
@@ -105,7 +105,7 @@ ignores declarative forms; the page is unchanged there.)
 
 **The waitlist cascade — the race is gone.** On the shared board an agent can queue its human for
 a slot that is held or booked by someone else. When that slot comes back — a hold lapses, a
-cancellation, a move — the *server* hands it to the first in line as a fresh 45-second hold; the
+cancellation, a move — the *server* hands it to the first in line as a fresh three-minute hold; the
 dock arms by itself (**"It came back to you"**), and one press books it. The agent does the
 watching a person with a switch cannot; the person does the one act that must stay theirs; the
 database guarantees the order between strangers. A cascade grant arrives at a moment nobody at
@@ -153,7 +153,7 @@ node evals/live-two-visitors.mjs --url=<origin>            # the shared board: v
 | 9 tools at load, **10 after the human books** (one born live, additive only), **no** booking/cancel/move tool (9 negative assertions) | `evals/cases/clinic-thesis.json` |
 | A synthetic press is **blocked**; a trusted press **books** — same page, same run | same case |
 | The agent path costs the person **1** interaction | same case |
-| A hold lapses after 45 s: slot returns, **nothing booked** | `clinic-hold-lapses.json` |
+| A hold lapses after 3 min: slot returns, **nothing booked** | `clinic-hold-lapses.json` |
 | The rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
 | Booking by hand costs ≥ 30 asserted / **36 measured** interactions | `clinic-manual-tax.json` |
 | Cancel is armed by the agent, performed only by a trusted press — synthetic press blocked, counted | `clinic-cancel.json` |

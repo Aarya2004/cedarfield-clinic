@@ -1,0 +1,77 @@
+[
+  {
+    "_doc": "SPEC-V8 evidence: the page's own record of the agent. Four calls, then a refusal, then the log is photographed. Every line on it comes from the tools' own answers."
+  },
+  {
+    "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+    "timeout": 20000
+  },
+  {
+    "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+    "timeout": 15000
+  },
+  {
+    "eval": "Number(document.querySelector('[data-clinic-agent-log]')?.getAttribute('data-clinic-agent-log'))",
+    "equals": 0
+  },
+  {
+    "invoke": "clinic_clinicians",
+    "outputMatches": "clinicians"
+  },
+  {
+    "invoke": "clinic_list_drops",
+    "outputMatches": "open_count"
+  },
+  {
+    "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+    "timeout": 20000
+  },
+  {
+    "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot === 'string'; })()",
+    "equals": true
+  },
+  {
+    "invoke": "clinic_hold_slot",
+    "inputFrom": {
+      "slot_id": "window.__slot"
+    },
+    "outputMatches": "held"
+  },
+  {
+    "invoke": "clinic_hold_slot",
+    "input": {
+      "slot_id": "no-such-slot"
+    },
+    "outputMatches": "unknown_slot"
+  },
+  {
+    "waitFor": "Number(document.querySelector('[data-clinic-agent-log]')?.getAttribute('data-clinic-agent-log') ?? 0) === 4",
+    "timeout": 4000
+  },
+  {
+    "eval": "document.querySelectorAll('[data-clinic-call=\"ok\"]').length",
+    "equals": 3
+  },
+  {
+    "eval": "document.querySelectorAll('[data-clinic-call=\"refused\"]').length",
+    "equals": 1
+  },
+  {
+    "eval": "(document.querySelector('[data-clinic-call=\"refused\"]')?.textContent ?? '')",
+    "matches": "refused \u2014 .*no slot"
+  },
+  {
+    "eval": "(() => { document.querySelector('[data-clinic-agent-log]')?.scrollIntoView({ block: 'center' }); return true; })()",
+    "equals": true
+  },
+  {
+    "sleep": 300
+  },
+  {
+    "shot": "docs/evidence/clinic/agent-activity-log.png"
+  },
+  {
+    "eval": "document.querySelector('[data-clinic-agent-log] [role=\"log\"]')?.getAttribute('aria-live')",
+    "equals": "polite"
+  }
+]

@@ -34,7 +34,7 @@ reaches that step.
    `chrome://flags/#enable-webmcp-testing`, then click **Book an appointment** (`/clinic/book`).
 2. Check the **Site tools** arrow (or DevTools → Application → WebMCP): eleven `clinic_*` tools —
    and no booking, cancel, or move tool among them. Watch the list again after step 5: one more appears.
-3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a 45-second bar and
+3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a three-minute bar, and the page's **Agent activity** log records the call in its own words ("held 8:40 AM with Dr. Fanning · 180 s, your press books it") — you never have to trust the chat's narration, and
    the dock at the bottom arms.
 4. Ask it to *"just book it."* It will explain that it can't, and why.
 5. **Press Enter.** Booked — the receipt shows what the same task costs by hand versus the one
@@ -105,7 +105,7 @@ the platform provides for exactly that.
 **And on the shared board — where every real visitor is — two more tools make eleven, and the race is gone.** `clinic_join_waitlist` and
 `clinic_leave_waitlist`, let an agent put its human *in line* for a slot someone else holds. When
 that slot comes back — a hold lapses, a cancellation, a move — the server hands it to the first in
-line as a fresh 45-second hold; the dock arms by itself (*"It came back to you"*) and one press
+line as a fresh three-minute hold; the dock arms by itself (*"It came back to you"*) and one press
 books it. The agent does the watching a person with a switch cannot; the person does the one act
 that must stay theirs; the database keeps the order between strangers. In MCP-B's taxonomy (read ·
 navigation · human-approved write): read/arming tools, two reversible queue verbs, and zero write
@@ -134,7 +134,7 @@ Postgres inventory every visitor sees — open it in two windows and race yourse
 session per browser (no sign-up, no credentials), realtime updates with a poll fallback, and the
 integrity a page can never provide for two strangers at once enforced by the database as RLS +
 `SECURITY DEFINER` functions: one hold per visitor, hold-before-book, only your own booking cancels
-or moves, an atomic move, three bookings each at most. Waves release on a 90-second server clock
+or moves, an atomic move, three bookings each at most. Waves release on a six-minute server clock
 for everyone at once. **No model call of our own anywhere in the product**: the reasoning is the
 visitor's own agent, in their own client. One `DropDriver` seam is where the backend plugs in
 (`supabase-driver.ts`; the seeded in-page driver behind `?test=1` is what every eval drives);
@@ -149,7 +149,7 @@ Verification is a first-class part of the repo, not a claim in a README:
 | Nine tools at load, ten after the human books (one born live, additive only); **no** booking/cancel/move tool (nine negative assertions) | `evals/cases/clinic-thesis.json` |
 | A synthetic press is **blocked**; a browser-trusted press **books** — same page, same run | same case |
 | The agent path costs the person **1** interaction | same case |
-| A hold lapses after 45 s: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |
+| A hold lapses after 3 min: the slot returns, **nothing was booked** | `clinic-hold-lapses.json` |
 | A rival takes a slot mid-read; holding a gone slot is refused **with a reason** | `clinic-rival-race.json` |
 | Booking by hand costs ≥ 30 asserted / **36 measured** interactions | `clinic-manual-tax.json` |
 | Cancel/move are armed by the agent, performed only by a trusted press; a move swaps atomically | `clinic-cancel.json`, `clinic-move.json` |

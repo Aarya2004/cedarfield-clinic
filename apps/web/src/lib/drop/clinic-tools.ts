@@ -172,6 +172,23 @@ export interface ClinicToolsOptions {
    */
   onJoinWaitlist?: (slotId: string) => boolean;
   onLeaveWaitlist?: (slotId: string) => boolean;
+  /**
+   * SPEC-V8 (2026-09-02): the page's own record of what the agent did. Called after every tool
+   * answer with one honest line derived from that answer — a person reading the page (or a screen
+   * reader) learns "held 8:40 AM with Dr. Fanning" without trusting the chat window's narration.
+   */
+  onCall?: (record: ToolCallRecord) => void;
+}
+
+/** One agent call as the page saw it. `summary` is derived from the tool's JSON answer, never invented. */
+export interface ToolCallRecord {
+  /** Wall-clock ms when the call arrived. */
+  at: number;
+  name: ClinicToolName;
+  ok: boolean;
+  summary: string;
+  /** Measured on the page: call arrived → answer left. */
+  ms: number;
 }
 
 const DEFAULT_SETTLE_TIMEOUT_MS = 1_200;
@@ -186,6 +203,59 @@ const DEFAULT_SETTLE_POLL_MS = 25;
  */
 export interface ToolTextResult {
   content: [{ type: 'text'; text: string }];
+}
+
+type Rec = Record<string, unknown>;
+const rec = (v: unknown): Rec => (v !== null && typeof v === 'object' ? (v as Rec) : {});
+const str = (v: unknown, fallback = '?'): string => (typeof v === 'string' || typeof v === 'number' ? String(v) : fallback);
+const len = (v: unknown): number => (Array.isArray(v) ? v.length : 0);
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
+ * Pure: the one line the activity log shows for a tool's answer. Reads only what the answer says.
+ * A refusal quotes the tool's own `detail`; an unreadable answer says so rather than guessing.
+ */
+export function summariseToolAnswer(name: ClinicToolName, result: ToolTextResult): { ok: boolean; summary: string } {
+  let r: Rec;
+  try {
+    r = rec(JSON.parse(result.content[0].text));
+  } catch {
+    return { ok: false, summary: 'answer was not JSON' };
+  }
+  if (r.ok === false) {
+    const why = str(r.detail, str(r.error, 'refused'));
+    return { ok: false, summary: `refused — ${why.length > 110 ? `${why.slice(0, 107)}…` : why}` };
+  }
+  const hold = rec(r.your_hold);
+  const slot = rec(r.slot);
+  switch (name) {
+    case 'clinic_list_drops':
+      return { ok: true, summary: `${str(r.open_count, '0')} open of ${len(r.slots)}${r.your_hold ? ` · holding ${str(hold.time)}` : ''}` };
+    case 'clinic_find_slots':
+      return { ok: true, summary: len(r.matches) ? plural(len(r.matches), 'match') : `no match (${str(r.eliminated_by, 'nothing open')})` };
+    case 'clinic_clinicians':
+      return { ok: true, summary: plural(len(r.clinicians), 'clinician') };
+    case 'clinic_hold_slot':
+      return { ok: true, summary: `held ${str(hold.time)} with ${str(hold.clinician)} · ${str(hold.ttl_seconds)} s, your press books it` };
+    case 'clinic_hold_status':
+      return { ok: true, summary: r.held ? `holding ${str(hold.time)} · ${str(hold.seconds_left)} s left` : 'nothing held' };
+    case 'clinic_release_hold':
+      return { ok: true, summary: `released ${str(r.released)}` };
+    case 'clinic_prepare_cancel':
+      return { ok: true, summary: `dock armed to cancel ${str(slot.time)} — only your press cancels` };
+    case 'clinic_prepare_move':
+      return { ok: true, summary: `dock armed to move ${str(rec(r.from_slot).time)} → ${str(rec(r.to_slot).time)} — only your press moves` };
+    case 'clinic_explain_confirm':
+      return { ok: true, summary: 'explained: no tool books; you do' };
+    case 'clinic_join_waitlist':
+      return { ok: true, summary: `in line for ${str(slot.time)}${r.position ? ` · #${str(r.position)}` : ''}` };
+    case 'clinic_leave_waitlist':
+      return { ok: true, summary: `left the line for ${str(r.slot_id)}` };
+    case 'clinic_my_appointment':
+      return { ok: true, summary: plural(len(r.appointments), 'appointment') };
+    default:
+      return { ok: true, summary: 'ok' };
+  }
 }
 
 export function asToolResult(data: unknown): ToolTextResult {
@@ -507,7 +577,7 @@ export const PREPARE_CANCEL_DESCRIPTION =
 export const JOIN_WAITLIST_DESCRIPTION =
   'Put your human in line for a slot that is NOT open (held or booked by someone else). If it ' +
   'comes back — a hold lapses, a cancellation — the clinic hands it to the first in line as a ' +
-  'fresh 45-second hold, in order: nobody races. Reversible (clinic_leave_waitlist). Answers ' +
+  'fresh three-minute hold, in order: nobody races. Reversible (clinic_leave_waitlist). Answers ' +
   'with the position. Booking still takes one press from your human.';
 
 export const LEAVE_WAITLIST_DESCRIPTION =
@@ -1086,7 +1156,18 @@ export async function registerClinicTools(
     description: def.description,
     inputSchema: def.inputSchema,
     annotations: def.annotations,
-    execute: (input, options) => def.execute(input, options ? { signal: options.signal } : undefined),
+    execute: async (input, execOptions) => {
+      const at = Date.now();
+      try {
+        const res = await def.execute(input, execOptions ? { signal: execOptions.signal } : undefined);
+        options.onCall?.({ at, name: def.name, ms: Date.now() - at, ...summariseToolAnswer(def.name, res) });
+        return res;
+      } catch (err) {
+        const why = err instanceof Error ? err.message : String(err);
+        options.onCall?.({ at, name: def.name, ms: Date.now() - at, ok: false, summary: `failed — ${why.slice(0, 110)}` });
+        throw err;
+      }
+    },
   });
   const registerSet = async (names: readonly ClinicToolName[], signal: AbortSignal) => {
     for (const def of defs) {
