@@ -1,0 +1,11 @@
+Production verification — main @ 1999adc (assistant guide on /clinic/book; verify-deployed 17 cases).
+Deployed by Arav ~05:00, 2026-09-02; verified by Engineer #4 from this machine (first run under
+Arav's standing permission to run the deploy pair).
+
+verify-deployed: GET / /clinic /clinic/book 200 · 17 cases 0 failed (thesis 47 · voice-tour 10 ·
+  cancel 27 · move 25 · agent-edges 18 · responsive 8 · rival-race 9 · hold-lapses 10 · receipt 10 ·
+  landing-frontdoor 4 · landing-phone 8 · chaos 50 · phone-acts 21 · delegation 32 · activity-log 15 ·
+  voice-names 42 · guide 12) · axe 0 violations ×3 routes.
+live-two-visitors: 25 steps 0 failed — wave 4967731; B books s2, A's row flips without reload; DB
+  refuses B (slot_unavailable:held, not_your_hold:held); A queues #1; B gives it back; cascade hands
+  it to A — "It came back to you"; B cancels (cleanup).
