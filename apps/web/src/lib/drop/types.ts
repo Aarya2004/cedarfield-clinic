@@ -17,12 +17,22 @@ export interface Slot {
   clinician: string;
   kind: string; // "New patient" | "Follow-up" | …
   state: SlotState;
+  /** SPEC-V5, live board only: how many visitors wait on this slot, and where you stand (1 = next). */
+  waiting?: number;
+  yourPosition?: number | null;
 }
 
 export type DropEvent =
   | { type: 'drop_wave'; slots: Slot[]; at: number }
   | { type: 'slot_taken'; slotId: string; by: 'rival'; at: number }
-  | { type: 'hold_started'; slotId: string; ttlSeconds: number; at: number }
+  | {
+      type: 'hold_started';
+      slotId: string;
+      ttlSeconds: number;
+      at: number;
+      /** SPEC-V5: the world handed you this hold (the waitlist cascade) — nobody asked for it locally. */
+      granted?: true;
+    }
   | { type: 'hold_tick'; slotId: string; secondsLeft: number; at: number }
   | { type: 'hold_expired'; slotId: string; at: number }
   | { type: 'booked'; slotId: string; at: number }

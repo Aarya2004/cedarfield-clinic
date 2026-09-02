@@ -49,9 +49,17 @@ export const CLINIC_TOOL_NAMES = [
   'clinic_release_hold',
   'clinic_prepare_cancel',
   'clinic_prepare_move',
+  'clinic_join_waitlist',
+  'clinic_leave_waitlist',
   'clinic_my_appointment',
   'clinic_explain_confirm',
 ] as const;
+
+/**
+ * SPEC-V5: the waitlist cascade — registered only when the page is on the shared board (the seam
+ * is present). The seeded board has no other people to wait behind, so it has no queue.
+ */
+export const WAITLIST_TOOL_NAMES = ['clinic_join_waitlist', 'clinic_leave_waitlist'] as const satisfies readonly ClinicToolName[];
 
 /**
  * SPEC-V4 (2026-09-01): a tool born from the human act. The base nine are registered on load —
@@ -122,6 +130,8 @@ export interface ClinicToolsView {
   waveLandedAt?: number | null;
   /** SPEC-V3: true when other visitors share this board — so the agent can say so out loud. */
   sharedBoard?: boolean;
+  /** SPEC-V5: the queue exists (shared board). Decides which tools exist and what refusals suggest. */
+  waitlistAvailable?: boolean;
   /** The verbs. `hold` / `release` are called here; `confirm` is the human path and never is. */
   driver: DropDriver;
   /** The fold the UI renders: slots, held, secondsLeft, now, log. */
@@ -156,6 +166,12 @@ export interface ClinicToolsOptions {
   onPrepareMove?: (fromSlotId: string, toSlotId: string) => boolean;
   /** How often the registration watches for the human's booking (tests set it tiny). */
   watchMs?: number;
+  /**
+   * SPEC-V5 queue seams. Reversible agent verbs (a place in line, not an appointment): the page
+   * injects them on the shared board; absent ⇒ the two waitlist tools are not registered at all.
+   */
+  onJoinWaitlist?: (slotId: string) => boolean;
+  onLeaveWaitlist?: (slotId: string) => boolean;
 }
 
 const DEFAULT_SETTLE_TIMEOUT_MS = 1_200;
@@ -203,6 +219,9 @@ export interface AgentSlot {
   clinician: string;
   kind: string;
   state: SlotState;
+  /** Shared board only: how many wait on this slot, and your human's place in that line (1 = next). */
+  waiting?: number;
+  your_position?: number;
 }
 
 export interface ListDropsResult {
@@ -258,7 +277,15 @@ function round1(n: number): number {
 }
 
 function toAgentSlot(slot: Slot): AgentSlot {
-  return { id: slot.id, time: slot.timeLabel, clinician: slot.clinician, kind: slot.kind, state: slot.state };
+  return {
+    id: slot.id,
+    time: slot.timeLabel,
+    clinician: slot.clinician,
+    kind: slot.kind,
+    state: slot.state,
+    ...(slot.waiting ? { waiting: slot.waiting } : {}),
+    ...(slot.yourPosition ? { your_position: slot.yourPosition } : {}),
+  };
 }
 
 function openIds(slots: readonly Slot[]): string[] {
@@ -436,6 +463,15 @@ export const findSlotsSchema = {
   additionalProperties: false,
 } as const;
 
+export const waitlistSchema = {
+  type: 'object',
+  properties: {
+    slot_id: { type: 'string', maxLength: 64, description: 'A slot that is held or booked by someone else, from clinic_list_drops.' },
+  },
+  required: ['slot_id'],
+  additionalProperties: false,
+} as const;
+
 export const prepareMoveSchema = {
   type: 'object',
   properties: {
@@ -458,6 +494,20 @@ export const PREPARE_CANCEL_DESCRIPTION =
   'Arm the page for the person to CANCEL their booked appointment. Cancels nothing itself: the ' +
   'dock shows "press to cancel" and only a key, switch or held gesture from the person performs ' +
   'it. Refused when nothing is booked.';
+
+export const JOIN_WAITLIST_DESCRIPTION =
+  'Put your human in line for a slot that is NOT open (held or booked by someone else). If it ' +
+  'comes back — a hold lapses, a cancellation — the clinic hands it to the first in line as a ' +
+  'fresh 45-second hold, in order: nobody races. Reversible (clinic_leave_waitlist). Answers ' +
+  'with the position. Booking still takes one press from your human.';
+
+export const LEAVE_WAITLIST_DESCRIPTION =
+  'Take your human out of the line for a slot they no longer want. Reversible, immediate. ' +
+  'Use it when they change their mind or when they have booked something else.';
+
+export const WAITLIST_CHOREOGRAPHY =
+  'Your human is in line. If the slot comes back it becomes their hold automatically — tell them the ' +
+  'dock will arm by itself and one keypress books it. You cannot press it.';
 
 export const MY_APPOINTMENT_DESCRIPTION =
   "Your human's booked appointment(s) on this board — time, clinician, kind, slot id — newest " +
@@ -620,6 +670,9 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           return asToolResult({
             ok: false,
             error: slot.state === 'held_by_you' ? 'already_held_by_you' : 'slot_not_open',
+            ...(before.waitlistAvailable && (slot.state === 'held_by_other' || slot.state === 'taken_by_other' || slot.state === 'taken_by_rival')
+              ? { hint: 'clinic_join_waitlist: put your human in line for it — if it comes back, it is theirs first.' }
+              : {}),
             detail:
               slot.state === 'taken_by_rival'
                 ? 'Someone else took this slot. Pick another id from open_slot_ids.'
@@ -860,6 +913,69 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
       },
     },
     {
+      name: 'clinic_join_waitlist',
+      title: 'Put your human in line for a taken slot',
+      description: JOIN_WAITLIST_DESCRIPTION,
+      inputSchema: waitlistSchema,
+      annotations: { readOnlyHint: false },
+      async execute(raw) {
+        const input = coerceInput(raw);
+        const slotId = typeof input.slot_id === 'string' ? input.slot_id.trim() : '';
+        const view = source();
+        if (!slotId) {
+          return asToolResult({ ok: false, error: 'slot_id_required', detail: 'Pass the id of a slot that is held or booked by someone else.', open_slot_ids: openIds(view.session.slots) } satisfies ErrorResult);
+        }
+        const slot = view.session.slots.find((s) => s.id === slotId);
+        if (!slot) {
+          return asToolResult({ ok: false, error: 'unknown_slot', detail: `This drop has no slot "${slotId}".`, open_slot_ids: openIds(view.session.slots) } satisfies ErrorResult);
+        }
+        if (slot.state === 'open') {
+          return asToolResult({ ok: false, error: 'slot_open', detail: 'That slot is open right now — clinic_hold_slot it instead of waiting for it.', slot_state: slot.state, open_slot_ids: openIds(view.session.slots) } satisfies ErrorResult);
+        }
+        if (slot.state === 'held_by_you' || slot.state === 'booked_yours') {
+          return asToolResult({ ok: false, error: 'already_yours', detail: "That slot is already your human's.", slot_state: slot.state } satisfies ErrorResult);
+        }
+        if (!options.onJoinWaitlist || !options.onJoinWaitlist(slotId)) {
+          return asToolResult({ ok: false, error: 'waitlist_unavailable', detail: 'This board has no waitlist.' } satisfies ErrorResult);
+        }
+        await settle(source, (v) => (v.session.slots.find((s) => s.id === slotId)?.yourPosition ?? 0) > 0, settleBudget(), pollMs);
+        const now = source().session.slots.find((s) => s.id === slotId);
+        return asToolResult({
+          ok: true,
+          waiting: true,
+          slot: now ? toAgentSlot(now) : toAgentSlot(slot),
+          position: now?.yourPosition ?? null,
+          ahead_of_you: now?.yourPosition ? now.yourPosition - 1 : null,
+          booking: 'human_only' as const,
+          next_step: WAITLIST_CHOREOGRAPHY,
+        });
+      },
+    },
+    {
+      name: 'clinic_leave_waitlist',
+      title: 'Take your human out of a line',
+      description: LEAVE_WAITLIST_DESCRIPTION,
+      inputSchema: waitlistSchema,
+      annotations: { readOnlyHint: false },
+      async execute(raw) {
+        const input = coerceInput(raw);
+        const slotId = typeof input.slot_id === 'string' ? input.slot_id.trim() : '';
+        const view = source();
+        const slot = view.session.slots.find((s) => s.id === slotId);
+        if (!slotId || !slot) {
+          return asToolResult({ ok: false, error: 'unknown_slot', detail: `This drop has no slot "${slotId}".` } satisfies ErrorResult);
+        }
+        if (!slot.yourPosition) {
+          return asToolResult({ ok: false, error: 'not_waiting', detail: 'Your human is not in line for that slot.', slot_state: slot.state } satisfies ErrorResult);
+        }
+        if (!options.onLeaveWaitlist || !options.onLeaveWaitlist(slotId)) {
+          return asToolResult({ ok: false, error: 'waitlist_unavailable', detail: 'This board has no waitlist.' } satisfies ErrorResult);
+        }
+        await settle(source, (v) => !(v.session.slots.find((s) => s.id === slotId)?.yourPosition), settleBudget(), pollMs);
+        return asToolResult({ ok: true, waiting: false, slot_id: slotId, booking: 'human_only' as const });
+      },
+    },
+    {
       name: 'clinic_my_appointment',
       title: "Your human's booked appointment(s)",
       description: MY_APPOINTMENT_DESCRIPTION,
@@ -897,7 +1013,11 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           ok: true,
           booking: 'human_only' as const,
           reason: NO_BOOKING_TOOL_REASON,
-          tools_that_exist: hasOwnBooking(view) ? [...CLINIC_TOOL_NAMES] : [...BASE_TOOL_NAMES],
+          tools_that_exist: [
+            ...BASE_TOOL_NAMES,
+            ...(view.waitlistAvailable ? WAITLIST_TOOL_NAMES : []),
+            ...(hasOwnBooking(view) ? BOOKED_TOOL_NAMES : []),
+          ],
           ...(hasOwnBooking(view) ? {} : { tools_that_appear_after_your_human_books: [...BOOKED_TOOL_NAMES] }),
           tool_that_books: null,
           human_only_acts: ['book', 'cancel', 'move'],
@@ -951,10 +1071,11 @@ export async function registerClinicTools(
   const base = new AbortController();
   let booked: AbortController | null = null;
   let disposed = false;
-  const liveNames = (): ClinicToolName[] => (booked ? [...CLINIC_TOOL_NAMES] : [...BASE_TOOL_NAMES]);
+  const loadSet: ClinicToolName[] = [...BASE_TOOL_NAMES, ...(options.onJoinWaitlist ? WAITLIST_TOOL_NAMES : [])];
+  const liveNames = (): ClinicToolName[] => (booked ? [...loadSet, ...BOOKED_TOOL_NAMES] : [...loadSet]);
 
   try {
-    await registerSet(BASE_TOOL_NAMES, base.signal);
+    await registerSet(loadSet, base.signal);
     onState({ kind: 'registered', names: liveNames() });
   } catch (e) {
     // Half a surface is worse than none: a throw mid-loop must not leave the earlier tools live
@@ -968,8 +1089,13 @@ export async function registerClinicTools(
   // toolchange); the last booking goes → it is unregistered. Polled, because the seam has no
   // event stream and 400 ms is well inside the beat of a person reading a dock.
   let busy = false;
+  let again = false;
   const reconcile = async () => {
-    if (disposed || busy) return;
+    if (disposed) return;
+    if (busy) {
+      again = true; // a tick landed mid-registration: run once more when this one settles
+      return;
+    }
     busy = true;
     try {
       const want = hasOwnBooking(source());
@@ -998,10 +1124,14 @@ export async function registerClinicTools(
       }
     } finally {
       busy = false;
+      if (again && !disposed) {
+        again = false;
+        void reconcile();
+      }
     }
   };
   await reconcile(); // a reload with a booking already on the board gets its tools at once
-  const watch = setInterval(() => void reconcile(), options.watchMs ?? 400);
+  const watch = setInterval(() => void reconcile(), options.watchMs ?? 250);
   // Under Node (tests) a live interval would keep the process alive after the last test; the
   // browser's setInterval returns a number and has no unref — hence the guard.
   (watch as unknown as { unref?: () => void }).unref?.();

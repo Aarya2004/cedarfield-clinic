@@ -14,7 +14,7 @@
  */
 import { formatClock } from '../../lib/drop/time.ts';
 
-export type HoldOrigin = 'you' | 'agent';
+export type HoldOrigin = 'you' | 'agent' | 'waitlist';
 
 /**
  * How recently a local click must have asked for the hold to own it. Generous on purpose: the
@@ -47,7 +47,7 @@ export function holdOrigin(
  */
 export function holdHeadline(origin: HoldOrigin, secondsLeft: number): string {
   const clock = formatClock(secondsLeft);
-  const who = origin === 'agent' ? 'Held by your agent' : 'Held for you';
+  const who = origin === 'agent' ? 'Held by your agent' : origin === 'waitlist' ? 'It came back to you' : 'Held for you';
   return `${who} — ${clock} · one keypress books it`;
 }
 
@@ -61,6 +61,7 @@ export function holdGutterLabel(origin: HoldOrigin): string {
  * per tick, so the seconds are deliberately absent from this sentence.
  */
 export function agentArrivalAnnouncement(origin: HoldOrigin, timeLabel: string): string | null {
+  if (origin === 'waitlist') return `${timeLabel} came back to you from the waitlist — nobody raced you. Press Enter to book it.`;
   if (origin !== 'agent') return null;
   return `Your agent holds ${timeLabel}. Press Enter to book it — your agent cannot.`;
 }

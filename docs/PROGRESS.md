@@ -1,6 +1,22 @@
 # PROGRESS — verified state (update before you stop; Aarya's Claude reads this, not chat)
 
-Last update: **2026-09-01 night (Engineer #4, Fable 5.1)** Branch `main`.
+Last update: **2026-09-02 (Engineer #4, Fable 5.1)** Branch `main`.
+
+## Build log — Engineer #4 (2026-09-02) — SPEC-V4 + SPEC-V5: the surface answers the human's act; the race is gone
+- **SPEC-V4** tools born from the human act — after Arav's review, ADDITIVE ONLY: the nine base
+  tools (arming tools included, so a voice user always hears "nothing booked") register on load;
+  `clinic_my_appointment` is born by the press (toolchange) and dies with the booking, swap-death
+  guarded; `list_drops.your_bookings`. README/SUBMISSION map the surface onto MCP-B's taxonomy.
+- **SPEC-V5** the waitlist cascade — `clinic_join_waitlist`/`clinic_leave_waitlist` (reversible,
+  cap 3, current wave only, shared board only); the sweep hands a reopened slot to the first in
+  line as a fresh 45 s hold; the dock arms by itself with origin `waitlist` (no focus steal, dead
+  zone, "It came back to you"); the rival never takes a queued slot; queue depth and position on
+  the sheet and in every tool result. Migration `cedarfield_waitlist` committed.
+- **Registration is serialised on a promise chain** in `ClinicTools` (a surface change after
+  mount — the queue verbs arriving with `live` — re-registers without name collisions).
+- Gate: 444 tests · lint 0 · seeded suite + axe · `live-two-visitors` grew the cascade beat.
+- Owed: deploy → verify-deployed + live-two-visitors on prod → monitor; ChatGPT desktop hour;
+  Aarya's real-hand test; video beat added to VIDEO-SCRIPT.
 
 ## Build log — Engineer #4 (2026-09-01 night) — SPEC-V3 shipped + full adversarial sweep closed
 **SPEC-V3 — the shared live board.** Arav: "not a simulation — real judges racing each other."

@@ -38,6 +38,8 @@ interface BoardRow {
   yours_held: boolean;
   yours_booked: boolean;
   hold_expires_at: string | null;
+  waiting: number;
+  your_position: number | null;
 }
 
 interface Board {
@@ -62,7 +64,15 @@ export function rowToSlot(row: BoardRow): Slot {
           : row.yours_booked
             ? 'booked_yours'
             : 'taken_by_other';
-  return { id: row.id, timeLabel: row.time_label, clinician: row.clinician, kind: row.kind, state };
+  return {
+    id: row.id,
+    timeLabel: row.time_label,
+    clinician: row.clinician,
+    kind: row.kind,
+    state,
+    waiting: row.waiting ?? 0,
+    yourPosition: row.your_position ?? null,
+  };
 }
 
 export interface LiveMeta {
@@ -85,12 +95,19 @@ export function refusalSentence(raw: string): string {
   if (raw.includes('not_your_booking')) return 'That appointment is no longer yours to change.';
   if (raw.includes('nothing_held')) return 'There was no hold to give back.';
   if (raw.includes('booking_cap')) return 'Three appointments is the limit here. Cancel one to book another.';
+  if (raw.includes('waitlist_cap')) return 'Three waitlists is the limit here. Leave one to join another.';
+  if (raw.includes('slot_open')) return 'That time is open right now — hold it instead of waiting for it.';
+  if (raw.includes('already_yours')) return 'That time is already yours.';
+  if (raw.includes('not_waiting')) return 'You were not waiting on that time.';
   if (raw.includes('sign_in') || raw.includes('board_offline')) return 'Could not reach the live board. Reload to try again.';
   return 'That did not go through. The board has been refreshed.';
 }
 
 export interface LiveDriver extends DropDriver {
   meta(): LiveMeta;
+  /** SPEC-V5: the agent's reversible queue verbs. Never on `DropDriver` — the seeded board has no queue. */
+  joinWaitlist(slotId: string): void;
+  leaveWaitlist(slotId: string): void;
   /** Same shape the page reads off the mock: the current world, synchronously. */
   snapshot(): { slots: Slot[]; hold: { slotId: string } | null };
   dispose(): void;
@@ -104,6 +121,9 @@ export function createSupabaseDriver(): LiveDriver {
   const subscribers = new Set<(e: DropEvent) => void>();
   let slots: Slot[] = [];
   let myHold: { slotId: string; expiresAt: number } | null = null;
+  // Holds this tab asked for. A hold that appears WITHOUT being asked for is the cascade handing
+  // over a queued slot — announced as `granted`, so the dock treats it like an agent-timed arm.
+  const requested = new Set<string>();
   let meta: LiveMeta = { waveStartedAt: null, nextWaveAt: null, ready: false, lastError: null, errorSeq: 0 };
   let disposed = false;
   let refreshing = false;
@@ -161,7 +181,15 @@ export function createSupabaseDriver(): LiveDriver {
       if (mine && mine.hold_expires_at) {
         const expiresAt = toClient(mine.hold_expires_at);
         if (myHold?.slotId !== mine.id) {
-          emit({ type: 'hold_started', slotId: mine.id, ttlSeconds: HOLD_TTL_SECONDS, at: expiresAt - HOLD_TTL_SECONDS * 1000 });
+          const granted = !requested.has(mine.id);
+          requested.delete(mine.id);
+          emit({
+            type: 'hold_started',
+            slotId: mine.id,
+            ttlSeconds: HOLD_TTL_SECONDS,
+            at: expiresAt - HOLD_TTL_SECONDS * 1000,
+            ...(granted ? { granted: true as const } : {}),
+          });
         }
         myHold = { slotId: mine.id, expiresAt };
       } else if (myHold !== null) {
@@ -239,7 +267,14 @@ export function createSupabaseDriver(): LiveDriver {
       return () => subscribers.delete(cb);
     },
     hold(slotId) {
+      requested.add(slotId);
       verb('clinic_hold', { slot_id: slotId });
+    },
+    joinWaitlist(slotId) {
+      verb('clinic_join_waitlist', { p_slot_id: slotId });
+    },
+    leaveWaitlist(slotId) {
+      verb('clinic_leave_waitlist', { p_slot_id: slotId });
     },
     release(slotId) {
       verb('clinic_release', { slot_id: slotId });
@@ -254,6 +289,7 @@ export function createSupabaseDriver(): LiveDriver {
      * upstream of this call either way.
      */
     book(slotId) {
+      requested.add(slotId);
       void rpc('clinic_hold', { slot_id: slotId }).then(({ error }) => {
         if (error) return void refresh();
         verb('clinic_book', { slot_id: slotId }, () => releaseQuietly(slotId));

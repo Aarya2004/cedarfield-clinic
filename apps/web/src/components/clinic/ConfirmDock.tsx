@@ -142,7 +142,8 @@ export function ConfirmDock({
       // P1-1: only the BOOK dock may take focus. A cancel/move dock is armed at a moment the agent
       // chose — stealing focus would aim the person's in-flight Enter at a destructive act. Those
       // docks announce themselves and wait to be reached deliberately (Tab, click, or gesture).
-      if (act === 'book') {
+      // A waitlist grant also arrives at a moment nobody at this keyboard chose (SPEC-V5).
+      if (act === 'book' && origin !== 'waitlist') {
         const active = typeof document === 'undefined' ? null : document.activeElement;
         const typing =
           active instanceof HTMLElement &&
@@ -150,7 +151,7 @@ export function ConfirmDock({
         if (!typing) capRef.current?.focus();
       }
     }
-  }, [armed, secondsLeft, slotLabel, audioOn, player, act]);
+  }, [armed, secondsLeft, slotLabel, audioOn, player, act, origin]);
 
   // When this dock mounted — which, for the keyed act docks, is when it was armed (P1-1/P1-3).
   const armedAtRef = useRef<number>(typeof performance === 'undefined' ? 0 : performance.now());
@@ -162,7 +163,9 @@ export function ConfirmDock({
         disabled: !armed,
         secondsLeft,
         alreadyConfirmed: confirmed,
-        ...(act !== 'book' ? { msSinceArmed: (typeof performance === 'undefined' ? 0 : performance.now()) - armedAtRef.current } : {}),
+        ...(act !== 'book' || origin === 'waitlist'
+          ? { msSinceArmed: (typeof performance === 'undefined' ? 0 : performance.now()) - armedAtRef.current }
+          : {}),
       });
       if (decision.kind === 'blocked') {
         setUntrusted((n) => n + 1);
@@ -173,7 +176,7 @@ export function ConfirmDock({
         onConfirm();
       }
     },
-    [armed, confirmed, onConfirm, secondsLeft, act],
+    [armed, confirmed, onConfirm, secondsLeft, act, origin],
   );
 
   const blocked = blockedAnnouncement(untrusted, act);
@@ -210,16 +213,18 @@ export function ConfirmDock({
               line with the seconds in it; repeating that here, six inches from a numeral the size
               of a fist, would be the page saying the same thing twice. */}
           <p className="cl-dock__eyebrow" data-clinic-dock-eyebrow>
-            {origin === 'agent' ? copy.eyebrowAgent : copy.eyebrowYou}
+            {origin === 'waitlist' && act === 'book' ? 'It came back to you · you book it' : origin === 'agent' ? copy.eyebrowAgent : copy.eyebrowYou}
           </p>
           <p className="cl-dock__line">
             {copy.line} {slotLabel} <span className="cl-dock__detail">· {slotDetail}</span>
           </p>
           <p className="cl-dock__note">
             {act === 'book'
-              ? origin === 'agent'
-                ? 'Your agent took this hold and cannot take the next step. Only a keypress the browser marks as trusted books it.'
-                : 'The hold is yours for now. Only a keypress the browser marks as trusted books it.'
+              ? origin === 'waitlist'
+                ? 'This time was taken; you were next in line, and it came back to you — nobody raced you for it. Only a keypress the browser marks as trusted books it.'
+                : origin === 'agent'
+                  ? 'Your agent took this hold and cannot take the next step. Only a keypress the browser marks as trusted books it.'
+                  : 'The hold is yours for now. Only a keypress the browser marks as trusted books it.'
               : act === 'cancel'
                 ? 'Your agent armed this and cannot press the key. Only a keypress the browser marks as trusted cancels it — or ignore it and nothing changes.'
                 : 'Your agent armed this and cannot press the key. One trusted keypress swaps the appointments atomically — or ignore it and nothing changes.'}

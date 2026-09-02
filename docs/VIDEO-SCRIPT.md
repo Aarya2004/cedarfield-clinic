@@ -86,6 +86,17 @@ Then press Enter. **BOOKED — YOURS.** Cut to the receipt: **by hand, N · with
 
 ---
 
+## THE BEAT TO ADD (SPEC-V5) · the race is gone — ~20 s, put it right after "With the agent"
+
+**Shot.** Two windows on the shared board. Window B holds 9:20. In window A, ask the agent:
+*"get me in line for 9:20."* The row reads **You're #1 in line**. In window B, click **Give it
+back**. Window A's dock arms **by itself**: *"It came back to you — you book it."* Press Enter.
+
+**Narration** (~45 words)
+> "Someone else has the time I want. My agent puts me in line — that's a tool, and it's
+> reversible. When the slot comes back, the clinic hands it to me first, as a fresh hold. Nobody
+> raced. And it still takes my key to book it."
+
 ## 2:00 – 2:28 · Why it cannot cheat
 
 **Shot.** Open the **Site tools** arrow in ChatGPT and scroll the list slowly: nine tools, and no

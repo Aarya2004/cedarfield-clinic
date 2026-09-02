@@ -218,6 +218,14 @@ shipped mechanism. The store (`kept.ts`) and its 18 unit tests have landed; the 
   form's fields (name, date of birth, phone, reason) are transmitted nowhere: every function takes
   only a slot id. `?test=1` or `NEXT_PUBLIC_LIVE_BOARD=0` pins the seeded in-page board, which is
   what every eval drives — nothing in CI mutates the shared inventory.
+- **The waitlist cascade (SPEC-V5):** `clinic_join_waitlist` / `clinic_leave_waitlist` are
+  reversible agent verbs (a place in line, never an appointment), capped at three lines per
+  visitor, current-wave only, registered only on the shared board. The hand-over happens inside
+  `clinic_sweep` in wave order, one hold per visitor always (a waiter's other hold is given back),
+  and the simulated rival never takes a queued slot. A cascade grant lands at a moment nobody at
+  the keyboard chose, so the dock treats it exactly like an agent-timed arm — no focus steal and
+  the 500 ms dead zone — and announces it as such ("It came back to you"). Booking still requires
+  the trusted press; the queue changes who gets the chance, never who can act.
 - **Injection surface:** slot inventory, clinicians and wave copy are server-generated
   deterministically from the wave index (`clinic_sweep`) or page-authored; no tool echoes
   text authored by anyone other than its own caller (refusals may quote the caller's slot id or

@@ -19,6 +19,8 @@ import {
   CLINIC_TOOL_NAMES,
   BASE_TOOL_NAMES,
   BOOKED_TOOL_NAMES,
+  WAITLIST_TOOL_NAMES,
+  WAITLIST_CHOREOGRAPHY,
   HOLD_CHOREOGRAPHY,
   CANCEL_CHOREOGRAPHY,
   MOVE_CHOREOGRAPHY,
@@ -227,8 +229,8 @@ test('nine tools register on load; clinic_my_appointment is born by the human pr
     await new Promise((r) => setTimeout(r, 40));
     // registration order: the base seven first, then the three the press created
     assert.deepEqual(live(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES], 'after the press: the full ten, clinic_my_appointment born');
-    assert.deepEqual([...live()].sort(), [...CLINIC_TOOL_NAMES].sort());
-    assert.deepEqual(states.at(-1), { kind: 'registered', names: [...CLINIC_TOOL_NAMES] });
+    assert.deepEqual([...live()].sort(), [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES].sort(), 'no waitlist seam ⇒ no waitlist tools');
+    assert.deepEqual(states.at(-1), { kind: 'registered', names: [...BASE_TOOL_NAMES, ...BOOKED_TOOL_NAMES] });
     // THE HUMAN CANCELS → the three are unregistered again
     driver.cancel(open.id);
     await new Promise((r) => setTimeout(r, 40));
@@ -263,7 +265,7 @@ test('every registered tool carries a description and an input schema; annotatio
   }
 });
 
-test('schemas are stable: exactly three tools take input, everything else is a bare object', () => {
+test('schemas are stable: exactly five tools take input, everything else is a bare object', () => {
   const { defs, get } = defsFor(ready().source);
   const hold = get('clinic_hold_slot').inputSchema as { required: string[]; properties: Record<string, { type: string }> };
   assert.deepEqual(hold.required, ['slot_id']);
@@ -274,7 +276,10 @@ test('schemas are stable: exactly three tools take input, everything else is a b
   const find = get('clinic_find_slots').inputSchema as { required?: string[]; properties: Record<string, { type: string }> };
   assert.equal(find.required, undefined, 'every clinic_find_slots filter is optional — an empty query is a listing');
   assert.deepEqual(Object.keys(find.properties).sort(), ['after', 'before', 'clinician', 'kind']);
-  const WITH_INPUT = ['clinic_hold_slot', 'clinic_prepare_move', 'clinic_find_slots'];
+  const wait = get('clinic_join_waitlist').inputSchema as { required: string[] };
+  assert.deepEqual(wait.required, ['slot_id']);
+  assert.deepEqual((get('clinic_leave_waitlist').inputSchema as { required: string[] }).required, ['slot_id']);
+  const WITH_INPUT = ['clinic_hold_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist'];
   for (const def of defs.filter((d) => !WITH_INPUT.includes(d.name))) {
     assert.deepEqual(def.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
   }
@@ -788,4 +793,69 @@ test('clinic_prepare_move refuses while a hold is live on a DIFFERENT slot (P1-2
   const ok = await callJson(prep, { new_slot_id: open[1].id });
   assert.equal(ok.ok, true);
   assert.equal(ok.armed, 'move');
+});
+
+// ── SPEC-V5: the waitlist cascade — the agent's reversible place in line ────────────────────────
+
+test('waitlist tools exist only when the page provides the queue seam (the shared board)', async () => {
+  const { mc, live } = fakeMc();
+  const restore = withModelContext(mc);
+  try {
+    const joined: string[] = [];
+    const dispose = await registerClinicTools(ready().source, () => {}, { watchMs: 5, onJoinWaitlist: (id) => (joined.push(id), true), onLeaveWaitlist: () => true });
+    assert.deepEqual([...live()].sort(), [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES].sort(), 'nine + the two queue verbs');
+    dispose();
+  } finally {
+    restore();
+  }
+});
+
+test('clinic_join_waitlist: refuses an OPEN slot (hold it instead), your own slot, and the unknown; queues a taken one', async () => {
+  const held: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'held_by_other', waiting: 1 };
+  const open: Slot = { id: 's2', timeLabel: '9:20 AM', clinician: 'Dr. B', kind: 'Consult', state: 'open' };
+  const mine: Slot = { id: 's3', timeLabel: '9:40 AM', clinician: 'Dr. C', kind: 'Consult', state: 'booked_yours' };
+  const src = frozenSource([held, open, mine], []);
+  const joined: string[] = [];
+  const defs = clinicToolDefs(src, {
+    ...FAST,
+    onJoinWaitlist: (id) => {
+      joined.push(id);
+      held.yourPosition = 2; // the board answers: second in line
+      held.waiting = 2;
+      return true;
+    },
+    onLeaveWaitlist: () => {
+      held.yourPosition = null; // the board answers: out of the line
+      return true;
+    },
+  });
+  const join = defs.find((d) => d.name === 'clinic_join_waitlist')!;
+  assert.equal((await callJson(join, { slot_id: 's2' })).error, 'slot_open');
+  assert.equal((await callJson(join, { slot_id: 's3' })).error, 'already_yours');
+  assert.equal((await callJson(join, { slot_id: 'nope' })).error, 'unknown_slot');
+  assert.deepEqual(joined, [], 'refusals never reach the seam');
+  const out = await callJson(join, { slot_id: 's1' });
+  assert.equal(out.ok, true);
+  assert.equal(out.waiting, true);
+  assert.equal(out.position, 2);
+  assert.equal(out.ahead_of_you, 1);
+  assert.equal(out.next_step, WAITLIST_CHOREOGRAPHY);
+  assert.deepEqual(joined, ['s1']);
+  // leaving: refused when not waiting, honoured when waiting
+  const leave = defs.find((d) => d.name === 'clinic_leave_waitlist')!;
+  assert.equal((await callJson(leave, { slot_id: 's2' })).error, 'not_waiting');
+  const left = await callJson(leave, { slot_id: 's1' });
+  assert.equal(left.ok, true);
+});
+
+test('hold_slot on a taken slot points the agent at the queue when the board has one', async () => {
+  const held: Slot = { id: 's1', timeLabel: '9:00 AM', clinician: 'Dr. A', kind: 'Consult', state: 'held_by_other' };
+  const calls: string[] = [];
+  const base = frozenSource([held], calls);
+  const withQueue: ClinicToolsSource = () => ({ ...base(), waitlistAvailable: true });
+  const out = await callJson(clinicToolDefs(withQueue, FAST).find((d) => d.name === 'clinic_hold_slot')!, { slot_id: 's1' });
+  assert.equal(out.ok, false);
+  assert.match(String(out.hint), /clinic_join_waitlist/);
+  const plain = await callJson(clinicToolDefs(base, FAST).find((d) => d.name === 'clinic_hold_slot')!, { slot_id: 's1' });
+  assert.equal('hint' in plain, false, 'the seeded board has no queue to suggest');
 });

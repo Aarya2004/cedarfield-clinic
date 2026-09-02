@@ -88,6 +88,21 @@ const steps = [
   { eval: "'held:' + window.__a", matches: '^held:' },
   { sleep: 4000 },
   { eval: "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state')", equals: 'held_by_you' },
+  // ── THE CASCADE (SPEC-V5). A gives its hold back; B (script) holds a THIRD slot; A's agent joins
+  // the line for it; B lets go — and A's dock arms by itself: "It came back to you". Nobody raced.
+  { invoke: 'clinic_release_hold', outputMatches: 'ok.{0,2}:true' },
+  { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state') === 'open'", timeout: 10000 },
+  { eval: "(() => { const o = [...document.querySelectorAll('[data-slot-state=\"open\"]')].map(e => e.getAttribute('data-clinic-slot')).filter(id => id !== window.__t); window.__q = o[0]; return 'queue-target:' + o[0]; })()", matches: '^queue-target:' },
+  { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__q + '\"]')?.getAttribute('data-slot-state') === 'held_by_other'", timeout: 15000 },
+  { invoke: 'clinic_join_waitlist', inputFrom: { slot_id: 'window.__q' }, outputMatches: 'waiting.{0,2}:true[\\s\\S]*position.{0,2}:1' },
+  { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__q + '\"] [data-clinic-position=\"1\"]') !== null", timeout: 10000 },
+  { eval: "'queued:' + window.__q", matches: '^queued:' },
+  // B releases (script side) → the sweep hands the slot to A → A's dock arms on its own
+  { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__q + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'", timeout: 15000 },
+  { waitFor: "document.querySelector('[data-clinic-dock]')?.getAttribute('data-origin') === 'waitlist'", timeout: 10000 },
+  { eval: "document.querySelector('[data-clinic-dock-eyebrow]')?.textContent", matches: 'came back' },
+  { shot: 'docs/evidence/clinic/live-cascade-came-back.png' },
+  { eval: "'cascade-done'", equals: 'cascade-done' },
 ];
 const caseFile = join(work, 'live.json');
 writeFileSync(caseFile, JSON.stringify(steps));
@@ -95,6 +110,9 @@ writeFileSync(caseFile, JSON.stringify(steps));
 const harness = spawn('node', [join(root, 'evals/harness/webmcp-cdp.mjs'), `${url}/clinic/book`, caseFile], {
   env: { ...process.env, ROKAN_EVAL_SHOT_DIR: process.env.ROKAN_EVAL_SHOT_DIR ?? join(root, 'evals/.shots') },
 });
+// Attach the exit listener NOW: the harness may finish before the choreography below awaits it,
+// and a listener attached after the event has fired waits forever.
+const harnessExit = new Promise((resolve) => harness.on('exit', resolve));
 let out = '';
 harness.stdout.on('data', (d) => {
   out += d.toString();
@@ -119,7 +137,7 @@ let aTarget = null;
 try {
   await waitForLine('"value":"targets:', 90_000);
   const m = out.match(/"value":"targets:([^,"]+),([^"]+)"/);
-  if (!m) throw new Error('could not read the targets the page nominated');
+  if (!m || m[1] === 'undefined' || m[2] === 'undefined') throw new Error('could not read the targets the page nominated');
   target = m[1];
   aTarget = m[2];
   ok(true, 'the page nominated the race', `${target} (B takes) · ${aTarget} (A holds)`);
@@ -133,11 +151,23 @@ try {
   ok(!!steal.error && steal.error.includes('slot_unavailable:held'), `visitor B refused A's held slot by the database`, steal.error ?? 'was allowed!');
   const stealBook = await rpcB('clinic_book', { slot_id: aTarget });
   ok(!!stealBook.error, `visitor B cannot book A's hold`, stealBook.error ?? 'was allowed!');
+
+  // the cascade: B holds the slot A's page nominated for the queue, A joins the line, B lets go
+  await waitForLine('"value":"queue-target:', 60_000);
+  const q = out.match(/"value":"queue-target:([^"]+)"/)?.[1];
+  if (!q || q === 'undefined') throw new Error('could not read the queue target');
+  const bHold = await rpcB('clinic_hold', { slot_id: q });
+  ok(!bHold.error, `visitor B holds ${q} (A will queue for it)`, bHold.error);
+  await waitForLine('"value":"queued:', 60_000);
+  const bRelease = await rpcB('clinic_release', { slot_id: q });
+  ok(!bRelease.error, `visitor B gives ${q} back — the cascade hands it to A, first in line`, bRelease.error);
+  await waitForLine('"value":"cascade-done"', 60_000);
+  ok(out.includes('"value":"cascade-done"') && !/"data-origin\\?"\) === 'waitlist'","ok":false/.test(out), "visitor A's dock armed by itself: 'It came back to you' — nobody raced");
 } catch (e) {
   ok(false, 'choreography', e instanceof Error ? e.message : String(e));
 }
 
-const code = await new Promise((resolve) => harness.on('exit', resolve));
+const code = await harnessExit;
 const summary = out
   .split('\n')
   .map((l) => {

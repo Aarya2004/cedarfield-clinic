@@ -87,10 +87,23 @@ is always one trusted press from you.
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists, what exists now, and what your press will create |
 | *born by your press:* `clinic_my_appointment` | ✅ | Your booking(s), newest first — exists only while you have one |
 
+| *shared board only:* `clinic_join_waitlist` | ❌ | Puts your human **in line** for a taken slot. If it comes back, it is theirs first — as a fresh hold, in order. Reversible |
+| *shared board only:* `clinic_leave_waitlist` | ❌ | Takes them out of the line |
+
+**The waitlist cascade — the race is gone.** On the shared board an agent can queue its human for
+a slot that is held or booked by someone else. When that slot comes back — a hold lapses, a
+cancellation, a move — the *server* hands it to the first in line as a fresh 45-second hold; the
+dock arms by itself (**"It came back to you"**), and one press books it. The agent does the
+watching a person with a switch cannot; the person does the one act that must stay theirs; the
+database guarantees the order between strangers. A cascade grant arrives at a moment nobody at
+the keyboard chose, so it is treated exactly like an agent-timed arm: no focus steal, 500 ms
+dead zone. Proven with two visitors in `evals/live-two-visitors.mjs`.
+
 In the vocabulary of the MCP-B taxonomy (read tools · navigation tools · human-approved write
-tools): nine read/arming tools always, one read tool that exists only after a human act, and
-**zero write tools** — the writes that matter are performed by the person, at the page, through a
-browser-trusted event the agent's API cannot express.
+tools): nine read/arming tools always, two reversible queue verbs on the shared board, one read
+tool that exists only after a human act, and **zero write tools** — the writes that matter are
+performed by the person, at the page, through a browser-trusted event the agent's API cannot
+express.
 
 Cancelling and moving are, if anything, *worse* to automate than booking — they destroy something
 the person fought for. So they follow the same law: the agent prepares, the page shows exactly what
@@ -182,7 +195,7 @@ apps/web
   app/clinic/book       the product: board · dock · manual flow · counter
   components/clinic     the calm-clinic surface (typographic, token-driven, no canvas)
   components/drop       ConfirmDock/Surface · TtlBar · SlotBoard · ClinicTools (the mount)
-  lib/drop              clinic-tools (the ten tools; one born by the press) · confirm-logic (the trusted-event gate)
+  lib/drop              clinic-tools (the twelve tools; two shared-board-only, one born by the press) · confirm-logic (the trusted-event gate)
                         supabase-driver (the shared live board: Postgres + RLS + RPCs)
                         mock-driver (the seeded board every eval drives) · interaction-counter · gesture-logic
 supabase/migrations     the live board's schema and its six SECURITY DEFINER verbs

@@ -82,9 +82,16 @@ hears *"you have nothing booked"* rather than *"I have no such tool"*. **The ten
 human's press**: the instant a person books, `clinic_my_appointment` is registered live —
 `toolchange` fires, the agent's list grows — and it is unregistered when the last booking is gone.
 What the press creates is purely additive: a client slow to notice `toolchange` loses nothing; a
-client that sees it watches a human act change the agent's surface. In MCP-B's taxonomy (read ·
-navigation · human-approved write): ten read/arming tools and zero write tools — the writes are the
-person's, at the page. The writes — hold, release, and the two prepare tools — are all
+client that sees it watches a human act change the agent's surface.
+
+**And on the shared board, the race is gone.** Two more tools, `clinic_join_waitlist` and
+`clinic_leave_waitlist`, let an agent put its human *in line* for a slot someone else holds. When
+that slot comes back — a hold lapses, a cancellation, a move — the server hands it to the first in
+line as a fresh 45-second hold; the dock arms by itself (*"It came back to you"*) and one press
+books it. The agent does the watching a person with a switch cannot; the person does the one act
+that must stay theirs; the database keeps the order between strangers. In MCP-B's taxonomy (read ·
+navigation · human-approved write): read/arming tools, two reversible queue verbs, and zero write
+tools — the writes are the person's, at the page. The writes — hold, release, and the two prepare tools — are all
 reversible and self-expiring; `clinic_prepare_cancel` / `clinic_prepare_move` **arm** the page's
 dock and perform nothing: the cancel or the move happens only on a browser-trusted press, through
 the same gate as booking. A search that matches nothing names the constraint that eliminated
@@ -132,6 +139,7 @@ Verification is a first-class part of the repo, not a claim in a README:
 | **0 axe violations** across WCAG 2.0/2.1/2.2 A + AA on all three routes | `node evals/a11y.mjs` |
 
 | The shared board is real: visitor B books, visitor A's open page shows "Another patient" with no reload; the database refuses B visitor A's held slot | `node evals/live-two-visitors.mjs` |
+| The cascade: A queues for B's held slot; B lets go; A's dock arms by itself — "It came back to you" — nobody raced | same command |
 
 Plus 441 unit tests. Traces and screenshots for every row are committed under
 `docs/evidence/clinic/`. The seeded-board proofs above re-run from a clean clone in two commands;

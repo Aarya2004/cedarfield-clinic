@@ -249,7 +249,7 @@ export function ClinicBooking() {
 
   useEffect(() => {
     if (heldStartedAt === null || heldSlotId === null) return;
-    setOrigin(holdOrigin(heldStartedAt, lastLocalRequest.current));
+    setOrigin(session.held?.granted ? 'waitlist' : holdOrigin(heldStartedAt, lastLocalRequest.current));
     // A hold that arrived while you were reading further down the page is invisible unless the page
     // shows you where it landed. Scrolling is not an interaction the counter sees, so this costs the
     // reader nothing on the receipt.
@@ -257,7 +257,7 @@ export function ClinicBooking() {
     if (row === null) return;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
-  }, [heldStartedAt, heldSlotId]);
+  }, [heldStartedAt, heldSlotId, session.held?.granted]);
 
   // ── receipts ───────────────────────────────────────────────────────────────────────────────────
   const [handReceipt, setHandReceipt] = useState<LaneReceipt | null>(null);
@@ -657,6 +657,9 @@ export function ClinicBooking() {
           nextWaveAt={live ? (liveMeta?.nextWaveAt ?? null) : nextRelease === null ? null : session.now + nextRelease}
           onPrepareCancel={prepareCancel}
           onPrepareMove={prepareMove}
+          // SPEC-V5: the queue exists only on the shared board; the seeded board has no other people.
+          onJoinWaitlist={live && liveDriver ? (id) => (liveDriver.joinWaitlist(id), true) : undefined}
+          onLeaveWaitlist={live && liveDriver ? (id) => (liveDriver.leaveWaitlist(id), true) : undefined}
           armedAct={pendingAct?.kind ?? null}
           waveLandedAt={live ? (liveMeta?.waveStartedAt ?? null) : null}
           sharedBoard={live}

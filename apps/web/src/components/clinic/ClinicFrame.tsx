@@ -103,6 +103,9 @@ export function ToolManifest({ absent = false }: { absent?: boolean }) {
     'clinic_prepare_cancel()',
     'clinic_prepare_move(new_slot_id)',
     'clinic_explain_confirm()',
+    '— on the shared board —',
+    'clinic_join_waitlist(slot_id)',
+    'clinic_leave_waitlist(slot_id)',
     '— born by your press —',
     'clinic_my_appointment()',
   ];

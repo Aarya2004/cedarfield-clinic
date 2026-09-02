@@ -106,7 +106,15 @@
   "outputMatches": "ok.{0,2}:true"
  },
  {
-  "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "9"
+  "eval": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-booked')",
+  "equals": "false"
+ },
+ {
+  "waitFor": "!(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('my_appointment')",
+  "timeout": 5000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '9'",
+  "timeout": 5000
  }
 ]
