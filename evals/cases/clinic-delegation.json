@@ -34,7 +34,8 @@
   {"invoke": "clinic_book_slot", "inputFrom": {"slot_id": "window.__d"}, "outputMatches": "booked.{0,2}:true[\\s\\S]*under_permission_granted_at"},
   {"waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__d + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'", "timeout": 8000},
   {"waitFor": "!!document.querySelector('[data-clinic-appointment]')", "timeout": 8000},
-  {"eval": "(document.querySelector('[data-lane=\"agent\"]')?.textContent ?? '')", "matches": "^0 interactions — your assistant booked it under the permission you gave"},
+  {"eval": "(() => { const c = document.querySelector('[data-clinic-appointment]'); return c ? c.getAttribute('data-clinic-booked-under-permission') + ':' + c.getAttribute('data-clinic-cost-agent') : null; })()", "equals": "true:0"},
+  {"eval": "/interaction|receipt|by hand/i.test(document.querySelector('[data-clinic-appointment]')?.textContent ?? '')", "equals": false},
   {"eval": "(document.querySelector('[data-clinic-call=\"ok\"]')?.textContent ?? '')", "matches": "booked .* with .* under the permission you gave"},
 
   {"_doc": "The grant is spent: the booking tool dies; the born-by-booking tool lives."},

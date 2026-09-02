@@ -1601,12 +1601,3 @@ html:has(.cl-dock) {
   margin-top: 1rem;
 }
 
-.cl-appt__cost {
-  margin: 1rem 0 0;
-  font-size: var(--clinic-small);
-  line-height: 1.5;
-}
-
-.cl-appt__cost [data-lane='agent'] {
-  font-weight: 600;
-}

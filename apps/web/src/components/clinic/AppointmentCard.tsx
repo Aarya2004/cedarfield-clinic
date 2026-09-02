@@ -127,7 +127,17 @@ export function AppointmentCard({
   };
 
   return (
-    <div className="cl-appt" data-clinic-appointment={reference} data-clinic-slot-booked={slotId}>
+    <div
+      className="cl-appt"
+      data-clinic-appointment={reference}
+      data-clinic-slot-booked={slotId}
+      // The measurements are still taken (interaction-counter.ts, trusted events only) but a patient
+      // is never shown them — a clinic does not price its own form (SPEC-V3 §1; Aarya 2026-09-02:
+      // the demo shows the time difference by going through both flows on camera). Hooks only.
+      data-clinic-cost-hand={interactions?.hand ?? undefined}
+      data-clinic-cost-agent={interactions?.agent ?? undefined}
+      data-clinic-booked-under-permission={interactions?.delegated ? 'true' : undefined}
+    >
       <h2 className="cl-appt__head">Your appointment</h2>
 
       <p className="cl-appt__time">{timeLabel}</p>
@@ -180,24 +190,6 @@ export function AppointmentCard({
             </li>
           ))}
         </ul>
-      ) : null}
-
-      {interactions && (interactions.hand !== null || interactions.agent !== null) ? (
-        <p className="cl-appt__cost" data-clinic-cost>
-          {interactions.agent !== null ? (
-            <span data-lane="agent">
-              {interactions.delegated
-                ? '0 interactions — your assistant booked it under the permission you gave.'
-                : `${interactions.agent} ${interactions.agent === 1 ? 'interaction' : 'interactions'} with your assistant, from the confirm bar arriving to your press.`}
-            </span>
-          ) : null}
-          {interactions.agent !== null && interactions.hand !== null ? ' ' : null}
-          {interactions.hand !== null ? (
-            <span data-lane="hand">
-              {interactions.hand} {interactions.hand === 1 ? 'interaction' : 'interactions'} by hand, counted from arriving on this page.
-            </span>
-          ) : null}
-        </p>
       ) : null}
 
       <p className="cl-appt__note" role="status" data-clinic-appointment-notice>

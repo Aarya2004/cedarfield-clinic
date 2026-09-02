@@ -46,8 +46,8 @@
   "equals": "-:1"
  },
  {
-  "eval": "(document.querySelector('[data-lane=\"agent\"]')?.textContent ?? '').includes('1')",
-  "equals": true
+  "eval": "document.querySelector('[data-clinic-appointment]')?.getAttribute('data-clinic-cost-agent')",
+  "equals": "1"
  },
  {
   "shot": "docs/evidence/clinic/receipt-agent-lane.png"
