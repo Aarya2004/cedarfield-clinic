@@ -28,6 +28,15 @@ Last update: **2026-09-02 (Engineer #4, Fable 5.1)** Branch `main`.
   "N waiting" on your own booking, title lists registered names. Docs: counts are 9 seeded / 11
   shared / 12 booked everywhere; SECURITY cascade bullet exactly true; tables fixed; 444→448.
   Still owed by humans: redeploy; ChatGPT desktop hour; Aarya's real-hand test.
+- **Physical test through Chrome's own registry (2026-09-02, Claude-in-Chrome on prod):**
+  `document.modelContext.getTools()` returns exactly our 11; `executeTool(list_drops)` and
+  `executeTool(hold_slot, '{"slot_id":…}')` worked and the page reacted (slot held_by_you, dock
+  armed "Held by your agent · you book it"). Found a bug no harness could: with the tab hidden
+  (`document.hidden`, 0 rAF/s) the session clock froze while the server counted — a 45 s hold
+  read 78 s. `useDropSession` now advances on a 1 s interval and on `visibilitychange` as well
+  as on frames (single `step()`, never double-counted). Also learned: Chrome's `executeTool`
+  takes the input as a JSON STRING (matches the "Chrome 152 passes stringified JSON" handling
+  already in `coerceInput`).
 
 ## Build log — Engineer #4 (2026-09-01 night) — SPEC-V3 shipped + full adversarial sweep closed
 **SPEC-V3 — the shared live board.** Arav: "not a simulation — real judges racing each other."
