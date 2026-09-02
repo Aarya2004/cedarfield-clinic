@@ -92,6 +92,9 @@ interface Recognizer {
   close(): void;
 }
 
+/** Minimum gap between two inferences. ~12 readings/s is plenty for a one-second dwell. */
+const INFER_EVERY_MS = 80;
+
 export function GestureConfirm({
   onConfirm,
   armed,
@@ -122,6 +125,7 @@ export function GestureConfirm({
   const rafRef = useRef<number | null>(null);
   const dwellRef = useRef<DwellState>(initialDwellState());
   const lastVideoTime = useRef(-1);
+  const lastInferAt = useRef(0);
 
   // The loop reads these through refs so a re-render never restarts the camera.
   const onConfirmRef = useRef(onConfirm);
@@ -173,8 +177,12 @@ export function GestureConfirm({
     // freezes entirely therefore cancels the hold instead of quietly filling the ring on a still
     // image. `stepDwell` credits wall-clock time from the last real sighting, so nothing is lost.
     let freshFrame = false;
-    if (video.currentTime !== lastVideoTime.current) {
+    // Inference is CPU-bound (XNNPACK) and ran on every camera frame: with the camera on, the page's
+    // main thread was saturated (a 100 ms poll fired once a second — measured on Arav's Mac,
+    // 2026-09-02). A one-second dwell does not need 30 readings; INFER_EVERY_MS caps it near 12/s.
+    if (video.currentTime !== lastVideoTime.current && at - lastInferAt.current >= INFER_EVERY_MS) {
       lastVideoTime.current = video.currentTime;
+      lastInferAt.current = at;
       freshFrame = true;
       try {
         const result = recognizer.recognizeForVideo(video, at);
