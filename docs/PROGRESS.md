@@ -13,6 +13,17 @@ Last update: **2026-09-02 (Aarya's Claude, Fable 5.1)** Branch `main`.
   rebased tree `clinic-thesis` 49/49, `clinic-receipt` 11/11, `clinic-delegation` 33/33,
   `clinic-gesture-boot` 16/16, 467/467 unit tests, typecheck/lint clean. Not deployed yet —
   production still serves the broadsheet until Arav runs `vercel --prod`.
+- **Demo direction (Aarya, 2026-09-02 ~02:45): the page keeps no visible score.** The last visible
+  measurement — the "N interactions … by hand / with your assistant / under the permission" sentence
+  SPEC-V9 put on the appointment card — is gone; the counts are written to
+  `data-clinic-cost-hand` / `-agent` / `data-clinic-booked-under-permission` on the card instead.
+  `clinic-receipt` and `clinic-delegation` re-pointed to those hooks (+ a negative assertion that the
+  card text carries no measurement vocabulary). Simulated demand stays unlabelled on the page
+  ("No longer available"); README, SUBMISSION and DROP-STATUS rails now disclose it in words.
+  **VIDEO-SCRIPT rewritten**: both flows end to end in real time with a real clock in frame, the
+  simulation said out loud once, palm beat and born-by-hand beat kept, no page-side numbers. Gate:
+  typecheck/lint clean · 467/467 · receipt 11/11 · delegation 34/34 · thesis 49/49 · rendered pages
+  contain none of: fictional/rival/simulated/demo/interaction/counted/WebMCP/Site tools/receipt.
 - **Real-hand gesture test DONE** (Aarya, Chrome 152, live board): hold via
   `document.modelContext.executeTool(tool, json)` → Enable camera → open palm ≈1 s → booked from
   the palm. Details and what is still open in `components/drop/GESTURE.md` (top note). The

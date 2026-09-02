@@ -27,13 +27,13 @@ per act. An injected "yes" is bounded to one visible appointment that only you c
 
 ## 60 seconds, no login
 
-1. Open the live URL, then **“Book an appointment”** (`/clinic/book`). Six appointments; a countdown to the next release; a quiet counter in the
-   corner that counts every interaction the page costs you. No login, no account of yours — the
-   page signs itself into an anonymous session so your hold is yours across reloads. Nothing is real.
-2. **Book one by hand.** Click a slot, fill the form, submit. Watch the counter climb — and watch a
-   slot or two vanish while you type: the (labelled) simulated rival, or **another visitor on the
-   same board**, labelled "Another patient". Open it in two windows and race yourself: this board is
-   one world for everyone. That is the web most people use.
+1. Open the live URL, then **“Book an appointment”** (`/clinic/book`). Six appointments and the time
+   of the next release. No login, no account of yours — the page signs itself into an anonymous
+   session so your hold is yours across reloads. Nothing is real: Cedarfield is a fictional practice.
+2. **Book one by hand, and time it.** Click a slot, fill the form, review, confirm. Watch a slot or
+   two go "No longer available" while you type — the board simulates other patients so it is never
+   still, and **every other visitor is on the same board**. Open it in two windows and race
+   yourself: this board is one world for everyone. That is the web most people use.
 3. **Now ask your agent**, in ChatGPT's side panel: *"hold me the earliest appointment."* It calls
    `clinic_hold_slot`. A slot freezes with a three-minute bar (three minutes because chat clients take 10–39 s per call — measured on ChatGPT desktop, `docs/evidence/clinic/2026-09-02-chatgpt-desktop-transcript.md`), the dock at the bottom arms, and the
    page says who holds it. Your agent cannot finish. **Press Enter.** Booked — one interaction.
@@ -54,7 +54,8 @@ A declared tool does. `hold_slot(id)` has no drag in it and no race in it. That 
 WebMCP that matters here, and it is why the agent is allowed to do everything **except** the one
 act that should never be automated.
 
-Measured on this page, in the harness, against the page's own counter:
+Measured in the harness, against a counter the page keeps but never shows (it counts only events
+the browser marks trusted; the numbers are written to `data-clinic-cost-*` on the appointment card):
 
 | | interactions the person spends |
 |---|---|
@@ -62,8 +63,10 @@ Measured on this page, in the harness, against the page's own counter:
 | Booking with your agent | **1** — the keypress that books it |
 
 <sup>1</sup> A floor, not the total: Chrome's native date picker does not accept segment entry over
-CDP, so the headless run cannot complete the by-hand booking. A real keyboard finishes it; the
-page's own receipt shows both numbers live. Case: `evals/cases/clinic-manual-tax.json`.
+CDP, so the headless run cannot complete the by-hand booking. A real keyboard finishes it. Case:
+`evals/cases/clinic-manual-tax.json`. The page itself shows a patient no counter and no comparison
+— a clinic does not price its own form — so the video shows the difference the honest way: both
+flows, end to end, in real time.
 
 ---
 
@@ -177,9 +180,11 @@ Traces and screenshots for every one of these are committed under `docs/evidence
 
 ## What we are not claiming
 
-- **The inventory is fictional and says so on every page.** No real appointment is booked, no
-  payment is taken, nothing is signed in. The rival is a seeded simulation and is labelled as one
-  wherever it appears. (Sponsor demos in this challenge use fictional inventory too; we simply say so.)
+- **The inventory is fictional.** No real appointment is booked, no payment is taken, nothing is
+  signed in. The board simulates other patients taking slots so it is never still; on the page they
+  read as a clinic would say it — "No longer available" — and this README, the submission and the
+  video say plainly that the demand is simulated. (Sponsor demos in this challenge use fictional
+  inventory too; we simply say so.)
 - **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
   keyboard-accessible page — not "the accessible version". W3C's APA group and WCAG are explicit
   that an agent route does not discharge a page's own obligations, and we agree.
@@ -216,7 +221,7 @@ apps/web
   app/page.tsx          the front door — renders the clinic landing
   app/clinic            the same landing at its own path
   app/terminal          Rokan Terminal, the pre-pivot entry, kept and still evalled
-  app/clinic/book       the product: board · dock · manual flow · counter
+  app/clinic/book       the product: board · confirm bar · manual flow · appointment card
   components/clinic     the calm-clinic surface (typographic, token-driven, no canvas)
   components/drop       ConfirmDock/Surface · TtlBar · SlotBoard · ClinicTools (the mount)
   lib/drop              clinic-tools (the twelve tools; two shared-board-only, one born by the press) · confirm-logic (the trusted-event gate)

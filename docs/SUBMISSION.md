@@ -42,8 +42,8 @@ the tool dies with the booking. Your hand roots every booking, pressed once, ear
 3. Ask your agent: *"hold me the earliest appointment."* A slot freezes with a three-minute bar, and the page's **Agent activity** log records the call in its own words ("held 8:40 AM with Dr. Fanning · 180 s, your press books it") — you never have to trust the chat's narration, and
    the dock at the bottom arms.
 4. Ask it to *"just book it."* It will explain that it can't, and why.
-5. **Press Enter.** Booked — the receipt shows what the same task costs by hand versus the one
-   press it cost you, and **a new tool appears in your agent's list**, born by that press.
+5. **Press Enter.** Booked — an appointment card with a reference, calendar, move and cancel, and
+   **a new tool appears in your agent's list**, born by that press.
 
 Everything the description claims is also re-runnable from the repo in two commands (below).
 
@@ -71,12 +71,15 @@ A declared tool does. `hold_slot(id)` contains no drag and no race. That is the 
 WebMCP changes for this person, and it is why the agent here is allowed to do everything **except**
 the one act that should never be automated.
 
-Measured on the page itself, by a counter that only counts events the browser marks trusted:
+Measured in the harness by a counter the page keeps but never shows — it counts only events the
+browser marks trusted, and a clinic does not price its own form:
 
 | | interactions the person spends |
 |---|---|
 | Booking by hand, keyboard only | **36 measured** (≥ 30 asserted), and the form is not finished yet |
 | Booking with your agent | **1** |
+
+The video shows the same difference the way a person feels it: both flows, end to end, in real time.
 
 ## What humans and agents accomplish together here
 
@@ -122,8 +125,8 @@ everything, so an agent on a voice call can say which filter to relax.
 
 **The missing tool is the design.** There is no booking tool at load — and no cancel or move tool,
 ever: those acts are gated on a browser-trusted event, which no tool call, no console `.click()` and
-no extension can produce. Every synthetic attempt is counted and shown on screen instead of being
-silently dropped. The one booking tool that can exist is created by that same trusted event: the
+no extension can produce. Every synthetic attempt is refused and counted (`data-clinic-*` hooks the
+evals assert) instead of being silently obeyed. The one booking tool that can exist is created by that same trusted event: the
 person's press births it, for one booking, and the booking kills it.
 
 That is the honest answer to "could you do this without WebMCP?" — no. Behind the page a database
@@ -171,10 +174,11 @@ the live board's schema is committed under `supabase/migrations/`.
 
 ## What we are not claiming
 
-- **The clinic is fictional and the page says so on every screen.** Nothing real is booked, no
-  payment is taken, no one signs up (an anonymous per-browser session only). The rival is a
-  labelled simulation; every other name on the board is a real visitor, labelled "Another patient",
-  never as the rival.
+- **The clinic is fictional, and we say so here and in the video.** Nothing real is booked, no
+  payment is taken, no one signs up (an anonymous per-browser session only). The board simulates
+  other patients taking slots so it is never still; on the page a taken time reads "No longer
+  available" whether the simulation or another real visitor took it — a clinic would not say more,
+  and this description does.
 - **This is not a conformance substitute.** The agent path is an *additional operable path* beside a
   keyboard-accessible page — never "the accessible version". W3C's APA group is explicit that an
   agent route does not discharge a page's own obligations, and we agree with them.

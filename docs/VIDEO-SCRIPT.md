@@ -1,158 +1,147 @@
 # VIDEO-SCRIPT.md — The Drop, ≤ 3:00, with audio
 
+> **Rewritten 2026-09-02 (Aarya's decision) for the shipped page.** The page is a clinic. It shows
+> a patient no counter, no receipt, no rival label and no thesis (SPEC-V3). So the film does not cut
+> to numbers the page keeps score of — it shows **both flows, end to end, in real time**, and lets
+> the clock on the recording be the measurement. Every number spoken is read off the take.
+
 Devpost requires a video under three minutes with narration, and the organisers' own advice is
 blunt: **show the project working in the first 10–15 seconds.** So the film opens on the product
-doing the thing, and explains afterwards. Target **2:40**, leaving twenty seconds of headroom.
-
-Every number spoken here is one this repo measures. If a take produces a different number, the
-narration changes — not the number. The counter on screen is the page's own, and it only counts
-events the browser marked trusted.
+doing the thing, and explains afterwards. Target **2:45**, leaving fifteen seconds of headroom.
 
 ---
 
 ## Before you record
 
-- [ ] Deployed URL live; open `/clinic/book` in **ChatGPT desktop** (GPT-5.6 Sol or Terra).
-- [ ] Sound on the laptop **off** (the page has optional audio cues; they are off by default —
-      leave them off, they add nothing on camera).
+- [ ] Deployed URL live; `/clinic/book?test=1` open in the **Codex desktop app**'s browser pane
+      (the judged client — model 5.6 Terra, dictation + Send, no Voice Mode) with the chat beside it.
+      `?test=1` pins the seeded board: it lands on page load and the simulated demand takes a slot
+      at 6 s, 20 s and 34 s, so the by-hand take always loses one mid-form.
+- [ ] A visible clock in the frame for both flow beats: macOS menu-bar clock with seconds
+      (System Settings → Control Centre → Clock → show seconds), or a stopwatch window in the
+      corner. **No speed-ramping anywhere.** If a take is slow, it is slow.
+- [ ] Sound on the laptop **off** (the page's audio cues are optional and off by default).
 - [ ] Browser at 1280×800, zoom 100 %. One display. Do-not-disturb on.
-- [ ] Dry-run the whole take three times before recording audio. On the live board waves land on
-      the shared six-minute clock; the seeded board (`?test=1`) lands on page load with the rival at
-      six seconds — the timing below assumes the seeded board.
-- [ ] Have a second tab already on `/clinic` (the landing) for the closing shot.
-- [ ] Screen recording at 60 fps if the machine can hold it; the TTL bar and the counter are the
-      two things that must read cleanly.
+- [ ] Camera permission already granted to the browser for the palm beat (click Enable camera
+      once in a dry run so no permission sheet appears on the recording).
+- [ ] Second tab on `/` (the practice homepage) for the closing shot.
+- [ ] Dry-run the whole take three times before recording audio.
 
 ---
 
-## 0:00 – 0:14 · The hook: it already works
+## 0:00 – 0:12 · The hook: it already works
 
-**Shot.** `/clinic/book` in ChatGPT desktop, side panel open. Type (or speak) into the panel:
-*"hold me the earliest appointment."* The tool call fires, **8:40 AM** turns green with a
-countdown bar, the dock at the bottom arms and reads **Press Enter to book**. Press Enter. The row
-turns deep green: **BOOKED — YOURS**.
+**Shot.** The booking page, chat beside it. Type: *"hold me the earliest appointment."* The 8:40
+card turns blue — **Held for you · 2:59 · via your assistant** — and the confirm bar rises with
+**Confirm booking**. Press Enter. The card reads **Booked — yours**; the appointment card appears
+with its reference.
 
-**Narration** (28 words)
-> "My agent just held an appointment for me. It could not book it. It watched, it compared, it
-> held the slot — and then it stopped, and waited for me to press one key."
-
----
-
-## 0:14 – 0:40 · Who this is for
-
-**Shot.** Cut to the landing page thesis in large type, then back to the board with the countdown
-running.
-
-**Narration** (57 words)
-> "Every task on the web costs a number of interactions. If you use a mouse, you never count them.
-> If you use a switch, or voice control, or a head pointer, you count all of them — and a clinic
-> that releases cancellations in waves is not just tiring. It is unwinnable. No assistive
-> technology has ever won a race against a pointer."
+**Narration** (27 words)
+> "My assistant just held an appointment for me. It could not book it. It found the time, held it,
+> and stopped — and waited for me to press one key."
 
 ---
 
-## 0:40 – 1:18 · By hand
+## 0:12 – 0:34 · Who this is for
 
-**Shot.** Book one the ordinary way, keyboard only, so the counter is visible the whole time:
-tab to a slot → Enter → details → tab through name, date of birth, reason, phone → review. **Keep
-the counter in frame.** Around the twenty-second mark the rival takes a slot: the time is struck
-through and labelled **SIMULATED RIVAL**. Let that land; do not rush past it.
+**Shot.** Cut to the practice homepage — "Book a cancelled appointment today", the board in the
+hero, the doctors — then back to the booking page.
 
-**Narration** (54 words)
-> "This is the same booking by hand. The counter in the corner is the page counting what it costs
-> me — it only counts presses the browser itself marks as real. Watch: while I am still filling in
-> the form, somebody else takes one of the slots. That happens to people every day."
-
-**On screen at the end of this beat:** the counter reading in the thirties.
+**Narration** (52 words)
+> "This is an ordinary clinic page. Cancelled appointments come back in releases and the fastest
+> hands take them. If you use a mouse you never notice. If you use a switch, voice control or a head
+> pointer, every click costs you seconds — and a race like this one is not tiring. It is unwinnable."
 
 ---
 
-## 1:18 – 2:00 · With the agent
+## 0:34 – 1:20 · Flow one: by hand, in real time
 
-**Shot.** Reset. In the ChatGPT panel: *"hold me anything after nine, then tell me what to do."*
-The agent calls `clinic_hold_slot`, the slot freezes, and — this is the line that matters — the
-agent says out loud that it cannot book it and that you must press the key. That sentence comes
-from the page: it is what `clinic_hold_slot` and `clinic_explain_confirm` return.
+**Shot.** Reload `?test=1`. Start the clock in frame. Keyboard only, no cuts: Tab to a time →
+Enter → the details form → name, date of birth, reason, phone → Review → Confirm. Around the
+twenty-second mark a time on the board goes grey: **No longer available**. Let it land. Stop the
+clock when the appointment card appears. Read the time off the clock.
 
-Now ask it to book anyway: *"just book it for me."* It refuses and explains why.
-
-Then press Enter. **BOOKED — YOURS.** Cut to the receipt: **by hand, N · with your agent, 1**.
-
-**Narration** (62 words)
-> "Now the same appointment with my agent. It holds the slot instantly — the race is over before I
-> could have reached the keyboard. Then it tells me, in its own words, that it cannot finish, and
-> why. I ask it to book anyway. It can't. There is no booking tool on this page. One key from me,
-> and it's done."
-
-## THE BEAT TO ADD (SPEC-V9) · the booking tool is born by my hand — ~25 s, after the first booking
-
-**Shot.** Scroll to **Your assistant**. Press **Let my assistant book for me** (or show an open
-palm to the camera). The Site tools count ticks 9 → 10; the list now has `clinic_book_slot`. In
-the chat: *"yes, book me the earliest one."* The row flips to booked; the card reads **0
-interactions — your assistant booked it under the permission you gave**; the count ticks back.
-
-**Narration** (~50 words)
-> "I can hand it the booking — with my hand. One press creates a booking tool that did not exist a
-> second ago, for one booking, for ten minutes. Now 'yes' is enough. The page records that it
-> booked under my permission, and the tool is gone again. My hand still roots every booking."
+**Narration** (58 words, adjust the number to the take)
+> "Here is the same booking by hand, keyboard only, in real time. Watch the board while I type — a
+> time I could have taken just went. The board simulates other patients so it is never still, and
+> on the live site the other names are real visitors. Forty-one seconds, and I was fast, and I was
+> lucky."
 
 ---
 
-## THE BEAT TO ADD (SPEC-V5) · the race is gone — ~20 s, put it right after "With the agent"
+## 1:20 – 1:52 · Flow two: with the assistant, in real time
 
-**Shot.** Two windows on the shared board. Window B holds 9:20. In window A, ask the agent:
-*"get me in line for 9:20."* The row reads **You're #1 in line**. In window B, click **Give it
-back**. Window A's dock arms **by itself**: *"It came back to you · you book it."* Press Enter.
+**Shot.** Reload. Clock in frame. In the chat: *"hold me anything after nine, then tell me what to
+do."* The assistant calls the hold tool; a card turns blue; the **What your assistant has done**
+line appears under the board. The assistant says, in its own words, that it cannot book and that
+you must confirm — that sentence comes from the page. Ask: *"just book it for me."* It refuses and
+explains why. Press Enter. Stop the clock.
 
-**Narration** (~45 words)
-> "Someone else has the time I want. My agent puts me in line — that's a tool, and it's
-> reversible. When the slot comes back, the clinic hands it to me first, as a fresh hold. Nobody
-> raced. And it still takes my key to book it."
-
-## 2:00 – 2:28 · Why it cannot cheat
-
-**Shot.** Open the **Site tools** arrow in ChatGPT and scroll the list slowly: eleven tools, and no
-booking, cancel or move tool among them. Then, in DevTools console, run
-`document.querySelector('[data-clinic-confirm]').click()` —
-nothing books, and the counter of **synthetic presses blocked** ticks up on screen.
-
-**Narration** (55 words)
-> "Here is the whole tool list this page gives an agent. Eleven tools — list, search, who's on,
-> hold, status, release, arm a cancel, arm a move, get in line, leave the line, and one that exists only to explain the rule.
-> Nothing that books, cancels or moves — until my hand creates the one that books. And that press is
-> gated on an event only a browser can produce, so a script cannot fake it either. The page counts
-> the attempts in the open."
+**Narration** (60 words, adjust the number)
+> "Now with my assistant. It held the time before I could have reached the keyboard, then told me —
+> in its own words — that it cannot finish, and why. I asked it to book anyway. It can't: there is no
+> booking tool on this page. One key from me. Nine seconds, most of them the assistant talking."
 
 ---
 
-## 2:28 – 2:44 · Close
+## 1:52 – 2:14 · Or a hand, not a key
 
-**Shot.** The landing page line, held for three seconds, then the booked board.
+**Shot.** Hold again from the chat. In the confirm bar, the palm row is already on (Enable camera
+was clicked in the dry run): your face in the small circle. Hold an open palm up for one second. The
+ring fills; the card books. Keep DevTools closed — the ring is the proof.
 
-**Narration** (44 words)
+**Narration** (40 words)
+> "The key can be a switch, or a held gesture. An open palm to the camera confirms the same way —
+> optional, on-device, nothing leaves the page. Same rule as the key: the assistant holds, and only
+> a person present finishes it."
+
+---
+
+## 2:14 – 2:38 · The booking tool is born by my hand
+
+**Shot.** Scroll to **Your assistant**. Press **Let my assistant book for me**. In the chat, open
+the tool list: `clinic_book_slot` is now in it. Type: *"yes, book me the earliest one."* The card
+flips to **Booked — yours**; the assistant's activity line says it booked under the permission you
+gave; the tool list is one shorter again.
+
+**Narration** (50 words)
+> "And I can hand it the booking — with my hand. One press creates a booking tool that did not
+> exist a second ago, for one booking, for ten minutes. Now 'yes' is enough. The page records that
+> it booked under my permission, and the tool is gone again. My hand still roots every booking."
+
+---
+
+## 2:38 – 2:50 · Close
+
+**Shot.** The practice homepage, held for three seconds, then the booked card.
+
+**Narration** (38 words)
 > "Agents are about to do most of the work on the web. The question is which act stays ours. This
-> page answers it in the only place that can't be argued with — the API it hands your agent, where
-> booking does not exist."
+> page answers it in the one place that cannot be argued with — the tools it hands your agent."
 
 ---
 
-## The four stills (already captured, `docs/evidence/clinic/`)
+## Optional beat if the cut has room (~20 s) · the race is gone
 
-`beat1-board.png` · `beat2-rival-took-one.png` · `beat3-held-armed.png` · `beat4-booked.png` —
-shot from the real page by `evals/cases/clinic-shots.json`, so the gallery images and the film show
-the same product.
+Two windows on the live board. Window B holds 9:20. In window A: *"get me in line for 9:20."* The
+card reads **You're #1 in line**. In window B, release. Window A's confirm bar rises by itself:
+*"It came back to you."* Press Enter.
+
+> "Someone else has the time I want. My assistant puts me in line — reversible. When the time
+> comes back, the clinic hands it to me first. Nobody raced. It still takes my key."
+
+---
 
 ## Rules for the edit
 
-- No speed-ramping the TTL bar or the counter. If the bar takes a minute, it takes a minute; cut
-  between beats instead.
-- Never cut in a way that implies the agent booked. If a take is ambiguous, reshoot it.
-- The banner (*Cedarfield is a fictional clinic. The rival is simulated and labelled. Nothing real
-  is booked…*) must be legible in at least one full-width shot.
-- Say "simulated rival" out loud the first time it appears. Do not let a viewer think it is a real
-  competing user. If an **"Another patient"** row appears, that IS a real visitor on the shared
-  board — say so; it is the best thing that can happen on camera.
-- The board is shared and live: waves land on a six-minute server clock, not on page load. Record
-  on the live board for the two-window beat; use `?test=1` only if a take needs the seeded rival's
-  exact timing, and say so in the narration if you do.
-- If the numbers in the take differ from the ones above, the narration changes to match the take.
+- **No speed-ramping.** The two flow beats are the measurement; a cut inside either one invalidates
+  it. Cut between beats only. If a flow runs long, say the real number and keep it.
+- **Say the simulation out loud.** The page does not label the simulated demand (a clinic would
+  not). The narration does, once, in flow one. Never let a take imply a real person took the slot
+  on the seeded board.
+- Never cut in a way that implies the assistant booked without a press, except in the born-by-hand
+  beat, where the press comes first and is on camera.
+- Every spoken number is read off the take. If the take changes, the narration changes — not the
+  number.
+- Nothing on screen is edited in: no overlays, no arrows, no captions that the page does not show.
+  The clock in the frame is the only thing added, and it is a real clock.

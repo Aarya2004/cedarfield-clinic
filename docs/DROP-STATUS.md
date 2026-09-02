@@ -98,8 +98,11 @@ Driven, photographed and asserted on the live origin, both widths:
   `.clinic` — Aarya had already handled the dark-shell leak).
 
 ## Rails that must not slip
-The fictional clinic and the simulated rival stay labelled on screen, and another real visitor is
-labelled "Another patient", never as the rival. Every number on screen is measured by the code that
-shows it. The accessibility framing is an *additional operable path*, never a conformance
+The clinic is fictional and the simulated demand is disclosed in the README, the submission and
+the video — **not on the page** (Aarya, 2026-09-02: the page is a clinic, so a taken time reads
+"No longer available" with no attribution, and the demo shows the time difference by running both
+flows on camera rather than the page keeping score). The counters still run and write
+`data-clinic-*` hooks the evals assert; nothing measured is shown to a patient. Every number that
+IS on screen is measured by the code that shows it. The accessibility framing is an *additional operable path*, never a conformance
 substitute. Keyboard/switch is the primary confirm; the camera is on in the build and strictly
 opt-in per person.
