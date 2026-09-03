@@ -1,0 +1,32 @@
+[
+  {"_doc": ["clinic-switchboard — the camera is a switch board and the assistant labels it (2026-09-02).",
+            "clinic_set_sign is registered from load. The agent sets thumbs up to a whole request on the person's",
+            "say-so: the legend shows it with 'Labelled by your assistant'; it is in the person's browser; the",
+            "open palm is refused as a phrase; an unknown shape is refused; the person can reset it."]},
+  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
+  {"waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", "timeout": 15000},
+  {"list": true},
+  {"expect": {"tool": "clinic_set_sign"}},
+  {"waitFor": "document.querySelector('[data-clinic-signs]') !== null", "timeout": 8000},
+  {"eval": "document.querySelector('[data-clinic-signs]')?.getAttribute('data-clinic-signs-by')", "equals": "you"},
+
+  {"invoke": "clinic_set_sign", "input": {"shape": "thumbs up", "phrase": "hold me the earliest appointment"}, "outputMatches": "ok.{0,2}:true[\\s\\S]*hold me the earliest appointment[\\s\\S]*Tell your human what the shape now means"},
+  {"waitFor": "(document.querySelector('[data-clinic-sign-phrase=\"Thumb_Up\"]')?.textContent ?? '') === '“hold me the earliest appointment”'", "timeout": 4000},
+  {"eval": "document.querySelector('[data-clinic-signs]')?.getAttribute('data-clinic-signs-by')", "equals": "assistant"},
+  {"eval": "(document.querySelector('[data-clinic-signs-by-note]')?.textContent ?? '')", "matches": "Labelled by your assistant"},
+  {"eval": "JSON.parse(localStorage.getItem('cedarfield.signs') ?? '{}').Thumb_Up", "equals": "hold me the earliest appointment"},
+  {"eval": "(document.querySelector('[data-clinic-call=\"ok\"]')?.textContent ?? '')", "matches": "set thumbs up to mean “hold me the earliest appointment”"},
+
+  {"invoke": "clinic_set_sign", "input": {"shape": "open palm", "phrase": "book it"}, "outputMatches": "palm_is_consent"},
+  {"invoke": "clinic_set_sign", "input": {"shape": "wave", "phrase": "hello"}, "outputMatches": "unknown_shape"},
+  {"invoke": "clinic_set_sign", "input": {"shape": "two fingers", "phrase": "cancel my appointment"}, "outputMatches": "cancel my appointment"},
+  {"eval": "(document.querySelector('[data-clinic-sign-phrase=\"Victory\"]')?.textContent ?? '')", "equals": "“cancel my appointment”"},
+  {"shot": "docs/evidence/clinic/switchboard-by-assistant.png"},
+
+  {"_doc": "The person takes it back."},
+  {"eval": "(() => { document.querySelector('[data-clinic-signs-edit]')?.click(); return true; })()", "equals": true},
+  {"waitFor": "!!document.querySelector('[data-clinic-signs-reset]')", "timeout": 4000},
+  {"eval": "(() => { document.querySelector('[data-clinic-signs-reset]')?.click(); return true; })()", "equals": true},
+  {"eval": "localStorage.getItem('cedarfield.signs')", "equals": null},
+  {"eval": "document.querySelector('[data-clinic-signs]')?.getAttribute('data-clinic-signs-by')", "equals": "you"}
+]

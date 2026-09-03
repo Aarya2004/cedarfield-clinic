@@ -26,7 +26,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "10"
+  "equals": "11"
  },
  {
   "eval": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation')",
@@ -73,7 +73,7 @@
   "timeout": 4000
  },
  {
-  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '11'",
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '12'",
   "timeout": 8000
  },
  {
@@ -155,7 +155,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "11"
+  "equals": "12"
  },
  {
   "shot": "docs/evidence/clinic/delegation-spent.png"

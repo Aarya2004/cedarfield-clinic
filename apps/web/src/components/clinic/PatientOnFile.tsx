@@ -13,6 +13,16 @@
  */
 import { useEffect, useState } from 'react';
 import { SAMPLE_PATIENT, normalisePatient, validate, validateFields, type PatientField, type PatientOnFileRecord } from '../../lib/drop/patient-record.ts';
+import { setSignSink } from '../../lib/drop/sign-sink.ts';
+import { ScanKeyboard } from './ScanKeyboard.tsx';
+
+/** The sweep speed; under `?test=1` a case may freeze it (`window.__cedarfieldScanMs`) to drive it deterministically. */
+function scanStepMs(): number {
+  if (typeof window === 'undefined') return 900;
+  const hook = (window as unknown as { __cedarfieldScanMs?: unknown }).__cedarfieldScanMs;
+  const test = new URLSearchParams(window.location.search).has('test');
+  return test && typeof hook === 'number' && hook > 0 ? hook : 900;
+}
 
 export { SAMPLE_PATIENT, validate, type PatientOnFileRecord };
 
@@ -75,6 +85,9 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
   const [saved, setSaved] = useState(false);
   const [agentFilled, setAgentFilled] = useState(false);
   const [blockedSubmits, setBlockedSubmits] = useState(0);
+  /** Which field the scanning keyboard is typing into, if any (two switches: camera shapes, a switch, or keys). */
+  const [scanning, setScanning] = useState<PatientField | null>(null);
+  const FIELD_LABEL: Record<PatientField, string> = { fullName: 'the patient’s full name', dateOfBirth: 'the date of birth', phone: 'the phone number' };
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -281,6 +294,26 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
               ) : null}
             </div>
           </div>
+          {scanning !== null ? (
+            <ScanKeyboard
+              key={scanning}
+              fieldLabel={FIELD_LABEL[scanning]}
+              value={draft[scanning]}
+              stepMs={scanStepMs()}
+              onChange={(text) => setDraft((d) => ({ ...d, [scanning]: text }))}
+              onDone={() => setScanning(null)}
+              registerSignSink={setSignSink}
+            />
+          ) : (
+            <p className="cl-patient__scan-offer">
+              Cannot type?{' '}
+              {(['fullName', 'dateOfBirth', 'phone'] as PatientField[]).map((f) => (
+                <button key={f} type="button" className="cl-link" data-clinic-scan-open={f} onClick={() => setScanning(f)}>
+                  Type {FIELD_LABEL[f]} with two switches
+                </button>
+              ))}
+            </p>
+          )}
           <div className="cl-patient__actions">
             <button type="submit" className="cl-cta cl-cta--sm" data-clinic-patient-save>
               Save

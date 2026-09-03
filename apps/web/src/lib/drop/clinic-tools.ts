@@ -58,6 +58,7 @@ export const CLINIC_TOOL_NAMES = [
   'clinic_leave_waitlist',
   'clinic_my_appointment',
   'clinic_wait_for_request',
+  'clinic_set_sign',
   'clinic_explain_confirm',
 ] as const;
 
@@ -104,7 +105,14 @@ export const DELEGATED_TOOL_NAMES = ['clinic_book_slot'] as const satisfies read
  * page — waiting up to a minute for it. Registered only when the page wires the queue (the bench
  * and the unit fakes do not), like the waitlist verbs.
  */
-export const LISTEN_TOOL_NAMES = ['clinic_wait_for_request'] as const satisfies readonly ClinicToolName[];
+export const LISTEN_TOOL_NAMES = ['clinic_wait_for_request', 'clinic_set_sign'] as const satisfies readonly ClinicToolName[];
+
+const SET_SIGN_DESCRIPTION =
+  "Labels the page's camera switch board for your human: the camera reads five hand shapes (thumbs " +
+  'up, thumbs down, fist, one finger, two fingers) and each means a phrase the page hands to you ' +
+  "through clinic_wait_for_request. Set a shape's phrase when your human asks — e.g. thumbs up = " +
+  "'hold me the earliest appointment'. Empty phrase switches that shape off. Never the open palm: " +
+  "that is your human's consent, not a phrase. Kept in their browser.";
 
 const WAIT_FOR_REQUEST_DESCRIPTION =
   "Waits for the next thing your human says, signs or types TO THE PAGE (they may not be able to " +
@@ -242,10 +250,12 @@ export interface ClinicToolsOptions {
    * the grant again itself and returns false if it has lapsed; the tool then answers honestly.
    */
   onBook?: (slotId: string) => boolean;
-  /** The person's requests to the page. Present ⇒ `clinic_wait_for_request` is registered. */
+  /** The person's requests to the page. Present ⇒ `clinic_wait_for_request` and `clinic_set_sign` are registered. */
   requests?: {
     wait(timeoutMs: number, signal?: AbortSignal): Promise<{ at: number; text: string; via: string } | null>;
     pending(): number;
+    /** The switch-board write: returns the whole board after the change, or null for an unknown shape. */
+    setSign?(shape: string, phrase: string): Record<string, string> | null;
   };
 }
 
@@ -328,6 +338,8 @@ export function summariseToolAnswer(name: ClinicToolName, result: ToolTextResult
       const req = rec(r.request);
       return { ok: true, summary: r.request ? `heard you: “${str(req.text)}” (${str(req.via)})` : `waited ${str(r.waited_seconds, '?')} s — nothing said yet` };
     }
+    case 'clinic_set_sign':
+      return { ok: true, summary: `set ${str(r.shape)} to mean “${str(r.phrase)}”` };
     default:
       return { ok: true, summary: 'ok' };
   }
@@ -1318,6 +1330,49 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             req.text.toLowerCase() === 'stop'
               ? 'The person said stop. Say goodbye and do not call clinic_wait_for_request again.'
               : 'Act on this with the other tools, tell the person what happened in one sentence, then call clinic_wait_for_request again.',
+        });
+      },
+    },
+    {
+      name: 'clinic_set_sign',
+      title: "Label your human's camera switch board",
+      description: SET_SIGN_DESCRIPTION,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          shape: { type: 'string', description: 'One of: thumbs up, thumbs down, fist, one finger, two fingers.' },
+          phrase: { type: 'string', description: 'What that shape should mean, in your human’s words (≤ 120 chars). Empty switches the shape off.' },
+        },
+        required: ['shape', 'phrase'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false },
+      async execute(raw) {
+        const q = options.requests;
+        if (!q?.setSign) {
+          return asToolResult({ ok: false, error: 'signs_not_wired', detail: 'This page has no camera switch board.' } satisfies ErrorResult);
+        }
+        const input = coerceInput(raw);
+        const shape = typeof input.shape === 'string' ? input.shape : '';
+        const phrase = typeof input.phrase === 'string' ? input.phrase : '';
+        if (/palm/i.test(shape)) {
+          return asToolResult({ ok: false, error: 'palm_is_consent', detail: 'The open palm is your human’s consent — it books, cancels, moves or grants. It cannot carry a phrase.' } satisfies ErrorResult);
+        }
+        const board = q.setSign(shape, phrase);
+        if (board === null) {
+          return asToolResult({
+            ok: false,
+            error: 'unknown_shape',
+            detail: 'Name one of: thumbs up, thumbs down, fist, one finger, two fingers.',
+          } satisfies ErrorResult);
+        }
+        return asToolResult({
+          ok: true,
+          shape: shape.trim().toLowerCase(),
+          phrase: phrase.replace(/\s+/g, ' ').trim().slice(0, 120),
+          board,
+          next_step:
+            'Tell your human what the shape now means, in one sentence. From here they can drive you with that shape; the open palm stays their consent.',
         });
       },
     },

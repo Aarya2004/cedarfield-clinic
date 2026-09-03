@@ -1,56 +1,181 @@
 [
-  {"_doc": ["clinic-delegation-edges — the permission protocol under pressure (Codex audit, 2026-09-02).",
-            "Expiry: a grant shortened to 3 s (test hook) dies on its own and the booking tool with it.",
-            "Revoke: 'Take that back' ends it at once. Wrong slot / taken slot: the tool refuses and the grant",
-            "stands. Replay after spend: the tool is gone. No patient: the press itself is refused. Reload:",
-            "nothing persists (a fresh page starts with no grant)."]},
-  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
-  {"waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", "timeout": 15000},
-  {"waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'on-file'", "timeout": 8000},
-
-  {"_doc": "Expiry in seconds (test hook, honoured only under ?test=1)."},
-  {"eval": "(() => { window.__cedarfieldDelegationMs = 3000; return true; })()", "equals": true},
-  {"focus": "[data-clinic-delegate]"},
-  {"type": "\r"},
-  {"waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'granted'", "timeout": 4000},
-  {"waitFor": "(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')", "timeout": 8000},
-  {"waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'none'", "timeout": 8000},
-  {"waitFor": "!(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')", "timeout": 8000},
-  {"eval": "(() => { delete window.__cedarfieldDelegationMs; return true; })()", "equals": true},
-
-  {"_doc": "Revoke ends a grant at once."},
-  {"focus": "[data-clinic-delegate]"},
-  {"type": "\r"},
-  {"waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'granted'", "timeout": 4000},
-  {"waitFor": "(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')", "timeout": 8000},
-  {"focus": "[data-clinic-revoke]"},
-  {"type": "\r"},
-  {"waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'none'", "timeout": 4000},
-  {"waitFor": "!(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')", "timeout": 8000},
-
-  {"_doc": "Wrong slot and taken slot: refused, grant intact. Then a real booking spends it; a replay finds no tool."},
-  {"focus": "[data-clinic-delegate]"},
-  {"type": "\r"},
-  {"waitFor": "(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')", "timeout": 8000},
-  {"invoke": "clinic_book_slot", "input": {"slot_id": "no-such-slot"}, "outputMatches": "unknown_slot"},
-  {"waitFor": "!!document.querySelector('[data-slot-state=\"taken_by_rival\"]')", "timeout": 30000},
-  {"eval": "(() => { window.__taken = document.querySelector('[data-slot-state=\"taken_by_rival\"]')?.getAttribute('data-clinic-slot'); window.__open = document.querySelector('[data-slot-state=\"open\"]')?.getAttribute('data-clinic-slot'); return typeof window.__taken + ':' + typeof window.__open; })()", "equals": "string:string"},
-  {"invoke": "clinic_book_slot", "inputFrom": {"slot_id": "window.__taken"}, "outputMatches": "slot_not_open"},
-  {"eval": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation')", "equals": "granted"},
-  {"invoke": "clinic_book_slot", "inputFrom": {"slot_id": "window.__open"}, "outputMatches": "booked.{0,2}:true"},
-  {"waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'none'", "timeout": 4000},
-  {"waitFor": "!(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')", "timeout": 8000},
-  {"list": true},
-  {"expect": {"noTool": "clinic_book_slot"}},
-
-  {"_doc": "No patient on file: the press itself is refused with the reason; no grant appears."},
-  {"eval": "(() => { document.querySelector('[data-clinic-patient-clear]')?.click(); return true; })()", "equals": true},
-  {"waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'none'", "timeout": 4000},
-  {"focus": "[data-clinic-delegate]"},
-  {"type": "\r"},
-  {"waitFor": "!!document.querySelector('[data-clinic-notice]')", "timeout": 4000},
-  {"eval": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation')", "equals": "none"},
-
-  {"_doc": "Nothing persists: the grant is page state, never storage."},
-  {"eval": "Object.keys(localStorage).filter(k => /deleg|grant|permission/i.test(k)).length", "equals": 0}
+ {
+  "_doc": [
+   "clinic-delegation-edges \u2014 the permission protocol under pressure (Codex audit, 2026-09-02).",
+   "Expiry: a grant shortened to 3 s (test hook) dies on its own and the booking tool with it.",
+   "Revoke: 'Take that back' ends it at once. Wrong slot / taken slot: the tool refuses and the grant",
+   "stands. Replay after spend: the tool is gone. No patient: the press itself is refused. Reload:",
+   "nothing persists (a fresh page starts with no grant)."
+  ]
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'on-file'",
+  "timeout": 8000
+ },
+ {
+  "_doc": "Expiry in seconds (test hook, honoured only under ?test=1)."
+ },
+ {
+  "eval": "(() => { window.__cedarfieldDelegationMs = 3000; return true; })()",
+  "equals": true
+ },
+ {
+  "focus": "[data-clinic-delegate]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'granted'",
+  "timeout": 4000
+ },
+ {
+  "waitFor": "(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')",
+  "timeout": 8000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'none'",
+  "timeout": 8000
+ },
+ {
+  "waitFor": "!(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')",
+  "timeout": 8000
+ },
+ {
+  "eval": "(() => { delete window.__cedarfieldDelegationMs; return true; })()",
+  "equals": true
+ },
+ {
+  "_doc": "Revoke ends a grant at once."
+ },
+ {
+  "focus": "[data-clinic-delegate]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'granted'",
+  "timeout": 4000
+ },
+ {
+  "waitFor": "(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')",
+  "timeout": 8000
+ },
+ {
+  "focus": "[data-clinic-revoke]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'none'",
+  "timeout": 4000
+ },
+ {
+  "waitFor": "!(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')",
+  "timeout": 8000
+ },
+ {
+  "_doc": "Wrong slot and taken slot: refused, grant intact. Then a real booking spends it; a replay finds no tool."
+ },
+ {
+  "focus": "[data-clinic-delegate]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')",
+  "timeout": 8000
+ },
+ {
+  "invoke": "clinic_book_slot",
+  "input": {
+   "slot_id": "no-such-slot"
+  },
+  "outputMatches": "unknown_slot"
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"taken_by_rival\"]')",
+  "timeout": 30000
+ },
+ {
+  "eval": "(() => { window.__taken = document.querySelector('[data-slot-state=\"taken_by_rival\"]')?.getAttribute('data-clinic-slot'); window.__open = document.querySelector('[data-slot-state=\"open\"]')?.getAttribute('data-clinic-slot'); return typeof window.__taken + ':' + typeof window.__open; })()",
+  "equals": "string:string"
+ },
+ {
+  "invoke": "clinic_book_slot",
+  "inputFrom": {
+   "slot_id": "window.__taken"
+  },
+  "outputMatches": "slot_not_open"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation')",
+  "equals": "granted"
+ },
+ {
+  "invoke": "clinic_book_slot",
+  "inputFrom": {
+   "slot_id": "window.__open"
+  },
+  "outputMatches": "booked.{0,2}:true"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation') === 'none'",
+  "timeout": 4000
+ },
+ {
+  "waitFor": "!(document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').includes('clinic_book_slot')",
+  "timeout": 8000
+ },
+ {
+  "list": true
+ },
+ {
+  "expect": {
+   "noTool": "clinic_book_slot"
+  }
+ },
+ {
+  "_doc": "No patient on file: the press itself is refused with the reason; no grant appears."
+ },
+ {
+  "eval": "(() => { document.querySelector('[data-clinic-patient-clear]')?.click(); return true; })()",
+  "equals": true
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'none'",
+  "timeout": 4000
+ },
+ {
+  "focus": "[data-clinic-delegate]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-clinic-notice]')",
+  "timeout": 4000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation')",
+  "equals": "none"
+ },
+ {
+  "_doc": "Nothing persists: the grant is page state, never storage."
+ },
+ {
+  "eval": "Object.keys(localStorage).filter(k => /deleg|grant|permission/i.test(k)).length",
+  "equals": 0
+ }
 ]

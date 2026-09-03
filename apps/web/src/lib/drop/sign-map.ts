@@ -74,6 +74,53 @@ export function cleanPhrase(v: string): string {
   return v.replace(/\s+/g, ' ').trim().slice(0, SIGN_PHRASE_MAX);
 }
 
+/** The shape names a person or an agent would say, mapped to the recognizer's categories. */
+export const SHAPE_ALIASES: Record<string, SignShape['category']> = {
+  'thumbs up': 'Thumb_Up',
+  thumbsup: 'Thumb_Up',
+  'thumb up': 'Thumb_Up',
+  'thumbs down': 'Thumb_Down',
+  thumbsdown: 'Thumb_Down',
+  'thumb down': 'Thumb_Down',
+  fist: 'Closed_Fist',
+  'closed fist': 'Closed_Fist',
+  'a fist': 'Closed_Fist',
+  'one finger': 'Pointing_Up',
+  'one finger up': 'Pointing_Up',
+  'pointing up': 'Pointing_Up',
+  'index finger': 'Pointing_Up',
+  'two fingers': 'Victory',
+  'two fingers up': 'Victory',
+  victory: 'Victory',
+  'peace sign': 'Victory',
+  thumb_up: 'Thumb_Up',
+  thumb_down: 'Thumb_Down',
+  closed_fist: 'Closed_Fist',
+  pointing_up: 'Pointing_Up',
+};
+
+/** A shape as a person or an agent names it → the recognizer's category, or null. */
+export function shapeFromName(name: string): SignShape['category'] | null {
+  const key = name.trim().toLowerCase().replace(/[-\s]+/g, ' ');
+  return SHAPE_ALIASES[key] ?? SHAPE_ALIASES[key.replace(/\s/g, '_')] ?? null;
+}
+
+/** Event the page dispatches when the map changes (the legend re-reads). */
+export const SIGNS_CHANGED = 'cedarfield:signs';
+
+/**
+ * Set one shape's phrase — the switch-board write. Used by the legend (the person) and by the
+ * `clinic_set_sign` tool (the agent, on the person's say-so). Returns the new map, or null when
+ * the shape is unknown.
+ */
+export function setSignPhrase(store: StoreLike | null | undefined, shape: string, phrase: string): SignMap | null {
+  const category = shapeFromName(shape);
+  if (category === null) return null;
+  const next = { ...loadSignMap(store), [category]: cleanPhrase(phrase) };
+  saveSignMap(store, next);
+  return next;
+}
+
 /** What a recognised category means now — null for an unmapped category or an emptied phrase. */
 export function phraseFor(category: string, map: SignMap): string | null {
   if (!(category in map)) return null;

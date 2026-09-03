@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_SIGN_MAP, SIGN_SHAPES, cleanPhrase, loadSignMap, phraseFor, saveSignMap } from './sign-map.ts';
+import { DEFAULT_SIGN_MAP, SIGN_SHAPES, cleanPhrase, loadSignMap, phraseFor, saveSignMap, setSignPhrase, shapeFromName } from './sign-map.ts';
 
 function memStore() {
   const m = new Map<string, string>();
@@ -24,6 +24,21 @@ test('a person assigns whole requests to shapes; they round-trip through storage
   assert.equal(phraseFor('Thumb_Up', back), 'hold me the earliest appointment');
   assert.equal(phraseFor('Open_Palm', back), null, 'the palm is never a word');
   assert.equal(phraseFor('Victory', { ...back, Victory: '' }), null, 'an emptied phrase disables the shape');
+});
+
+test('an agent labels the switch board by the shape name a person would say', () => {
+  const store = memStore();
+  assert.equal(shapeFromName('Thumbs up'), 'Thumb_Up');
+  assert.equal(shapeFromName('two fingers'), 'Victory');
+  assert.equal(shapeFromName('a fist'), 'Closed_Fist');
+  assert.equal(shapeFromName('one-finger'), 'Pointing_Up');
+  assert.equal(shapeFromName('Pointing_Up'), 'Pointing_Up');
+  assert.equal(shapeFromName('open palm'), null, 'the palm is consent, never a phrase');
+  assert.equal(shapeFromName('wave'), null);
+  const next = setSignPhrase(store, 'thumbs up', '  hold me the earliest appointment ');
+  assert.equal(next?.Thumb_Up, 'hold me the earliest appointment');
+  assert.equal(loadSignMap(store).Thumb_Up, 'hold me the earliest appointment', 'written through');
+  assert.equal(setSignPhrase(store, 'wave', 'x'), null);
 });
 
 test('defaults are not stored; broken or oversized records fall back per shape', () => {

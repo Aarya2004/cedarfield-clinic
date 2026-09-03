@@ -11,7 +11,7 @@ an item names one. Use only synthetic data. Do not book an appointment unless an
 Prior findings, to re-verify on this build:
 1. Fresh page → fetch tools → immediately call clinic_list_drops. Repeat 3 times on 3 fresh loads.
    PASS = no "stale" error on any first call.
-2. Tool list on the live board: 12 tools including clinic_wait_for_request, on three fresh loads,
+2. Tool list on the live board: 13 tools including clinic_wait_for_request and clinic_set_sign, on three fresh loads,
    fetching about one second after the page shows the slot list (the page registers each set in
    parallel; Chrome fires toolchange as sets land — a fetch inside the first frames may catch a set
    mid-registration and must be re-fetched on toolchange). PASS = 12 on all three.

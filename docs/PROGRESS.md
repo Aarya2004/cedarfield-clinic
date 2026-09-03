@@ -2,6 +2,19 @@
 
 Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4, 2026-09-02 ~21:50 PT: the camera switch board + a scanning keyboard for the patient card
+Arav: "what's the point of five shapes in real life?" → reframed as **camera switch access** (switch
+users drive phones with two to five hardware switches mapped to phrases; here five hand shapes are
+five free switches). New tool `clinic_set_sign({shape, phrase})`, registered from load with the wait
+tool: the assistant labels a switch on the person's say-so; legend shows "labelled by your assistant";
+palm refused (`palm_is_consent`). Counts: seeded 11 at load, 12 after a booking/grant, shared 13;
+fifteen names. Then "how does this help them fill out name, phone, DOB?" → **scanning keyboard**
+(the standard AAC method; finger-counting rejected honestly: the canned model reads one and two
+fingers only). `scan-keyboard.ts` pure + 4 tests · `ScanKeyboard.tsx` under each patient field ·
+`sign-sink.ts` routes shapes to the open keyboard and away from the queue · `clinic-scan.json`.
+Unit **492/492** · typecheck · lint. Full suite r6 on the switch-board tree in flight; a full pass on
+the final tree, then deploy + double production round, before the physical pass with Arav.
+
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera
   shapes, defaults not stored, cleanup, 120-char cap; 3 unit tests), a legend with glyph · name ·

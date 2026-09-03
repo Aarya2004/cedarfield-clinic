@@ -14,7 +14,7 @@ reaches that step.
 
 **One tool surface, three clients.** Codex consumes these tools from its browser pane. Chrome 152
 exposes them to any agent. And the page hosts its own voice client — **Talk to Cedarfield** — an
-OpenAI Realtime agent that consumes the same eleven tools through the same execute path, speaks its
+OpenAI Realtime agent that consumes the same live tools through the same execute path, speaks its
 answers, and cannot press either. A person with no hands says "hold me the earliest appointment"
 to the page, hears the answer, and books with a palm or with the permission they granted once.
 
@@ -119,13 +119,14 @@ is always one trusted press from you.
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists, what exists now, and what your press will create |
 | *born by your grant:* `clinic_book_slot` | ❌ | Books **one** slot for you — exists only while the permission you pressed for stands (ten minutes), and dies with the booking |
 | `clinic_wait_for_request` | ✅ | Hands the agent the next thing you **said, signed or typed to the page** (waits up to a minute; `request: null` if nothing). Registered from load so the agent can find it before you speak. The agent loops: wait, act, wait |
+| `clinic_set_sign` | ❌ | Labels your **camera switch board**: sets what one of the five hand shapes means, on your say-so ("make thumbs-up mean hold me the earliest appointment"). Never the open palm — that is your consent |
 | *born by your press:* `clinic_my_appointment` | ✅ | Your booking(s), newest first — exists only while you have one |
 | *shared board only:* `clinic_join_waitlist` | ❌ | Puts your human **in line** for a taken slot. If it comes back, it is theirs first — as a fresh hold, in order. Reversible |
 | *shared board only:* `clinic_leave_waitlist` | ❌ | Takes them out of the line |
 
-**Counted honestly:** ten tools on the seeded board (`?test=1`), **twelve on the shared board** every
-real visitor is on (the two queue verbs); one more while your permission stands, one more once you
-have booked. Fourteen names in the vocabulary, at most thirteen live at once, well inside Chrome's
+**Counted honestly:** eleven tools on the seeded board (`?test=1`), **thirteen on the shared board**
+every real visitor is on (the two queue verbs); one more while your permission stands, one more once
+you have booked. Fifteen names in the vocabulary, at most fourteen live at once, well inside Chrome's
 guidance of about thirty. The base set is registered once and never re-registered: handles a client
 fetched at load stay valid; everything state-dependent is born on its own controller.
 
@@ -135,11 +136,20 @@ own speech recognizer, a typed line, or five hand shapes all land in one queue, 
 `clinic_wait_for_request` hands the agent the next one. Tell the agent once, "keep helping me with
 what I say to the page until I say stop", and never touch its window again.
 
-**The shapes mean what you say they mean.** Five shapes the camera can read — thumbs up, thumbs
-down, a fist, one finger, two fingers — default to *yes / no / stop / the first one / another one*.
-The legend on the page lets you assign whole requests instead: thumbs up = "hold me the earliest
-appointment", two fingers = "cancel my appointment". Kept in your browser. Not a language, and the
-page says so; it is a keyboard with five keys you label yourself, plus the palm that books.
+**The camera is a switch board, and the agent labels it.** Switch access is standard assistive
+technology: a person with ALS, cerebral palsy or a high spinal injury drives a whole phone with two
+to five physical switches, each mapped to a phrase. Here the five switches are five hand shapes the
+camera reads — thumbs up, thumbs down, a fist, one finger, two fingers — no hardware, and the phrases
+on them are yours. Set them on the page, or say once to your agent "make thumbs-up mean *hold me the
+earliest appointment* and a fist mean *cancel my appointment*": it calls `clinic_set_sign` and the
+board is written, in your browser, marked "labelled by your assistant". From then on two shapes and
+a palm book an appointment. Not a language, and the page says so.
+
+And when the patient card itself must be typed — a name, a date of birth, a phone number — the
+same two shapes drive a **scanning keyboard**, the way switch users type today: the keyboard sweeps
+rows, then keys; thumbs-up selects, a fist goes back; a hardware switch, Space and Escape do the
+same. While it is open the shapes are its switches and nothing reaches the assistant, so typing a
+name can never also send "yes". The person still presses Save.
 
 **Both halves of WebMCP, each doing the job it is for.** The tools above are the *imperative* API.
 The patient-details form is also published *declaratively* — `toolname="clinic_booking_form"`,

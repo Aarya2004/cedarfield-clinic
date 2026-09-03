@@ -269,7 +269,7 @@ test('every registered tool carries a description and an input schema; annotatio
   }
 });
 
-test('schemas are stable: exactly six tools take input, everything else is a bare object', () => {
+test('schemas are stable: exactly seven tools take input, everything else is a bare object', () => {
   const { defs, get } = defsFor(ready().source);
   const hold = get('clinic_hold_slot').inputSchema as { required: string[]; properties: Record<string, { type: string }> };
   assert.deepEqual(hold.required, ['slot_id']);
@@ -284,7 +284,8 @@ test('schemas are stable: exactly six tools take input, everything else is a bar
   assert.deepEqual(wait.required, ['slot_id']);
   assert.deepEqual((get('clinic_leave_waitlist').inputSchema as { required: string[] }).required, ['slot_id']);
   assert.deepEqual((get('clinic_book_slot').inputSchema as { required: string[] }).required, ['slot_id']);
-  const WITH_INPUT = ['clinic_hold_slot', 'clinic_book_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist', 'clinic_wait_for_request'];
+  assert.deepEqual((get('clinic_set_sign').inputSchema as { required: string[] }).required, ['shape', 'phrase']);
+  const WITH_INPUT = ['clinic_hold_slot', 'clinic_book_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist', 'clinic_wait_for_request', 'clinic_set_sign'];
   for (const def of defs.filter((d) => !WITH_INPUT.includes(d.name))) {
     assert.deepEqual(def.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
   }
@@ -570,6 +571,33 @@ test('the base set is registered once: learning the board is shared births the q
   } finally {
     restore();
   }
+});
+
+test('clinic_set_sign labels the camera switch board on the person’s say-so; the palm is never a phrase', async () => {
+  const board: Record<string, string> = { Thumb_Up: 'yes', Thumb_Down: 'no', Closed_Fist: 'stop', Pointing_Up: 'the first one', Victory: 'another one' };
+  const requests = {
+    wait: () => Promise.resolve(null),
+    pending: () => 0,
+    setSign: (shape: string, phrase: string) => {
+      const map: Record<string, string> = { 'thumbs up': 'Thumb_Up', fist: 'Closed_Fist' };
+      const cat = map[shape.trim().toLowerCase()];
+      if (!cat) return null;
+      board[cat] = phrase.trim();
+      return { ...board };
+    },
+  };
+  const def = clinicToolDefs(ready().source, { requests }).find((d) => d.name === 'clinic_set_sign')!;
+  const ok = JSON.parse((await def.execute({ shape: 'Thumbs up', phrase: ' hold me the earliest appointment ' })).content[0].text) as Record<string, unknown>;
+  assert.equal(ok.ok, true);
+  assert.equal(ok.phrase, 'hold me the earliest appointment');
+  assert.equal((ok.board as Record<string, string>).Thumb_Up, 'hold me the earliest appointment');
+  const palm = JSON.parse((await def.execute({ shape: 'open palm', phrase: 'book it' })).content[0].text) as { error: string };
+  assert.equal(palm.error, 'palm_is_consent');
+  const unknown = JSON.parse((await def.execute({ shape: 'wave', phrase: 'hi' })).content[0].text) as { error: string };
+  assert.equal(unknown.error, 'unknown_shape');
+  const unwired = clinicToolDefs(ready().source, {}).find((d) => d.name === 'clinic_set_sign')!;
+  const none = JSON.parse((await unwired.execute({ shape: 'fist', phrase: 'stop' })).content[0].text) as { error: string };
+  assert.equal(none.error, 'signs_not_wired');
 });
 
 test('SPEC-V9: the grant births clinic_book_slot, the tool books through the page verb, the spent grant kills it', async () => {

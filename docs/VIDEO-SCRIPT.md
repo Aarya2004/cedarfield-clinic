@@ -86,17 +86,20 @@ explains why. Press Enter. Stop the clock.
 
 ## THE BEAT TO ADD (2026-09-02, the person who cannot type or speak) · ~25 s, before the palm beat
 
-**Shot.** Scroll to **Say it to the page**. Open "Change what the shapes mean"; set thumbs up to
-*"hold me the earliest appointment"*, press Done. Enable the camera on that panel. Hold a thumbs-up
-for a second: the log reads *Signed "hold me the earliest appointment"*. In the chat, the
-assistant (told once to keep helping) takes it: the strip reads *heard you: … (sign)*, then *held
-9:00 AM*. The confirm bar rises. An open palm books it.
+**Shot.** Scroll to **Say it to the page**. Type once to the assistant: *"make thumbs-up mean hold me
+the earliest appointment."* It calls `clinic_set_sign`; the legend updates and reads **Labelled by
+your assistant, at your request**. Enable the camera on that panel. Hold a thumbs-up for a second:
+the log reads *Signed "hold me the earliest appointment"*; the assistant (told once to keep helping)
+takes it: the strip reads *heard you: … (sign)*, then *held 9:00 AM*. The confirm bar rises. An open
+palm books it.
 
-**Narration** (~55 words)
-> "Now someone who cannot type and cannot speak. Five hand shapes the camera reads, and they mean
-> whatever she says they mean — she made thumbs-up her whole request. The page hands it to the
-> assistant; the assistant holds the time; her palm books it. Five shapes today. Sign language when
-> a recognizer exists. The tools do not change."
+**Narration** (~60 words)
+> "Now someone who cannot type and cannot speak. People like her drive phones today with two to five
+> hardware switches. Here the camera is the switch board — five hand shapes, no hardware — and the
+> assistant labels it for her, on her say-so. Thumbs-up is now her whole request. The assistant
+> holds the time; her palm books it. And when the clinic needs her name, the same two shapes type
+> it on a scanning keyboard — the way switch users type today. Five switches. Not a language, and
+> the page says so. The tools do not change."
 
 ## 1:52 – 2:14 · Or a hand, not a key
 

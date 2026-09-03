@@ -59,6 +59,7 @@ import { PathStrip } from './PathStrip.tsx';
 import { VoiceAgent, type VoiceExecutor } from './VoiceAgent.tsx';
 import { ListenPanel } from './ListenPanel.tsx';
 import { createRequestQueue } from '../../lib/drop/request-queue.ts';
+import { SIGNS_CHANGED, setSignPhrase } from '../../lib/drop/sign-map.ts';
 import { BookingSteps } from './BookingSteps.tsx';
 import { ConfirmDock } from './ConfirmDock.tsx';
 import { SlotSheet } from './SlotSheet.tsx';
@@ -537,7 +538,20 @@ export function ClinicBooking() {
 
   // "Say it to the page": what the person says, signs or types, queued for whichever agent asks.
   // The wait tool is born while the page listens or a request is waiting — the person's press.
-  const requestQueue = useMemo(() => createRequestQueue(), []);
+  // The queue plus the switch-board write: `clinic_set_sign` lets the assistant label the five
+  // camera shapes on the person's say-so (camera switch access — the board is theirs, in their
+  // browser; the legend re-reads on the event).
+  const requestQueue = useMemo(
+    () =>
+      Object.assign(createRequestQueue(), {
+        setSign: (shape: string, phrase: string) => {
+          const next = setSignPhrase(window.localStorage, shape, phrase);
+          if (next) window.dispatchEvent(new CustomEvent(SIGNS_CHANGED, { detail: { by: 'assistant' } }));
+          return next;
+        },
+      }),
+    [],
+  );
   const [listenActive, setListenActive] = useState(false);
   // One microphone consumer at a time: the page's own voice agent and the recognizer exclude each
   // other, so the agent's speech is never transcribed back as the person's words (review P1-3).

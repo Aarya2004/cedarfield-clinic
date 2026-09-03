@@ -14,7 +14,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
 import type { PersonRequest, RequestQueue } from '../../lib/drop/request-queue.ts';
-import { DEFAULT_SIGN_MAP, SIGN_PHRASE_MAX, SIGN_SHAPES, loadSignMap, phraseFor, saveSignMap, type SignMap, type SignShape } from '../../lib/drop/sign-map.ts';
+import { routeSign } from '../../lib/drop/sign-sink.ts';
+import { DEFAULT_SIGN_MAP, SIGNS_CHANGED, SIGN_PHRASE_MAX, SIGN_SHAPES, loadSignMap, phraseFor, saveSignMap, type SignMap, type SignShape } from '../../lib/drop/sign-map.ts';
 
 interface RecognitionLike {
   lang: string;
@@ -61,14 +62,26 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
   const [editingSigns, setEditingSigns] = useState(false);
   const signMapRef = useRef(signMap);
   signMapRef.current = signMap;
-  useEffect(() => setSignMap(loadSignMap(typeof window === 'undefined' ? null : window.localStorage)), []);
+  const [boardBy, setBoardBy] = useState<'you' | 'assistant'>('you');
+  useEffect(() => {
+    setSignMap(loadSignMap(window.localStorage));
+    // The assistant labelled a switch (clinic_set_sign): re-read, and say who did it.
+    const onChanged = (e: Event) => {
+      setSignMap(loadSignMap(window.localStorage));
+      if ((e as CustomEvent<{ by?: string }>).detail?.by === 'assistant') setBoardBy('assistant');
+    };
+    window.addEventListener(SIGNS_CHANGED, onChanged);
+    return () => window.removeEventListener(SIGNS_CHANGED, onChanged);
+  }, []);
   const setPhrase = (category: SignShape['category'], phrase: string) => {
     const next = { ...signMapRef.current, [category]: phrase.slice(0, SIGN_PHRASE_MAX) };
     setSignMap(next);
+    setBoardBy('you');
     saveSignMap(window.localStorage, next);
   };
   const resetSigns = () => {
     setSignMap({ ...DEFAULT_SIGN_MAP });
+    setBoardBy('you');
     saveSignMap(window.localStorage, { ...DEFAULT_SIGN_MAP });
   };
   const recRef = useRef<RecognitionLike | null>(null);
@@ -181,6 +194,8 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
 
   const onSign = useCallback(
     (category: string) => {
+      // A scanning keyboard, when open, owns the shapes as its two switches.
+      if (routeSign(category)) return;
       const phrase = phraseFor(category, signMapRef.current);
       if (phrase) queue.push(phrase, 'sign');
     },
@@ -244,10 +259,11 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
       {gesture ? (
         <div className="cl-listen__signs">
           <p className="cl-listen__signs-head">
-            Or sign it — five hand shapes the camera reads, each meaning what <b>you</b> decide (not a language: five
-            keys you label yourself, kept in this browser). Hold a shape steady for about a second.
+            Or use the camera as a switch board — five hand shapes it reads, each meaning what <b>you</b> decide (not a
+            language: five switches you label, or ask your assistant to label for you; kept in this browser). Hold a
+            shape steady for about a second.
           </p>
-          <ol className="cl-signs" aria-label="What each hand shape means" data-clinic-signs={editingSigns ? 'editing' : 'legend'}>
+          <ol className="cl-signs" aria-label="What each hand shape means" data-clinic-signs={editingSigns ? 'editing' : 'legend'} data-clinic-signs-by={boardBy}>
             {SIGN_SHAPES.map((s) => (
               <li key={s.category} className="cl-signs__row" data-clinic-sign={s.category}>
                 <span className="cl-signs__glyph" aria-hidden="true">
@@ -272,6 +288,11 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
               </li>
             ))}
           </ol>
+          {boardBy === 'assistant' ? (
+            <p className="cl-signs__by" role="status" data-clinic-signs-by-note>
+              Labelled by your assistant, at your request. Change or reset it below whenever you like.
+            </p>
+          ) : null}
           <p className="cl-signs__actions">
             <button type="button" className="cl-link" data-clinic-signs-edit onClick={() => setEditingSigns((e) => !e)}>
               {editingSigns ? 'Done' : 'Change what the shapes mean'}

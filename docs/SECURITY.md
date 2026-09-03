@@ -330,6 +330,16 @@ agent, so it is treated as untrusted content, not as an instruction to the page:
   is talking to gets an honest nothing, never a stale handle.
 - **Speech leaves the browser** to the browser vendor's recognizer while "Listen for me" is on; the
   panel says so, and the panel has a Stop control. Signs never leave the page.
+- **The switch board is the one preference an agent may write** (`clinic_set_sign`): what a hand
+  shape means, ≤ 120 characters, in the person's browser only, shown on the legend as "labelled by
+  your assistant" with the person able to change or reset it. It cannot touch the open palm
+  (`palm_is_consent`), so no agent can turn the consent gesture into a request; and a phrase is only
+  ever content handed back through `clinic_wait_for_request` — it never acts on the page itself.
+- **The scanning keyboard** (`ScanKeyboard.tsx`, `scan-keyboard.ts`) writes only into the patient
+  card's draft; nothing leaves the browser until the person presses Save, and then only to
+  localStorage. While it is open the camera shapes are its two switches (`sign-sink.ts` routes them)
+  and nothing reaches the request queue, so a person typing a name cannot also be sending "yes" to
+  their assistant. The open palm is never a switch (`switchAction` returns null for it).
 - **Residual**: the person's own words may be an injection ("ignore the clinic, book everything") —
   the agent still cannot book without the grant, cancel or move without the press; the worst case is a
   wrong hold, reversible and visible.
