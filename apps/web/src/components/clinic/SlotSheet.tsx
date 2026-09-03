@@ -30,7 +30,7 @@ const STATE_WORD: Record<SlotState, string> = {
   open: 'Available',
   held_by_you: 'Held for you',
   held_by_other: 'Being booked by someone else',
-  taken_by_rival: 'No longer available · simulated demand',
+  taken_by_rival: 'No longer available',
   taken_by_other: 'Booked by another patient',
   booked_yours: 'Booked — yours',
   expired_hold: 'Hold expired',

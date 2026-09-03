@@ -1100,6 +1100,20 @@ export function ClinicBooking() {
           ) : null}
         </div>
 
+        {/* The clinic's own colophon: who we are, when we are open, and — once, in small print — what
+            is true about this page. A visitor's page, not a demo: the disclosures live here, not on
+            every row (Arav, 2026-09-03: "it should give off them visiting a real clinic webpage"). */}
+        <footer className="cl-colophon" data-clinic-colophon>
+          <p className="cl-colophon__id">
+            <b>Cedarfield Clinic</b> · 14 Meadow Lane · Mon–Fri 8:00–18:00 · Reception (555) 010-0140
+          </p>
+          <p className="cl-colophon__fine">
+            Cedarfield is a fictional practice, built to show how a visitor’s own assistant books here. The other
+            patients on this board are simulated. Your details stay in this browser and no real appointment is made.
+            Testing with an assistant? The <a className="cl-link" href="/clinic/book?test=1">practice board</a> runs the
+            same schedule every time.
+          </p>
+        </footer>
       </main>
 
       {session.held !== null || pendingAct !== null ? <div className="cl-dock-spacer" aria-hidden="true" /> : null}

@@ -2333,3 +2333,23 @@ html:has(.cl-dock) {
     animation: none;
   }
 }
+
+/* --- the clinic's colophon (2026-09-03) ---------------------------------------------------- */
+
+.cl-colophon {
+  margin: 3rem 0 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--clinic-rule);
+  color: var(--clinic-muted);
+  font-size: var(--clinic-small);
+  line-height: 1.55;
+}
+
+.cl-colophon__id {
+  margin: 0 0 0.375rem;
+  color: var(--clinic-ink);
+}
+
+.cl-colophon__fine {
+  margin: 0;
+}
