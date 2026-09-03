@@ -16,3 +16,8 @@ Later the same morning (builds 2fe0c0c constant cursor, c9ac608 docs): cedarfiel
   `vercel domains add` and one redeploy). verify-deployed on the Cedarfield domain: 37 ✔ / 1 ✘ — the one miss was
   clinic-ask, one timing step of 63; re-run twice on the same domain: 63/63 and 63/63. First call with no wait on
   the Cedarfield domain: answered. Both domains serve the same build; the number is printed in the colophon.
+
+Final for the judging window — build 67a8768 (health cron + OPERATIONS runbook), 2026-09-03 ~14:50 PT:
+  verify-deployed on https://cedarfield-clinic.vercel.app: 38 ✔ / 0 ✘ — DEPLOYED AND VERIFIED. First call with no
+  wait: answered. /api/health on both hosts: {"ok":true,"board":"live",...}. Vercel cron registered: /api/health
+  daily 09:00 UTC. No further deploys planned during judging (docs/OPERATIONS.md).

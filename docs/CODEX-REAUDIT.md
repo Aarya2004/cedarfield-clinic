@@ -1,9 +1,9 @@
 # Codex re-audit prompt (paste into a Codex task with the booking page open in its browser pane)
 
-Production build at the time of writing: `52767c8` (main, deployed and verified, 2026-09-03 ~04:20).​
+Production build at the time of writing: `67a8768` (main, deployed and verified, 2026-09-03 ~14:50 PT).​
 
 ```text
-Re-audit https://cedarfield-clinic.vercel.app/clinic/book on production build 52767c8. For EACH numbered
+Re-audit https://cedarfield-clinic.vercel.app/clinic/book on production build 67a8768. For EACH numbered
 item below, report PASS or FAIL with the exact text or value you observed. Do not summarise; do not
 skip items you cannot run — mark them BLOCKED with the reason. Use the WebMCP tools directly where
 an item names one. Use only synthetic data. Do not book an appointment unless an item says so.
