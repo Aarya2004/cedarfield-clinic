@@ -1,0 +1,15 @@
+Production verification — main @ 1576c91, 2026-09-02 ~18:10 PT (Engineer #4). Two consecutive rounds, identical.
+
+Local: unit 486/486 · typecheck 0 · lint 0 · clinic suite 31/31 (incl. path 17, patient-declarative,
+  delegation-edges 39, listen-edges 21, signs 19, gesture-quiet, the 10-minute soak) · axe 0×3.
+Round 1: verify-deployed 26 cases 0 failed (31 ✔ incl. 3 routes + 3 axe) · live-two-visitors 25/25.
+Round 2: identical — 26/26 · 25/25.
+Registry probe, three fresh loads of the live board: 12 tools each time, page and browser agreeing
+  (clinic_wait_for_request present before any request; both queue verbs; no booking tool).
+clinic-voice-live (fake microphone): 14/14 — secret minted, WebRTC live, tools sent, stayed live, clean end.
+Since ec52b81: sets register in parallel; queue verbs born on the page's intent to be live; scripted
+  grant presses announced; the patient card is a declarative WebMCP form (clinic_patient_details);
+  custom sign phrases; the primary path strip; folded explanations; voice caps 20/150 with a
+  readiness probe; the 8-reading sign bar with a covered-camera regression.
+Owed to a human: speech into "Say it to the page", a shape read as the person's phrase, one spoken
+  exchange with Talk to Cedarfield, the palm booking on the live board.
