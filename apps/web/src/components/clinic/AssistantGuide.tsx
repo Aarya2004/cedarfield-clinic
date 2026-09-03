@@ -60,8 +60,7 @@ export function AssistantGuide() {
         </button>
       </div>
       <p className="cl-prose cl-guide__intro">
-        Open this page inside your assistant’s browser — the Codex app, or Chrome 152 with WebMCP
-        turned on. The tools register on their own; the line under the list confirms it.
+        Open this page inside your assistant’s browser (the Codex app, or Chrome 152 with WebMCP on) and say one of these.
       </p>
       <ol className="cl-guide__list">
         {SAY.map((s) => (
@@ -82,10 +81,15 @@ export function AssistantGuide() {
           </li>
         ))}
       </ol>
-      <p className="cl-prose cl-guide__foot">
-        The booking is yours: <b>Enter</b> on the confirm bar, or an open palm to the camera. The
-        assistant cannot press it. Everything it does is listed under the times.
-      </p>
+      <details className="cl-fold">
+        <summary>How it works</summary>
+        <p className="cl-prose cl-guide__foot">
+          The tools register on their own; the line under the list confirms it. The booking is yours:{' '}
+          <b>Enter</b> on the confirm bar, or an open palm to the camera. The assistant cannot press it.
+          Everything it does is listed under the times. Cannot type into your assistant’s window? Use
+          “Say it to the page” below, or talk to Cedarfield directly.
+        </p>
+      </details>
     </section>
   );
 }

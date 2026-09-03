@@ -1975,3 +1975,104 @@ html:has(.cl-dock) {
   margin: 0.5rem 0 0;
   font-size: var(--clinic-small);
 }
+
+/* --- the primary path, three steps, always visible (2026-09-02) ----------------------------- */
+
+.cl-path {
+  max-width: 44rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.cl-path__step {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.cl-path__step[data-clinic-path-step='now'] {
+  border-color: var(--clinic-ink);
+  box-shadow: inset 0 0 0 1px var(--clinic-ink);
+}
+
+.cl-path__step[data-clinic-path-step='done'],
+.cl-path__step[data-clinic-path-step='booked'] {
+  background: var(--clinic-band);
+}
+
+.cl-path__step--booked {
+  grid-column: 1 / -1;
+}
+
+.cl-path__n {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--clinic-ink);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.cl-path__step[data-clinic-path-step='next'] .cl-path__n {
+  background: var(--clinic-rule);
+  color: var(--clinic-ink);
+}
+
+.cl-path__text {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.cl-path__title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.cl-path__detail {
+  font-size: var(--clinic-small);
+  color: var(--clinic-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .cl-path {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- folded explanations: the page stays quiet until asked --------------------------------- */
+
+.cl-fold {
+  margin: 0.75rem 0 0;
+  font-size: var(--clinic-small);
+}
+
+.cl-fold > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--clinic-ink);
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.cl-fold > summary:focus-visible {
+  outline: 2px solid var(--clinic-ink);
+  outline-offset: 2px;
+}
+
+.cl-fold[open] > summary {
+  margin-bottom: 0.25rem;
+}

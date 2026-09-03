@@ -55,6 +55,7 @@ import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx'
 import { AppointmentCard } from './AppointmentCard.tsx';
 import { AssistantGuide } from './AssistantGuide.tsx';
 import { PatientOnFile, validate as validatePatient, writePatient, type PatientOnFileRecord } from './PatientOnFile.tsx';
+import { PathStrip } from './PathStrip.tsx';
 import { VoiceAgent, type VoiceExecutor } from './VoiceAgent.tsx';
 import { ListenPanel } from './ListenPanel.tsx';
 import { createRequestQueue } from '../../lib/drop/request-queue.ts';
@@ -746,6 +747,20 @@ export function ClinicBooking() {
                   : 'The next release is held back until you have finished — nothing on this board will change while you are booking.'
                 : `Cancelled appointments are released to this page as they come in. Next release in ${formatClock(nextRelease / 1000)}; anything you have already booked stays yours.`}
             </p>
+          </Band>
+
+          {/* The primary path, always: which step the person is on, from the board's own state. */}
+          <Band flush wide>
+            <PathStrip
+              step={
+                session.slots.some((s) => s.state === 'booked_yours') && pendingAct === null && session.held === null
+                  ? 'booked'
+                  : pendingAct !== null || (session.held !== null && session.secondsLeft > 0)
+                    ? 'confirm'
+                    : 'ask'
+              }
+              act={pendingAct?.kind ?? 'book'}
+            />
           </Band>
 
           {/* What to say, for a first visitor with an assistant (Arav, 2026-09-02). Dismissible. */}

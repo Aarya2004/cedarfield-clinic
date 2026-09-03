@@ -196,8 +196,8 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
             Say it to the page
           </h2>
           <p className="cl-prose cl-listen__intro">
-            Whatever you say, sign or type here is handed to your assistant the moment it asks — you never have to
-            type into its window. Tell it once: <b>“keep helping me with what I say to the page until I say stop.”</b>
+            Say, sign or type here; your assistant takes it the moment it asks. Tell it once:{' '}
+            <b>“keep helping me with what I say to the page until I say stop.”</b>
           </p>
         </div>
         {supported === false ? null : listening ? (

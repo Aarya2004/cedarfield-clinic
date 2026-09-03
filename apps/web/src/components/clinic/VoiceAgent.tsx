@@ -260,8 +260,7 @@ export function VoiceAgent({ executor, disabled = false, disabledReason, onLiveC
             Talk to Cedarfield
           </h2>
           <p className="cl-prose cl-voice__intro">
-            The page’s own assistant, by voice. It uses the same tools your chat assistant does, and it cannot press
-            either: your key, your palm, or your permission still books.
+            The page’s own assistant, by voice — same tools, same rule: it cannot press; you do.
           </p>
         </div>
         {live || state === 'connecting' ? (

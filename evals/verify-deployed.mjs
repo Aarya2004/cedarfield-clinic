@@ -67,6 +67,7 @@ const cases = [
   ['clinic-listen-edges.json', '/clinic/book'],
   ['clinic-signs.json', '/clinic/book'],
   ['clinic-patient-declarative.json', '/clinic/book'],
+  ['clinic-path.json', '/clinic/book'],
   // clinic-soak.json is deliberately NOT here: its walk-away-and-wait beats (180 s arm expiry, a
   // full deferred wave rollover) can exceed the per-case timeout. Run it by hand:
   //   node evals/harness/webmcp-cdp.mjs '<origin>/clinic/book?test=1' evals/cases/clinic-soak.json
