@@ -1405,10 +1405,11 @@ export async function registerClinicTools(
       }
     },
   });
+  // A set registers in parallel, not one tool at a time: a client that fetches during the first
+  // frames of a page must see all of a set or none of it (Codex, on production: three fresh loads
+  // showed 12, 7 and 11 tools — the second fetch landed mid-loop).
   const registerSet = async (names: readonly ClinicToolName[], signal: AbortSignal) => {
-    for (const def of defs) {
-      if (names.includes(def.name)) await mc.registerTool(toTool(def), { signal });
-    }
+    await Promise.all(defs.filter((def) => names.includes(def.name)).map((def) => mc.registerTool(toTool(def), { signal })));
   };
 
   const base = new AbortController();

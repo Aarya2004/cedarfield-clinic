@@ -557,6 +557,9 @@ export function ClinicBooking() {
     (e: { nativeEvent: Event }) => {
       if (!e.nativeEvent.isTrusted) {
         setSyntheticGrants((n) => n + 1);
+        // Counted AND said: a press the browser did not attribute to the person (a script, an
+        // automation driver) must never look like a dead button (Codex re-audit, item 5/12).
+        setNotice('That press did not come from you — the browser marked it as scripted. Press the button yourself to grant.');
         return;
       }
       // No patient, no permission — and say so where the eye is, instead of a dead click
@@ -896,8 +899,12 @@ export function ClinicBooking() {
               onPrepareCancel={prepareCancel}
               onPrepareMove={prepareMove}
               // SPEC-V5: the queue exists only on the shared board; the seeded board has no other people.
-              onJoinWaitlist={live && liveDriver ? (id) => (liveDriver.joinWaitlist(id), true) : undefined}
-              onLeaveWaitlist={live && liveDriver ? (id) => (liveDriver.leaveWaitlist(id), true) : undefined}
+              // Wired on the page's INTENT to be live (known a frame after mount), not on the database
+              // handshake seconds later — so the queue verbs are born with the base set, and a client
+              // fetching early sees the same twelve tools as one fetching late. Before the driver is
+              // ready the verbs answer honestly (waitlist_not_confirmed).
+              onJoinWaitlist={live ? (id) => (liveDriver ? (liveDriver.joinWaitlist(id), true) : false) : undefined}
+              onLeaveWaitlist={live ? (id) => (liveDriver ? (liveDriver.leaveWaitlist(id), true) : false) : undefined}
               armedAct={pendingAct?.kind ?? null}
               waveLandedAt={live ? (liveMeta?.waveStartedAt ?? null) : null}
               sharedBoard={live}

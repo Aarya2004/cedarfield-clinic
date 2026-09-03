@@ -51,6 +51,10 @@
   "equals": 1
  },
  {
+  "waitFor": "(document.querySelector('[data-clinic-notice]')?.textContent ?? '').includes('did not come from you')",
+  "timeout": 4000
+ },
+ {
   "expect": {
    "noTool": "clinic_book_slot"
   }

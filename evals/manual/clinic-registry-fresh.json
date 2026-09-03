@@ -1,0 +1,16 @@
+[
+  {"_doc": ["clinic-registry-fresh — what a client sees on a fresh load of the LIVE board (Codex: 12 / 7 / 11).",
+            "Run three times against production: node evals/harness/webmcp-cdp.mjs 'https://…/clinic/book' this.",
+            "One second after the slot list is on screen, the platform must report exactly the twelve tools",
+            "of the shared board — base nine, the wait tool, the two queue verbs — every time."]},
+  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
+  {"waitFor": "!!document.querySelector('[data-clinic-slot]')", "timeout": 20000},
+  {"sleep": 1000},
+  {"list": true},
+  {"eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')", "equals": "12"},
+  {"expect": {"tool": "clinic_wait_for_request"}},
+  {"expect": {"tool": "clinic_join_waitlist"}},
+  {"expect": {"tool": "clinic_leave_waitlist"}},
+  {"expect": {"noTool": "clinic_book_slot"}},
+  {"eval": "(() => { const live = (document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').split(' ').filter(Boolean); const browser = Number(document.querySelector('[data-clinic-browser-count]')?.getAttribute('data-clinic-browser-count')); return live.length + ':' + browser; })()", "equals": "12:12"}
+]
