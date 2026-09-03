@@ -1,6 +1,6 @@
 # Codex re-audit prompt (paste into a Codex task with the booking page open in its browser pane)
 
-Replace `ec52b81` with the commit `git log --oneline -1` prints on `main` after the deploy.
+Production build at the time of writing: `ec52b81` (main, deployed and verified twice, 2026-09-02 ~15:20).​
 
 ```text
 Re-audit https://rokan-terminal.vercel.app/clinic/book on production build ec52b81. For EACH numbered
