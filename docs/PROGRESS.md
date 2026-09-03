@@ -19,6 +19,9 @@ page's own speech never confirm. `word-challenge.ts` + 4 tests · `word-sink.ts`
 `clinic-spoken-word.json`. Unit **496/496** · typecheck · lint · r6 32/32 + axe 0 · r7 32/33 (the
 one red was the new scan case's selector, fixed) · scan + spoken cases green alone. Next: full r8,
 deploy, double production round, then the physical pass with Arav.
+01:16 Arav's hand test on the OLD production build found two real bugs, fixed at the root: the
+seeing line ignored which camera it was on (`seeingCopy(seen, verb, armed)`, tests), and the
+`?test=1` sample patient persisted in localStorage (memory-only now). Unit **497/497**.
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera

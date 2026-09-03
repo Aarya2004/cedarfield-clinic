@@ -65,8 +65,7 @@ import {
   type CameraPermission,
   type DwellConfig,
   type DwellState,
-  type GestureFailure,
-} from '../../lib/drop/gesture-logic.ts';
+  type GestureFailure, seeingCopy } from '../../lib/drop/gesture-logic.ts';
 
 /** Same-origin, provisioned by `scripts/fetch-gesture-model.sh`. Never a CDN. */
 export const WASM_BASE_PATH = '/models/mediapipe/wasm';
@@ -466,7 +465,7 @@ export function GestureConfirm({
               leaves a dead control on the surface is the thing this state exists to prevent. */}
           {running ? (
             <p className="rk-g-seen" data-gesture-seeing>
-              {pageHidden ? 'Paused: bring this window to the front — the camera only watches a visible page.' : seeingCopy(seen)}
+              {pageHidden ? 'Paused: bring this window to the front — the camera only watches a visible page.' : seeingCopy(seen, verb, armed)}
             </p>
           ) : null}
           <p className="rk-g-sub" data-gesture-note>
@@ -534,32 +533,6 @@ export function GestureConfirm({
 }
 
 const RING = 2 * Math.PI * 29;
-
-/**
- * The live reading, in words a person can act on. `seen` is the raw `<category> <score>` the loop
- * records (or `no_hand`), so the sentence is always what the model actually said last frame.
- */
-export function seeingCopy(seen: string): string {
-  if (seen === '' || seen === 'no_hand') return 'Seeing: no hand yet — raise it into the window.';
-  const [category, score] = seen.split(' ');
-  const pct = Math.round(Number(score) * 100);
-  switch (category) {
-    case 'Open_Palm':
-      return `Seeing: an open palm (${pct}%) — hold it.`;
-    case 'None':
-      return 'Seeing: a hand, but not an open palm — spread your fingers, palm to the camera.';
-    case 'Closed_Fist':
-      return 'Seeing: a fist — open your hand.';
-    case 'Pointing_Up':
-    case 'Victory':
-    case 'Thumb_Up':
-    case 'Thumb_Down':
-    case 'ILoveYou':
-      return 'Seeing: a hand sign, not an open palm — show a flat, open hand.';
-    default:
-      return `Seeing: ${category.replace(/_/g, ' ').toLowerCase()} (${pct}%).`;
-  }
-}
 
 function copyFor(
   state: ReturnType<typeof gestureUiState>,

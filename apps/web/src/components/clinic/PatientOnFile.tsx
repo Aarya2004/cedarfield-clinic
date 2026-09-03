@@ -92,8 +92,9 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
 
   useEffect(() => {
     const stored = readPatient();
+    // The sample lives in memory only: written to the browser it would outlive the test flag and
+    // book a real visitor's appointment for "Ada Okonkwo" without asking (Arav, 2026-09-03 01:16).
     const initial = stored ?? (sample ? SAMPLE_PATIENT : null);
-    if (stored === null && sample) writePatient(SAMPLE_PATIENT);
     setPatient(initial);
     setDraft(initial ?? { fullName: '', dateOfBirth: '', phone: '' });
     setEditing(initial === null);

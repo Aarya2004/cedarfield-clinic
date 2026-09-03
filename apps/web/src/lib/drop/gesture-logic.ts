@@ -358,3 +358,55 @@ export type CameraPermission = 'granted' | 'denied' | 'prompt' | 'unknown';
 export function shouldAutoStart(pref: boolean, permission: CameraPermission): boolean {
   return pref && permission === 'granted';
 }
+
+/**
+ * The live reading, in words a person can act on — for THIS camera. `seen` is the raw
+ * `<category> <score>` the loop records (or `no_hand`), so the sentence is always what the model
+ * said last frame. The sign camera ("Listen for me") wants a shape and refuses the palm; a dock's
+ * camera wants the palm and refuses shapes; an idle camera says there is nothing to confirm yet
+ * (2026-09-03 01:16: a palm at the sign camera was told "hold it" and nothing happened).
+ */
+export function seeingCopy(seen: string, verb: GestureVerb = 'book', armed = true): string {
+  if (seen === '' || seen === 'no_hand') return 'Seeing: no hand yet — raise it into the window.';
+  const [category = '', score = '0'] = seen.split(' ');
+  const pct = Math.round(Number(score) * 100);
+  const NAMES: Record<string, string> = { Thumb_Up: 'thumbs up', Thumb_Down: 'thumbs down', Closed_Fist: 'a fist', Pointing_Up: 'one finger up', Victory: 'two fingers', Open_Palm: 'an open palm' };
+  const shape = NAMES[category] ?? category.replace(/_/g, ' ').toLowerCase();
+  if (verb === 'sign') {
+    switch (category) {
+      case 'Open_Palm':
+        return 'Seeing: an open palm — here that is not a request. The palm confirms on the bar at the bottom; for a request show thumbs up, thumbs down, a fist, one finger or two fingers.';
+      case 'None':
+        return 'Seeing: a hand, but no clear shape — show thumbs up, thumbs down, a fist, one finger or two fingers.';
+      case 'Thumb_Up':
+      case 'Thumb_Down':
+      case 'Closed_Fist':
+      case 'Pointing_Up':
+      case 'Victory':
+        return `Seeing: ${shape} (${pct}%) — hold it steady for a moment.`;
+      default:
+        return `Seeing: ${shape} (${pct}%) — not one of the five switches.`;
+    }
+  }
+  if (!armed && category === 'Open_Palm') {
+    return verb === 'grant'
+      ? 'Seeing: an open palm — this card is paused while a time is held; confirm on the bar at the bottom.'
+      : 'Seeing: an open palm — nothing to confirm yet. Hold a time first.';
+  }
+  switch (category) {
+    case 'Open_Palm':
+      return `Seeing: an open palm (${pct}%) — hold it.`;
+    case 'None':
+      return 'Seeing: a hand, but not an open palm — spread your fingers, palm to the camera.';
+    case 'Closed_Fist':
+      return 'Seeing: a fist — open your hand.';
+    case 'Pointing_Up':
+    case 'Victory':
+    case 'Thumb_Up':
+    case 'Thumb_Down':
+    case 'ILoveYou':
+      return 'Seeing: a hand sign, not an open palm — show a flat, open hand.';
+    default:
+      return `Seeing: ${shape} (${pct}%).`;
+  }
+}

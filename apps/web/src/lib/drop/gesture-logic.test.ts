@@ -337,7 +337,7 @@ test('a remembered "on" reopens the camera only where the grant already stands',
 // SPEC-V10 §1.8 / §4: two gesture modules can be on one page (a dock and the grant band), so a
 // bare "Enable camera" is ambiguous to Voice Control ("Click Enable camera" → which?). The
 // accessible name keeps the visible text first (WCAG 2.5.3) and says what the palm would do.
-import { cameraControlName } from './gesture-logic.ts';
+import { cameraControlName, seeingCopy } from './gesture-logic.ts';
 
 test('camera controls are named by what the palm would do, visible text first', () => {
   assert.equal(cameraControlName('Enable camera', 'book'), 'Enable camera to book it');
@@ -349,4 +349,14 @@ test('camera controls are named by what the palm would do, visible text first', 
 test('the two modules that can share a page never share a camera-control name', () => {
   assert.notEqual(cameraControlName('Enable camera', 'book'), cameraControlName('Enable camera', 'grant'));
   assert.notEqual(cameraControlName('Camera off', 'cancel'), cameraControlName('Camera off', 'grant'));
+});
+
+test('the seeing line speaks for the camera it is on (2026-09-03: a palm at the sign camera did nothing, silently)', () => {
+  assert.match(seeingCopy('Open_Palm 0.68', 'sign', false), /not a request.*thumbs up/);
+  assert.match(seeingCopy('Thumb_Up 0.80', 'sign', false), /thumbs up \(80%\) — hold it steady/);
+  assert.match(seeingCopy('Open_Palm 0.68', 'book', true), /open palm \(68%\) — hold it/);
+  assert.match(seeingCopy('Open_Palm 0.68', 'book', false), /nothing to confirm yet/);
+  assert.match(seeingCopy('Open_Palm 0.68', 'grant', false), /paused while a time is held/);
+  assert.match(seeingCopy('Thumb_Up 0.80', 'book', true), /not an open palm/);
+  assert.match(seeingCopy('no_hand'), /no hand yet/);
 });
