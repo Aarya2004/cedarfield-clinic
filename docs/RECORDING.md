@@ -73,9 +73,10 @@ left and the page on the right), sound on, 1080p. Hands and voice: your own. One
 together. If a shot fails twice, do the [fallback] and move on.
 
 **SHOT 1 — 0:00–0:15 — black, one line of text, then the page loads.**
-SAY: "A visitor arrives at a public website with their own agent, and their own way of
-communicating. Typed, spoken, a hand shape. The page tells that agent exactly what it may do — and
-never lets it commit."
+SAY: "Someone we love communicates slowly, and every website assumes you do not. So: a visitor
+arrives at a public website with their own agent, and their own way of communicating. Typed, spoken,
+a hand shape. The page tells that agent exactly what it may do — and never lets it commit."
+(The first sentence only with that person's consent; otherwise start at "A visitor arrives".)
 SHOW: the page loading; the permission card under "Your assistant": Can / Cannot / "no tool can book until…".
 
 **SHOT 2 — 0:15–0:35 — arrival.**
