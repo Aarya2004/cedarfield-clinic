@@ -12,15 +12,11 @@
  * appointment reference on the card is what a clinic would file it under.
  */
 import { useEffect, useState } from 'react';
+import { SAMPLE_PATIENT, validate, type PatientOnFileRecord } from '../../lib/drop/patient-record.ts';
 
-export interface PatientOnFileRecord {
-  fullName: string;
-  dateOfBirth: string; // ISO yyyy-mm-dd
-  phone: string;
-}
+export { SAMPLE_PATIENT, validate, type PatientOnFileRecord };
 
 const KEY = 'cedarfield.patient';
-export const SAMPLE_PATIENT: PatientOnFileRecord = { fullName: 'Ada Okonkwo', dateOfBirth: '1988-04-12', phone: '416 555 0100' };
 
 export function readPatient(): PatientOnFileRecord | null {
   try {
@@ -45,17 +41,6 @@ export function writePatient(p: PatientOnFileRecord | null): void {
   }
   // The by-hand form saves here too; the card re-reads on this event so both stay one record.
   window.dispatchEvent(new Event(CHANGED));
-}
-
-/** One sentence, or null when the record is usable. Same bar as the by-hand form. */
-export function validate(p: PatientOnFileRecord): string | null {
-  if (p.fullName.trim().length < 2) return 'Enter the patient’s full name, as it appears on their record.';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.dateOfBirth.trim())) return 'Enter the date of birth as year, month and day.';
-  const dob = new Date(`${p.dateOfBirth.trim()}T12:00:00Z`);
-  if (Number.isNaN(dob.getTime()) || dob.toISOString().slice(0, 10) !== p.dateOfBirth.trim()) return 'That date does not exist. Check the month and day.';
-  if (dob > new Date()) return 'That date of birth is in the future. Check the year.';
-  if (p.phone.replace(/\D/g, '').length < 7) return 'Enter a phone number the clinic can call.';
-  return null;
 }
 
 function formatDob(iso: string): string {

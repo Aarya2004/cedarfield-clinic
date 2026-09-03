@@ -1,0 +1,68 @@
+[
+ {
+  "_doc": [
+   "clinic-voice-live \u2014 the page's own voice agent connects for real (manual: needs OPENAI_API_KEY +",
+   "SUPABASE_SERVICE_ROLE_KEY on the target, and Chrome's fake microphone so no permission prompt).",
+   "Proves: a ticket is minted, WebRTC to the Realtime API opens, the data channel comes up, the live",
+   "tool list is sent, the recognizer panel pauses itself while the agent is live, and End the call",
+   "tears everything down. No speech is fed, so no tool call is expected \u2014 that is the human's part.",
+   "Run: ROKAN_EVAL_CHROME_FLAGS='--use-fake-device-for-media-stream --use-fake-ui-for-media-stream' \\",
+   "  node evals/harness/webmcp-cdp.mjs 'https://rokan-terminal.vercel.app/clinic/book' evals/manual/clinic-voice-live.json"
+  ],
+  "allowErrors": true
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-voice]')?.getAttribute('data-clinic-voice') === 'idle'",
+  "timeout": 8000
+ },
+ {
+  "eval": "(() => { document.querySelector('[data-clinic-voice-start]')?.click(); return true; })()",
+  "equals": true
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-voice]')?.getAttribute('data-clinic-voice') === 'live'",
+  "timeout": 25000
+ },
+ {
+  "eval": "(document.querySelector('[data-clinic-voice-status]')?.textContent ?? '')",
+  "matches": "Listening"
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-listen-start]')?.hasAttribute('disabled')",
+  "equals": true
+ },
+ {
+  "eval": "(document.querySelector('[data-clinic-listen-status]')?.textContent ?? '')",
+  "matches": "Paused while you are talking to Cedarfield"
+ },
+ {
+  "sleep": 4000
+ },
+ {
+  "eval": "(document.querySelector('[data-clinic-voice]')?.getAttribute('data-clinic-voice') ?? '') + ' :: ' + (document.querySelector('[data-clinic-voice-status]')?.textContent ?? '')",
+  "matches": "^live :: "
+ },
+ {
+  "shot": "docs/evidence/clinic/voice-live.png"
+ },
+ {
+  "eval": "(() => { document.querySelector('[data-clinic-voice-stop]')?.click(); return true; })()",
+  "equals": true
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-voice]')?.getAttribute('data-clinic-voice') === 'ended'",
+  "timeout": 8000
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-listen-start]')?.hasAttribute('disabled')",
+  "equals": false
+ }
+]

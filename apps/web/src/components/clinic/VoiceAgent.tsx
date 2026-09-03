@@ -99,6 +99,10 @@ export function VoiceAgent({ executor, disabled = false, onLiveChange }: VoiceAg
       JSON.stringify({
         type: 'session.update',
         session: {
+          // The GA API requires the session type on every update; without it the service answers
+          // "Missing required parameter: 'session.type'" and closes the call (found by the
+          // fake-microphone proof against production, 2026-09-02).
+          type: 'realtime',
           tools: ex.tools.map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: t.inputSchema })),
           tool_choice: 'auto',
         },
