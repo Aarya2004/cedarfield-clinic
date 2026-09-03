@@ -2,14 +2,12 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { ClinicBooking } from '@/components/clinic/ClinicBooking';
 import { bootstrapScript, loadToolDescriptors } from '@/lib/drop/clinic-bootstrap';
+import { BUILD_AT, BUILD_SHA } from '@/build-info';
 
 /** Static: the same twelve descriptors on every request, computed once per server. */
 const BOOTSTRAP = bootstrapScript(loadToolDescriptors());
-/** Stamped once per server start: Vercel's commit for this deployment, and when this server came up. */
-const BUILD = {
-  sha: (process.env.NEXT_PUBLIC_BUILD_SHA ?? process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_SHA ?? 'local').slice(0, 7),
-  at: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
-};
+/** Stamped by the deploy step into src/build-info.ts (see there). */
+const BUILD = { sha: BUILD_SHA, at: BUILD_AT };
 
 /**
  * Load-bearing, not cosmetic — the same reason as `/clinic`. `middleware.ts` mints the CSP nonce per
