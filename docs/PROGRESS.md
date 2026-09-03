@@ -2,6 +2,24 @@
 
 Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, ~11:30–12:15) — Codex's product audit: WebMCP layer passes; four UI blockers fixed
+- Arav dispatched an audit to a Codex task. It invoked every tool on production and called the
+  WebMCP layer "strong and differentiated"; its blockers were the human UI. Fixed and proven:
+  (1) patient profile — `required` fields, per-field errors with `aria-invalid`/`aria-describedby`
+  and focus on the first problem, an alert naming the count, a durable "Saved" status, and a
+  typeable date of birth (`normaliseDate`: ISO, day/month/year with `/`, `.`, `-`, or "12 April
+  1988"; `patient-record.ts`, 3 unit tests); (2) "Let my assistant book for me" with no profile
+  refuses at the top with the reason and scrolls to the card — press and palm alike; (3) a typed
+  handoff no longer disables Talk to Cedarfield (`ListenPanel.onMicChange`: only a live recognizer
+  or camera excludes the voice agent); (4) one camera owner at a time (`cameraBus`: the instance
+  the person just started claims the camera; the others let go and say where it went).
+- Proof: `clinic-patient.json` (37 steps: no-profile refusal, required, bad date → alert + field
+  error + focus, day-first date normalised, Saved status, grant with profile); `clinic-listen` +1
+  step; delegation/guide/gesture-boot/voice-unavailable/thesis/manual-tax/declarative green; axe
+  0×3; unit 482/482. `verify-deployed` runs 19 cases.
+- Not changed: the one "stale registration" reading Codex saw cleared on its own re-fetch — the
+  born-tool reconcile re-registers within 250 ms of a state change.
+
 ## Build log — Engineer #4 (2026-09-02, ~09:45–10:30) — independent security review of tonight's surfaces; all eight findings fixed
 - Reviewer (read-only, ran the unit suite and a throwaway race script): P1 anon-callable voice quota
   with caller-chosen cap; P1 route open to any origin + honest worth of a secret; P1 SECURITY said
