@@ -318,7 +318,7 @@ export function ConfirmDock({
           {/* One act, several ways in. Named on screen rather than left for someone to discover:
               a person who cannot use a keyboard should not have to guess that the button is one. */}
           <p className="cl-dock__ways" data-clinic-dock-ways>
-            You can also select the button, use a switch{gestureSlot ? ', or hold the gesture below' : ''}.
+            You can also select the button, use a switch{gestureSlot ? ', say the word shown below, or hold the gesture' : ''}.
           </p>
         </div>
 

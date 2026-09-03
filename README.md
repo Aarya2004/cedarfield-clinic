@@ -151,6 +151,14 @@ rows, then keys; thumbs-up selects, a fist goes back; a hardware switch, Space a
 same. While it is open the shapes are its switches and nothing reaches the assistant, so typing a
 name can never also send "yes". The person still presses Save.
 
+**And for no hands and no camera: answer the page aloud.** When a dock is armed the page asks its
+own question on screen and accepts a spoken **"yes"**, or a **word shown on screen** it never
+speaks and never hands to a tool. That word is for the noisy room. "Yes" counts only because the
+page controls every other voice on the desk: it ignores the microphone while it is talking, its
+own voice agent is off whenever "Listen for me" is on, and a text agent cannot make sound. The
+grant card is a standing offer, not a question, so there only the word counts: a stray "yes" never
+hands an assistant a booking. Any negation in the sentence wins: "no, not yes" refuses.
+
 **Both halves of WebMCP, each doing the job it is for.** The tools above are the *imperative* API.
 The patient-details form is also published *declaratively* — `toolname="clinic_booking_form"`,
 a `tooldescription`, a `toolparamdescription` on every field — so in Chrome the browser itself

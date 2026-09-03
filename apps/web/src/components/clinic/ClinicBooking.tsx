@@ -51,6 +51,7 @@ import { firstComeDriver, useDropSession } from '../drop/useDropSession.ts';
 import { ClinicTools } from '../drop/ClinicTools.tsx';
 import { DELEGATION_MS, type Delegation, type ToolCallRecord } from '../../lib/drop/clinic-tools.ts';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
+import { SpokenWord } from './SpokenWord.tsx';
 import { Band, ClinicPhoneLink, Masthead, CLINIC_NAME } from './ClinicFrame.tsx';
 import { AppointmentCard } from './AppointmentCard.tsx';
 import { AssistantGuide } from './AssistantGuide.tsx';
@@ -908,6 +909,9 @@ export function ClinicBooking() {
                   {GESTURE_ENABLED ? (
                     <GestureConfirm verb="grant" onConfirm={grantByGesture} armed={session.held === null && pendingAct === null} />
                   ) : null}
+                  {/* The spoken word grants too (2026-09-03): a word shown on screen, said with
+                      "Listen for me" on — the act for a person with no hands and no camera. */}
+                  <SpokenWord verb="grant" onConfirm={grantByGesture} armed={session.held === null && pendingAct === null} listening={listenMic === 'microphone'} acceptYes={false} />
                 </>
               ) : (
                 <>
@@ -992,9 +996,10 @@ export function ClinicBooking() {
               onRelease={dismissPendingAct}
               measuredRef={attachDock}
               gestureSlot={
-                GESTURE_ENABLED ? (
-                  <GestureConfirm verb={pendingAct.kind} onConfirm={confirmPendingAct} armed={pendingSecondsLeft > 0} />
-                ) : undefined
+                <>
+                  <SpokenWord verb={pendingAct.kind} onConfirm={confirmPendingAct} armed={pendingSecondsLeft > 0} listening={listenMic === 'microphone'} />
+                  {GESTURE_ENABLED ? <GestureConfirm verb={pendingAct.kind} onConfirm={confirmPendingAct} armed={pendingSecondsLeft > 0} /> : null}
+                </>
               }
             />
           ) : session.held !== null && session.secondsLeft > 0 && heldSlot ? (
@@ -1012,9 +1017,10 @@ export function ClinicBooking() {
               onRelease={() => session.release(session.held!.slotId)}
               measuredRef={attachDock}
               gestureSlot={
-                GESTURE_ENABLED ? (
-                  <GestureConfirm onConfirm={confirmHold} armed={session.held !== null && session.secondsLeft > 0} />
-                ) : undefined
+                <>
+                  <SpokenWord verb="book" onConfirm={confirmHold} armed={session.held !== null && session.secondsLeft > 0} listening={listenMic === 'microphone'} />
+                  {GESTURE_ENABLED ? <GestureConfirm onConfirm={confirmHold} armed={session.held !== null && session.secondsLeft > 0} /> : null}
+                </>
               }
             />
           ) : null}

@@ -12,8 +12,13 @@ fifteen names. Then "how does this help them fill out name, phone, DOB?" → **s
 (the standard AAC method; finger-counting rejected honestly: the canned model reads one and two
 fingers only). `scan-keyboard.ts` pure + 4 tests · `ScanKeyboard.tsx` under each patient field ·
 `sign-sink.ts` routes shapes to the open keyboard and away from the queue · `clinic-scan.json`.
-Unit **492/492** · typecheck · lint. Full suite r6 on the switch-board tree in flight; a full pass on
-the final tree, then deploy + double production round, before the physical pass with Arav.
+Then "why not just ask them to say yes?" → **answer the page aloud**: a word shown on screen only
+(never spoken, never in a tool result, aria-hidden), or a plain "yes" where the page asked a
+question (docks; not the grant card); the sentence that confirms is never queued; finals during the
+page's own speech never confirm. `word-challenge.ts` + 4 tests · `word-sink.ts` · `SpokenWord.tsx` ·
+`clinic-spoken-word.json`. Unit **496/496** · typecheck · lint · r6 32/32 + axe 0 · r7 32/33 (the
+one red was the new scan case's selector, fixed) · scan + spoken cases green alone. Next: full r8,
+deploy, double production round, then the physical pass with Arav.
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera

@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
 import type { PersonRequest, RequestQueue } from '../../lib/drop/request-queue.ts';
 import { routeSign } from '../../lib/drop/sign-sink.ts';
+import { routeTranscript } from '../../lib/drop/word-sink.ts';
 import { DEFAULT_SIGN_MAP, SIGNS_CHANGED, SIGN_PHRASE_MAX, SIGN_SHAPES, loadSignMap, phraseFor, saveSignMap, type SignMap, type SignShape } from '../../lib/drop/sign-map.ts';
 
 interface RecognitionLike {
@@ -102,6 +103,18 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
   }, [listening, signsOn, pending, onActive, onMicChange]);
 
   useEffect(() => setSupported(recognizerFactory() !== null), []);
+  // Test seam (?test=1 only): a final sentence as the recognizer would deliver it. A real
+  // microphone cannot be driven headlessly; the routing after it is what the case proves.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('test')) return;
+    const w = window as unknown as { __cedarfieldHear?: (text: string) => void };
+    w.__cedarfieldHear = (text: string) => {
+      if (!routeTranscript(text)) queue.push(text, 'voice');
+    };
+    return () => {
+      delete w.__cedarfieldHear;
+    };
+  }, [queue]);
   useEffect(() => {
     const sync = () => {
       setHistory([...queue.history()]);
@@ -141,7 +154,10 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i]!;
         if (r.isFinal) {
-          queue.push(r[0].transcript, 'voice');
+          // A confirm word (or a clean yes) is checked first; the sentence that carries it acts,
+          // never queues. Not while the page itself is talking: its own voice must never confirm.
+          const pageTalking = typeof speechSynthesis !== 'undefined' && speechSynthesis.speaking;
+          if (pageTalking || !routeTranscript(r[0].transcript)) queue.push(r[0].transcript, 'voice');
           live = '';
         } else live += r[0].transcript;
       }

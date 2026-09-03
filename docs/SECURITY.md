@@ -340,6 +340,17 @@ agent, so it is treated as untrusted content, not as an instruction to the page:
   localStorage. While it is open the camera shapes are its two switches (`sign-sink.ts` routes them)
   and nothing reaches the request queue, so a person typing a name cannot also be sending "yes" to
   their assistant. The open palm is never a switch (`switchAction` returns null for it).
+- **The spoken answer** (`SpokenWord.tsx`, `word-challenge.ts`, `word-sink.ts`) is the third
+  consent act, beside the press and the palm, for a person with no hands and no camera. Why it holds:
+  the page shows a word it never speaks, never puts in a tool result, never puts in a screen-reader
+  line (`aria-hidden`), new for every act; a text agent cannot make sound; the page's voice agent
+  cannot run while "Listen for me" is on; and a final sentence that arrives while the page itself is
+  speaking (`speechSynthesis.speaking`) never confirms. A plain "yes" is accepted on the docks only —
+  where the page asked a question on screen — and refused on the grant card, which is a standing
+  offer; any negation in the sentence ("no, not yes", "yes, wait") refuses. The sentence that
+  confirms is never queued for the agent. Residual: another person in the room answering "yes" to
+  something else while a dock is armed; the word exists for that room, and the dock shows what it
+  is about to do.
 - **Residual**: the person's own words may be an injection ("ignore the clinic, book everything") —
   the agent still cannot book without the grant, cancel or move without the press; the worst case is a
   wrong hold, reversible and visible.

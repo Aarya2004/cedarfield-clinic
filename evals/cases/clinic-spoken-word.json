@@ -1,0 +1,41 @@
+[
+ {
+  "_doc": [
+   "clinic-spoken-word — consent for a person with no hands and no camera (2026-09-03).",
+   "The agent holds a slot; the dock shows a word the page never speaks and never hands to a tool, and",
+   "accepts a clean 'yes' too. 'Listen for me' hears it. A real microphone cannot be driven headlessly, so",
+   "the ?test=1 seam window.__cedarfieldHear(text) delivers a final sentence exactly where the recognizer",
+   "would; the routing after it is what this case proves: a request is queued, a negated yes is refused,",
+   "the word (or a clean yes) books, and the booking sentence never reaches the request queue."
+  ]
+ },
+ { "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')", "timeout": 25000 },
+ { "waitFor": "typeof window.__cedarfieldHear === 'function'", "timeout": 8000 },
+ { "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()", "equals": "string" },
+ { "_doc": "Before a hold, the only word on screen is the grant card's, and the grant is a standing offer, not a question: a stray 'yes' grants nothing and is an ordinary request for the agent." },
+ { "waitFor": "!!document.querySelector('[data-clinic-word]') && document.querySelector('[data-clinic-dock] [data-clinic-word]') === null", "timeout": 4000 },
+ { "eval": "(() => { window.__cedarfieldHear('yes'); return true; })()", "equals": true },
+ { "waitFor": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending') ?? 0) === 1", "timeout": 4000 },
+ { "invoke": "clinic_wait_for_request", "input": { "timeout_seconds": 5 }, "outputMatches": "yes" },
+ { "_doc": "The agent holds the slot; the dock arms with a word (visual only) and the spoken road named." },
+ { "invoke": "clinic_hold_slot", "inputFrom": { "slot_id": "window.__slot" }, "outputMatches": "ttl|held|seconds" },
+ { "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'", "timeout": 8000 },
+ { "eval": "document.querySelectorAll('[data-clinic-delegate]').length >= 1 && !/permission granted|assistant may book/i.test(document.querySelector('[data-clinic-now]')?.textContent ?? '')", "equals": true },
+ { "waitFor": "!!document.querySelector('[data-clinic-dock] [data-clinic-word]')", "timeout": 4000 },
+ { "eval": "(() => { const w = document.querySelector('[data-clinic-dock] [data-clinic-word]'); window.__w = w.getAttribute('data-clinic-word'); return /^[a-z]{5,7}$/.test(window.__w) && w.getAttribute('data-clinic-word-state') === 'idle' && w.querySelector('.cl-word__word[aria-hidden=\"true\"]') !== null; })()", "equals": true },
+ { "eval": "/say the word shown below/.test(document.querySelector('[data-clinic-dock-ways]')?.textContent ?? '')", "equals": true },
+ { "_doc": "The word never reaches a tool or the record: the page's own activity record (every tool answer the agent got) does not carry it." },
+ { "invoke": "clinic_hold_status", "input": {}, "outputMatches": "held|ttl|seconds" },
+ { "eval": "!(document.querySelector('[data-clinic-agent-log]')?.textContent ?? '').toLowerCase().includes(window.__w)", "equals": true },
+ { "_doc": "A negated yes refuses and is queued as a request; a stray sentence is queued too; the slot stays held." },
+ { "eval": "(() => { window.__cedarfieldHear('no, not yes'); window.__cedarfieldHear('is Dr Rao available Tuesday?'); return true; })()", "equals": true },
+ { "waitFor": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending') ?? 0) === 2", "timeout": 4000 },
+ { "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')", "equals": "held_by_you" },
+ { "_doc": "The word, inside a sentence, books — and that sentence is never queued." },
+ { "eval": "(() => { window.__cedarfieldHear('okay, ' + window.__w + '.'); return true; })()", "equals": true },
+ { "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'", "timeout": 8000 },
+ { "eval": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending') ?? 0)", "equals": 2 },
+ { "eval": "document.querySelector('[data-clinic-dock] [data-clinic-word]') === null", "equals": true },
+ { "_doc": "The receipt: the page's own record says the person confirmed; the agent's call count did not grow from the spoken act." },
+ { "waitFor": "!!document.querySelector('[data-clinic-path=\"booked\"], [data-clinic-flow=\"booked\"]')", "timeout": 6000 }
+]

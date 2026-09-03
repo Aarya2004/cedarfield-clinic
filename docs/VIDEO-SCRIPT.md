@@ -99,7 +99,8 @@ palm books it.
 > assistant labels it for her, on her say-so. Thumbs-up is now her whole request. The assistant
 > holds the time; her palm books it. And when the clinic needs her name, the same two shapes type
 > it on a scanning keyboard — the way switch users type today. Five switches. Not a language, and
-> the page says so. The tools do not change."
+> the page says so. And with no hands and no camera at all: the page asks, and she answers it out
+> loud — yes, or the word on screen only she can see. The tools do not change."
 
 ## 1:52 – 2:14 · Or a hand, not a key
 

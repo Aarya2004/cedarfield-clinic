@@ -2172,3 +2172,26 @@ html:has(.cl-dock) {
     transition: none;
   }
 }
+
+/* --- the spoken word: consent for no hands, no camera (2026-09-03) ---------------------------- */
+
+.cl-word {
+  margin: 0.75rem 0 0;
+  font-size: var(--clinic-small);
+  line-height: 1.5;
+}
+
+.cl-word__word {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 2px solid var(--clinic-ink);
+  border-radius: 0.375rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-word[data-clinic-word-state='idle'] .cl-word__word {
+  border-style: dashed;
+}
