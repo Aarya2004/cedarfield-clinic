@@ -15,7 +15,7 @@ how each is covered, and what to do if it happens. Checked on 2026-09-03 ~15:00 
 
 | Risk | Cover | If it happens |
 |---|---|---|
-| **Supabase free project pauses after 7 idle days** | A Vercel cron calls `/api/health` daily at 09:00 UTC; it reads the board through the service role, which counts as activity and advances the waves. Any real visitor does the same. | Supabase dashboard → project `cedarfield-clinic` → Restore. Takes ~2 min. |
+| **Supabase free project pauses after 7 idle days** | A Vercel cron calls `/api/health` daily at 09:00 UTC; it calls a service-role-only sweep (`clinic_health`), which counts as activity and advances the waves. Any real visitor does the same. | Supabase dashboard → project `cedarfield-clinic` → Restore. Takes ~2 min. |
 | **Board offline** | The kill switch `clinic_settings.live` is `true`. Pages fall back to the seeded board if the live one is unreachable, so the page still works. | SQL: `update public.clinic_settings set live = true where key = 'board';` |
 | **Voice quota** | 40 calls per visitor per day, 200 per day, fixed in SQL; counters are per day, so they reset by themselves. The page says "used up" and still works without voice. | Raise in `supabase/migrations/20260903050000_cedarfield_voice_quota_40.sql` and re-apply. |
 | **OpenAI key** | Voice only. If the key is removed or the account has no balance, the voice button says it is not set up; everything else works. | Vercel → Environment Variables → `OPENAI_API_KEY`; redeploy. |
