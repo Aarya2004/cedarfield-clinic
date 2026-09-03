@@ -1,12 +1,12 @@
 # For Aarya and Aarya's Claude — the final hours (2026-09-03, ~02:10 PT)
 
 Read this first, then `docs/DROP-STATUS.md` (one row per batch, newest at the top), then
-`docs/VIDEO-SCRIPT.md` and `docs/DEVPOST.md`. Everything below is true of production build `5e9bfe2`
+`docs/VIDEO-SCRIPT.md` and `docs/DEVPOST.md`. Everything below is true of production build `52767c8`
 or newer; the build number is printed in the page's colophon.
 
 ## State of the product
 
-- Production is `5e9bfe2`, verified with two deployed-suite rounds (38 checks each), the live board
+- Production is `52767c8`, verified with two deployed-suite rounds (38 checks each), the live board
   with two visitors, the registry probe (14 tools) and the first-call probe on the live board (tools
   present in the first snapshot, no wait). Every build today was verified the same way before the next.
 - Three consecutive independent audits (Codex 5.6) on production came back with no P1 and no P2.

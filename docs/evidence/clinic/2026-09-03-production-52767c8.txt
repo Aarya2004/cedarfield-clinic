@@ -1,0 +1,12 @@
+Production verification — main @ 52767c8, 2026-09-03 ~04:20 PT (Engineer #4). Fast round (targeted local cases,
+deploy, full deployed suite once), the regime since ~03:50 PT at Arav's request.
+
+Builds since 5e9bfe2, each verified on the deployed URL: 5070271 (a real thumbs-up fires; only docks auto-claim the
+  lens) · c530b35 (times-first layout; question card scrolls into view; colophon in column, one reception number) ·
+  086438d (build stamp from src/build-info.ts) · ddaebae (sign channel 5 readings at 0.6, hold bar) · 1550f1f
+  (keyboard steps with one finger, 700 ms sweep, signs read every 50 ms) · 52767c8 (one finger = "hold me the
+  earliest appointment" by default; the sign camera reopens on later visits once enabled).
+Local at 52767c8: unit 513/513 · typecheck 0 · lint 0 · cases gesture ×2, listen ×2, signs, phrases, switchboard, scan,
+  thesis, guide, ask, permit, path, voice-tour green.
+Production: verify-deployed 38 ✔ / 0 ✘ — DEPLOYED AND VERIFIED. First call with no wait: answered.
+Colophon prints "Build 52767c8 · deployed 2026-09-03 11:10 UTC".
