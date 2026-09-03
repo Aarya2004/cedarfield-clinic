@@ -3,7 +3,7 @@
 > Everything below the rule is the Devpost text. HTML comments are notes to us and must be stripped
 > before pasting. Every number below is produced by a committed eval case; none is estimated.
 
-**Project name:** _TODO — the two founders pick it; "The Drop" is the working title._
+**Project name:** Cedarfield Clinic — your words, your agent, your final say.
 **Tagline:** Your agent can hold it. Only you can take it.
 **Live URL:** https://rokan-terminal.vercel.app (the front door is the product; the booking page is `/clinic/book`)
 <!-- Deployed and verified 2026-08-31: node evals/verify-deployed.mjs --url=… — all checks green

@@ -1,4 +1,4 @@
-# CLAUDE.md — Rokan Terminal (OpenAI WebMCP Challenge entry)
+# CLAUDE.md — Cedarfield Clinic (OpenAI WebMCP Challenge entry; the repo also holds the earlier Rokan Terminal experiment)
 
 > **This is a hackathon.** We are competing in the OpenAI WebMCP Challenge — a 10-day, online, Devpost-run hackathon (Aug 25 → **Sep 3 13:00 PT**), $35K cash, top-10 prizes only, seven judges (OpenAI, Chrome, Cloudflare, Shopify, Vercel, Netlify, MCP-B), ~3,000 registrants. We submit by Sep 2 18:00 PT. Operate in **hackathon mode**: one feature polished, working demo > clean code > tests > docs, recorded backup one keypress away, rehearse 5×, E2E smoke before judging. If a `hackathon-sprint` skill exists in this environment, invoke it at session start.
 > Read on every session in this folder.

@@ -73,7 +73,7 @@ you said by voice.
 ## The Codex loop prompt (paste into Codex before shot 3, page open in its pane)
 
 ```text
-You are my agent on https://rokan-terminal.vercel.app/clinic/book, open in your browser pane. I talk
+You are my agent on https://cedarfield-clinic.vercel.app/clinic/book, open in your browser pane. I talk
 to you by voice. Use the page's WebMCP tools only; never scrape, click or press anything on the page.
 When I ask for an appointment: find times with the tools, then ALWAYS put the two best to me with
 clinic_ask (two short choices, timeout_seconds 20) before holding. I answer on the page with a hand

@@ -1,59 +1,66 @@
-# Devpost submission text — Cedarfield Clinic (2026-09-03, final)
+# Devpost text — Cedarfield Clinic (final, 2026-09-03)
 
-> Paste each section into the matching Devpost field. True of production build `2fe0c0c` or newer; the
-> build number is printed at the foot of the page. Live URL: https://cedarfield-clinic.vercel.app/clinic/book
-> (also https://rokan-terminal.vercel.app/clinic/book). Repo: this one, public.
+> Paste each section into its Devpost field. Live: https://cedarfield-clinic.vercel.app/clinic/book
+> (the build number is at the foot of the page). Repo: this one. Video: the link Aarya uploads.
 
 ## Tagline
 
-Your words, your agent, your final say: a public clinic page that gives a visitor's own agent safe live tools, and never lets it commit.
+A clinic page that gives your own agent real tools and never lets it book for you.
 
 ## Inspiration
 
-Some people cannot reliably speak, type, or get through a long booking form: cerebral palsy, ALS, a stroke, a speech difference, or just a bad day. For them a web page that releases cancelled appointments in timed waves is not merely tiring. It is unwinnable. No switch, head pointer, or voice control has ever beaten a mouse in a race.
+There's a person in our family for whom talking takes time. Not thinking. Talking. And the web has quietly become a place that punishes that. Cancelled appointments get released at 8:00 and are gone by 8:01. Course seats, visa slots, concert tickets, same thing. If you use a switch, a head pointer, or voice control, you lose that race every single time, and nobody built the race with you in mind.
 
-Many of those same people already have an agent that understands how they communicate. Public websites do not. They expose forms, dropdowns, timers, and a phone number. This project began with a family member for whom communication takes time and web workflows demand fast, precise clicks. We wanted one public page where a visitor arrives with their own agent and their own way of communicating, and the page meets both of them halfway, without ever handing the agent the right to decide.
+The strange part is that the same person already has an assistant that understands them perfectly well. It just can't do anything on a clinic's website except stare at the buttons and guess.
+
+So we built the page we wished existed. Not an app you have to install, not the clinic's chatbot. A normal public booking page that, when you show up with your own agent, tells that agent exactly what it's allowed to do for you, and draws a line it can't cross.
 
 ## What it does
 
-Cedarfield is a fictional clinic that releases cancelled appointments in waves. A visitor opens the booking page inside their own agent's browser. Through WebMCP the page tells that agent exactly what it may do right now: see the board, find times, hold and release a slot, wait for the person's words, and ask them one bounded question.
+Cedarfield is a made-up clinic that releases cancelled appointments in waves, a few at a time. You open the booking page inside whatever agent you use (we recorded with Codex). Through WebMCP, the page hands your agent fourteen tools: read the board, find times, hold a slot for three minutes, let it go, wait for whatever you say to the page, ask you one question with two or three choices.
 
-The visitor talks to the page however works for them: typing, speaking, a hand shape the camera reads as a switch, or a scanning keyboard driven by two of those shapes, the way switch users type today. The agent takes each request from the page, searches, holds a time, and can ask back through the page. The visitor answers by button, key, voice, or hand.
+You talk to the page however you can. Type. Speak. Press a phrase. Hold up a hand shape and the camera reads it as a switch. If you can't type your name, a scanning keyboard opens and you pick letters with a thumbs-up and a fist, the same way switch users have typed for decades. Your agent takes each request, searches, holds a time, and when it needs a decision it asks you on the page, not in its own window. You answer with a button, a word, or a thumbs-up.
 
-What the agent cannot do is commit. **There is no booking tool when the page loads.** One is born only from an act a person performs: a trusted press, an open palm held to the camera, or a word shown on screen that only they can see. It lives ten minutes, books once, and dies on use, revoke, or expiry. Cancel and move are never delegated. A permission card shows the contract at every moment: can, cannot, until. The tool surface is on the page too, as a row of chips: when the person grants, a gold chip appears, "born from your press"; when they take it back, it fades. A scripted press is counted and refused, out loud. Every call the agent makes is written on the page in plain words, and a cursor travels to whatever it touched.
+Here's the part we care about most. **When the page loads there is no booking tool.** None. Your agent can hold a slot and it can ask, but it cannot book. A booking tool only comes into existence when you do something an agent can't fake: press the button yourself, hold an open palm to the camera, or say a word that's shown on your screen and nowhere else. Then the tool lives for ten minutes, works once, and disappears. You can watch it appear as a gold chip on the page and watch it die when you take permission back. Cancelling and moving an appointment are never handed over at all.
+
+If an agent tries to press the confirm button with a script, the page notices, refuses, and says so out loud. Every call your agent makes gets written on the page in plain English, with a little cursor that travels to whatever it touched, so you can see your assistant working instead of trusting it.
 
 ## How we built it
 
-Next.js 15 on Vercel. The page registers its tools with `document.modelContext`, the imperative WebMCP API. The twelve load-time tools are registered by an inline script under the page's CSP nonce before any bundle runs, so they exist in a client's very first snapshot, and the app takes over their execution when it hydrates. Three further tool sets are born and die with page state: the queue verbs on the shared board, the booking tool under a grant, and the appointment tool after a booking.
+Next.js 15 on Vercel. The page registers tools with `document.modelContext`. The twelve tools that exist at load time are registered by an inline script in the HTML, before any JavaScript bundle runs, because we learned the hard way that agents which snapshot the tool list the instant a page opens will otherwise see nothing. The app takes over running those tools once it's hydrated. Three more sets of tools are born and die with the state of the page.
 
-A shared live board runs on Supabase with row-level security and `SECURITY DEFINER` procedures, so fairness between strangers, one hold each, hold before book, only your own booking cancels or moves, is enforced by the database rather than the client. The page reads intent through the browser's speech recogniser, MediaPipe hand-shape recognition served from our own origin, and a row-column scanning keyboard. Every number on screen is measured by the code that shows it.
+The board is shared between every visitor and lives in Supabase. Row-level security and `SECURITY DEFINER` procedures enforce the rules (one hold per person, hold before book, you can only cancel your own), so a clever client can't cheat a stranger out of a slot. Hand shapes come from MediaPipe, served from our own domain. Speech is the browser's own recognizer. The scanning keyboard is a hundred lines of state machine with tests.
+
+Every number you see on the page, "1 interaction from you", "3 appointments left", "held for 2:41", is measured by the code that displays it. We didn't want a single decorative number.
 
 ## Challenges we ran into
 
-Registering tools after hydration lost the first call of any client that snapshots at navigation. The fix was to register from the HTML itself.
+The first-call problem above cost us a whole audit round. Three fresh loads, three failures, all because React hadn't hydrated yet.
 
-A page-defined "yes" is the one word an agent can also say. So the spoken answer accepts "yes" only where the page asked a visible question, ignores the microphone while the page itself is talking, keeps the voice client off while the page listens, and offers a word shown on screen for a noisy room.
+"Yes" is a trap. It's the one word an agent can say too. We ended up with rules: a spoken yes only counts when the page itself asked a visible question, the microphone is ignored while the page is talking, the page's voice client can't run at the same time as its listener, and for a noisy room there's a word on screen you can say instead.
 
-Five camera shapes are not a language, and the page says so. They are five switches the visitor labels, or asks their agent to label.
+We wanted to call the hand shapes sign language and we can't. Five shapes are five switches, not a language, and the page says exactly that. It stung, but claiming ASL with a gesture model would have been a lie to the people we built this for.
 
-Chat clients take ten to forty seconds per tool call. A 45-second hold was expiring while the agent was still describing it. Holds are now three minutes, measured, not guessed.
+And agents are slow. Ten to forty seconds per tool call in a chat client. Our forty-five second hold kept expiring while the agent was still telling the user about it. Holds are three minutes now, and the timer on screen is real.
 
 ## Accomplishments that we're proud of
 
-Three consecutive clean independent audits on production by another agent, with no P1 and no P2. Tools present in the first snapshot on every fresh load of the live board. 513 unit tests, 39 browser cases, zero accessibility violations on every route, and a two-visitor live-board proof, all run against the deployed URL before every release, twenty releases in one night, each verified. A person with no hands can enter their name, ask for a time, answer the agent's question, grant, and book without touching anything, and the page never claimed a language it cannot read.
+We shipped twenty builds in one night and verified every one of them against the live URL before the next: a suite of 39 browser cases, 513 unit tests, an accessibility scan on every route, and a two-visitor test that books a slot from a second browser and watches the first one update. We had another agent audit the deployed page cold, three times in a row, and it found nothing above P3 on the last three passes.
+
+And the thing itself works. Someone who cannot move their hands can open this page, type their name with two hand shapes, ask for a time with one finger, answer their agent's question with a thumbs-up, grant permission with an open palm, and get a booking with a reference number and a calendar file, without touching anything and without saying a word.
 
 ## What we learned
 
-The agent is the easy part. The hard part is a page that knows what an agent may do for this person, right now, and what must stay human, and says it in a way the visitor can check. WebMCP made that expressible: consent became a tool that is born and dies, which no scraper can fake and no developer API can see.
+The agent was the easy part. Getting an agent to call tools is a weekend. The hard part was building a page that knows what an agent should be allowed to do for *this* person, right now, and can say it in a way the person can check. WebMCP gave us a way to make consent itself a tool, one that's born and dies. A scraper can't forge that. An API can't see it.
 
 ## What's next
 
-A session with a real switch and AAC user, recorded with their consent, and the changes it forces. Sign language, when a recogniser exists that reads a language rather than five shapes. And the same pattern on the other pages where people lose races they should never have had to run: visa slots, course registration, ticket drops.
+Sit down with a real switch user and an AAC user, record it with their permission, and fix whatever they hate. Real sign language, the day a model can read one. And then every other page where people lose races they never should have had to run.
 
 ## Built with
 
-Next.js 15 · TypeScript · WebMCP (`document.modelContext`) · Supabase (Postgres, RLS, realtime) · MediaPipe hand gestures · Web Speech API · OpenAI Realtime API over WebRTC · Vercel
+Next.js 15, TypeScript, WebMCP (`document.modelContext`), Supabase (Postgres, RLS, realtime), MediaPipe hand gestures, Web Speech API, OpenAI Realtime API over WebRTC, Vercel.
 
-## Scope, stated plainly
+## Honest scope
 
-Cedarfield is a fictional practice. The other patients on the board are simulated and the page says so. No real appointment is made; the visitor's details never leave their browser.
+Cedarfield is fictional. The other patients you see taking slots are simulated, and the page says so in its footer. No real appointment is ever made and your details never leave your browser.

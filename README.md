@@ -1,6 +1,6 @@
 # Cedarfield Clinic — your words, your agent, your final say
 
-> Live: **https://cedarfield-clinic.vercel.app/clinic/book** (also rokan-terminal.vercel.app) · the build number is printed at the foot of
+> Live: **https://cedarfield-clinic.vercel.app/clinic/book** (rokan-terminal.vercel.app serves the same build) · the build number is printed at the foot of
 > the page. Everything below is true of that build; every proof re-runs from this repo (`evals/`), and
 > the live board's schema is committed under `supabase/migrations/`.
 >
