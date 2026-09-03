@@ -1,7 +1,7 @@
 # For Aarya and Aarya's Claude — the final hours (2026-09-03, ~02:10 PT)
 
 Read this first, then `docs/DROP-STATUS.md` (one row per batch, newest at the top), then
-`docs/VIDEO-SCRIPT.md` and `docs/DEVPOST.md`. Everything below is true of production build `891c755`
+`docs/VIDEO-SCRIPT.md` and `docs/DEVPOST.md`. Everything below is true of production build `db48684`
 or newer; the build number is printed in the page's colophon.
 
 ## State of the product

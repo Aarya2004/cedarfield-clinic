@@ -1,0 +1,11 @@
+Production verification — main @ db48684, 2026-09-03 ~03:05 PT (Engineer #4). Two consecutive rounds, identical.
+
+Builds today, each verified on the deployed URL before the next: a5fca53 · 1e3ac6f · 057b8de · f6d63ec · 891c755 ·
+  bc70e25 (phrase board) · 4113442 (camera follows the visit, keyboard sheet, voice captions, motion) ·
+  db48684 (camera comes back after a claim, keyboard summons signs, tool names on strip and cursor, take it back).
+Local at db48684: unit 512/512 · typecheck 0 · lint 0 · touched cases gesture ×2, scan, listen ×2, spoken-word,
+  thesis, activity-log green.
+Round 1: verify-deployed 38 ✔ / 0 ✘ — DEPLOYED AND VERIFIED.
+Round 2: verify-deployed 38 ✔ / 0 ✘ — DEPLOYED AND VERIFIED.
+Live board, two visitors: 25 steps, 0 failed. Registry on the live board: 14:14. First call with no wait: answered.
+(4113442, the build before: 38/38 ×2 · live 25/25 · registry 14:14 · first-call · voice 14/14.)
