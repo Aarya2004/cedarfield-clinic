@@ -103,6 +103,16 @@ const GESTURE_ENABLED = process.env.NEXT_PUBLIC_DROP_GESTURE === '1';
 /** "Talk to Cedarfield": the page's own voice client. Same flag rule; the route says if no key is set. */
 const VOICE_ENABLED = process.env.NEXT_PUBLIC_DROP_VOICE === '1';
 
+/**
+ * How long a grant stands. Ten minutes — except under `?test=1`, where a case may shorten it
+ * through `window.__cedarfieldDelegationMs` to prove expiry in seconds. Ignored outside test mode.
+ */
+function delegationMs(): number {
+  if (!isTestMode()) return DELEGATION_MS;
+  const hook = (window as unknown as { __cedarfieldDelegationMs?: unknown }).__cedarfieldDelegationMs;
+  return typeof hook === 'number' && Number.isFinite(hook) && hook > 0 ? hook : DELEGATION_MS;
+}
+
 /** "2:24 PM" — when a standing permission ends, in the visitor's own clock. */
 function formatWallClock(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -553,7 +563,7 @@ export function ClinicBooking() {
       // (Codex audit, 2026-09-02: "gives no feedback when the patient profile is incomplete").
       if (!requirePatient()) return;
       const now = Date.now();
-      setDelegation({ grantedAt: now, until: now + DELEGATION_MS });
+      setDelegation({ grantedAt: now, until: now + delegationMs() });
     },
     [setDelegation, requirePatient],
   );
@@ -562,7 +572,7 @@ export function ClinicBooking() {
     if (delegationRef.current !== null) return;
     if (!requirePatient()) return;
     const now = Date.now();
-    setDelegation({ grantedAt: now, until: now + DELEGATION_MS });
+    setDelegation({ grantedAt: now, until: now + delegationMs() });
   }, [setDelegation, requirePatient]);
   const revokeDelegation = useCallback(() => setDelegation(null), [setDelegation]);
   useEffect(() => {

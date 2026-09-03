@@ -1,0 +1,95 @@
+[
+ {
+  "_doc": [
+   "clinic-listen-edges \u2014 the bridge's limits (2026-09-02).",
+   "Whitespace-only is ignored; an over-long request is cut at 400 characters; two requests are",
+   "handed over in the order they were made; a wait with an out-of-range timeout is clamped and",
+   "still answers; the tool never leaves the registry."
+  ]
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "_doc": "Whitespace only: nothing queued."
+ },
+ {
+  "focus": "[data-clinic-listen-typed]"
+ },
+ {
+  "type": "     "
+ },
+ {
+  "focus": "[data-clinic-listen-send]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "sleep": 300
+ },
+ {
+  "eval": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending'))",
+  "equals": 0
+ },
+ {
+  "_doc": "Order and length: a 600-character request is stored at 400; the two are handed over first-in first-out."
+ },
+ {
+  "eval": "(() => { const i = document.querySelector('[data-clinic-listen-typed]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'first ' + 'x'.repeat(600)); i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()",
+  "equals": true
+ },
+ {
+  "focus": "[data-clinic-listen-send]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "focus": "[data-clinic-listen-typed]"
+ },
+ {
+  "type": "second request"
+ },
+ {
+  "focus": "[data-clinic-listen-send]"
+ },
+ {
+  "type": "\r"
+ },
+ {
+  "waitFor": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending')) === 2",
+  "timeout": 4000
+ },
+ {
+  "invoke": "clinic_wait_for_request",
+  "input": {
+   "timeout_seconds": 999
+  },
+  "outputMatches": "text.{0,4}:.{0,3}first x{394}[^x][\\s\\S]*more_pending.{0,4}:.{0,2}1"
+ },
+ {
+  "invoke": "clinic_wait_for_request",
+  "input": {
+   "timeout_seconds": -5
+  },
+  "outputMatches": "second request[\\s\\S]*more_pending.{0,4}:.{0,2}0"
+ },
+ {
+  "eval": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending'))",
+  "equals": 0
+ },
+ {
+  "list": true
+ },
+ {
+  "expect": {
+   "tool": "clinic_wait_for_request"
+  }
+ }
+]

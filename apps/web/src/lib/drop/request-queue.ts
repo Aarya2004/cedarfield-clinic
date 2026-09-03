@@ -26,8 +26,11 @@ export interface RequestQueue {
   pending(): number;
   /** Every request ever pushed, newest first, capped — the panel shows the last few. */
   history(): readonly PersonRequest[];
-  /** Fires on every push (the panel re-renders; the page announces). */
-  subscribe(fn: (req: PersonRequest) => void): () => void;
+  /**
+   * Fires on every push (with the request) and on every hand-over to an agent (with null), so a
+   * panel showing "N waiting" is right the instant the agent takes one — never a second later.
+   */
+  subscribe(fn: (req: PersonRequest | null) => void): () => void;
 }
 
 const MAX_TEXT = 400;
@@ -38,7 +41,10 @@ export function createRequestQueue(): RequestQueue {
   const pending: PersonRequest[] = [];
   const history: PersonRequest[] = [];
   const waiters: Array<(r: PersonRequest | null) => void> = [];
-  const listeners = new Set<(req: PersonRequest) => void>();
+  const listeners = new Set<(req: PersonRequest | null) => void>();
+  const taken = () => {
+    for (const fn of listeners) fn(null);
+  };
 
   return {
     push(text, via, at = Date.now()) {
@@ -48,7 +54,7 @@ export function createRequestQueue(): RequestQueue {
       history.unshift(req);
       if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
       const waiter = waiters.shift();
-      if (waiter) waiter(req);
+      if (waiter) waiter(req); // straight to the agent already waiting: never counted as pending
       else {
         pending.push(req);
         if (pending.length > MAX_PENDING) pending.shift();
@@ -57,11 +63,16 @@ export function createRequestQueue(): RequestQueue {
       return req;
     },
     take() {
-      return pending.shift() ?? null;
+      const r = pending.shift() ?? null;
+      if (r) taken();
+      return r;
     },
     wait(timeoutMs, signal) {
       const now = pending.shift();
-      if (now) return Promise.resolve(now);
+      if (now) {
+        taken();
+        return Promise.resolve(now);
+      }
       if (signal?.aborted) return Promise.resolve(null);
       return new Promise((resolve) => {
         let done = false;

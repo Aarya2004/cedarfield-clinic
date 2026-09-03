@@ -34,13 +34,14 @@ test('wait honours an AbortSignal and leaves the queue clean', async () => {
   assert.equal(q.pending(), 1, 'a request after the abort waits for the next caller');
 });
 
-test('subscribers hear every push; the sign vocabulary is exactly five words', () => {
+test('subscribers hear every push and every hand-over; the sign vocabulary is exactly five words', () => {
   const q = createRequestQueue();
   const heard: string[] = [];
-  const off = q.subscribe((r) => heard.push(`${r.via}:${r.text}`));
+  const off = q.subscribe((r) => heard.push(r ? `${r.via}:${r.text}` : 'taken'));
   q.push('yes', 'sign');
+  q.take();
   off();
   q.push('no', 'sign');
-  assert.deepEqual(heard, ['sign:yes']);
+  assert.deepEqual(heard, ['sign:yes', 'taken'], 'a take is announced too, so "N waiting" is never stale');
   assert.deepEqual(Object.keys(SIGN_WORDS).sort(), ['Closed_Fist', 'Pointing_Up', 'Thumb_Down', 'Thumb_Up', 'Victory']);
 });
