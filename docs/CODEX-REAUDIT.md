@@ -16,7 +16,7 @@ Prior findings, to re-verify on this build:
    a spoken "yes" or the word shown on screen books, with "Listen for me" on; the grant card takes the word only),
    fetching about one second after the page shows the slot list (the page registers each set in
    parallel; Chrome fires toolchange as sets land — a fetch inside the first frames may catch a set
-   mid-registration and must be re-fetched on toolchange). PASS = 12 on all three.
+   mid-registration and must be re-fetched on toolchange). PASS = 13 on all three.
 3. clinic_explain_confirm: one protocol sentence — "No booking tool by default … a trusted, visible
    permission creates a one-use, ten-minute clinic_book_slot; cancel and move are never delegated".
    PASS = the answer contains that protocol and tool_that_books is null.
@@ -58,6 +58,28 @@ Prior findings, to re-verify on this build:
 14. Availability consistency: compare the open slots the page shows with clinic_list_drops.open_count
     at the same moment, twice. PASS = equal both times (a wave rollover between reads is not a fail —
     say if one happened).
+
+New on this build:
+15. Patient card, "Not you? Remove", then "Type the patient's full name with two switches". PASS = a
+    scanning keyboard opens under the card: six rows (a–g, h–n, o–u, v–z + space + delete, 0–6,
+    7–9 / - + done), the first row highlighted, sweeping about once a second; the on-screen Select
+    picks the row, Select again types the highlighted key into the name field; Escape steps back
+    out of a row; "Close keyboard" keeps what was typed. Report the screen-reader status line text.
+16. While that keyboard is open, "Talk to Cedarfield" and the request queue are untouched: type a
+    request into "Say it to the page" → it still queues (PASS), and the keyboard's own Space/Enter
+    handling does not fire when focus is on a text field or a button (PASS = typing a space into
+    the request line inserts a space).
+17. Hold a slot with clinic_hold_slot. PASS = the confirm bar shows "Or … answer aloud … say yes or
+    the word on screen <WORD>" where <WORD> is 5–7 lowercase letters in a box, aria-hidden; the
+    "You can also…" line names "say the word shown below"; clinic_hold_status and the assistant's
+    record on the page do NOT contain that word. Release the hold: PASS = the word is gone. The grant
+    card ("Let my assistant book for me") shows a word but says "the word on screen" only — no
+    "yes" (PASS).
+18. Enable the camera on the "Say it to the page" panel and show an open palm. PASS = the Seeing:
+    line says the palm is not a request here and names the five shapes, and nothing is signed. On a
+    hold's confirm bar, the same palm reads "an open palm (NN%) — hold it" (PASS).
+19. Fresh load with no profile: PASS = the card asks who the appointment is for; "Ada Okonkwo" never
+    appears on the live board without the ?test=1 flag.
 
 Then: list anything you saw that is not covered above, ranked P1/P2/P3, with the exact text. Say
 "no P1, no P2" explicitly if that is the case.

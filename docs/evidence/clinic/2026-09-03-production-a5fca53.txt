@@ -7,8 +7,8 @@ Since 1576c91: camera switch board (clinic_set_sign, 13 tools on the shared boar
   per camera, the ?test=1 sample patient is memory-only and a stale one is cleaned once.
 Local: unit 497/497 · typecheck 0 · lint 0 · clinic suite r9 34/34 (incl. clinic-scan, clinic-spoken-word,
   clinic-switchboard) · axe 0×3 · patient/manual/declarative/delegation re-run green after the last fix.
-Round 1: verify-deployed:  · live-two-visitors: .
-Round 2: verify-deployed:  · live-two-visitors: .
+Round 1: verify-deployed: 34 ✔ / 0 ✘ (29 cases + routes + axe) — DEPLOYED AND VERIFIED · live-two-visitors: 25 steps, 0 failed.
+Round 2: verify-deployed: 34 ✔ / 0 ✘ — DEPLOYED AND VERIFIED · live-two-visitors: 25 steps, 0 failed.
 Registry probe, three fresh loads of the live board (no test flag): 13 tools each time, page and
   browser agreeing (13:13), clinic_wait_for_request and clinic_set_sign present before any request.
 clinic-voice-live (fake microphone): 14/14 — secret minted, WebRTC live, tools sent, stayed live, clean end.
