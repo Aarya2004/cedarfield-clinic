@@ -19,6 +19,18 @@ export { SAMPLE_PATIENT, validate, type PatientOnFileRecord };
 const KEY = 'cedarfield.patient';
 const FIELD_IDS: Record<PatientField, string> = { fullName: 'cl-patient-name', dateOfBirth: 'cl-patient-dob', phone: 'cl-patient-phone' };
 
+/** The declarative WebMCP attributes: the browser publishes this form as a tool an assistant can fill. */
+const DECLARATIVE_PATIENT_FORM = {
+  toolname: 'clinic_patient_details',
+  tooldescription:
+    'Who the appointment is for at Cedarfield Clinic: full name, date of birth (day/month/year) and phone. Fill it from what you know about your human; they press Save themselves — a submit you make is refused.',
+};
+const PARAM_DESCRIPTION: Record<PatientField, string> = {
+  fullName: "The patient's full name, as it appears on their record.",
+  dateOfBirth: 'Date of birth, day/month/year — for example 12/04/1988.',
+  phone: 'A phone number the clinic can call.',
+};
+
 export function readPatient(): PatientOnFileRecord | null {
   try {
     const raw = window.localStorage.getItem(KEY);
@@ -61,6 +73,8 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
   const [draft, setDraft] = useState<PatientOnFileRecord>({ fullName: '', dateOfBirth: '', phone: '' });
   const [errors, setErrors] = useState<Partial<Record<PatientField, string>>>({});
   const [saved, setSaved] = useState(false);
+  const [agentFilled, setAgentFilled] = useState(false);
+  const [blockedSubmits, setBlockedSubmits] = useState(0);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -151,12 +165,36 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
         <form
           className="cl-patient__form"
           data-clinic-patient-form
+          data-clinic-patient-agent-filled={agentFilled ? 'true' : 'false'}
+          data-clinic-patient-submits-blocked={blockedSubmits}
           noValidate
+          // WebMCP's declarative half: the browser publishes this form as a tool, so an assistant can
+          // fill it for a person who cannot type — from what it knows about them. The person's press
+          // on Save is the consent; a submit the browser attributes to an agent, or a scripted one,
+          // is refused and counted, exactly like the booking form.
+          {...(DECLARATIVE_PATIENT_FORM as unknown as Record<string, string>)}
+          onInput={(e) => {
+            if (!e.nativeEvent.isTrusted) setAgentFilled(true);
+          }}
           onSubmit={(e) => {
             e.preventDefault();
+            if ((e.nativeEvent as SubmitEvent & { agentInvoked?: boolean }).agentInvoked === true || !e.nativeEvent.isTrusted) {
+              setBlockedSubmits((n) => n + 1);
+              return;
+            }
             save();
           }}
         >
+          {agentFilled ? (
+            <p className="cl-agent" role="status" data-clinic-patient-agent-banner>
+              Filled in by your assistant. Check it over, then press Save yourself — nothing is kept until you do.
+            </p>
+          ) : null}
+          {blockedSubmits > 0 ? (
+            <p className="cl-lost" role="status" data-clinic-patient-submit-blocked={blockedSubmits}>
+              A save that did not come from you was refused ({blockedSubmits}). Press Save yourself.
+            </p>
+          ) : null}
           <h2 id="cl-patient-head" className="cl-patient__head">Who is this appointment for?</h2>
           <p className="cl-prose cl-patient__intro">
             Entered once, kept in this browser only. Every booking on this page — by hand or by your assistant —
@@ -181,6 +219,7 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
                 id={FIELD_IDS.fullName}
                 name="patientFullName"
                 autoComplete="name"
+                {...({ toolparamdescription: PARAM_DESCRIPTION['fullName'] } as Record<string, string>)}
                 required
                 aria-required="true"
                 aria-invalid={errors.fullName ? 'true' : 'false'}
@@ -205,6 +244,7 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
                 type="text"
                 inputMode="numeric"
                 autoComplete="bday"
+                {...({ toolparamdescription: PARAM_DESCRIPTION['dateOfBirth'] } as Record<string, string>)}
                 placeholder="DD/MM/YYYY"
                 required
                 aria-required="true"
@@ -226,6 +266,7 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
                 name="patientPhone"
                 type="tel"
                 autoComplete="tel"
+                {...({ toolparamdescription: PARAM_DESCRIPTION['phone'] } as Record<string, string>)}
                 required
                 aria-required="true"
                 aria-invalid={errors.phone ? 'true' : 'false'}

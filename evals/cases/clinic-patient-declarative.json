@@ -1,0 +1,41 @@
+[
+  {"_doc": ["clinic-patient-declarative — the patient card is a declarative WebMCP form (2026-09-02).",
+            "For a person who cannot type: the browser publishes the card as clinic_patient_details, the",
+            "assistant fills it from what it knows, the person's own press on Save is the consent. A fill the",
+            "browser did not attribute to the person shows the 'Filled in by your assistant' banner; a submit",
+            "that is not the person's is refused and counted; a trusted Save stores the record."]},
+  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
+  {"waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'on-file'", "timeout": 8000},
+  {"eval": "(() => { document.querySelector('[data-clinic-patient-clear]')?.click(); return true; })()", "equals": true},
+  {"waitFor": "!!document.querySelector('[data-clinic-patient-form]')", "timeout": 4000},
+
+  {"_doc": "The browser sees a tool: toolname on the form, a description on every field."},
+  {"eval": "document.querySelector('[data-clinic-patient-form]')?.getAttribute('toolname')", "equals": "clinic_patient_details"},
+  {"eval": "(document.querySelector('[data-clinic-patient-form]')?.getAttribute('tooldescription') ?? '').length > 40", "equals": true},
+  {"eval": "document.querySelectorAll('[data-clinic-patient-form] [toolparamdescription]').length", "equals": 3},
+  {"sleep": 500},
+  {"list": true},
+  {"expect": {"tool": "clinic_patient_details"}},
+
+  {"_doc": "An assistant's fill (not the person's keystrokes) is shown as such."},
+  {"eval": "(() => { const i = document.querySelector('#cl-patient-name'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'Agent Filled Patient'); i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()", "equals": true},
+  {"waitFor": "document.querySelector('[data-clinic-patient-form]')?.getAttribute('data-clinic-patient-agent-filled') === 'true'", "timeout": 4000},
+  {"eval": "(document.querySelector('[data-clinic-patient-agent-banner]')?.textContent ?? '')", "matches": "Filled in by your assistant"},
+
+  {"_doc": "A submit the person did not make is refused and counted; nothing is stored."},
+  {"eval": "(() => { const f = document.querySelector('[data-clinic-patient-form]'); f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); return true; })()", "equals": true},
+  {"waitFor": "document.querySelector('[data-clinic-patient-form]')?.getAttribute('data-clinic-patient-submits-blocked') === '1'", "timeout": 4000},
+  {"eval": "(document.querySelector('[data-clinic-patient-submit-blocked]')?.textContent ?? '')", "matches": "did not come from you was refused"},
+  {"eval": "localStorage.getItem('cedarfield.patient')", "equals": null},
+
+  {"_doc": "The person completes it and presses Save themselves: stored."},
+  {"focus": "#cl-patient-dob"},
+  {"type": "12/04/1990"},
+  {"focus": "#cl-patient-phone"},
+  {"type": "6135550147"},
+  {"focus": "[data-clinic-patient-save]"},
+  {"type": "\r"},
+  {"waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'on-file'", "timeout": 4000},
+  {"eval": "(document.querySelector('[data-clinic-patient-name]')?.textContent ?? '')", "equals": "Agent Filled Patient"},
+  {"eval": "JSON.parse(localStorage.getItem('cedarfield.patient') ?? '{}').dateOfBirth", "equals": "1990-04-12"}
+]
