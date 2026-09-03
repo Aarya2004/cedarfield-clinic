@@ -6,12 +6,16 @@ or newer; the build number is printed in the page's colophon.
 
 ## State of the product
 
-- main = `c5f3f36` (docs) on top of `891c755` (code). Production is `891c755`, verified with two
-  deployed-suite rounds, the live board with two visitors, the registry probe and the first-call probe
-  on the live board (five loads, no wait, tools present in the first snapshot).
+- Production is `db48684`, verified with two deployed-suite rounds (38 checks each), the live board
+  with two visitors, the registry probe (14 tools) and the first-call probe on the live board (tools
+  present in the first snapshot, no wait). Every build today was verified the same way before the next.
 - Three consecutive independent audits (Codex 5.6) on production came back with no P1 and no P2.
   The prompt for a fourth is `docs/CODEX-REAUDIT.md`; run it once on the final build before recording.
-- Local gate at every release: 508 unit tests · typecheck · lint · 38 browser cases · axe on all routes.
+- Local gate at every release: 512 unit tests · typecheck · lint · 39 browser cases · axe on all routes.
+- Since 891c755: the phrase board (ready sentences, one press each), the camera follows the visit and
+  comes back after the bar's palm, the scanning keyboard is a sheet and summons the sign camera, voice
+  captions (You / Cedarfield), the assistant's cursor travels and clicks with the tool's name, motion on
+  every state change, "Take it back" on a heard line.
 - What is NOT machine-proved and needs a person: a real microphone, a real hand, a trusted press.
   That is the rehearsal checklist below.
 
@@ -41,13 +45,13 @@ fallbacks below in the Codex pane.
 
 1. Fresh load shows the permission card and 14 tools within a second.
 2. "Listen for me" says Listening; a spoken sentence appears as Heard "…".
-3. The agent loop takes the request, holds a time; the strip announces it; the pointer pill sits on the row.
+3. The agent loop takes the request, holds a time; the strip announces it; the cursor travels to the row, clicks, and labels it.
 4. The agent's question card appears; a thumbs-up to the sign camera resolves it (Seeing: "thumbs up (NN%) — hold it steady", then Signed "yes").
 5. A scripted confirm is refused with "That did not confirm. Press Enter, or select the confirm button."
 6. A real press on "Let my assistant book for me" flips the permission card and adds the booking tool.
 7. "yes" with Listen on books; or the palm on the bar's camera books.
 8. "Take that back" removes the tool and the card returns to standard.
-9. Scanning keyboard: thumbs-up picks a row, thumbs-up a letter, a fist steps back.
+9. Scanning keyboard (button under the patient card): thumbs-up picks a row, thumbs-up a letter, a fist steps back; after the palm books, the sign camera is back on by itself.
 10. Recorder at 1080p, system audio and microphone on; captions generated after.
 
 ## The Codex loop prompt (paste into Codex before shot 3, page open in its pane)
@@ -113,8 +117,8 @@ from you once your assistant had held it."
 
 **SHOT 7 — 2:15–2:40 — take it back, and type with two shapes.**
 DO: press "Let my assistant book for me" again, then "Take that back". Then "Not you? Remove", open
-"Type the patient's full name with two switches", thumbs-up to pick a row, thumbs-up a letter, fist
-to step back.
+"Type the patient's full name" under the patient card (the keyboard slides up), thumbs-up to pick a
+row, thumbs-up a letter, fist to step back.
 SAY: "Revoke it, and the tool is gone. And when the clinic needs her name, two hand shapes type it —
 the way switch users type today. Not sign language, and the page says so."
 SHOW: the tool leaving the Tools pane; the card back to standard; the sweep and one typed letter.
