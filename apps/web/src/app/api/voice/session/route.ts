@@ -64,6 +64,15 @@ async function takeTicket(serviceKey: string, ipHash: string): Promise<boolean> 
   }
 }
 
+/** Readiness, spending nothing: can this deployment mint a session at all? The panel asks on mount. */
+export async function GET(): Promise<NextResponse> {
+  const ready = Boolean(process.env.OPENAI_API_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return NextResponse.json(
+    { ready, detail: ready ? 'Voice is set up on this deployment.' : 'Voice is not set up on this deployment. Type to your assistant instead.' },
+    { headers: { 'cache-control': 'no-store' } },
+  );
+}
+
 export async function POST(req: Request): Promise<NextResponse> {
   // Only our own page may spend a ticket. Browsers send Sec-Fetch-Site on every fetch; a request
   // without it (curl, a script) is refused too — the page is the only legitimate caller.

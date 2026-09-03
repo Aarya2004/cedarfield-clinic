@@ -2,6 +2,24 @@
 
 Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, ~12:30–13:30) — Codex's second audit on production: six P1s fixed at the root
+- Stale-handle root cause: `ClinicTools` re-registered every tool when `waitlistAvailable` flipped
+  after load. Now: base set (+ the wait tool when the page has a queue) registered once per mount;
+  `waitlist` is a born set in the reconcile loop (`options.onJoinWaitlist && view.waitlistAvailable`);
+  the queue seams are always wired as getters. Unit test: handles fetched at load stay live across
+  the shared-board transition.
+- `clinic_wait_for_request` registered from load (discoverable before the first request); all
+  tool-count assertions +1 (8 cases); `clinic-listen` rewritten (present at load, honest null wait,
+  typed handoff, stop; never re-registered).
+- Copy unified (`NO_BOOKING_TOOL_REASON`, explain_confirm `tool_after_permission`); the answer
+  briefly exceeded the 1.5K output budget → trimmed (the budget test caught it).
+- Speech `network` error → explicit "speech service did not answer" fallback; voice caps 20/visitor
+  & 150/day (`20260902140000_cedarfield_voice_quota_caps.sql`, applied); `GET /api/voice/session`
+  readiness probe shown before the button; the voice block names the blocker (camera vs mic).
+- Sign bar: 8 steady readings at ≥ 0.85, 2 s refractory (`SIGN_*` constants); new
+  `clinic-gesture-quiet.json` (fake camera, ten seconds, no sign, no request, camera-reason block).
+- Gate: unit 483/483 · typecheck 0 · lint 0; full suite + axe running at the time of writing.
+
 ## Build log — Engineer #4 (2026-09-02, ~11:30–12:15) — Codex's product audit: WebMCP layer passes; four UI blockers fixed
 - Arav dispatched an audit to a Codex task. It invoked every tool on production and called the
   WebMCP layer "strong and differentiated"; its blockers were the human UI. Fixed and proven:

@@ -169,13 +169,11 @@ export function ClinicTools({
         // Live seams: registration happens once, the page's callbacks change every render.
         onPrepareCancel: (slotId) => seams.current.onPrepareCancel?.(slotId) ?? false,
         onPrepareMove: (fromId, toId) => seams.current.onPrepareMove?.(fromId, toId) ?? false,
-        // Registered at mount only when the page is live: the seam's presence decides the surface.
-        ...(waitlistAvailable
-          ? {
-              onJoinWaitlist: (id: string) => seams.current.onJoinWaitlist?.(id) ?? false,
-              onLeaveWaitlist: (id: string) => seams.current.onLeaveWaitlist?.(id) ?? false,
-            }
-          : {}),
+        // Always wired as getters: the queue verbs are BORN when the page learns it is on the shared
+        // board (view.waitlistAvailable), never by re-registering the base set — a client's handles
+        // from load must stay valid.
+        onJoinWaitlist: (id: string) => seams.current.onJoinWaitlist?.(id) ?? false,
+        onLeaveWaitlist: (id: string) => seams.current.onLeaveWaitlist?.(id) ?? false,
         // Live too: the budget is read at each call, so the page may learn it after registration.
         settleTimeoutMs: () => seams.current.settleTimeoutMs ?? 1200,
         // SPEC-V9: the booking verb — the tool refuses unless the grant stands; the page re-checks.
@@ -211,9 +209,9 @@ export function ClinicTools({
         dispose = null;
       });
     };
-    // The surface itself (which tools exist) is the only dependency; every value the tools READ is
-    // a ref (view, seams, budget). A change here re-registers, serialised through the chain.
-  }, [waitlistAvailable, requests]);
+    // Registration happens ONCE per mount: every value the tools read is a ref, and every
+    // state-dependent tool is born by the reconcile loop. (The queue is created once by the page.)
+  }, [requests]);
 
   // `hidden` rather than a class: this mount point has no stylesheet of its own, and the attribute
   // takes it out of the accessibility tree as well as the layout while leaving the hooks queryable.

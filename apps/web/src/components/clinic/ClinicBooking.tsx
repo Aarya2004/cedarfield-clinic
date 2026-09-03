@@ -532,7 +532,7 @@ export function ClinicBooking() {
   // other, so the agent's speech is never transcribed back as the person's words (review P1-3).
   // `listenMic` is the recognizer or the sign camera actually running — a typed request waiting in
   // the queue does not count (Codex audit: a typed handoff must not disable Talk to Cedarfield).
-  const [listenMic, setListenMic] = useState(false);
+  const [listenMic, setListenMic] = useState<'off' | 'microphone' | 'camera'>('off');
   const [voiceLive, setVoiceLive] = useState(false);
 
   const [delegation, setDelegationState] = useState<Delegation | null>(null);
@@ -740,7 +740,18 @@ export function ClinicBooking() {
             <PatientOnFile sample={clockOrigin !== 0} onChange={onPatientChange} />
             <AssistantGuide />
             <ListenPanel queue={requestQueue} gesture={GESTURE_ENABLED} onActive={setListenActive} onMicChange={setListenMic} disabled={voiceLive} />
-            {VOICE_ENABLED ? <VoiceAgent executor={voiceExecutor} disabled={listenMic} onLiveChange={setVoiceLive} /> : null}
+            {VOICE_ENABLED ? (
+              <VoiceAgent
+                executor={voiceExecutor}
+                disabled={listenMic !== 'off'}
+                disabledReason={
+                  listenMic === 'camera'
+                    ? 'Turn off the sign camera above before starting a voice call — one capture at a time.'
+                    : 'Press Stop listening above before starting a voice call — one microphone at a time.'
+                }
+                onLiveChange={setVoiceLive}
+              />
+            ) : null}
           </Band>
 
           {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (

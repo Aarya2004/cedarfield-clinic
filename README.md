@@ -118,22 +118,28 @@ is always one trusted press from you.
 | `clinic_prepare_move` | ❌ | Freezes the target slot and **arms** the dock. One trusted press swaps atomically |
 | `clinic_explain_confirm` | ✅ | Why no booking tool exists, what exists now, and what your press will create |
 | *born by your grant:* `clinic_book_slot` | ❌ | Books **one** slot for you — exists only while the permission you pressed for stands (ten minutes), and dies with the booking |
-| *born while the page listens:* `clinic_wait_for_request` | ✅ | Hands the agent the next thing you **said, signed or typed to the page** (waits up to a minute). The agent loops: wait, act, wait. You never type into its window |
+| `clinic_wait_for_request` | ✅ | Hands the agent the next thing you **said, signed or typed to the page** (waits up to a minute; `request: null` if nothing). Registered from load so the agent can find it before you speak. The agent loops: wait, act, wait |
 | *born by your press:* `clinic_my_appointment` | ✅ | Your booking(s), newest first — exists only while you have one |
 | *shared board only:* `clinic_join_waitlist` | ❌ | Puts your human **in line** for a taken slot. If it comes back, it is theirs first — as a fresh hold, in order. Reversible |
 | *shared board only:* `clinic_leave_waitlist` | ❌ | Takes them out of the line |
 
-**Counted honestly:** nine tools on the seeded board (`?test=1`), **eleven on the shared board** every
-real visitor is on (the two queue verbs); one more while the page listens for you, one more while
-your permission stands, one more once you have booked. Fourteen names in the vocabulary, at most
-thirteen live at once, well inside Chrome's guidance of about thirty.
+**Counted honestly:** ten tools on the seeded board (`?test=1`), **twelve on the shared board** every
+real visitor is on (the two queue verbs); one more while your permission stands, one more once you
+have booked. Fourteen names in the vocabulary, at most thirteen live at once, well inside Chrome's
+guidance of about thirty. The base set is registered once and never re-registered: handles a client
+fetched at load stay valid; everything state-dependent is born on its own controller.
 
 **The page makes you legible to the agent.** WebMCP has no page-to-agent push, so a person who
 cannot type into the agent's window would be stuck. "Say it to the page" fixes that: the browser's
-own speech recognizer, a typed line, or five hand signs (thumbs up *yes*, thumbs down *no*, fist
-*stop*, one finger *the first one*, two fingers *another one* — five shapes, not a language) all
-land in one queue, and `clinic_wait_for_request` hands the agent the next one. Tell the agent once,
-"keep helping me with what I say to the page until I say stop", and never touch its window again.
+own speech recognizer, a typed line, or five hand shapes all land in one queue, and
+`clinic_wait_for_request` hands the agent the next one. Tell the agent once, "keep helping me with
+what I say to the page until I say stop", and never touch its window again.
+
+**The shapes mean what you say they mean.** Five shapes the camera can read — thumbs up, thumbs
+down, a fist, one finger, two fingers — default to *yes / no / stop / the first one / another one*.
+The legend on the page lets you assign whole requests instead: thumbs up = "hold me the earliest
+appointment", two fingers = "cancel my appointment". Kept in your browser. Not a language, and the
+page says so; it is a keyboard with five keys you label yourself, plus the palm that books.
 
 **Both halves of WebMCP, each doing the job it is for.** The tools above are the *imperative* API.
 The patient-details form is also published *declaratively* — `toolname="clinic_booking_form"`,

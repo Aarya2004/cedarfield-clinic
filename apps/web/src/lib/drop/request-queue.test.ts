@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequestQueue, SIGN_WORDS } from './request-queue.ts';
+import { createRequestQueue } from './request-queue.ts';
+import { DEFAULT_SIGN_MAP as SIGN_WORDS } from './sign-map.ts';
 
 test('push then take: oldest first, trimmed, empty ignored', () => {
   const q = createRequestQueue();

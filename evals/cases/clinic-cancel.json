@@ -46,7 +46,7 @@
   "_doc": "Now the agent arms the cancel. The tool cancels NOTHING: the slot stays booked."
  },
  {
-  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '11'",
   "timeout": 8000
  },
  {
@@ -112,7 +112,7 @@
   "_doc": "SPEC-V4: the booking is gone, so the tool it created is gone \u2014 the surface tells the truth both ways."
  },
  {
-  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '9'",
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
   "timeout": 8000
  },
  {

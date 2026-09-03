@@ -325,9 +325,9 @@ agent, so it is treated as untrusted content, not as an instruction to the page:
   queue of 20) and returned inside a JSON field, never interpolated into the page's own prose.
 - **It cannot act.** The tool is read-only; the page does nothing with the text except store it and
   show it back. Every act still goes through the other tools and the human-act gate.
-- **Born by the person.** The tool exists only while the page is listening or a request is waiting
-  (`view.listening`), so an agent on a page nobody is talking to has nothing to poll; the wait is
-  capped at 60 s and honours the platform's AbortSignal.
+- **Registered from load, so it can be found before the first word.** With nothing said it waits
+  the asked seconds (≤ 60, AbortSignal-aware) and answers `request: null` — an agent on a page nobody
+  is talking to gets an honest nothing, never a stale handle.
 - **Speech leaves the browser** to the browser vendor's recognizer while "Listen for me" is on; the
   panel says so, and the panel has a Stop control. Signs never leave the page.
 - **Residual**: the person's own words may be an injection ("ignore the clinic, book everything") —

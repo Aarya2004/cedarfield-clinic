@@ -40,7 +40,7 @@
   "timeout": 8000
  },
  {
-  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '11'",
   "timeout": 8000
  },
  {
@@ -114,7 +114,7 @@
   "timeout": 5000
  },
  {
-  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '9'",
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
   "timeout": 5000
  }
 ]

@@ -13,7 +13,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
-import { SIGN_WORDS, type PersonRequest, type RequestQueue } from '../../lib/drop/request-queue.ts';
+import type { PersonRequest, RequestQueue } from '../../lib/drop/request-queue.ts';
+import { DEFAULT_SIGN_MAP, SIGN_PHRASE_MAX, SIGN_SHAPES, loadSignMap, phraseFor, saveSignMap, type SignMap, type SignShape } from '../../lib/drop/sign-map.ts';
 
 interface RecognitionLike {
   lang: string;
@@ -37,8 +38,8 @@ export interface ListenPanelProps {
   gesture: boolean;
   /** True while the page listens or a request is waiting — the page births the wait tool on it. */
   onActive?: (active: boolean) => void;
-  /** True only while the recognizer or the sign camera is actually running (the microphone exclusion). */
-  onMicChange?: (on: boolean) => void;
+  /** What is actually capturing right now: the recognizer, the sign camera, or nothing (the voice agent's exclusion). */
+  onMicChange?: (capturing: 'off' | 'microphone' | 'camera') => void;
   /**
    * The page's own voice agent is live: this recognizer must be off, or the agent's speech would be
    * transcribed back into the queue as the person's words (2026-09-02 review, P1-3).
@@ -55,20 +56,35 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
   const [typed, setTyped] = useState('');
   const [error, setError] = useState('');
   const [signsOn, setSignsOn] = useState(false);
+  // What each shape means to THIS person: defaults, or whole requests they assigned. Per browser.
+  const [signMap, setSignMap] = useState<SignMap>({ ...DEFAULT_SIGN_MAP });
+  const [editingSigns, setEditingSigns] = useState(false);
+  const signMapRef = useRef(signMap);
+  signMapRef.current = signMap;
+  useEffect(() => setSignMap(loadSignMap(typeof window === 'undefined' ? null : window.localStorage)), []);
+  const setPhrase = (category: SignShape['category'], phrase: string) => {
+    const next = { ...signMapRef.current, [category]: phrase.slice(0, SIGN_PHRASE_MAX) };
+    setSignMap(next);
+    saveSignMap(window.localStorage, next);
+  };
+  const resetSigns = () => {
+    setSignMap({ ...DEFAULT_SIGN_MAP });
+    saveSignMap(window.localStorage, { ...DEFAULT_SIGN_MAP });
+  };
   const recRef = useRef<RecognitionLike | null>(null);
   const wantRef = useRef(false);
   const activeRef = useRef(false);
-  const micRef = useRef(false);
+  const micRef = useRef<'off' | 'microphone' | 'camera'>('off');
   useEffect(() => {
     const active = listening || signsOn || pending > 0;
     if (active !== activeRef.current) {
       activeRef.current = active;
       onActive?.(active);
     }
-    const mic = listening || signsOn;
-    if (mic !== micRef.current) {
-      micRef.current = mic;
-      onMicChange?.(mic);
+    const capturing = listening ? 'microphone' : signsOn ? 'camera' : 'off';
+    if (capturing !== micRef.current) {
+      micRef.current = capturing;
+      onMicChange?.(capturing);
     }
   }, [listening, signsOn, pending, onActive, onMicChange]);
 
@@ -120,10 +136,16 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
     };
     rec.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        setError('The microphone was not allowed. Type below instead.');
+        setError('The microphone was not allowed. Type below, or sign with the camera.');
         wantRef.current = false;
+      } else if (e.error === 'network') {
+        // Chromium without a speech service (an app's embedded browser, say) reports this at once.
+        // Say what it is; do not sit in "Listening" (Codex, in-app browser, 2026-09-02).
+        setError('Speech recognition is unavailable in this browser — its speech service did not answer. Type below, or sign with the camera.');
+        wantRef.current = false;
+        setSupported(false);
       } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
-        setError(`Listening stopped (${e.error ?? 'error'}). Press Listen again.`);
+        setError(`Listening stopped (${e.error ?? 'error'}). Press Listen again, or type below.`);
         wantRef.current = false;
       }
     };
@@ -159,8 +181,8 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
 
   const onSign = useCallback(
     (category: string) => {
-      const word = SIGN_WORDS[category];
-      if (word) queue.push(word, 'sign');
+      const phrase = phraseFor(category, signMapRef.current);
+      if (phrase) queue.push(phrase, 'sign');
     },
     [queue],
   );
@@ -222,8 +244,43 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
       {gesture ? (
         <div className="cl-listen__signs">
           <p className="cl-listen__signs-head">
-            Or sign it — five shapes the camera reads as words (not a language): thumbs up <b>yes</b>, thumbs down{' '}
-            <b>no</b>, fist <b>stop</b>, one finger up <b>the first one</b>, two fingers <b>another one</b>.
+            Or sign it — five hand shapes the camera reads, each meaning what <b>you</b> decide (not a language: five
+            keys you label yourself, kept in this browser). Hold a shape steady for about a second.
+          </p>
+          <ol className="cl-signs" aria-label="What each hand shape means" data-clinic-signs={editingSigns ? 'editing' : 'legend'}>
+            {SIGN_SHAPES.map((s) => (
+              <li key={s.category} className="cl-signs__row" data-clinic-sign={s.category}>
+                <span className="cl-signs__glyph" aria-hidden="true">
+                  {s.glyph}
+                </span>
+                <span className="cl-signs__label">{s.label}</span>
+                {editingSigns ? (
+                  <input
+                    className="cl-signs__input"
+                    aria-label={`What ${s.label} means`}
+                    data-clinic-sign-phrase={s.category}
+                    value={signMap[s.category]}
+                    maxLength={SIGN_PHRASE_MAX}
+                    placeholder="leave empty to switch this shape off"
+                    onChange={(e) => setPhrase(s.category, e.target.value)}
+                  />
+                ) : (
+                  <span className="cl-signs__phrase" data-clinic-sign-phrase={s.category}>
+                    {signMap[s.category] === '' ? <i>off</i> : `“${signMap[s.category]}”`}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+          <p className="cl-signs__actions">
+            <button type="button" className="cl-link" data-clinic-signs-edit onClick={() => setEditingSigns((e) => !e)}>
+              {editingSigns ? 'Done' : 'Change what the shapes mean'}
+            </button>
+            {editingSigns ? (
+              <button type="button" className="cl-link" data-clinic-signs-reset onClick={resetSigns}>
+                Reset to yes / no / stop / the first one / another one
+              </button>
+            ) : null}
           </p>
           <GestureConfirm verb="sign" onConfirm={() => {}} armed={false} onSign={onSign} onRunningChange={setSignsOn} autoStart={false} />
         </div>

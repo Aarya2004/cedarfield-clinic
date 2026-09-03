@@ -156,11 +156,11 @@ export const MOVE_CHOREOGRAPHY =
 
 /** The answer `clinic_explain_confirm` gives, and the reason the other tools stop where they do. */
 export const NO_BOOKING_TOOL_REASON =
-  'This page deliberately publishes no booking or confirmation tool. Booking is gated on a ' +
-  "browser-trusted event — a real key press or click from the person at the keyboard — which no " +
-  'tool call can produce; a synthetic press is rejected by the page. So the division of labour is: ' +
-  'you do the fast, expensive parts (watch the drop, hold a slot, keep the clock), your human does ' +
-  'the one part that must stay theirs (press the key). Hold the slot, then say so out loud.';
+  'No booking tool by default: booking is gated on a browser-trusted act (a real key press, click ' +
+  'or held palm) that no tool call can produce; synthetic presses are rejected. Only a trusted, ' +
+  'visible permission on the page ("Let my assistant book for me", press or palm) creates a one-use, ' +
+  'ten-minute clinic_book_slot. Cancel and move are never delegated. You do the fast parts (watch, ' +
+  'hold, keep the clock); your human does the one part that must stay theirs.';
 
 // ── the seam ────────────────────────────────────────────────────────────────────────────────────
 
@@ -1344,9 +1344,8 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             ? { tool_that_books: 'clinic_book_slot' as const, permission_until: new Date(view.delegation!.until).toISOString() }
             : {
                 tool_that_books: null,
-                tool_born_by_your_humans_permission: 'clinic_book_slot' as const,
-                how_they_grant_it:
-                  'a trusted press on the page ("Let my agent book for me") or an open palm — one booking, ten minutes; you cannot press it',
+                tool_after_permission: 'clinic_book_slot' as const,
+                how_they_grant_it: 'a press or palm on "Let my assistant book for me" — one booking, ten minutes; you cannot press it',
               }),
           human_only_acts: ['book', 'cancel', 'move'],
           what_to_tell_your_human: HOLD_CHOREOGRAPHY,
@@ -1415,17 +1414,23 @@ export async function registerClinicTools(
   const base = new AbortController();
   // The two sets born by the human's hand: `booked` by the press that books, `delegated` by the
   // press that grants permission (SPEC-V4, SPEC-V9). Each lives on its own AbortController.
+  // The base set — and the wait tool, when the page has a queue — is registered ONCE and never
+  // re-registered: a client that fetched tools at load must never hold stale handles (Codex, on
+  // production: "WebMCP tool is stale. Call fetchTools() again" — the page used to re-register
+  // everything when it learned it was on the shared board). Everything that depends on state is a
+  // born set, added and removed on its own controller: the queue verbs when the board is shared,
+  // the booking tool under a grant, the appointment tool after a booking.
   const BORN = {
-    listen: { names: LISTEN_TOOL_NAMES, want: (v: ClinicToolsView) => options.requests !== undefined && v.listening === true },
+    waitlist: { names: WAITLIST_TOOL_NAMES, want: (v: ClinicToolsView) => options.onJoinWaitlist !== undefined && v.waitlistAvailable === true },
     delegated: { names: DELEGATED_TOOL_NAMES, want: (v: ClinicToolsView) => hasDelegation(v) },
     booked: { names: BOOKED_TOOL_NAMES, want: (v: ClinicToolsView) => hasOwnBooking(v) },
   } as const;
   const born = new Map<keyof typeof BORN, AbortController>();
   let disposed = false;
-  const loadSet: ClinicToolName[] = [...BASE_TOOL_NAMES, ...(options.onJoinWaitlist ? WAITLIST_TOOL_NAMES : [])];
+  const loadSet: ClinicToolName[] = [...BASE_TOOL_NAMES, ...(options.requests ? LISTEN_TOOL_NAMES : [])];
   const liveNames = (): ClinicToolName[] => [
     ...loadSet,
-    ...(born.has('listen') ? LISTEN_TOOL_NAMES : []),
+    ...(born.has('waitlist') ? WAITLIST_TOOL_NAMES : []),
     ...(born.has('delegated') ? DELEGATED_TOOL_NAMES : []),
     ...(born.has('booked') ? BOOKED_TOOL_NAMES : []),
   ];

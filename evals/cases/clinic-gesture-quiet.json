@@ -1,0 +1,20 @@
+[
+  {"_doc": ["clinic-gesture-quiet — a camera with no deliberate sign must never produce a request (Codex audit:",
+            "a 'Signed stop' appeared with no gesture in the in-app browser). Chrome's fake camera (a moving",
+            "test pattern, no hand) feeds the sign panel for ten seconds: the model runs, the reading stays",
+            "'no hand' or 'a hand, not a palm', and the heard-log stays empty. Run by run-all with the fake",
+            "media flags (name contains 'gesture')."],
+   "allowErrors": true},
+  {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
+  {"waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", "timeout": 15000},
+  {"eval": "(() => { const b = [...document.querySelectorAll('.cl-listen button')].find(b => /Enable camera/.test(b.getAttribute('aria-label') || b.textContent)); b?.click(); return !!b; })()", "equals": true},
+  {"waitFor": "document.querySelector('.cl-listen [data-gesture-confirm]')?.getAttribute('data-gesture-state') === 'ready'", "timeout": 30000},
+  {"eval": "document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen')", "equals": "idle"},
+  {"sleep": 10000},
+  {"eval": "document.querySelector('.cl-listen [data-gesture-confirm]')?.getAttribute('data-gesture-state')", "equals": "ready"},
+  {"eval": "document.querySelectorAll('[data-clinic-heard=\"sign\"]').length", "equals": 0},
+  {"eval": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending'))", "equals": 0},
+  {"eval": "(document.querySelector('.cl-listen [data-gesture-seeing]')?.textContent ?? '')", "matches": "Seeing:"},
+  {"_doc": "The camera panel counts as a capture: the voice agent is blocked with the camera reason, not a microphone one."},
+  {"eval": "(document.querySelector('[data-clinic-voice-status]')?.textContent ?? '')", "matches": "sign camera"}
+]

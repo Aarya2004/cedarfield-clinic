@@ -108,6 +108,10 @@ interface Recognizer {
 
 /** Minimum gap between two inferences. ~12 readings/s is plenty for a one-second dwell. */
 const INFER_EVERY_MS = 80;
+/** The sign channel's bar: held for eight consecutive readings at ≥ 0.85, then a 2 s gap. */
+export const SIGN_MIN_SCORE = 0.85;
+export const SIGN_STEADY_READINGS = 8;
+export const SIGN_REFRACTORY_MS = 2000;
 
 /** The page-wide "who has the camera" channel: an instance that starts announces itself. */
 const cameraBus: EventTarget = typeof window === 'undefined' ? new EventTarget() : ((window as unknown as { __cedarfieldCameraBus?: EventTarget }).__cedarfieldCameraBus ??= new EventTarget());
@@ -248,10 +252,12 @@ export function GestureConfirm({
     // usual noise floor on a still hand.
     if (freshFrame && onSignRef.current) {
       const s = signRef.current;
-      if (gesture !== null && gesture !== 'Open_Palm' && gesture !== 'None' && score >= 0.8) {
+      // Eight steady readings (~0.65 s at the capped rate) at 0.85 — a shape must be HELD, not
+      // glimpsed (Codex, in-app browser: a "Signed stop" with no deliberate gesture at 4 × 0.8).
+      if (gesture !== null && gesture !== 'Open_Palm' && gesture !== 'None' && score >= SIGN_MIN_SCORE) {
         s.readings = gesture === s.category ? s.readings + 1 : 1;
         s.category = gesture;
-        if (s.readings === 4 && at - s.firedAt > 1500) {
+        if (s.readings === SIGN_STEADY_READINGS && at - s.firedAt > SIGN_REFRACTORY_MS) {
           s.firedAt = at;
           onSignRef.current(gesture);
         }

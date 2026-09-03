@@ -1,219 +1,219 @@
 [
-  {
-    "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
-    "timeout": 20000
-  },
-  {
-    "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
-    "timeout": 15000
-  },
-  {
-    "list": true
-  },
-  {
-    "expect": {
-      "tool": "clinic_list_drops"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_hold_slot"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_hold_status"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_release_hold"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_explain_confirm"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_find_slots"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_clinicians"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_prepare_cancel"
-    }
-  },
-  {
-    "expect": {
-      "tool": "clinic_prepare_move"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "clinic_cancel_booking"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "clinic_move_booking"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "clinic_cancel"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "cancel_booking"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "clinic_book_slot"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "clinic_confirm"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "clinic_confirm_booking"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "book_slot"
-    }
-  },
-  {
-    "expect": {
-      "noTool": "confirm_booking"
-    }
-  },
-  {
-    "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-    "equals": "9"
-  },
-  {
-    "expect": {
-      "noTool": "clinic_my_appointment"
-    }
-  },
-  {
-    "invoke": "clinic_explain_confirm",
-    "outputMatches": "tool_that_books.{0,2}:null"
-  },
-  {
-    "invoke": "clinic_list_drops",
-    "outputMatches": "slot[\\s\\S]*next_wave_seconds.{0,2}:[0-9]"
-  },
-  {
-    "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
-    "timeout": 20000
-  },
-  {
-    "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
-    "equals": "string"
-  },
-  {
-    "eval": "(() => { window.__count0 = Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter') ?? -1); return window.__count0 >= 0; })()",
-    "equals": true
-  },
-  {
-    "invoke": "clinic_hold_slot",
-    "inputFrom": {
-      "slot_id": "window.__slot"
-    },
-    "outputMatches": "ttl|held|seconds"
-  },
-  {
-    "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'",
-    "timeout": 8000
-  },
-  {
-    "_doc": "SPEC-V8: the page keeps its own record of the agent's calls. Three so far in this case (explain_confirm, list_drops, hold_slot); the newest row says what the hold actually did, in words a person can check against the board."
-  },
-  {
-    "waitFor": "Number(document.querySelector('[data-clinic-agent-log]')?.getAttribute('data-clinic-agent-log') ?? 0) >= 3",
-    "timeout": 4000
-  },
-  {
-    "eval": "(document.querySelector('[data-clinic-call=\"ok\"]')?.textContent ?? '')",
-    "matches": "held .* with .* your press books it"
-  },
-  {
-    "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
-    "timeout": 8000
-  },
-  {
-    "shot": "docs/evidence/clinic/held-armed.png"
-  },
-  {
-    "eval": "(() => { const b = document.querySelector('[data-armed] button, button[data-clinic-action=\"book\"], [data-armed] [role=\"button\"]'); if (!b) return 'no-button'; b.click(); return 'clicked'; })()",
-    "equals": "clicked"
-  },
-  {
-    "sleep": 400
-  },
-  {
-    "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
-    "equals": "held_by_you"
-  },
-  {
-    "eval": "Number(document.querySelector('[data-untrusted-attempts]')?.getAttribute('data-untrusted-attempts') ?? 0) >= 1",
-    "equals": true
-  },
-  {
-    "focus": "[data-armed] button, button[data-clinic-action=\"book\"]"
-  },
-  {
-    "key": "Enter"
-  },
-  {
-    "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
-    "timeout": 8000
-  },
-  {
-    "_doc": "SPEC-V4: the human's press just BIRTHED a tool (toolchange) \u2014 clinic_my_appointment did not exist a second ago. The arming tools were always there, so a slow client loses nothing."
-  },
-  {
-    "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'",
-    "timeout": 8000
-  },
-  {
-    "list": true
-  },
-  {
-    "expect": {
-      "tool": "clinic_my_appointment"
-    }
-  },
-  {
-    "invoke": "clinic_my_appointment",
-    "outputMatches": "appointments[\\s\\S]*human_only"
-  },
-  {
-    "shot": "docs/evidence/clinic/booked.png"
-  },
-  {
-    "invoke": "clinic_hold_status",
-    "outputMatches": "held.{0,2}:false"
-  },
-  {
-    "eval": "(() => { const n = Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter') ?? -1); return { start: window.__count0, end: n, human_inputs: n - window.__count0 }; })()"
-  },
-  {
-    "eval": "Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter')) - window.__count0",
-    "equals": 1
+ {
+  "waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null",
+  "timeout": 20000
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'",
+  "timeout": 15000
+ },
+ {
+  "list": true
+ },
+ {
+  "expect": {
+   "tool": "clinic_list_drops"
   }
+ },
+ {
+  "expect": {
+   "tool": "clinic_hold_slot"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_hold_status"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_release_hold"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_explain_confirm"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_find_slots"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_clinicians"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_prepare_cancel"
+  }
+ },
+ {
+  "expect": {
+   "tool": "clinic_prepare_move"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_cancel_booking"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_move_booking"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_cancel"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "cancel_booking"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_book_slot"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_confirm"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "clinic_confirm_booking"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "book_slot"
+  }
+ },
+ {
+  "expect": {
+   "noTool": "confirm_booking"
+  }
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
+  "equals": "10"
+ },
+ {
+  "expect": {
+   "noTool": "clinic_my_appointment"
+  }
+ },
+ {
+  "invoke": "clinic_explain_confirm",
+  "outputMatches": "tool_that_books.{0,2}:null"
+ },
+ {
+  "invoke": "clinic_list_drops",
+  "outputMatches": "slot[\\s\\S]*next_wave_seconds.{0,2}:[0-9]"
+ },
+ {
+  "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')",
+  "timeout": 20000
+ },
+ {
+  "eval": "(() => { const el = document.querySelector('[data-slot-state=\"open\"]'); window.__slot = el && el.getAttribute('data-clinic-slot'); return typeof window.__slot; })()",
+  "equals": "string"
+ },
+ {
+  "eval": "(() => { window.__count0 = Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter') ?? -1); return window.__count0 >= 0; })()",
+  "equals": true
+ },
+ {
+  "invoke": "clinic_hold_slot",
+  "inputFrom": {
+   "slot_id": "window.__slot"
+  },
+  "outputMatches": "ttl|held|seconds"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'held_by_you'",
+  "timeout": 8000
+ },
+ {
+  "_doc": "SPEC-V8: the page keeps its own record of the agent's calls. Three so far in this case (explain_confirm, list_drops, hold_slot); the newest row says what the hold actually did, in words a person can check against the board."
+ },
+ {
+  "waitFor": "Number(document.querySelector('[data-clinic-agent-log]')?.getAttribute('data-clinic-agent-log') ?? 0) >= 3",
+  "timeout": 4000
+ },
+ {
+  "eval": "(document.querySelector('[data-clinic-call=\"ok\"]')?.textContent ?? '')",
+  "matches": "held .* with .* your press books it"
+ },
+ {
+  "waitFor": "document.querySelector('[data-armed]')?.getAttribute('data-armed') === 'true'",
+  "timeout": 8000
+ },
+ {
+  "shot": "docs/evidence/clinic/held-armed.png"
+ },
+ {
+  "eval": "(() => { const b = document.querySelector('[data-armed] button, button[data-clinic-action=\"book\"], [data-armed] [role=\"button\"]'); if (!b) return 'no-button'; b.click(); return 'clicked'; })()",
+  "equals": "clicked"
+ },
+ {
+  "sleep": 400
+ },
+ {
+  "eval": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state')",
+  "equals": "held_by_you"
+ },
+ {
+  "eval": "Number(document.querySelector('[data-untrusted-attempts]')?.getAttribute('data-untrusted-attempts') ?? 0) >= 1",
+  "equals": true
+ },
+ {
+  "focus": "[data-armed] button, button[data-clinic-action=\"book\"]"
+ },
+ {
+  "key": "Enter"
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-slot=\"' + window.__slot + '\"]')?.getAttribute('data-slot-state') === 'booked_yours'",
+  "timeout": 8000
+ },
+ {
+  "_doc": "SPEC-V4: the human's press just BIRTHED a tool (toolchange) \u2014 clinic_my_appointment did not exist a second ago. The arming tools were always there, so a slow client loses nothing."
+ },
+ {
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '11'",
+  "timeout": 8000
+ },
+ {
+  "list": true
+ },
+ {
+  "expect": {
+   "tool": "clinic_my_appointment"
+  }
+ },
+ {
+  "invoke": "clinic_my_appointment",
+  "outputMatches": "appointments[\\s\\S]*human_only"
+ },
+ {
+  "shot": "docs/evidence/clinic/booked.png"
+ },
+ {
+  "invoke": "clinic_hold_status",
+  "outputMatches": "held.{0,2}:false"
+ },
+ {
+  "eval": "(() => { const n = Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter') ?? -1); return { start: window.__count0, end: n, human_inputs: n - window.__count0 }; })()"
+ },
+ {
+  "eval": "Number(document.querySelector('[data-clinic-counter]')?.getAttribute('data-clinic-counter')) - window.__count0",
+  "equals": 1
+ }
 ]

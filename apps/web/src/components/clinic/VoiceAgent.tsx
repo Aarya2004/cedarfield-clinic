@@ -45,14 +45,34 @@ interface RealtimeEvent {
 
 export interface VoiceAgentProps {
   executor: VoiceExecutor | null;
-  /** The page's recognizer is listening: this agent must not start (its speech would be heard as the person's). */
+  /** The page's recognizer or sign camera is capturing: this agent must not start (its speech would be heard as the person's). */
   disabled?: boolean;
+  /** Exactly what is blocking, in the person's words (Codex: "say exactly what is blocking it"). */
+  disabledReason?: string;
   /** Reports live/not-live so the page can pause the recognizer while the agent talks. */
   onLiveChange?: (live: boolean) => void;
 }
 
-export function VoiceAgent({ executor, disabled = false, onLiveChange }: VoiceAgentProps) {
+export function VoiceAgent({ executor, disabled = false, disabledReason, onLiveChange }: VoiceAgentProps) {
   const [state, setState] = useState<VoiceState>('idle');
+  // Readiness before the button (Codex: "do not let a reviewer discover it only after pressing"):
+  // the route's GET says whether this deployment can mint a session at all. It spends nothing.
+  const [ready, setReady] = useState<{ ok: boolean; reason: string } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await fetch('/api/voice/session', { method: 'GET' });
+        const body = (await r.json()) as { ready?: boolean; detail?: string };
+        if (!cancelled) setReady({ ok: body.ready === true, reason: body.detail ?? '' });
+      } catch {
+        if (!cancelled) setReady({ ok: false, reason: 'Voice could not be checked right now.' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const onLiveRef = useRef(onLiveChange);
   onLiveRef.current = onLiveChange;
   useEffect(() => {
@@ -249,16 +269,27 @@ export function VoiceAgent({ executor, disabled = false, onLiveChange }: VoiceAg
             End the call
           </button>
         ) : (
-          <button type="button" className="cl-cta cl-cta--sm" data-clinic-voice-start onClick={() => void start()} disabled={executor === null || disabled}>
+          <button
+            type="button"
+            className="cl-cta cl-cta--sm"
+            data-clinic-voice-start
+            data-clinic-voice-ready={ready === null ? 'checking' : ready.ok ? 'true' : 'false'}
+            onClick={() => void start()}
+            disabled={executor === null || disabled || ready?.ok === false}
+          >
             Talk to Cedarfield
           </button>
         )}
       </div>
       <p className="cl-voice__status" role="status" data-clinic-voice-status>
         {disabled && state !== 'live' && state !== 'connecting'
-          ? 'Paused while the page is listening for you above — one microphone at a time. Stop listening there to talk to Cedarfield.'
+          ? (disabledReason ?? 'Paused while the page is capturing above — one capture at a time.')
           : state === 'idle'
-          ? 'Press the button, allow the microphone, and speak. It answers out loud.'
+          ? ready === null
+            ? 'Checking whether voice is set up on this deployment…'
+            : ready.ok
+              ? 'Voice is ready. Press the button, allow the microphone, and speak. It answers out loud.'
+              : ready.reason || 'Voice is not set up on this deployment. Type to your assistant instead.'
           : state === 'connecting'
             ? 'Connecting…'
             : state === 'live'

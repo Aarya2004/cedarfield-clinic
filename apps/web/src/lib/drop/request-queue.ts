@@ -89,11 +89,4 @@ export function createRequestQueue(): RequestQueue {
   };
 }
 
-/** The five canned hand shapes the page reads as words. Not a language; said so on the page. */
-export const SIGN_WORDS: Record<string, string> = {
-  Thumb_Up: 'yes',
-  Thumb_Down: 'no',
-  Closed_Fist: 'stop',
-  Pointing_Up: 'the first one',
-  Victory: 'another one',
-};
+// The five hand shapes and what they mean live in sign-map.ts (per-person, editable).

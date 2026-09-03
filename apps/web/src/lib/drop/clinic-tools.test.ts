@@ -534,14 +534,8 @@ test('clinic_wait_for_request hands the agent what the person said to the page, 
       wait: () => new Promise<{ at: number; text: string; via: string } | null>((res) => { waiter = res; }),
       pending: () => 0,
     };
-    const base = ready();
-    let listening = false;
-    const src = () => ({ ...base.source(), listening });
-    const dispose = await registerClinicTools(src, () => {}, { requests, watchMs: 5 });
-    assert.ok(!live().includes('clinic_wait_for_request'), 'queue seam but not listening ⇒ not yet');
-    listening = true; // the person pressed "Listen for me"
-    await new Promise((r) => setTimeout(r, 40));
-    assert.ok(live().includes('clinic_wait_for_request'), 'listening ⇒ born');
+    const dispose = await registerClinicTools(ready().source, () => {}, { requests, watchMs: 5 });
+    assert.ok(live().includes('clinic_wait_for_request'), 'queue seam ⇒ registered from load (discoverable before the first request)');
     const tool = regs.find((r) => r.tool.name === 'clinic_wait_for_request' && !r.signal?.aborted)!.tool;
     const p = tool.execute({ timeout_seconds: 5 }) as Promise<{ content: [{ text: string }] }>;
     await new Promise((r) => setTimeout(r, 5));
@@ -551,6 +545,27 @@ test('clinic_wait_for_request hands the agent what the person said to the page, 
     assert.equal(out.request.text, 'hold me the earliest');
     assert.equal(out.request.via, 'voice');
     assert.match(out.next_step, /call clinic_wait_for_request again/);
+    dispose();
+  } finally {
+    restore();
+  }
+});
+
+test('the base set is registered once: learning the board is shared births the queue verbs without re-registering anything', async () => {
+  const { mc, regs, live } = fakeMc();
+  const restore = withModelContext(mc);
+  try {
+    const base = ready();
+    let shared = false;
+    const src = () => ({ ...base.source(), waitlistAvailable: shared });
+    const dispose = await registerClinicTools(src, () => {}, { watchMs: 5, onJoinWaitlist: () => true, onLeaveWaitlist: () => true });
+    const handlesAtLoad = regs.filter((r) => !r.signal?.aborted).map((r) => r.tool);
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES], 'not shared yet ⇒ base only');
+    shared = true; // the page learns it is on the live board
+    await new Promise((r) => setTimeout(r, 40));
+    assert.deepEqual(live(), [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES], 'queue verbs born');
+    const stillLive = regs.filter((r) => !r.signal?.aborted).map((r) => r.tool);
+    for (const t of handlesAtLoad) assert.ok(stillLive.includes(t), `${t.name}: the handle a client fetched at load is still the live one`);
     dispose();
   } finally {
     restore();
@@ -888,7 +903,10 @@ test('waitlist tools exist only when the page provides the queue seam (the share
   const restore = withModelContext(mc);
   try {
     const joined: string[] = [];
-    const dispose = await registerClinicTools(ready().source, () => {}, { watchMs: 5, onJoinWaitlist: (id) => (joined.push(id), true), onLeaveWaitlist: () => true });
+    const base = ready();
+    const shared: ClinicToolsSource = () => ({ ...base.source(), waitlistAvailable: true });
+    const dispose = await registerClinicTools(shared, () => {}, { watchMs: 5, onJoinWaitlist: (id) => (joined.push(id), true), onLeaveWaitlist: () => true });
+    await new Promise((r) => setTimeout(r, 40)); // the queue verbs are born by the reconcile loop
     assert.deepEqual([...live()].sort(), [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES].sort(), 'nine + the two queue verbs');
     dispose();
   } finally {
