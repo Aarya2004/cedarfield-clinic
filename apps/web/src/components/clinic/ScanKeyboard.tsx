@@ -49,11 +49,14 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900
   // Keys: a hardware switch shows up as Space or Enter; Escape / Backspace is "back".
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // A person tabbing to a control (Close, Save) keeps their keys; a switch arrives on the body.
-      const t = e.target;
-      if (t instanceof HTMLElement && t.closest('button, input, textarea, select, a[href]') !== null) return;
       const action = switchAction(e.key);
       if (action === null) return;
+      // Escape always steps back, wherever focus sits (Codex re-audit 2026-09-03: Escape with focus
+      // on the Select button was swallowed). Space / Enter / Backspace stay with a focused control —
+      // a text field keeps its characters, a button keeps its click (or the key would select twice).
+      const t = e.target;
+      const onControl = t instanceof HTMLElement && t.closest('button, input, textarea, select, a[href]') !== null;
+      if (e.key !== 'Escape' && onControl) return;
       e.preventDefault();
       act(action);
     };

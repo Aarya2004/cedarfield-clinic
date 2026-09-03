@@ -343,7 +343,11 @@ export function GestureConfirm({
       setPhase(null);
       setRunning(true);
       cameraBus.dispatchEvent(new CustomEvent('claim', { detail: instanceId.current }));
-      setLive(`Camera on. Hold an open palm for ${(dwellMs / 1000).toFixed(1)} seconds to ${forms.infinitive}.`);
+      setLive(
+        verb === 'sign'
+          ? 'Camera on. Show thumbs up, thumbs down, a fist, one finger or two fingers to your assistant and hold it steady. An open palm is not a request here.'
+          : `Camera on. Hold an open palm for ${(dwellMs / 1000).toFixed(1)} seconds to ${forms.infinitive}.`,
+      );
       rafRef.current = requestAnimationFrame(loop);
     } catch (err) {
       // Two failure families, told apart honestly: the assets did not arrive, or the camera did not.
@@ -542,6 +546,10 @@ function copyFor(
   verb: GestureVerb,
 ): string {
   const forms = verbForms(verb);
+  // The sign camera reads shapes, never the palm (Codex re-audit 2026-09-03: its own lines said "sign
+  // with an open palm" while the seeing line said the opposite).
+  if (verb === 'sign' && state === 'disabled') return 'Or show a hand shape to your assistant: thumbs up, thumbs down, a fist, one finger, two fingers.';
+  if (verb === 'sign' && state === 'ready') return 'Show a hand shape and hold it steady for a moment.';
   switch (state) {
     case 'disabled':
       return `Or ${forms.infinitive} with an open palm.`;
