@@ -911,7 +911,7 @@ Drop `--no-tunnel` to get a `wss://…trycloudflare.com` link (≈ 15–20 s, wa
 
 ## Before the repo goes public (Sep 1) — checklist
 - [ ] Purge `docs/evidence/demo/beat3-share-redacted.png` from history (commit `0bb4cba` captured a listing of Arav's home directory; regenerated in a scratch dir in the next commit). `git filter-repo --path docs/evidence/demo/beat3-share-redacted.png --invert-paths` on a fresh clone, then force-push — Arav's call, coordinate with Aarya.
-- [x] Grep evidence images/logs for home paths and tokens (`docs/evidence/**`, `FIELD-NOTES.md`): the pairing token appears nowhere; `/Users/aravkekane` appears in status bars — acceptable. — **done 20:45 PT: `grep -rE "/Users/aravkekane|[a-f0-9]{32}"` over `docs/evidence/**` + FIELD-NOTES = 0 hits; demo PNGs regenerated on the fixed build run in `/tmp/rokan-demo` (viewed: no home listing; the shown key is AWS's public docs placeholder)**
+- [x] Grep evidence images/logs for home paths and tokens (`docs/evidence/**`, `FIELD-NOTES.md`): the pairing token appears nowhere; `<home>` appears in status bars — acceptable. — **done 20:45 PT: `grep -rE "<home>` over `docs/evidence/**` + FIELD-NOTES = 0 hits; demo PNGs regenerated on the fixed build run in `/tmp/rokan-demo` (viewed: no home listing; the shown key is AWS's public docs placeholder)**
 - [x] LICENSE in GitHub About; README first line; `vendor/` note honest. — **verified 20:45 PT: `gh repo view` → licenseInfo Apache-2.0 (LICENSE file detected); README opens with the one-liner; no `vendor/` claim remains**
 
 ## Objections
