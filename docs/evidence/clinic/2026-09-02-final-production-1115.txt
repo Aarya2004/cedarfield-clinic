@@ -1,0 +1,17 @@
+Production verification — main @ 8b07e2e, 2026-09-02 ~11:15 (Engineer #4, deploy pair run from this machine).
+Contains: Say it to the page (listen bridge), Talk to Cedarfield (page voice agent), patient on file, the
+strip/pulse/spoken line, the assistant guide, SPEC-V9 delegation, all eight security-review fixes.
+
+Local, same code: unit 481/481 · typecheck 0 · lint 0 · clinic suite 24/24 (listen 26, delegation 34,
+  voice-unavailable, guide 13, gesture-boot, the 10-minute soak) · axe 0×3.
+verify-deployed (production): 18 cases 0 failed · axe 0×3 · DEPLOYED AND VERIFIED.
+live-two-visitors (production): 25 steps 0 failed · LIVE BOARD PROVEN WITH TWO VISITORS.
+Voice route (production): 403 without Sec-Fetch-Site same-origin; 200 with it → client secret for
+  gpt-realtime-2.1 (both server variables present in Vercel: OPENAI_API_KEY, SUPABASE_SERVICE_ROLE_KEY).
+clinic-voice-live (manual case, fake microphone, production): 14/14 — ticket minted, WebRTC to the Realtime
+  API opened, data channel up, live tool list sent (session.type fix 8b07e2e), state stayed `live`
+  ("Listening. Say what you need…"), the recognizer panel paused itself, End the call tore it down.
+Listen bridge on production, live board (Arav's Chrome, typed line): request handed over → record
+  "heard you: “hold me the earliest appointment” (typed)" → queue drained → tool retired (11 → 11).
+Owed to a human: speech into the panel, a thumbs-up read as "yes", and one spoken exchange with the
+  page's voice agent (the fake microphone cannot speak).
