@@ -10,3 +10,9 @@ Local at 52767c8: unit 513/513 · typecheck 0 · lint 0 · cases gesture ×2, li
   thesis, guide, ask, permit, path, voice-tour green.
 Production: verify-deployed 38 ✔ / 0 ✘ — DEPLOYED AND VERIFIED. First call with no wait: answered.
 Colophon prints "Build 52767c8 · deployed 2026-09-03 11:10 UTC".
+
+Later the same morning (builds 2fe0c0c constant cursor, c9ac608 docs): cedarfield-clinic.vercel.app added as a
+  production domain of the project (it was briefly an alias behind Vercel's deployment protection; fixed by
+  `vercel domains add` and one redeploy). verify-deployed on the Cedarfield domain: 37 ✔ / 1 ✘ — the one miss was
+  clinic-ask, one timing step of 63; re-run twice on the same domain: 63/63 and 63/63. First call with no wait on
+  the Cedarfield domain: answered. Both domains serve the same build; the number is printed in the colophon.
