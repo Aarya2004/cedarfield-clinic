@@ -69,6 +69,8 @@ test('the two switches come from the camera shapes, a hardware switch or the key
   assert.equal(switchAction('Enter'), 'select');
   assert.equal(switchAction('Closed_Fist'), 'back');
   assert.equal(switchAction('Escape'), 'back');
+  assert.equal(switchAction('Pointing_Up'), 'advance');
+  assert.equal(switchAction('ArrowRight'), 'advance');
   assert.equal(switchAction('Open_Palm'), null, 'the palm is consent, never a switch');
   assert.equal(switchAction('Victory'), null);
   assert.match(highlightLabel(initialScan()), /^Row: a, b, c/);

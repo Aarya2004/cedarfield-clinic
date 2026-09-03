@@ -2753,3 +2753,25 @@ html:has(.cl-dock) {
 .rk-g-signbar[data-gesture-sign-hold='100'] span {
   background: var(--clinic-ink);
 }
+
+/* --- the scanning keyboard, easier to read (2026-09-03) ------------------------------------ */
+
+.cl-scan__text {
+  font-size: 1.75rem;
+  min-height: 3rem;
+}
+
+.cl-scan__key {
+  min-height: 3.25rem;
+  font-size: 1.25rem;
+}
+
+.cl-scan__key[data-clinic-scan-highlight='true'] {
+  transform: scale(1.12);
+  background: var(--clinic-accent, #d97706);
+  outline-color: var(--clinic-accent, #d97706);
+}
+
+.cl-scan__row[data-clinic-scan-highlight='true'] {
+  background: var(--clinic-accent, #d97706);
+}

@@ -106,11 +106,11 @@ interface Recognizer {
 }
 
 /** Minimum gap between two inferences. ~12 readings/s is plenty for a one-second dwell. */
-const INFER_EVERY_MS = 80;
+const INFER_EVERY_MS = 50;
 /** The sign channel's bar: eight consecutive readings at ≥ 0.7 (a real thumbs-up on a laptop camera scores 0.7–0.85; 0.85 never fired — Arav, 2026-09-03), then a 1.2 s gap. */
 export const SIGN_MIN_SCORE = 0.6;
 export const SIGN_STEADY_READINGS = 5;
-export const SIGN_REFRACTORY_MS = 800;
+export const SIGN_REFRACTORY_MS = 600;
 
 /** The page-wide "who has the camera" channel: an instance that starts announces itself. */
 const cameraBus: EventTarget = typeof window === 'undefined' ? new EventTarget() : ((window as unknown as { __cedarfieldCameraBus?: EventTarget }).__cedarfieldCameraBus ??= new EventTarget());

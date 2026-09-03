@@ -28,7 +28,7 @@ export interface ScanKeyboardProps {
   fieldId?: string;
 }
 
-export function ScanKeyboard({ fieldLabel, value, onChange, onDone, onClose, stepMs = 900, registerSignSink, fieldId }: ScanKeyboardProps) {
+export function ScanKeyboard({ fieldLabel, value, onChange, onDone, onClose, stepMs = 700, registerSignSink, fieldId }: ScanKeyboardProps) {
   const [state, setState] = useState<ScanState>(() => initialScan(value));
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -39,13 +39,20 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, onClose, ste
   const onCloseRef = useRef(onClose ?? onDone);
   onCloseRef.current = onClose ?? onDone;
 
-  // The sweep.
+  // The sweep. `sweepKey` restarts its clock after a manual advance, so a stepped highlight is not
+  // immediately swept past.
+  const [sweepKey, setSweepKey] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setState((s) => tick(s)), stepMs);
     return () => clearInterval(t);
-  }, [stepMs]);
+  }, [stepMs, sweepKey]);
 
-  const act = useCallback((action: 'select' | 'back') => {
+  const act = useCallback((action: 'select' | 'back' | 'advance') => {
+    if (action === 'advance') {
+      setState((s) => tick(s));
+      setSweepKey((k) => k + 1);
+      return;
+    }
     const next = action === 'select' ? select(stateRef.current) : back(stateRef.current);
     setState(next);
     if (next.text !== stateRef.current.text) onChangeRef.current(next.text);
@@ -91,7 +98,7 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, onClose, ste
   return (
     <div className="cl-scan" role="dialog" aria-modal="false" aria-label={`Scanning keyboard for ${fieldLabel}`} data-clinic-scan-field={fieldId} data-clinic-scan={state.key === null ? 'rows' : 'keys'} data-clinic-scan-row={state.row} data-clinic-scan-key={state.key ?? ''}>
       <p className="cl-scan__head">
-        Typing <b>{fieldLabel}</b> with two switches: <b>thumbs up</b> (or Space) selects, <b>a fist</b> (or Escape) goes back, <b>thumbs down</b> closes; <b>done</b> moves to the next field.
+        Typing <b>{fieldLabel}</b>: <b>thumbs up</b> (or Space) selects · <b>one finger</b> (or an arrow key) steps ahead without waiting · <b>a fist</b> (or Escape) goes back · <b>thumbs down</b> closes · <b>done</b> moves to the next field.
         For hand shapes, the camera under “Listen for me” must be on.
       </p>
       <p className="cl-scan__text" aria-label="Typed so far">
@@ -118,6 +125,9 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, onClose, ste
       <p className="cl-scan__actions">
         <button type="button" className="cl-quiet" data-clinic-scan-select onClick={() => act('select')}>
           Select
+        </button>
+        <button type="button" className="cl-quiet" data-clinic-scan-advance onClick={() => act('advance')}>
+          Step
         </button>
         <button type="button" className="cl-quiet" data-clinic-scan-back onClick={() => act('back')}>
           Back

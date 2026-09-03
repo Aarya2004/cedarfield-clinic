@@ -76,9 +76,18 @@ export function keyLabel(k: string): string {
   return k;
 }
 
-/** The two switch actions, from the camera's shape names or a key. Null for anything else. */
-export function switchAction(input: string): 'select' | 'back' | null {
+/**
+ * The switch actions, from the camera's shape names or a key. `advance` steps the highlight now
+ * instead of waiting for the sweep (one finger, an arrow key, Tab) — a faster road for a person who
+ * can, beside the automatic sweep for a person who can only select. Null for anything else.
+ */
+export function switchAction(input: string): 'select' | 'back' | 'advance' | null {
   switch (input) {
+    case 'Pointing_Up':
+    case 'ArrowRight':
+    case 'ArrowDown':
+    case 'Tab':
+      return 'advance';
     case 'Thumb_Up':
     case ' ':
     case 'Space':
