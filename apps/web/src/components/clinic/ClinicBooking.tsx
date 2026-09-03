@@ -564,12 +564,20 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
       // clicked"): the agent has no hand, so the page draws one — a marker at the thing the last
       // call touched, labelled in the record's words. Measured after the scroll settles.
       // Rendered INTO the element it points at (a portal), so it sits on the thing itself through
-      // any scroll, in any pane, with no geometry to get wrong.
-      setPointer({ label: `your assistant · ${record.summary}`, el, at: Date.now() });
+      // any scroll, in any pane. The cursor TRAVELS there from wherever it last was (both rects
+      // measured now, so the delta is exact), clicks with a ring, then shows the label — the
+      // agent's hand made visible (Arav, 2026-09-03: "a cursor navigating the page and clicking").
+      const r = el.getBoundingClientRect();
+      const last = lastPointerRect.current;
+      const from = last ? { x: last.left - r.left, y: last.top - r.top } : { x: -r.left - 48, y: -r.top - 48 };
+      lastPointerRect.current = r;
+      setPointer({ label: `your assistant · ${record.summary}`, el, from, height: el.offsetHeight, at: Date.now() });
     }, 250);
   }, []);
   /** The assistant's pointer: where the last call landed, in document coordinates. */
-  const [pointer, setPointer] = useState<{ label: string; el: HTMLElement; at: number } | null>(null);
+  const [pointer, setPointer] = useState<{ label: string; el: HTMLElement; from: { x: number; y: number }; height: number; at: number } | null>(null);
+  /** Where the cursor last landed (viewport rect at that moment), so the next travel starts there. */
+  const lastPointerRect = useRef<DOMRect | null>(null);
   const [pointerGone, setPointerGone] = useState(false);
   useEffect(() => {
     if (pointer === null) return;
@@ -767,8 +775,20 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
     <div className="clinic" data-clinic-route="book" data-clinic-wave={wave} data-clinic-board={live ? 'live' : liveFailed ? 'fallback' : 'seeded'}>
       {pointer !== null && pointer.el.isConnected
         ? createPortal(
-            <span className="cl-pointer" aria-hidden="true" data-clinic-pointer={pointer.label} data-clinic-pointer-state={pointerGone ? 'gone' : 'shown'}>
-              {pointer.label}
+            <span className="cl-cursor-anchor" aria-hidden="true" style={{ ['--cl-h' as string]: `${pointer.height}px` }}>
+              <span
+                key={pointer.at}
+                className="cl-cursor"
+                data-clinic-pointer={pointer.label}
+                data-clinic-pointer-state={pointerGone ? 'gone' : 'shown'}
+                style={{ ['--cl-fx' as string]: `${Math.round(pointer.from.x)}px`, ['--cl-fy' as string]: `${Math.round(pointer.from.y)}px` }}
+              >
+                <svg className="cl-cursor__arrow" viewBox="0 0 24 24" width="22" height="22">
+                  <path d="M4 2 L4 19 L8.6 14.8 L11.6 21.5 L14.4 20.3 L11.5 13.7 L18 13.5 Z" fill="#18181b" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
+                </svg>
+                <span className="cl-cursor__ring" />
+                <span className="cl-pointer">{pointer.label}</span>
+              </span>
             </span>,
             pointer.el,
           )
