@@ -55,6 +55,11 @@ export function readPatient(): PatientOnFileRecord | null {
 
 const CHANGED = 'cedarfield:patient';
 
+/** The labelled sample, field for field — never a real person's record. */
+export function isSamplePatient(p: PatientOnFileRecord): boolean {
+  return p.fullName === SAMPLE_PATIENT.fullName && p.dateOfBirth === SAMPLE_PATIENT.dateOfBirth && p.phone === SAMPLE_PATIENT.phone;
+}
+
 export function writePatient(p: PatientOnFileRecord | null): void {
   try {
     if (p === null) window.localStorage.removeItem(KEY);
@@ -91,9 +96,14 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const stored = readPatient();
+    let stored = readPatient();
     // The sample lives in memory only: written to the browser it would outlive the test flag and
     // book a real visitor's appointment for "Ada Okonkwo" without asking (Arav, 2026-09-03 01:16).
+    // Browsers that already hold the sample from an older build are cleaned here, once.
+    if (stored !== null && !sample && isSamplePatient(stored)) {
+      writePatient(null);
+      stored = null;
+    }
     const initial = stored ?? (sample ? SAMPLE_PATIENT : null);
     setPatient(initial);
     setDraft(initial ?? { fullName: '', dateOfBirth: '', phone: '' });
