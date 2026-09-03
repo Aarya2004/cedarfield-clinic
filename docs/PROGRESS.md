@@ -28,7 +28,11 @@ registry 13:13 ×3 on the live board · voice handshake 14/14). Evidence:
 ~03:30 Terra (Codex 5.6) strategy pass → built the two real gaps: **`clinic_ask`** (agent asks one bounded
 question through the page; person answers any way they can; harness `invokeAsync`/`awaitInvoke`) and the
 **permission card**; README reframed visitor-first; judge door to the seeded board. Unit **503/503**;
-`clinic-ask` 48/48. Counts: seeded 12, granted 13, shared 14, sixteen names. Full r10 + deploy next.
+`clinic-ask` 48/48. Counts: seeded 12, granted 13, shared 14, sixteen names.
+~04:40 **Deployed `1e3ac6f`, verified twice** (verify-deployed 36/36 ×2 · live board 25/25 ×3 with one
+late-wave timing miss and two refused starts, all inside one wave · registry 14:14 ×6 · voice 14/14).
+Evidence `docs/evidence/clinic/2026-09-03-production-1e3ac6f.txt`. Codex prompt (21 items) at that hash.
+Owed by humans: two Codex passes, Arav's hands/voice pass, the video, the Devpost text.
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera

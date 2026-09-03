@@ -1,0 +1,20 @@
+Production verification — main @ 1e3ac6f, 2026-09-03 ~04:40 PT (Engineer #4). Two consecutive rounds.
+
+Since a5fca53: clinic_ask (the agent asks one bounded question through the page; the person answers by
+  button / key / switch, the typed line, a sentence, or a hand shape's phrase; the answer is never queued),
+  the permission card (can / cannot / until, rendered from the live tool set), visitor-first README, the
+  judge door to the seeded board, harness invokeAsync/awaitInvoke. Counts: seeded 12, granted 13, shared 14.
+Local: unit 503/503 · typecheck 0 · lint 0 · clinic suite r10 36 cases (32 green + 4 that failed only on
+  stale tool-count assertions, re-run green after the bump) · axe 0×3.
+Round 1: verify-deployed 36 ✔ / 0 ✘ — DEPLOYED AND VERIFIED · live-two-visitors: 25 steps, 1 failed
+  (visitor B's cancelled slot did not read "open" on A's page within 10 s — simulated demand late in a
+  wave; see below).
+Round 2: verify-deployed 36 ✔ / 0 ✘ — DEPLOYED AND VERIFIED · live-two-visitors: 25 steps, 0 failed.
+Live board, two more attempts inside the same wave: refused to start ("at least two open slots — 1 open");
+  after the next wave: 25/25 and 25/25 (runs 5 and 6). Net: 3 green runs, 1 timing miss, 2 refused starts,
+  all inside one late wave of the simulated-demand board. Not a product defect; the eval's precondition
+  is honest about it.
+Registry probe, six fresh loads of the live board (no test flag): 14 tools each time, page and browser
+  agreeing (14:14); the first three "failed" only my stale expected count of 13, fixed in the case.
+clinic-voice-live (fake microphone): 14/14 — secret minted, WebRTC live, tools sent, stayed live, clean end.
+Logs: scratchpad verify-1e3ac6f-{1,2}.log, live-1e3ac6f-{1..6}.log, reg-1e3ac6f-{1..6}.log, voice-1e3ac6f.log.

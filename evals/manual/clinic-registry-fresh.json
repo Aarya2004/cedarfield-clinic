@@ -7,7 +7,7 @@
   {"waitFor": "!!document.querySelector('[data-clinic-slot]')", "timeout": 20000},
   {"sleep": 1000},
   {"list": true},
-  {"eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')", "equals": "13"},
+  {"eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')", "equals": "14"},
   {"expect": {"tool": "clinic_wait_for_request"}},
   {"expect": {"tool": "clinic_join_waitlist"}},
   {"expect": {"tool": "clinic_leave_waitlist"}},
