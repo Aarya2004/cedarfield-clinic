@@ -340,7 +340,7 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
                   setEditingPhrases(false);
                 }}
               >
-                Reset to the usual seven
+                Reset to the usual eight
               </button>
             </div>
           </form>
@@ -411,11 +411,14 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
             </button>
             {editingSigns ? (
               <button type="button" className="cl-link" data-clinic-signs-reset onClick={resetSigns}>
-                Reset to yes / no / stop / the first one / another one
+                Reset to yes / no / stop / hold me the earliest appointment / another one
               </button>
             ) : null}
           </p>
-          <GestureConfirm verb="sign" onConfirm={() => {}} armed={false} onSign={onSign} onRunningChange={setSignsOn} autoStart={false} />
+          {/* Reopens by itself on a later visit when the person enabled it before and the browser's grant
+              stands (2026-09-03, Arav: "if I cannot speak or move, how will I click the camera?") — the
+              one press is the browser's own "Allow", once. The panel says the camera is on. */}
+          <GestureConfirm verb="sign" onConfirm={() => {}} armed={false} onSign={onSign} onRunningChange={setSignsOn} autoStart />
         </div>
       ) : null}
 

@@ -27,7 +27,7 @@ export const DEFAULT_SIGN_MAP: SignMap = {
   Thumb_Up: 'yes',
   Thumb_Down: 'no',
   Closed_Fist: 'stop',
-  Pointing_Up: 'the first one',
+  Pointing_Up: 'hold me the earliest appointment',
   Victory: 'another one',
 };
 

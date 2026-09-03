@@ -10,7 +10,7 @@ function memStore() {
 test('five shapes, five default words; the open palm is not among them', () => {
   assert.equal(SIGN_SHAPES.length, 5);
   assert.ok(!SIGN_SHAPES.some((s) => (s.category as string) === 'Open_Palm'));
-  assert.deepEqual(Object.values(DEFAULT_SIGN_MAP), ['yes', 'no', 'stop', 'the first one', 'another one']);
+  assert.deepEqual(Object.values(DEFAULT_SIGN_MAP), ['yes', 'no', 'stop', 'hold me the earliest appointment', 'another one']);
 });
 
 test('a person assigns whole requests to shapes; they round-trip through storage and clean up', () => {

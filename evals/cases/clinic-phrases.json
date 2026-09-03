@@ -1,14 +1,14 @@
 [
  {
   "_doc": [
-   "clinic-phrases — the phrase board (2026-09-03): what an AAC board is on this page. Seven ready sentences,",
+   "clinic-phrases — the phrase board (2026-09-03): what an AAC board is on this page. Eight ready sentences,",
    "one press each; a press hands the sentence to the agent through the same queue as speech and typing;",
    "the person can change the board (kept in this browser) and reset it; nothing on it can book."
   ]
  },
  { "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')", "timeout": 25000 },
- { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === '7'", "timeout": 6000 },
- { "eval": "[...document.querySelectorAll('[data-clinic-phrase]')].map(b => b.textContent).join('|')", "equals": "hold me the earliest appointment|show me afternoon times|show me another time|say that more simply|yes|no|stop" },
+ { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === '8'", "timeout": 6000 },
+ { "eval": "[...document.querySelectorAll('[data-clinic-phrase]')].map(b => b.textContent).join('|')", "equals": "hold me the earliest appointment|show me afternoon times|show me another time|say that more simply|the first one|yes|no|stop" },
  { "focus": "[data-clinic-phrase=\"0\"]" },
  { "type": "\r" },
  { "waitFor": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending')) === 1", "timeout": 4000 },
@@ -31,6 +31,6 @@
  { "eval": "(() => { document.querySelector('[data-clinic-phrases-edit]')?.click(); return true; })()", "equals": true },
  { "waitFor": "!!document.querySelector('[data-clinic-phrases-reset]')", "timeout": 3000 },
  { "eval": "(() => { document.querySelector('[data-clinic-phrases-reset]')?.click(); return true; })()", "equals": true },
- { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === '7'", "timeout": 3000 },
+ { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === '8'", "timeout": 3000 },
  { "eval": "localStorage.getItem('cedarfield.phrases')", "equals": null }
 ]

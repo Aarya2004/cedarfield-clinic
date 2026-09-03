@@ -9,6 +9,7 @@ export const DEFAULT_PHRASES: readonly string[] = [
   'show me afternoon times',
   'show me another time',
   'say that more simply',
+  'the first one',
   'yes',
   'no',
   'stop',

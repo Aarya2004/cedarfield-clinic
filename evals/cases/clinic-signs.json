@@ -6,7 +6,7 @@
   {"waitFor": "document.querySelector('[data-clinic-route=\"book\"]') !== null", "timeout": 20000},
   {"waitFor": "document.querySelector('[data-clinic-signs]') !== null", "timeout": 8000},
   {"eval": "document.querySelectorAll('[data-clinic-sign]').length", "equals": 5},
-  {"eval": "[...document.querySelectorAll('[data-clinic-sign-phrase]')].map(e => e.textContent).join('|')", "equals": "“yes”|“no”|“stop”|“the first one”|“another one”"},
+  {"eval": "[...document.querySelectorAll('[data-clinic-sign-phrase]')].map(e => e.textContent).join('|')", "equals": "“yes”|“no”|“stop”|“hold me the earliest appointment”|“another one”"},
   {"eval": "(() => { document.querySelector('[data-clinic-signs-edit]')?.click(); return true; })()", "equals": true},
   {"waitFor": "document.querySelector('[data-clinic-signs]')?.getAttribute('data-clinic-signs') === 'editing'", "timeout": 4000},
   {"eval": "new Set([...document.querySelectorAll('input[data-clinic-sign-phrase]')].map(i => i.getAttribute('aria-label'))).size", "equals": 5},
