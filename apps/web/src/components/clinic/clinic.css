@@ -2732,3 +2732,24 @@ html:has(.cl-dock) {
 .cl-listen__signs [for='rk-g-dwell'] {
   display: none;
 }
+
+/* --- the sign hold, filling (2026-09-03) ---------------------------------------------------- */
+
+.rk-g-signbar {
+  height: 0.375rem;
+  margin: 0.375rem 0 0;
+  border-radius: 999px;
+  background: rgba(24, 24, 27, 0.1);
+  overflow: hidden;
+}
+
+.rk-g-signbar span {
+  display: block;
+  height: 100%;
+  background: var(--clinic-accent, #d97706);
+  transition: width 0.08s linear;
+}
+
+.rk-g-signbar[data-gesture-sign-hold='100'] span {
+  background: var(--clinic-ink);
+}

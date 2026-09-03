@@ -108,9 +108,9 @@ interface Recognizer {
 /** Minimum gap between two inferences. ~12 readings/s is plenty for a one-second dwell. */
 const INFER_EVERY_MS = 80;
 /** The sign channel's bar: eight consecutive readings at ≥ 0.7 (a real thumbs-up on a laptop camera scores 0.7–0.85; 0.85 never fired — Arav, 2026-09-03), then a 1.2 s gap. */
-export const SIGN_MIN_SCORE = 0.7;
-export const SIGN_STEADY_READINGS = 8;
-export const SIGN_REFRACTORY_MS = 1200;
+export const SIGN_MIN_SCORE = 0.6;
+export const SIGN_STEADY_READINGS = 5;
+export const SIGN_REFRACTORY_MS = 800;
 
 /** The page-wide "who has the camera" channel: an instance that starts announces itself. */
 const cameraBus: EventTarget = typeof window === 'undefined' ? new EventTarget() : ((window as unknown as { __cedarfieldCameraBus?: EventTarget }).__cedarfieldCameraBus ??= new EventTarget());
@@ -150,6 +150,8 @@ export function GestureConfirm({
   // What the model is seeing right now ("Open_Palm 0.87", or ''). Honest-numbers ethos applied to
   // the camera: the person (and anyone in devtools) can watch the recognizer's actual output, so a
   // dwell that will not fill is a diagnosable fact rather than a mystery.
+  /** The sign channel's hold, 0–1, so a person sees the shape 'filling' instead of guessing. */
+  const [signHold, setSignHold] = useState(0);
   const [seen, setSeen] = useState('');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -260,6 +262,10 @@ export function GestureConfirm({
       if (gesture !== null && gesture !== 'Open_Palm' && gesture !== 'None' && score >= SIGN_MIN_SCORE) {
         s.readings = gesture === s.category ? s.readings + 1 : 1;
         s.category = gesture;
+        // Five steady readings (~0.4 s) at 0.6 — the palm's own bar (Arav, 2026-09-03: "thumbs up is
+        // annoying to use"); the eight-reading run at 0.85 never fired on a real hand. The false
+        // "Signed stop" Codex saw is still held off by the run itself and the gap after a fire.
+        setSignHold(Math.min(1, s.readings / SIGN_STEADY_READINGS));
         if (s.readings === SIGN_STEADY_READINGS && at - s.firedAt > SIGN_REFRACTORY_MS) {
           s.firedAt = at;
           onSignRef.current(gesture);
@@ -267,6 +273,7 @@ export function GestureConfirm({
       } else {
         s.category = '';
         s.readings = 0;
+        setSignHold(0);
       }
     }
     const step = stepDwell(dwellRef.current, { at, gesture, score, armed: armedRef.current }, configRef.current);
@@ -508,9 +515,16 @@ export function GestureConfirm({
           {/* The failure line is *rendered*, not just announced: a module that fails silently and
               leaves a dead control on the surface is the thing this state exists to prevent. */}
           {running ? (
-            <p className="rk-g-seen" data-gesture-seeing>
-              {pageHidden ? 'Paused: bring this window to the front — the camera only watches a visible page.' : seeingCopy(seen, verb, armed)}
-            </p>
+            <>
+              <p className="rk-g-seen" data-gesture-seeing>
+                {pageHidden ? 'Paused: bring this window to the front — the camera only watches a visible page.' : seeingCopy(seen, verb, armed)}
+              </p>
+              {verb === 'sign' ? (
+                <div className="rk-g-signbar" aria-hidden="true" data-gesture-sign-hold={Math.round(signHold * 100)}>
+                  <span style={{ width: `${Math.round(signHold * 100)}%` }} />
+                </div>
+              ) : null}
+            </>
           ) : null}
           <p className="rk-g-sub" data-gesture-note>
             {failure !== null
