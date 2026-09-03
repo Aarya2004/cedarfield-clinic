@@ -1402,7 +1402,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
         return asToolResult({
           ok: true,
           question,
-          answer: { index: result.answer.index, label: result.answer.choice.label, via: result.answer.via, seconds_to_answer: round1((result.answer.at - t0) / 1000) },
+          answer: { index: result.answer.index, label: result.answer.choice.label, via: result.answer.via, seconds_to_answer: round1(Math.max(0, result.answer.at - t0) / 1000) },
           stopped: false,
           next_step: 'Act on the choice with the other tools and tell the person what happened in one sentence.',
         });

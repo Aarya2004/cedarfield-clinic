@@ -60,7 +60,9 @@ export function AssistantGuide() {
         </button>
       </div>
       <p className="cl-prose cl-guide__intro">
-        Open this page inside your assistant’s browser and say one of these.
+        <b>Use your own assistant to find and hold a time — you stay in control of booking.</b> It runs in your browser;
+        Cedarfield gives it safe live tools, never your details or permanent control. Open this page inside your
+        assistant’s browser and say one of these.
       </p>
       <ol className="cl-guide__list">
         {SAY.map((s) => (

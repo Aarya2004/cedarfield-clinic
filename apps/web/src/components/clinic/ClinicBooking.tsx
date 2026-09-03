@@ -193,7 +193,12 @@ type PendingAct =
   | { kind: 'cancel'; slotId: string; timeLabel: string; detail: string; armedAt: number; by: HoldOrigin }
   | { kind: 'move'; fromId: string; toId: string; timeLabel: string; detail: string; armedAt: number; by: HoldOrigin };
 
-export function ClinicBooking() {
+export interface ClinicBookingProps {
+  /** The deployed build, for the colophon: every tester and judge can say which build they saw. */
+  build?: { sha: string; at: string };
+}
+
+export function ClinicBooking({ build }: ClinicBookingProps = {}) {
   // ── the wave ───────────────────────────────────────────────────────────────────────────────────
   /**
    * The seeded board's clock origin. Real visitors: the epoch, so this page and the landing
@@ -1113,6 +1118,11 @@ export function ClinicBooking() {
             Testing with an assistant? The <a className="cl-link" href="/clinic/book?test=1">practice board</a> runs the
             same schedule every time.
           </p>
+          {build ? (
+            <p className="cl-colophon__fine" data-clinic-build={build.sha}>
+              Build {build.sha} · deployed {build.at}
+            </p>
+          ) : null}
         </footer>
       </main>
 

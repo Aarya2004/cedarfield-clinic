@@ -60,7 +60,7 @@
  { "focus": "[data-clinic-listen-send]" },
  { "type": "\r" },
  { "waitFor": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending') ?? 0) === 1", "timeout": 3000 },
- { "invoke": "clinic_ask", "input": { "question": "Hold 10:30?", "choices": ["Hold it", "Show another time"], "timeout_seconds": 5 }, "timeout": 8000, "outputMatches": "index.{0,4}:.{0,3}1.*Show another time.*via.{0,4}:.{0,4}typed" },
+ { "invoke": "clinic_ask", "input": { "question": "Hold 10:30?", "choices": ["Hold it", "Show another time"], "timeout_seconds": 5 }, "timeout": 8000, "outputMatches": "index.{0,4}:.{0,3}1.*Show another time.*via.{0,4}:.{0,4}typed.*seconds_to_answer.{0,4}:.{0,2}0[,}]" },
  { "eval": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending') ?? 0)", "equals": 0 },
  { "_doc": "4. Stop ends it; a timeout answers null with the seconds waited; a newer question supersedes an older one." },
  { "invokeAsync": "clinic_ask", "as": "ask5", "input": { "question": "Keep looking?", "choices": ["Yes", "No"], "timeout_seconds": 30 } },

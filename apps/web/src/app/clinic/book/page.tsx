@@ -5,6 +5,11 @@ import { bootstrapScript, loadToolDescriptors } from '@/lib/drop/clinic-bootstra
 
 /** Static: the same twelve descriptors on every request, computed once per server. */
 const BOOTSTRAP = bootstrapScript(loadToolDescriptors());
+/** Stamped once per server start: Vercel's commit for this deployment, and when this server came up. */
+const BUILD = {
+  sha: (process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_SHA ?? 'local').slice(0, 7),
+  at: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
+};
 
 /**
  * Load-bearing, not cosmetic — the same reason as `/clinic`. `middleware.ts` mints the CSP nonce per
@@ -27,7 +32,7 @@ export default async function ClinicBookPage() {
   return (
     <>
       <script nonce={nonce} dangerouslySetInnerHTML={{ __html: BOOTSTRAP }} />
-      <ClinicBooking />
+      <ClinicBooking build={BUILD} />
     </>
   );
 }
