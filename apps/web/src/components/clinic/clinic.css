@@ -2615,3 +2615,23 @@ html:has(.cl-dock) {
     transform: none;
   }
 }
+
+.cl-now__tool,
+.cl-pointer__tool {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.cl-now__tool {
+  background: rgba(24, 24, 27, 0.08);
+  color: var(--clinic-ink);
+  margin-left: 0.25rem;
+}
+
+.cl-listen__takeback {
+  margin-left: 0.5rem;
+  font-size: var(--clinic-small);
+}

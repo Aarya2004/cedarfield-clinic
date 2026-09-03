@@ -433,8 +433,13 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
 
       <ol className="cl-listen__log" aria-label="What the page heard" data-clinic-listen-log={history.length}>
         {history.slice(0, 4).map((r) => (
-          <li key={`${r.at}-${r.text}`} data-clinic-heard={r.via}>
+          <li key={`${r.at}-${r.text}`} data-clinic-heard={r.via} data-clinic-heard-pending={queue.isPending(r.at) ? 'true' : 'false'}>
             <span className="cl-listen__via">{r.via === 'voice' ? 'Heard' : r.via === 'sign' ? 'Signed' : 'Typed'}</span> “{r.text}”
+            {queue.isPending(r.at) ? (
+              <button type="button" className="cl-link cl-listen__takeback" data-clinic-heard-takeback onClick={() => queue.withdraw(r.at)}>
+                Take it back
+              </button>
+            ) : null}
           </li>
         ))}
         {last === null ? <li className="cl-listen__empty">Nothing yet.</li> : null}

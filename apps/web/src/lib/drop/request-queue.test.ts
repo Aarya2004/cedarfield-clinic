@@ -118,3 +118,17 @@ test('ask: an answer given a few seconds BEFORE the question opened is taken as 
   assert.deepEqual(await p, { answer: null, stopped: false });
   assert.equal(q2.pending(), 1);
 });
+
+test('withdraw: a request not yet taken can be taken back; one already handed over cannot', async () => {
+  const q = createRequestQueue();
+  const a = q.push('hold me the earliest', 'typed')!;
+  assert.equal(q.isPending(a.at), true);
+  assert.equal(q.withdraw(a.at), true);
+  assert.equal(q.pending(), 0);
+  assert.equal(q.history().length, 0, 'gone from the log too');
+  const b = q.push('show me another', 'voice')!;
+  const taken = await q.wait(10);
+  assert.equal(taken?.at, b.at);
+  assert.equal(q.isPending(b.at), false);
+  assert.equal(q.withdraw(b.at), false);
+});

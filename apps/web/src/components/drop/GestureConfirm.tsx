@@ -110,7 +110,7 @@ const INFER_EVERY_MS = 80;
 /** The sign channel's bar: held for eight consecutive readings at ≥ 0.85, then a 2 s gap. */
 export const SIGN_MIN_SCORE = 0.85;
 export const SIGN_STEADY_READINGS = 8;
-export const SIGN_REFRACTORY_MS = 2000;
+export const SIGN_REFRACTORY_MS = 1200;
 
 /** The page-wide "who has the camera" channel: an instance that starts announces itself. */
 const cameraBus: EventTarget = typeof window === 'undefined' ? new EventTarget() : ((window as unknown as { __cedarfieldCameraBus?: EventTarget }).__cedarfieldCameraBus ??= new EventTarget());
@@ -182,7 +182,11 @@ export function GestureConfirm({
   configRef.current = { dwellMs, graceMs: DEFAULT_GRACE_MS, minScore: DEFAULT_MIN_SCORE };
 
   // ---- teardown: one function, called on disable, on failure and on unmount ----
+  const yieldingRef = useRef(false);
   const teardown = useCallback(() => {
+    // Letting go of the camera (a dock closing, a Stop): tell the others, so one paused by this
+    // instance's claim can resume. Not when yielding to a claim — the claimant owns it now.
+    if (runningRef.current && !yieldingRef.current) cameraBus.dispatchEvent(new CustomEvent('release', { detail: instanceId.current }));
     if (rafRef.current !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -380,20 +384,46 @@ export function GestureConfirm({
   }, [teardown, forms.does, forms.keyboard]);
 
   // ---- one camera owner: yield to whichever instance the person started last ----
+  const pausedByClaim = useRef(false);
   useEffect(() => {
     const onClaim = (e: Event) => {
       const who = (e as CustomEvent<string>).detail;
       if (who === instanceId.current || !runningRef.current) return;
+      yieldingRef.current = true;
       teardown();
+      yieldingRef.current = false;
       setRunning(false);
       setEnabled(false);
       setPhase(null);
       setFailure(null);
-      setLive('Camera moved to the control you just enabled. Enable it here again if you need it.');
+      pausedByClaim.current = true;
+      setLive('Camera moved to the confirm bar for a moment — it comes back here by itself when that is done.');
+    };
+    // The other camera let go (its dock closed, or the person stopped it): if this one was paused
+    // by that claim, it resumes on its own — a hand user must never have to re-enable the switch
+    // board after every palm (Arav's run-through, 2026-09-03).
+    const onRelease = (e: Event) => {
+      const who = (e as CustomEvent<string>).detail;
+      if (who === instanceId.current || !pausedByClaim.current || runningRef.current) return;
+      pausedByClaim.current = false;
+      void start();
+    };
+    // Something on the page wants hand shapes (the scanning keyboard opened): the sign camera
+    // starts if a camera has been used this visit and it is not running.
+    const onWant = () => {
+      if (verb !== 'sign' || runningRef.current) return;
+      const used = (window as unknown as { __cedarfieldCameraUsed?: boolean }).__cedarfieldCameraUsed === true;
+      if (used) void start();
     };
     cameraBus.addEventListener('claim', onClaim);
-    return () => cameraBus.removeEventListener('claim', onClaim);
-  }, [teardown]);
+    cameraBus.addEventListener('release', onRelease);
+    cameraBus.addEventListener('want-signs', onWant);
+    return () => {
+      cameraBus.removeEventListener('claim', onClaim);
+      cameraBus.removeEventListener('release', onRelease);
+      cameraBus.removeEventListener('want-signs', onWant);
+    };
+  }, [teardown, start, verb]);
 
   // ---- mount: read the prefs; reopen the lens only where a grant already stands ----
   const startedOnce = useRef(false);

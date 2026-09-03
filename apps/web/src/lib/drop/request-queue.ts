@@ -62,6 +62,10 @@ export interface RequestQueue {
   ask(question: string, choices: readonly Choice[], timeoutMs: number, signal?: AbortSignal): Promise<AskResult>;
   /** The open question, if any — the panel renders it. */
   question(): Question | null;
+  /** Still waiting for an agent to take it? (by the request's `at`). */
+  isPending(at: number): boolean;
+  /** The person takes a request back before any agent has taken it. False if it was already taken. */
+  withdraw(at: number): boolean;
   /** The person picked a choice on the card itself (button, key, switch). False if nothing was open. */
   answer(index: number): boolean;
 }
@@ -180,6 +184,16 @@ export function createRequestQueue(): RequestQueue {
       });
     },
     question: () => open?.q ?? null,
+    isPending: (at) => pending.some((r) => r.at === at),
+    withdraw(at) {
+      const i = pending.findIndex((r) => r.at === at);
+      if (i < 0) return false;
+      pending.splice(i, 1);
+      const h = history.findIndex((r) => r.at === at);
+      if (h >= 0) history.splice(h, 1);
+      taken();
+      return true;
+    },
     answer(index) {
       if (open === null || index < 0 || index >= open.q.choices.length) return false;
       const choice = open.q.choices[index]!;

@@ -571,11 +571,11 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
       const last = lastPointerRect.current;
       const from = last ? { x: last.left - r.left, y: last.top - r.top } : { x: -r.left - 48, y: -r.top - 48 };
       lastPointerRect.current = r;
-      setPointer({ label: `your assistant · ${record.summary}`, el, from, height: el.offsetHeight, at: Date.now() });
+      setPointer({ label: `your assistant · ${record.summary}`, tool: record.name, el, from, height: el.offsetHeight, at: Date.now() });
     }, 250);
   }, []);
   /** The assistant's pointer: where the last call landed, in document coordinates. */
-  const [pointer, setPointer] = useState<{ label: string; el: HTMLElement; from: { x: number; y: number }; height: number; at: number } | null>(null);
+  const [pointer, setPointer] = useState<{ label: string; tool: string; el: HTMLElement; from: { x: number; y: number }; height: number; at: number } | null>(null);
   /** Where the cursor last landed (viewport rect at that moment), so the next travel starts there. */
   const lastPointerRect = useRef<DOMRect | null>(null);
   const [pointerGone, setPointerGone] = useState(false);
@@ -787,7 +787,9 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
                   <path d="M4 2 L4 19 L8.6 14.8 L11.6 21.5 L14.4 20.3 L11.5 13.7 L18 13.5 Z" fill="#18181b" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
                 </svg>
                 <span className="cl-cursor__ring" />
-                <span className="cl-pointer">{pointer.label}</span>
+                <span className="cl-pointer">
+                  {pointer.label} <code className="cl-pointer__tool">{pointer.tool}</code>
+                </span>
               </span>
             </span>,
             pointer.el,
@@ -813,7 +815,10 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
         ) : lastCall !== null ? (
           <div className="cl-now" role="status" data-clinic-now={lastCall.name} data-clinic-now-ok={lastCall.ok ? 'true' : 'false'}>
             <span className="cl-now__who">Your assistant{lastCall.ok ? '' : ' was refused'}:</span>{' '}
-            <span className="cl-now__what">{lastCall.summary}</span>
+            <span className="cl-now__what">{lastCall.summary}</span>{' '}
+            <code className="cl-now__tool" data-clinic-now-tool>
+              {lastCall.name}
+            </code>
           </div>
         ) : null}
 

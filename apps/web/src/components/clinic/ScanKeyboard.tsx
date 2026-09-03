@@ -64,9 +64,12 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900
     return () => window.removeEventListener('keydown', onKey);
   }, [act]);
 
-  // The camera's shapes, while this keyboard is open.
+  // The camera's shapes, while this keyboard is open. Opening the keyboard asks the page for the
+  // sign camera (it starts by itself if a camera was used this visit).
   useEffect(() => {
     if (!registerSignSink) return;
+    const bus = (window as unknown as { __cedarfieldCameraBus?: EventTarget }).__cedarfieldCameraBus;
+    bus?.dispatchEvent(new CustomEvent('want-signs'));
     registerSignSink((category) => {
       const action = switchAction(category);
       if (action) act(action);
