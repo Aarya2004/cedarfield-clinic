@@ -2353,3 +2353,59 @@ html:has(.cl-dock) {
 .cl-colophon__fine {
   margin: 0;
 }
+
+/* --- the phrase board: ready sentences, one press each (2026-09-03) ------------------------ */
+
+.cl-phrases {
+  margin: 0.875rem 0 0;
+}
+
+.cl-phrases__head {
+  margin: 0 0 0.375rem;
+  font-size: var(--clinic-small);
+  color: var(--clinic-muted);
+}
+
+.cl-phrases__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cl-phrase {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1.5px solid var(--clinic-ink);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--clinic-ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.cl-phrase:hover,
+.cl-phrase:focus-visible {
+  background: var(--clinic-ink);
+  color: #fff;
+}
+
+.cl-phrases__change {
+  margin-top: 0.5rem;
+  font-size: var(--clinic-small);
+}
+
+.cl-phrases__edit textarea {
+  width: 100%;
+  font: inherit;
+  padding: 0.5rem;
+  border: 1px solid var(--clinic-rule);
+  border-radius: 0.375rem;
+}
+
+.cl-phrases__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}

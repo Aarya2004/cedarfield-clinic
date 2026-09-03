@@ -17,6 +17,7 @@ import type { PersonRequest, Question, RequestQueue } from '../../lib/drop/reque
 import { loadAudioPref } from '../../lib/drop/audio-cues.ts';
 import { routeSign } from '../../lib/drop/sign-sink.ts';
 import { routeTranscript } from '../../lib/drop/word-sink.ts';
+import { DEFAULT_PHRASES, loadPhrases, savePhrases } from '../../lib/drop/phrase-board.ts';
 import { DEFAULT_SIGN_MAP, SIGNS_CHANGED, SIGN_PHRASE_MAX, SIGN_SHAPES, loadSignMap, phraseFor, saveSignMap, type SignMap, type SignShape } from '../../lib/drop/sign-map.ts';
 
 interface RecognitionLike {
@@ -56,6 +57,17 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
   const [interim, setInterim] = useState('');
   const [history, setHistory] = useState<readonly PersonRequest[]>([]);
   const [pending, setPending] = useState(0);
+  /** The phrase board: ready sentences, one press each (an AAC board on the page). */
+  const [phrases, setPhrases] = useState<string[]>(() => [...DEFAULT_PHRASES]);
+  const [editingPhrases, setEditingPhrases] = useState(false);
+  const [phraseDraft, setPhraseDraft] = useState('');
+  useEffect(() => {
+    try {
+      setPhrases(loadPhrases(window.localStorage));
+    } catch {
+      /* defaults stand */
+    }
+  }, []);
   /** The agent's open question, rendered as a card the person answers any way they can. */
   const [question, setQuestion] = useState<Question | null>(null);
   const spokenQuestionRef = useRef<number>(0);
@@ -287,6 +299,65 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
           Hand it over
         </button>
       </form>
+
+      {/* The phrase board (2026-09-03): what an AAC board is — ready sentences, one press each. Every
+          press goes to the agent through the same queue as speech, the typed line and the shapes. */}
+      <div className="cl-phrases" data-clinic-phrases={editingPhrases ? 'editing' : phrases.length}>
+        <p className="cl-phrases__head">Or press a phrase:</p>
+        {editingPhrases ? (
+          <form
+            className="cl-phrases__edit"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const next = savePhrases(window.localStorage, phraseDraft.split('\n'));
+              setPhrases(next);
+              setEditingPhrases(false);
+            }}
+          >
+            <label htmlFor="cl-phrases-draft" className="cl-sr">
+              One phrase per line, up to twelve
+            </label>
+            <textarea id="cl-phrases-draft" data-clinic-phrases-draft rows={6} value={phraseDraft} onChange={(e) => setPhraseDraft(e.target.value)} />
+            <div className="cl-phrases__actions">
+              <button type="submit" className="cl-quiet" data-clinic-phrases-save>
+                Done
+              </button>
+              <button
+                type="button"
+                className="cl-link"
+                data-clinic-phrases-reset
+                onClick={() => {
+                  setPhrases(savePhrases(window.localStorage, DEFAULT_PHRASES));
+                  setEditingPhrases(false);
+                }}
+              >
+                Reset to the usual seven
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className="cl-phrases__grid">
+              {phrases.map((p, i) => (
+                <button key={p} type="button" className="cl-phrase" data-clinic-phrase={i} onClick={() => queue.push(p, 'typed')}>
+                  {p}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="cl-link cl-phrases__change"
+              data-clinic-phrases-edit
+              onClick={() => {
+                setPhraseDraft(phrases.join('\n'));
+                setEditingPhrases(true);
+              }}
+            >
+              Change these phrases
+            </button>
+          </>
+        )}
+      </div>
 
       {gesture ? (
         <div className="cl-listen__signs">

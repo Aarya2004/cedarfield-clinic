@@ -1,0 +1,36 @@
+[
+ {
+  "_doc": [
+   "clinic-phrases — the phrase board (2026-09-03): what an AAC board is on this page. Seven ready sentences,",
+   "one press each; a press hands the sentence to the agent through the same queue as speech and typing;",
+   "the person can change the board (kept in this browser) and reset it; nothing on it can book."
+  ]
+ },
+ { "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')", "timeout": 25000 },
+ { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === '7'", "timeout": 6000 },
+ { "eval": "[...document.querySelectorAll('[data-clinic-phrase]')].map(b => b.textContent).join('|')", "equals": "hold me the earliest appointment|show me afternoon times|show me another time|say that more simply|yes|no|stop" },
+ { "focus": "[data-clinic-phrase=\"0\"]" },
+ { "type": "\r" },
+ { "waitFor": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending')) === 1", "timeout": 4000 },
+ { "eval": "document.querySelector('[data-clinic-heard=\"typed\"]')?.textContent?.includes('hold me the earliest appointment')", "equals": true },
+ { "invoke": "clinic_wait_for_request", "input": { "timeout_seconds": 5 }, "outputMatches": "hold me the earliest appointment.*via.{0,4}:.{0,4}typed" },
+ { "_doc": "A phrase answers the agent's question too, through the same queue." },
+ { "invokeAsync": "clinic_ask", "as": "askP", "input": { "question": "Keep 8:40, or another time?", "choices": ["Keep it", "Show another time"], "timeout_seconds": 30 } },
+ { "waitFor": "!!document.querySelector('[data-clinic-ask]')", "timeout": 4000 },
+ { "focus": "[data-clinic-phrase=\"2\"]" },
+ { "type": "\r" },
+ { "awaitInvoke": "askP", "timeout": 6000, "outputMatches": "index.{0,4}:.{0,3}1.*Show another time.*via.{0,4}:.{0,4}typed" },
+ { "eval": "Number(document.querySelector('[data-clinic-listen]')?.getAttribute('data-clinic-listen-pending') ?? 0)", "equals": 0 },
+ { "_doc": "Change the board: two phrases of the person's own; kept in this browser; reset restores the seven." },
+ { "eval": "(() => { document.querySelector('[data-clinic-phrases-edit]')?.click(); return true; })()", "equals": true },
+ { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === 'editing'", "timeout": 3000 },
+ { "eval": "(() => { const t = document.querySelector('[data-clinic-phrases-draft]'); const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set; set.call(t, 'book me on tuesday\\nrepeat that'); t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()", "equals": true },
+ { "eval": "(() => { document.querySelector('[data-clinic-phrases-save]')?.click(); return true; })()", "equals": true },
+ { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === '2'", "timeout": 3000 },
+ { "eval": "JSON.parse(localStorage.getItem('cedarfield.phrases')).length", "equals": 2 },
+ { "eval": "(() => { document.querySelector('[data-clinic-phrases-edit]')?.click(); return true; })()", "equals": true },
+ { "waitFor": "!!document.querySelector('[data-clinic-phrases-reset]')", "timeout": 3000 },
+ { "eval": "(() => { document.querySelector('[data-clinic-phrases-reset]')?.click(); return true; })()", "equals": true },
+ { "waitFor": "document.querySelector('[data-clinic-phrases]')?.getAttribute('data-clinic-phrases') === '7'", "timeout": 3000 },
+ { "eval": "localStorage.getItem('cedarfield.phrases')", "equals": null }
+]
