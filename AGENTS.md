@@ -1,8 +1,10 @@
 # AGENTS.md — for coding agents working in this repo
 
-**What this is.** Rokan Terminal: a web terminal where anything the human approves becomes a live
-WebMCP tool (`document.modelContext.registerTool`) the agent can call. Nothing a tool does executes;
-the human's Enter runs commands. Read `docs/PROGRESS.md` first, then `docs/PLAN.md` §0.
+**What this is.** Cedarfield Clinic: a public booking page that gives a visitor's own agent safe, live
+WebMCP tools (`document.modelContext.registerTool`) and never lets it commit — the booking tool is born
+from the person's press, palm or spoken word and dies on use. Read `README.md`, then `docs/DROP-STATUS.md`
+(newest row first), then `docs/SECURITY.md`. The terminal under `packages/bridge` / `infra/sandbox` is an
+earlier experiment in this repository and is not the entry.
 
 **Layout.** `apps/web` (Next 15, tools + UI) · `packages/bridge` (node-pty + ws + tunnel) ·
 `infra/sandbox` (judge mode on Cloudflare) · `evals/` (headless WebMCP harness + cases) · `docs/`.

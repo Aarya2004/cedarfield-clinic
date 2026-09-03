@@ -1,9 +1,16 @@
-# The Drop — your agent can hold it. Only you can take it.
+# Cedarfield Clinic — your words, your agent, your final say
 
-> **Working title.** The product name is being chosen by the two people building it; the fictional
-> clinic on the page is "Cedarfield Clinic". Everything below is true today; the seeded board and
-> every proof re-run from this repo, and the live board's schema is committed under
-> `supabase/migrations/`.
+> Live: **https://cedarfield-clinic.vercel.app/clinic/book** (also rokan-terminal.vercel.app) · the build number is printed at the foot of
+> the page. Everything below is true of that build; every proof re-runs from this repo (`evals/`), and
+> the live board's schema is committed under `supabase/migrations/`.
+>
+> **Repository map.** The entry is `apps/web` (the clinic pages under `src/app/clinic`, the tools under
+> `src/lib/drop`, the components under `src/components/clinic` and `src/components/drop`), `evals/`
+> (the browser cases and the production verifier), `supabase/` (the live board) and `docs/`
+> (`DROP-STATUS.md` is the build-by-build record, `SECURITY.md` the threat model, `evidence/clinic/` the
+> production runs). `packages/bridge`, `infra/sandbox`, `vendor/` and `tickets/` belong to an earlier
+> experiment in this repository — a terminal whose approved commands became WebMCP tools — and are not
+> part of the Cedarfield entry; they are kept for history and do not run in production.
 
 **A visitor arrives at a public page with their own agent and their own way of communicating.**
 Typed, spoken, a hand shape the camera reads as a switch, a scanning keyboard driven by two of

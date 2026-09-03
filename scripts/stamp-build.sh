@@ -14,3 +14,4 @@ export const BUILD_SHA = '$SHA';
 export const BUILD_AT = '$AT';
 TS
 echo "stamped $SHA at $AT"
+echo "after: vercel --prod --yes, then: vercel alias set rokan-terminal.vercel.app cedarfield-clinic.vercel.app"
