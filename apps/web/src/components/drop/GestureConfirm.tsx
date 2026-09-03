@@ -107,8 +107,8 @@ interface Recognizer {
 
 /** Minimum gap between two inferences. ~12 readings/s is plenty for a one-second dwell. */
 const INFER_EVERY_MS = 80;
-/** The sign channel's bar: held for eight consecutive readings at ≥ 0.85, then a 2 s gap. */
-export const SIGN_MIN_SCORE = 0.85;
+/** The sign channel's bar: eight consecutive readings at ≥ 0.7 (a real thumbs-up on a laptop camera scores 0.7–0.85; 0.85 never fired — Arav, 2026-09-03), then a 1.2 s gap. */
+export const SIGN_MIN_SCORE = 0.7;
 export const SIGN_STEADY_READINGS = 8;
 export const SIGN_REFRACTORY_MS = 1200;
 
@@ -444,8 +444,13 @@ export function GestureConfirm({
         permission = 'unknown'; // Firefox and Safari have no camera permission descriptor
       }
       if (cancelled || startedOnce.current) return;
+      // Only a DOCK's camera opens by itself because a camera was used this visit: a hold has arrived
+      // and the palm must meet an open lens. The grant card's must not — it mounts whenever nothing is
+      // held and would steal the lens from the sign camera, and every thumbs-up would go nowhere
+      // (Arav, 2026-09-03: "thumbs up is not working at all").
       const usedThisVisit = (window as unknown as { __cedarfieldCameraUsed?: boolean }).__cedarfieldCameraUsed === true;
-      if (autoStart && (shouldAutoStart(pref, permission) || (usedThisVisit && permission !== 'denied'))) {
+      const dock = verb === 'book' || verb === 'cancel' || verb === 'move';
+      if (autoStart && (shouldAutoStart(pref, permission) || (dock && usedThisVisit && permission !== 'denied'))) {
         startedOnce.current = true;
         void start();
       }
