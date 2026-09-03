@@ -102,7 +102,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "11"
+  "equals": "12"
  },
  {
   "expect": {

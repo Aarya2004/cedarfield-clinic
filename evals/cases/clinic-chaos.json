@@ -244,7 +244,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "11"
+  "equals": "12"
  },
  {
   "eval": "document.querySelector('[data-clinic-act]') === null && document.querySelector('[data-clinic-dock]') === null",

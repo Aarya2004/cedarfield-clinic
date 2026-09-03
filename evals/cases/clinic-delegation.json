@@ -26,7 +26,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "11"
+  "equals": "12"
  },
  {
   "eval": "document.querySelector('[data-clinic-delegation]')?.getAttribute('data-clinic-delegation')",
@@ -155,7 +155,7 @@
  },
  {
   "eval": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')",
-  "equals": "12"
+  "equals": "13"
  },
  {
   "shot": "docs/evidence/clinic/delegation-spent.png"
