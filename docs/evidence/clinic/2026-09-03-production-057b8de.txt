@@ -1,0 +1,12 @@
+Production verification — main @ 057b8de, 2026-09-03 ~05:40 PT (Engineer #4). Two consecutive rounds, identical.
+
+Since 1e3ac6f (Codex re-audit pass 1: 18 PASS/PASS-GUARD, 3 FAIL, no P1/P2): Escape steps back from any
+  focus on the scanning keyboard; the sign camera's own lines never say the palm signs; voice caps
+  40/visitor and 200/day (migration applied), today's spent counters reset; the voice probe runs once.
+Local: unit 503/503 · typecheck 0 · lint 0 · touched cases clinic-scan (+Escape regression),
+  clinic-gesture-quiet (+palm-copy regression), clinic-gesture-boot green.
+Round 1: verify-deployed 36 ✔ / 0 ✘ — DEPLOYED AND VERIFIED · live-two-visitors 25 steps, 0 failed.
+Round 2: verify-deployed 36 ✔ / 0 ✘ — DEPLOYED AND VERIFIED · live-two-visitors 25 steps, 0 failed.
+Registry probe, three fresh loads of the live board (no test flag): 14 tools each time (14:14).
+clinic-voice-live (fake microphone, one ticket): 14/14.
+Logs: scratchpad verify-057b8de-{1,2}.log, live-057b8de-{1,2}.log, reg-057b8de-{1,2,3}.log, voice-057b8de.log.

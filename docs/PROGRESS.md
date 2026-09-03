@@ -32,7 +32,11 @@ question through the page; person answers any way they can; harness `invokeAsync
 ~04:40 **Deployed `1e3ac6f`, verified twice** (verify-deployed 36/36 ×2 · live board 25/25 ×3 with one
 late-wave timing miss and two refused starts, all inside one wave · registry 14:14 ×6 · voice 14/14).
 Evidence `docs/evidence/clinic/2026-09-03-production-1e3ac6f.txt`. Codex prompt (21 items) at that hash.
-Owed by humans: two Codex passes, Arav's hands/voice pass, the video, the Devpost text.
+Codex pass 1 on 1e3ac6f: 18 PASS/PASS-GUARD, 3 FAIL (voice cap spent by our probes; Escape on the scan
+keyboard's Select button; sign-camera palm copy), no P1/P2 — all fixed at the root.
+~05:40 **Deployed `057b8de`, verified twice** (36/36 ×2 · live 25/25 ×2 · registry 14:14 ×3 · voice 14/14).
+Evidence `docs/evidence/clinic/2026-09-03-production-057b8de.txt`. Codex prompt at that hash.
+Owed by humans: Codex pass 2 (and a clean pass 3), Arav's hands/voice pass, the video, the Devpost text.
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera
