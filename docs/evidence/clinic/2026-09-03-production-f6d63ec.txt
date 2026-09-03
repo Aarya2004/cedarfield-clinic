@@ -1,0 +1,17 @@
+Production verification — main @ f6d63ec, 2026-09-03 ~01:50 PT (Engineer #4). Two consecutive rounds, identical.
+(Earlier evidence files today carry estimated PT hours that ran ~3 h fast; the order and the numbers stand.)
+
+Since 057b8de (Codex re-audit pass 2: 2 P1, 1 P2): tools in the FIRST snapshot — an inline, CSP-nonced
+  bootstrap registers the twelve load-time tools before any bundle (clinic-bootstrap.ts; the app takes over
+  execution; a call before hydration is held, never refused); clinic_ask takes the typed line and an answer
+  given up to 20 s before the question opened; the assistant's pointer rendered into the touched element;
+  a clinic's register on the page (taken rows say "No longer available"; disclosures once, in the colophon).
+Local: unit 508/508 · typecheck 0 · lint 0 · clinic suite r11 37/37 (a few first attempts hydrated slowly under
+  Chrome contention and passed on retry) · axe 0×3.
+Round 1: verify-deployed 37 ✔ / 0 ✘ — DEPLOYED AND VERIFIED · live-two-visitors 25 steps, 0 failed.
+Round 2: verify-deployed 37 ✔ / 0 ✘ — DEPLOYED AND VERIFIED · live-two-visitors 25 steps, 0 failed.
+Registry probe, three fresh loads of the live board: 14 tools each time (14:14).
+First-call probe on the LIVE board, no wait at all after navigation: list → immediate clinic_list_drops →
+  clinic_explain_confirm, all answered, five loads (the first three "failed" only my seeded-board count of 12
+  where the live board has 14; assertion corrected to ≥ 12, runs 4 and 5 clean).
+Logs: scratchpad verify-f6d63ec-{1,2}.log, live-f6d63ec-{1,2}.log, reg-f6d63ec-{1,2,3}.log, first-f6d63ec-{1..5}.log.

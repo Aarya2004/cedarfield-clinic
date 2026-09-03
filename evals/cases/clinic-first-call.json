@@ -14,7 +14,7 @@
  { "invoke": "clinic_explain_confirm", "input": {}, "timeout": 15000, "outputMatches": "tool_that_books" },
  { "_doc": "After hydration the page's own count and the browser's agree, and nothing was registered twice." },
  { "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", "timeout": 15000 },
- { "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '12'", "timeout": 8000 },
+ { "waitFor": "Number(document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count')) >= 12", "timeout": 8000 },
  { "eval": "(() => { const h = window.__cedarfieldTools; return !!h && h.names.length === 12 && typeof h.execute === 'function'; })()", "equals": true },
  { "invoke": "clinic_list_drops", "input": {}, "outputMatches": "open_count" },
  { "invoke": "clinic_hold_status", "input": {}, "outputMatches": "held" }

@@ -40,7 +40,10 @@ Codex pass 2 on 057b8de: 2 P1 (first-snapshot tools; typed answers to clinic_ask
 ~07:30 Fixed at the root: inline bootstrap registers the twelve load-time tools before any bundle
 (`clinic-bootstrap.ts`, CSP-nonced, 4 tests, `clinic-first-call.json` lists+calls with no wait); ask takes a
 typed answer and one given up to 20 s early; the assistant's pointer rendered into the touched element.
-Unit **508/508**. Full r11 + deploy + double round next. Owed by humans: Codex pass 3, Arav's hands/voice pass, the video, the Devpost text.
+Unit **508/508**. Then the clinic's register on the page (colophon; "No longer available").
+**Deployed `f6d63ec`, verified twice** (37/37 ×2 · live 25/25 ×2 · registry 14:14 ×3 · first-call on the live
+board with no wait, 5 loads). NOTE: the "~PT" hours written earlier today ran ~3 h fast; real clock at this
+line: 01:50 PT 2026-09-03. Owed by humans: Codex pass 3, Arav's hands/voice pass, the video, the Devpost text.
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera
