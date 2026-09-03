@@ -2299,8 +2299,12 @@ html:has(.cl-dock) {
   transition: opacity 0.3s ease;
 }
 
-.cl-cursor[data-clinic-pointer-state='gone'] {
-  opacity: 0;
+.cl-cursor[data-clinic-pointer-state='resting'] {
+  opacity: 0.85;
+}
+
+.cl-cursor[data-clinic-pointer-state='resting'] .cl-pointer {
+  opacity: 0.55;
 }
 
 .cl-cursor__arrow {

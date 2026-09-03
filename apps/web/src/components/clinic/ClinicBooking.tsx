@@ -571,24 +571,25 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
       const last = lastPointerRect.current;
       const from = last ? { x: last.left - r.left, y: last.top - r.top } : { x: -r.left - 48, y: -r.top - 48 };
       lastPointerRect.current = r;
-      setPointer({ label: `your assistant · ${record.summary}`, tool: record.name, el, from, height: el.offsetHeight, at: Date.now() });
+      setPointer({ label: `your assistant · ${record.summary}`, tool: record.name, target, from, height: el.offsetHeight, at: Date.now() });
     }, 250);
   }, []);
   /** The assistant's pointer: where the last call landed, in document coordinates. */
-  const [pointer, setPointer] = useState<{ label: string; tool: string; el: HTMLElement; from: { x: number; y: number }; height: number; at: number } | null>(null);
+  const [pointer, setPointer] = useState<{ label: string; tool: string; target: string; from: { x: number; y: number }; height: number; at: number } | null>(null);
   /** Where the cursor last landed (viewport rect at that moment), so the next travel starts there. */
   const lastPointerRect = useRef<DOMRect | null>(null);
+  // The cursor never leaves the page once it has arrived: the label rests after a while, the arrow
+  // stays where it last landed until the next call moves it (Arav, 2026-09-03: "it needs to be
+  // constant"). The target is re-found by selector on every render, so a row React redraws does
+  // not take the cursor with it.
   const [pointerGone, setPointerGone] = useState(false);
   useEffect(() => {
     if (pointer === null) return;
     setPointerGone(false);
-    const fade = setTimeout(() => setPointerGone(true), 5000);
-    const drop = setTimeout(() => setPointer((p) => (p === pointer ? null : p)), 5600);
-    return () => {
-      clearTimeout(fade);
-      clearTimeout(drop);
-    };
+    const rest = setTimeout(() => setPointerGone(true), 6000);
+    return () => clearTimeout(rest);
   }, [pointer]);
+  const pointerEl = pointer !== null && typeof document !== 'undefined' ? document.querySelector<HTMLElement>(pointer.target) : null;
   useEffect(() => {
     if (lastCall === null) return;
     const t = setTimeout(() => setLastCall((c) => (c === lastCall ? null : c)), 9000);
@@ -773,14 +774,14 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
 
   return (
     <div className="clinic" data-clinic-route="book" data-clinic-wave={wave} data-clinic-board={live ? 'live' : liveFailed ? 'fallback' : 'seeded'}>
-      {pointer !== null && pointer.el.isConnected
+      {pointer !== null && pointerEl !== null
         ? createPortal(
-            <span className="cl-cursor-anchor" aria-hidden="true" style={{ ['--cl-h' as string]: `${pointer.height}px` }}>
+            <span className="cl-cursor-anchor" aria-hidden="true" style={{ ['--cl-h' as string]: `${pointerEl.offsetHeight || pointer.height}px` }}>
               <span
                 key={pointer.at}
                 className="cl-cursor"
                 data-clinic-pointer={pointer.label}
-                data-clinic-pointer-state={pointerGone ? 'gone' : 'shown'}
+                data-clinic-pointer-state={pointerGone ? 'resting' : 'shown'}
                 style={{ ['--cl-fx' as string]: `${Math.round(pointer.from.x)}px`, ['--cl-fy' as string]: `${Math.round(pointer.from.y)}px` }}
               >
                 <svg className="cl-cursor__arrow" viewBox="0 0 24 24" width="22" height="22">
@@ -792,7 +793,7 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
                 </span>
               </span>
             </span>,
-            pointer.el,
+            pointerEl,
           )
         : null}
       <main className="cl-shell">
