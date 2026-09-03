@@ -1,0 +1,15 @@
+Production verification — main @ ec52b81, 2026-09-02 ~15:20 (Engineer #4). Two consecutive rounds, identical results.
+
+Local, same code: unit 486/486 · typecheck 0 · lint 0 · three full suite passes on the way here
+  (24/24, 25/26 → case updated, 26/27 → case updated) + axe 0×3 each; edge cases green
+  (clinic-delegation-edges 39 steps, clinic-listen-edges 21, clinic-signs 19, clinic-patient 37).
+Round 1: verify-deployed 24 cases 0 failed (29 ✔ incl. 3 routes + 3 axe) · live-two-visitors 25/25 ·
+  clinic-voice-live 14/14 (secret minted, WebRTC live, tools sent, stayed live, clean end).
+Round 2: identical — 24/24 · 25/25 · 14/14.
+What the two rounds cover: tools registered once and stable (handles from load stay valid);
+  clinic_wait_for_request from load; typed handoff with the waiting count exact; delegation birth /
+  refusal / expiry / revoke / wrong slot / taken slot / replay / no patient / no storage; patient
+  profile validation, saved status, day-first dates; sign legend and custom phrases; covered camera
+  emits nothing; voice readiness before the button; the route refuses non-page callers.
+Owed to a human (a real mouth and hand): speech into "Say it to the page", a thumbs-up read as
+  the person's phrase, one spoken exchange with Talk to Cedarfield, the palm booking on the live board.

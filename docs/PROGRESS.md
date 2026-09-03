@@ -2,6 +2,21 @@
 
 Last update: **2026-09-02 ~04:15 (Engineer #4, Fable 5.1)** Branch `main`.
 
+## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
+- **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera
+  shapes, defaults not stored, cleanup, 120-char cap; 3 unit tests), a legend with glyph · name ·
+  phrase on the listen panel, "Change what the shapes mean" / Reset; `clinic-signs.json`.
+- **Edge cases**: `clinic-delegation-edges.json` (3 s expiry via `window.__cedarfieldDelegationMs`,
+  honoured under `?test=1` only; revoke; wrong slot; taken slot; replay after spend; no patient; no
+  storage) and `clinic-listen-edges.json` (whitespace, 400-char cut, FIFO + `more_pending`, clamped
+  timeouts, never re-registered). The edge run found the panel's "N waiting" lagging a hand-over →
+  the queue notifies on every take (unit-tested).
+- **Repeat runs**: three full local passes (24/24 · 25/26 → case updated · 26/27 → case updated) +
+  axe 0×3 each; production on `d6779fa`: live proof 2/2, voice handshake 2/2, verify 25–26/27 with
+  the only reds being the stale-count defect above and the not-yet-deployed edge cases. Deploy of
+  the fixed tree + double production round in progress at the time of writing.
+- `docs/CODEX-REAUDIT.md`: the 14-item pass/fail prompt for Codex, with the deployed hash.
+
 ## Build log — Engineer #4 (2026-09-02, ~12:30–13:30) — Codex's second audit on production: six P1s fixed at the root
 - Stale-handle root cause: `ClinicTools` re-registered every tool when `waitlistAvailable` flipped
   after load. Now: base set (+ the wait tool when the page has a queue) registered once per mount;
