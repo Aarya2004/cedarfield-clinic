@@ -1,0 +1,10 @@
+Production verification — main @ 5e9bfe2, 2026-09-03 ~03:30 PT (Engineer #4). Two consecutive rounds, identical.
+
+Since db48684: the patient card fills by hand shapes alone (one finger opens the keyboard on the next empty
+  field, done advances, two fingers saves, thumbs down closes); the live tool surface (chips born gold from the
+  press, fading "gone" on revoke); the cursor's travel eased and settled.
+Local: unit 513/513 · typecheck 0 · lint 0 · axe 0×3 · cases scan, patient ×2, listen ×2, gesture ×2, declarative,
+  manual-tax, permit, delegation ×2, activity-log, thesis green.
+Round 1: verify-deployed 38 ✔ / 0 ✘ — DEPLOYED AND VERIFIED.
+Round 2: verify-deployed 38 ✔ / 0 ✘ — DEPLOYED AND VERIFIED.
+Live board, two visitors: 25 steps, 0 failed. Registry on the live board: 14:14. First call with no wait: answered.
