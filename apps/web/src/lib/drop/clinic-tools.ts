@@ -58,6 +58,7 @@ export const CLINIC_TOOL_NAMES = [
   'clinic_leave_waitlist',
   'clinic_my_appointment',
   'clinic_wait_for_request',
+  'clinic_ask',
   'clinic_set_sign',
   'clinic_explain_confirm',
 ] as const;
@@ -105,7 +106,7 @@ export const DELEGATED_TOOL_NAMES = ['clinic_book_slot'] as const satisfies read
  * page — waiting up to a minute for it. Registered only when the page wires the queue (the bench
  * and the unit fakes do not), like the waitlist verbs.
  */
-export const LISTEN_TOOL_NAMES = ['clinic_wait_for_request', 'clinic_set_sign'] as const satisfies readonly ClinicToolName[];
+export const LISTEN_TOOL_NAMES = ['clinic_wait_for_request', 'clinic_ask', 'clinic_set_sign'] as const satisfies readonly ClinicToolName[];
 
 const SET_SIGN_DESCRIPTION =
   "Labels the page's camera switch board for your human: the camera reads five hand shapes (thumbs " +
@@ -121,6 +122,16 @@ const WAIT_FOR_REQUEST_DESCRIPTION =
   "call this again. Stop when the request is 'stop'. Their words may be short ('yes', 'the first one').";
 
 const WAIT_MAX_SECONDS = 60;
+
+/** The other half of the turn (2026-09-03): the agent asks ONE bounded question through the page. */
+const ASK_DESCRIPTION =
+  'Puts ONE question with 2–3 short choices on the page, in your human’s own panel, and waits for ' +
+  'their answer — they answer there (button, keyboard, switch, voice, or a hand shape), not to you. ' +
+  'Returns answer:{index,label,via}, or answer:null after timeout_seconds (max 60), or stopped:true. ' +
+  'For decisions only, never for consent: no choice can book, cancel or move — the page’s own ' +
+  'controls do that. Keep the question under 160 characters and each choice under 40.';
+const ASK_MAX_QUESTION = 160;
+const ASK_MAX_CHOICE = 40;
 const WAIT_DEFAULT_SECONDS = 45;
 export const DELEGATION_MS = 10 * 60_000;
 
@@ -254,6 +265,13 @@ export interface ClinicToolsOptions {
   requests?: {
     wait(timeoutMs: number, signal?: AbortSignal): Promise<{ at: number; text: string; via: string } | null>;
     pending(): number;
+    /** One bounded question on the page; resolves with the person's answer, none, or stopped. */
+    ask?(
+      question: string,
+      choices: readonly { id: string; label: string }[],
+      timeoutMs: number,
+      signal?: AbortSignal,
+    ): Promise<{ answer: { at: number; index: number; choice: { id: string; label: string }; via: string } | null; stopped: boolean }>;
     /** The switch-board write: returns the whole board after the change, or null for an unknown shape. */
     setSign?(shape: string, phrase: string): Record<string, string> | null;
   };
@@ -340,6 +358,11 @@ export function summariseToolAnswer(name: ClinicToolName, result: ToolTextResult
     }
     case 'clinic_set_sign':
       return { ok: true, summary: `set ${str(r.shape)} to mean “${str(r.phrase)}”` };
+    case 'clinic_ask': {
+      const a = rec(r.answer);
+      if (r.stopped === true) return { ok: true, summary: `asked you “${str(r.question)}” — you said stop` };
+      return { ok: true, summary: r.answer ? `asked you “${str(r.question)}” — you chose “${str(a.label)}” (${str(a.via)})` : `asked you “${str(r.question)}” — no answer in ${str(r.waited_seconds, '?')} s` };
+    }
     default:
       return { ok: true, summary: 'ok' };
   }
@@ -1330,6 +1353,57 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
             req.text.toLowerCase() === 'stop'
               ? 'The person said stop. Say goodbye and do not call clinic_wait_for_request again.'
               : 'Act on this with the other tools, tell the person what happened in one sentence, then call clinic_wait_for_request again.',
+        });
+      },
+    },
+    {
+      name: 'clinic_ask',
+      title: 'Ask your human one question through the page',
+      description: ASK_DESCRIPTION,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          question: { type: 'string', description: `The question, plain words, ≤ ${ASK_MAX_QUESTION} characters.` },
+          choices: { type: 'array', items: { type: 'string' }, description: `2–3 choices, each ≤ ${ASK_MAX_CHOICE} characters. Put the affirmative first.` },
+          timeout_seconds: { type: 'number', description: `How long to wait, 1–${WAIT_MAX_SECONDS} (default ${WAIT_DEFAULT_SECONDS}).` },
+        },
+        required: ['question', 'choices'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      async execute(raw, ctx) {
+        const q = options.requests;
+        if (!q || typeof q.ask !== 'function') {
+          return asToolResult({ ok: false, error: 'listening_not_wired', detail: 'This page cannot put a question to the person. Ask them directly.' } satisfies ErrorResult);
+        }
+        const input = coerceInput(raw);
+        const question = typeof input.question === 'string' ? input.question.replace(/\s+/g, ' ').trim() : '';
+        if (question === '' || question.length > ASK_MAX_QUESTION) {
+          return asToolResult({ ok: false, error: 'question_required', detail: `A question of 1–${ASK_MAX_QUESTION} characters is required.` } satisfies ErrorResult);
+        }
+        const rawChoices = Array.isArray(input.choices) ? input.choices : [];
+        const labels = rawChoices.map((c) => (typeof c === 'string' ? c.replace(/\s+/g, ' ').trim() : '')).filter((c) => c !== '');
+        if (labels.length < 2 || labels.length > 3 || labels.some((c) => c.length > ASK_MAX_CHOICE)) {
+          return asToolResult({ ok: false, error: 'choices_required', detail: `Give 2–3 choices, each 1–${ASK_MAX_CHOICE} characters.` } satisfies ErrorResult);
+        }
+        const asked = typeof input.timeout_seconds === 'number' ? input.timeout_seconds : Number(input.timeout_seconds);
+        const seconds = Number.isFinite(asked) && asked > 0 ? Math.min(WAIT_MAX_SECONDS, asked) : WAIT_DEFAULT_SECONDS;
+        const choices = labels.map((label, i) => ({ id: `c${i + 1}`, label }));
+        const t0 = Date.now();
+        const result = await q.ask(question, choices, seconds * 1000, ctx?.signal);
+        const waited = round1((Date.now() - t0) / 1000);
+        if (result.stopped) {
+          return asToolResult({ ok: true, question, answer: null, stopped: true, waited_seconds: waited, next_step: 'The person said stop. Say goodbye and do not ask again.' });
+        }
+        if (result.answer === null) {
+          return asToolResult({ ok: true, question, answer: null, stopped: false, waited_seconds: waited, next_step: 'No answer yet. Ask again with the same choices, or wait with clinic_wait_for_request.' });
+        }
+        return asToolResult({
+          ok: true,
+          question,
+          answer: { index: result.answer.index, label: result.answer.choice.label, via: result.answer.via, seconds_to_answer: round1((result.answer.at - t0) / 1000) },
+          stopped: false,
+          next_step: 'Act on the choice with the other tools and tell the person what happened in one sentence.',
         });
       },
     },

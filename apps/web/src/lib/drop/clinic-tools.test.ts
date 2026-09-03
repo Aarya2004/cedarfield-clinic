@@ -285,7 +285,7 @@ test('schemas are stable: exactly seven tools take input, everything else is a b
   assert.deepEqual((get('clinic_leave_waitlist').inputSchema as { required: string[] }).required, ['slot_id']);
   assert.deepEqual((get('clinic_book_slot').inputSchema as { required: string[] }).required, ['slot_id']);
   assert.deepEqual((get('clinic_set_sign').inputSchema as { required: string[] }).required, ['shape', 'phrase']);
-  const WITH_INPUT = ['clinic_hold_slot', 'clinic_book_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist', 'clinic_wait_for_request', 'clinic_set_sign'];
+  const WITH_INPUT = ['clinic_ask', 'clinic_hold_slot', 'clinic_book_slot', 'clinic_prepare_move', 'clinic_find_slots', 'clinic_join_waitlist', 'clinic_leave_waitlist', 'clinic_wait_for_request', 'clinic_set_sign'];
   for (const def of defs.filter((d) => !WITH_INPUT.includes(d.name))) {
     assert.deepEqual(def.inputSchema, { type: 'object', properties: {}, additionalProperties: false });
   }
@@ -504,7 +504,7 @@ const FORBIDDEN_TOOL_NAMES = [
 test('no booking tool exists AT LOAD — the one that can book is born only by the human grant (SPEC-V9)', () => {
   const defs = clinicToolDefs(frozenSource([], []));
   const names = defs.map((d) => d.name);
-  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the defs are exactly the declared thirteen');
+  assert.deepEqual(names, [...CLINIC_TOOL_NAMES], 'the defs are exactly the declared sixteen');
   const atLoad: readonly string[] = [...BASE_TOOL_NAMES, ...WAITLIST_TOOL_NAMES, ...BOOKED_TOOL_NAMES];
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {
     assert.ok(!atLoad.includes(forbidden), `${forbidden} must never be registered without a grant`);

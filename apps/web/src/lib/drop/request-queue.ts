@@ -8,7 +8,30 @@
  *
  * Pure and small so it is unit-tested; the page owns exactly one instance.
  */
+import { matchChoice, type Choice } from './choice-match.ts';
+
 export type RequestVia = 'voice' | 'sign' | 'typed';
+
+/** One bounded question from the agent, on the page, waiting for the person (2026-09-03). */
+export interface Question {
+  at: number;
+  question: string;
+  choices: readonly Choice[];
+}
+
+export interface Answer {
+  at: number;
+  index: number;
+  choice: Choice;
+  /** How the person answered: a button/key on the card, or the same three roads as a request. */
+  via: RequestVia | 'button';
+}
+
+export interface AskResult {
+  answer: Answer | null;
+  /** The person said stop (or the panel's Stop): end the conversation. */
+  stopped: boolean;
+}
 
 export interface PersonRequest {
   /** Wall-clock ms when the page heard it. */
@@ -31,6 +54,16 @@ export interface RequestQueue {
    * panel showing "N waiting" is right the instant the agent takes one — never a second later.
    */
   subscribe(fn: (req: PersonRequest | null) => void): () => void;
+  /**
+   * Puts one question with 2–3 choices in front of the person and waits. A sentence pushed meanwhile
+   * that reads as an answer resolves it (and is never queued as a request); "stop" ends it; anything
+   * else queues as usual. A second ask supersedes the first (which resolves with no answer).
+   */
+  ask(question: string, choices: readonly Choice[], timeoutMs: number, signal?: AbortSignal): Promise<AskResult>;
+  /** The open question, if any — the panel renders it. */
+  question(): Question | null;
+  /** The person picked a choice on the card itself (button, key, switch). False if nothing was open. */
+  answer(index: number): boolean;
 }
 
 const MAX_TEXT = 400;
@@ -45,6 +78,14 @@ export function createRequestQueue(): RequestQueue {
   const taken = () => {
     for (const fn of listeners) fn(null);
   };
+  let open: { q: Question; resolve: (r: AskResult) => void } | null = null;
+  const settle = (r: AskResult) => {
+    const o = open;
+    if (o === null) return;
+    open = null;
+    o.resolve(r);
+    for (const fn of listeners) fn(null);
+  };
 
   return {
     push(text, via, at = Date.now()) {
@@ -53,6 +94,16 @@ export function createRequestQueue(): RequestQueue {
       const req: PersonRequest = { at, text: clean, via };
       history.unshift(req);
       if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+      // An open question reads the sentence first: an answer resolves it and is never a request.
+      if (open !== null) {
+        const m = matchChoice(clean, open.q.choices);
+        if (m !== null) {
+          for (const fn of listeners) fn(req);
+          if (m.kind === 'stop') settle({ answer: null, stopped: true });
+          else settle({ answer: { at, index: m.index, choice: open.q.choices[m.index]!, via }, stopped: false });
+          return req;
+        }
+      }
       const waiter = waiters.shift();
       if (waiter) waiter(req); // straight to the agent already waiting: never counted as pending
       else {
@@ -93,6 +144,35 @@ export function createRequestQueue(): RequestQueue {
     },
     pending: () => pending.length,
     history: () => history,
+    ask(question, choices, timeoutMs, signal) {
+      settle({ answer: null, stopped: false }); // a newer question supersedes an older one
+      if (signal?.aborted) return Promise.resolve({ answer: null, stopped: false });
+      const q: Question = { at: Date.now(), question, choices: choices.slice(0, 3) };
+      return new Promise<AskResult>((resolve) => {
+        const timer = setTimeout(() => settle({ answer: null, stopped: false }), Math.max(0, timeoutMs));
+        const onAbort = () => settle({ answer: null, stopped: false });
+        signal?.addEventListener('abort', onAbort, { once: true });
+        open = {
+          q,
+          resolve: (r) => {
+            clearTimeout(timer);
+            signal?.removeEventListener('abort', onAbort);
+            resolve(r);
+          },
+        };
+        for (const fn of listeners) fn(null);
+      });
+    },
+    question: () => open?.q ?? null,
+    answer(index) {
+      if (open === null || index < 0 || index >= open.q.choices.length) return false;
+      const choice = open.q.choices[index]!;
+      const at = Date.now();
+      history.unshift({ at, text: choice.label, via: 'typed' });
+      if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+      settle({ answer: { at, index, choice, via: 'button' }, stopped: false });
+      return true;
+    },
     subscribe(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);

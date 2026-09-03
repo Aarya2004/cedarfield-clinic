@@ -11,12 +11,12 @@ an item names one. Use only synthetic data. Do not book an appointment unless an
 Prior findings, to re-verify on this build:
 1. Fresh page → fetch tools → immediately call clinic_list_drops. Repeat 3 times on 3 fresh loads.
    PASS = no "stale" error on any first call.
-2. Tool list on the live board: 13 tools including clinic_wait_for_request and clinic_set_sign, on three fresh loads,
+2. Tool list on the live board: 14 tools including clinic_wait_for_request, clinic_ask and clinic_set_sign, on three fresh loads,
    (new since the last pass: a scanning keyboard under each patient-card field, and "answer aloud" on every dock —
    a spoken "yes" or the word shown on screen books, with "Listen for me" on; the grant card takes the word only),
    fetching about one second after the page shows the slot list (the page registers each set in
    parallel; Chrome fires toolchange as sets land — a fetch inside the first frames may catch a set
-   mid-registration and must be re-fetched on toolchange). PASS = 13 on all three.
+   mid-registration and must be re-fetched on toolchange). PASS = 14 on all three.
 3. clinic_explain_confirm: one protocol sentence — "No booking tool by default … a trusted, visible
    permission creates a one-use, ten-minute clinic_book_slot; cancel and move are never delegated".
    PASS = the answer contains that protocol and tool_that_books is null.
@@ -80,6 +80,17 @@ New on this build:
     hold's confirm bar, the same palm reads "an open palm (NN%) — hold it" (PASS).
 19. Fresh load with no profile: PASS = the card asks who the appointment is for; "Ada Okonkwo" never
     appears on the live board without the ?test=1 flag.
+20. clinic_ask({question:"Hold 10:30 with Dr Lin?", choices:["Hold it","Show another time"], timeout_seconds:45}):
+    PASS = a card "Your assistant asks: …" with two buttons and a Stop appears in the "Say it to the
+    page" panel while the call is open; press "Show another time" → the tool returns
+    answer:{index:1,label:"Show another time",via:"button"}; the card is gone; the assistant's record
+    says "asked you … — you chose …". Then call it with one choice → choices_required. Then call it
+    and type "the first one" into the typed line → index 0, via "typed", and NOTHING is queued
+    (waiting count stays 0).
+21. The permission card under "Your assistant": PASS = at load it reads Can / Cannot / Booking with
+    "no tool can book until…"; after a trusted press on "Let my assistant book for me" (or PASS-GUARD
+    if your press is scripted) it reads "Until <time> — one booking, for <patient>, when you say yes"
+    and the tool count is one higher; "Take that back" returns it.
 
 Then: list anything you saw that is not covered above, ranked P1/P2/P3, with the exact text. Say
 "no P1, no P2" explicitly if that is the case.

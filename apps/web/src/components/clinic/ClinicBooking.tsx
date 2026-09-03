@@ -880,12 +880,30 @@ export function ClinicBooking() {
               data-clinic-delegation={delegation !== null ? 'granted' : 'none'}
               data-clinic-synthetic-grants={syntheticGrants}
             >
+              {/* The permission card (2026-09-03): what the agent may do RIGHT NOW, as one object the eye
+                  cannot miss — can, cannot, until when, and the one control that changes it. It is a
+                  rendering of the live tool set, never a promise: the booking tool exists only while
+                  the card says so. */}
+              <dl className="cl-permit" data-clinic-permit={delegation !== null ? 'booking' : 'standard'} aria-label="Your assistant’s permission right now">
+                <div className="cl-permit__row">
+                  <dt>Can</dt>
+                  <dd>see the board · find times · hold and release · wait for your words · ask you one question{live ? ' · join the waiting line' : ''}</dd>
+                </div>
+                <div className="cl-permit__row">
+                  <dt>Cannot</dt>
+                  <dd>{delegation !== null ? 'cancel or move — those are yours' : 'book, cancel or move — those are yours: a press, a palm, or your spoken answer'}</dd>
+                </div>
+                <div className="cl-permit__row">
+                  <dt>{delegation !== null ? 'Until' : 'Booking'}</dt>
+                  <dd data-clinic-permit-until>
+                    {delegation !== null
+                      ? `${formatWallClock(delegation.until)} — one booking, for ${patient?.fullName ?? 'the patient on file'}, when you say yes`
+                      : 'no tool can book until you press below, hold up a palm, or say the word on screen'}
+                  </dd>
+                </div>
+              </dl>
               {delegation === null ? (
                 <>
-                  <p className="cl-prose">
-                    Your assistant can search, hold and queue for you, but no tool on this page can book. One press
-                    here lets it book <b>one</b> appointment in the next ten minutes, when you say yes to it.
-                  </p>
                   <button
                     type="button"
                     className="cl-quiet"

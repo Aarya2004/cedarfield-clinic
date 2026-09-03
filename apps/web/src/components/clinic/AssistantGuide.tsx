@@ -83,7 +83,11 @@ export function AssistantGuide() {
       </ol>
       <details className="cl-fold">
         <summary>How it works</summary>
-        <p className="cl-prose cl-guide__foot">
+        <p className="cl-prose cl-guide__judge" data-clinic-judge-door>
+        Trying this out? <a className="cl-link" href="/clinic/book?test=1">Open the seeded board</a> — the same wave every
+        time, a labelled sample patient, nothing shared with anyone; this page is the live board every visitor shares.
+      </p>
+      <p className="cl-prose cl-guide__foot">
           The tools register on their own; the line under the list confirms it. The booking is yours:{' '}
           <b>Enter</b> on the confirm bar, or an open palm to the camera. The assistant cannot press it.
           Everything it does is listed under the times. Cannot type into your assistant’s window? Use

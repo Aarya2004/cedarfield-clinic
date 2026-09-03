@@ -2195,3 +2195,81 @@ html:has(.cl-dock) {
 .cl-word[data-clinic-word-state='idle'] .cl-word__word {
   border-style: dashed;
 }
+
+/* --- the agent asks one question through the page (2026-09-03) ---------------------------- */
+
+.cl-ask {
+  margin: 0.75rem 0 0;
+  padding: 0.875rem 1rem;
+  border: 2px solid var(--clinic-ink);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.cl-ask__q {
+  margin: 0 0 0.625rem;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+}
+
+.cl-ask__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cl-ask__how {
+  margin: 0.625rem 0 0;
+  font-size: var(--clinic-small);
+  color: var(--clinic-muted);
+  line-height: 1.5;
+}
+
+/* --- the permission card: what the agent may do right now (2026-09-03) ---------------------- */
+
+.cl-permit {
+  margin: 0 0 0.875rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--clinic-ink);
+  border-radius: 0.5rem;
+  background: #fff;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.cl-permit[data-clinic-permit='booking'] {
+  border-color: var(--clinic-accent, #d97706);
+}
+
+.cl-permit__row {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.cl-permit dt {
+  font-weight: 700;
+  font-size: var(--clinic-small);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cl-permit dd {
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .cl-permit__row {
+    grid-template-columns: 1fr;
+    gap: 0.125rem;
+  }
+}
+
+.cl-guide__judge {
+  margin-top: 0.75rem;
+  font-size: var(--clinic-small);
+  color: var(--clinic-muted);
+}

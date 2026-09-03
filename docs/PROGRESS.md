@@ -25,6 +25,10 @@ seeing line ignored which camera it was on (`seeingCopy(seen, verb, armed)`, tes
 ~02:10 **Deployed `a5fca53`, verified twice** (verify-deployed ×2 green incl. routes + axe · live-two-visitors ×2 ·
 registry 13:13 ×3 on the live board · voice handshake 14/14). Evidence:
 `docs/evidence/clinic/2026-09-03-production-a5fca53.txt`. Codex re-audit prompt in `docs/CODEX-REAUDIT.md` (hash updated).
+~03:30 Terra (Codex 5.6) strategy pass → built the two real gaps: **`clinic_ask`** (agent asks one bounded
+question through the page; person answers any way they can; harness `invokeAsync`/`awaitInvoke`) and the
+**permission card**; README reframed visitor-first; judge door to the seeded board. Unit **503/503**;
+`clinic-ask` 48/48. Counts: seeded 12, granted 13, shared 14, sixteen names. Full r10 + deploy next.
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera

@@ -5,12 +5,16 @@
 > every proof re-run from this repo, and the live board's schema is committed under
 > `supabase/migrations/`.
 
-A clinic releases cancelled appointments in waves. They are gone in seconds. On this page your
-agent does the fast, expensive part — watch the drop, compare, **hold** a slot the instant it
-appears — and then it stops, because **there is no booking tool when the page loads**. The only
-thing that books an appointment is one act from the person the appointment is for: **one key, one
-switch press, or one held gesture.** Nothing an agent can call, and nothing a script can fake,
-reaches that step.
+**A visitor arrives at a public page with their own agent and their own way of communicating.**
+Typed, spoken, a hand shape the camera reads as a switch, a scanning keyboard driven by two of
+them. The page tells that agent, through WebMCP, exactly what it may do right now — see the
+board, find times, hold and release, wait for the person's words, ask them one bounded question —
+and the visitor answers in whatever way they can. **The page never lets the agent commit.** There
+is no booking tool when the page loads; one is born from one act only the person can perform — a
+press, an open palm, or a word shown on screen only they can see — lives ten minutes, and dies on
+use or revoke. A permission card shows the contract at every moment. The clinic is the proving
+ground: cancelled appointments released in waves, gone in seconds, exactly where an agent is worth
+having and exactly where it must not decide for you.
 
 **One tool surface, three clients.** Codex consumes these tools from its browser pane. Chrome 152
 exposes them to any agent. And the page hosts its own voice client — **Talk to Cedarfield** — an
@@ -93,8 +97,8 @@ flows, end to end, in real time.
 
 ## What makes this WebMCP, specifically
 
-**The tool that is missing is the design — and the tool that appears is the proof.** Nine base tools
-are registered on `/clinic/book` when it loads (eleven on the shared board, which adds two queue verbs) — including the arming tools, on purpose: a person
+**The tool that is missing is the design — and the tool that appears is the proof.** Twelve tools
+are registered on `/clinic/book` when it loads (fourteen on the shared board, which adds two queue verbs) — including the arming tools, on purpose: a person
 with no booking must still hear *"you have nothing booked"* from their agent, and a voice user
 whose client is slow to notice `toolchange` must never lose a capability. The tenth,
 `clinic_my_appointment`, **does not exist until a person has booked**: the moment the trusted press
@@ -124,9 +128,9 @@ is always one trusted press from you.
 | *shared board only:* `clinic_join_waitlist` | ❌ | Puts your human **in line** for a taken slot. If it comes back, it is theirs first — as a fresh hold, in order. Reversible |
 | *shared board only:* `clinic_leave_waitlist` | ❌ | Takes them out of the line |
 
-**Counted honestly:** eleven tools on the seeded board (`?test=1`), **thirteen on the shared board**
+**Counted honestly:** twelve tools on the seeded board (`?test=1`), **fourteen on the shared board**
 every real visitor is on (the two queue verbs); one more while your permission stands, one more once
-you have booked. Fifteen names in the vocabulary, at most fourteen live at once, well inside Chrome's
+you have booked. Sixteen names in the vocabulary, at most fourteen live at once, well inside Chrome's
 guidance of about thirty. The base set is registered once and never re-registered: handles a client
 fetched at load stay valid; everything state-dependent is born on its own controller.
 

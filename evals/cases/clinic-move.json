@@ -50,7 +50,7 @@
   "_doc": "Moving onto the slot you already have is refused with same_slot."
  },
  {
-  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '12'",
+  "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '13'",
   "timeout": 8000
  },
  {

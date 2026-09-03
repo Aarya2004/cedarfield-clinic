@@ -13,7 +13,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GestureConfirm } from '../drop/GestureConfirm.tsx';
-import type { PersonRequest, RequestQueue } from '../../lib/drop/request-queue.ts';
+import type { PersonRequest, Question, RequestQueue } from '../../lib/drop/request-queue.ts';
+import { loadAudioPref } from '../../lib/drop/audio-cues.ts';
 import { routeSign } from '../../lib/drop/sign-sink.ts';
 import { routeTranscript } from '../../lib/drop/word-sink.ts';
 import { DEFAULT_SIGN_MAP, SIGNS_CHANGED, SIGN_PHRASE_MAX, SIGN_SHAPES, loadSignMap, phraseFor, saveSignMap, type SignMap, type SignShape } from '../../lib/drop/sign-map.ts';
@@ -55,6 +56,17 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
   const [interim, setInterim] = useState('');
   const [history, setHistory] = useState<readonly PersonRequest[]>([]);
   const [pending, setPending] = useState(0);
+  /** The agent's open question, rendered as a card the person answers any way they can. */
+  const [question, setQuestion] = useState<Question | null>(null);
+  const spokenQuestionRef = useRef<number>(0);
+  useEffect(() => {
+    if (question === null || spokenQuestionRef.current === question.at) return;
+    spokenQuestionRef.current = question.at;
+    if (!loadAudioPref(window.localStorage) || !('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(`Your assistant asks: ${question.question} ${question.choices.map((c, i) => `${i === 0 ? '' : 'or '}${c.label}`).join(', ')}.`);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }, [question]);
   const [typed, setTyped] = useState('');
   const [error, setError] = useState('');
   const [signsOn, setSignsOn] = useState(false);
@@ -119,6 +131,7 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
     const sync = () => {
       setHistory([...queue.history()]);
       setPending(queue.pending());
+      setQuestion(queue.question());
     };
     sync();
     const off = queue.subscribe(sync);
@@ -154,10 +167,13 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i]!;
         if (r.isFinal) {
-          // A confirm word (or a clean yes) is checked first; the sentence that carries it acts,
-          // never queues. Not while the page itself is talking: its own voice must never confirm.
+          // Nothing the page itself says can be an answer, a confirm or a request: while it is
+          // talking (a spoken question, a spoken record line) finals are dropped, not routed.
           const pageTalking = typeof speechSynthesis !== 'undefined' && speechSynthesis.speaking;
-          if (pageTalking || !routeTranscript(r[0].transcript)) queue.push(r[0].transcript, 'voice');
+          if (pageTalking) continue;
+          // A confirm word (or a clean yes) is checked first; the sentence that carries it acts,
+          // never queues. An open question reads it next (inside push).
+          if (!routeTranscript(r[0].transcript)) queue.push(r[0].transcript, 'voice');
           live = '';
         } else live += r[0].transcript;
       }
@@ -320,6 +336,27 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
             ) : null}
           </p>
           <GestureConfirm verb="sign" onConfirm={() => {}} armed={false} onSign={onSign} onRunningChange={setSignsOn} autoStart={false} />
+        </div>
+      ) : null}
+
+      {question !== null ? (
+        <div className="cl-ask" role="group" aria-labelledby="cl-ask-q" data-clinic-ask={question.choices.length}>
+          <p id="cl-ask-q" className="cl-ask__q">
+            Your assistant asks: <b data-clinic-ask-question>{question.question}</b>
+          </p>
+          <div className="cl-ask__choices">
+            {question.choices.map((c, i) => (
+              <button key={c.id} type="button" className="cl-cta cl-cta--sm" data-clinic-ask-choice={i} onClick={() => queue.answer(i)}>
+                {c.label}
+              </button>
+            ))}
+            <button type="button" className="cl-quiet" data-clinic-ask-stop onClick={() => queue.push('stop', 'typed')}>
+              Stop
+            </button>
+          </div>
+          <p className="cl-ask__how">
+            Or say it, type it below, or show a shape: thumbs up means the first, “another one” the second. Choosing here decides nothing on the board — booking still needs your press or palm.
+          </p>
         </div>
       ) : null}
 

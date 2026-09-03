@@ -1,0 +1,26 @@
+[
+ {
+  "_doc": [
+   "clinic-permit — the permission card (2026-09-03): what the agent may do RIGHT NOW as one object.",
+   "Standard at load (can search/hold/wait/ask; cannot book/cancel/move); a trusted press on 'Let my",
+   "assistant book for me' turns it into a one-time booking permission naming the patient and the time",
+   "it lapses; 'Take that back' returns it to standard. The card renders the live tool set, so the",
+   "count moves with it: seeded 12 → 13 → 12."
+  ]
+ },
+ { "waitFor": "!!document.querySelector('[data-slot-state=\"open\"]')", "timeout": 25000 },
+ { "waitFor": "document.querySelector('[data-clinic-permit]')?.getAttribute('data-clinic-permit') === 'standard'", "timeout": 6000 },
+ { "eval": "/ask you one question/.test(document.querySelector('[data-clinic-permit]')?.textContent ?? '') && /book, cancel or move/.test(document.querySelector('[data-clinic-permit]')?.textContent ?? '')", "equals": true },
+ { "eval": "/no tool can book/.test(document.querySelector('[data-clinic-permit-until]')?.textContent ?? '')", "equals": true },
+ { "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '12'", "timeout": 8000 },
+ { "waitFor": "document.querySelector('[data-clinic-patient]')?.getAttribute('data-clinic-patient') === 'on-file'", "timeout": 8000 },
+ { "focus": "[data-clinic-delegate]" },
+ { "type": "\r" },
+ { "waitFor": "document.querySelector('[data-clinic-permit]')?.getAttribute('data-clinic-permit') === 'booking'", "timeout": 6000 },
+ { "eval": "/one booking, for Ada Okonkwo, when you say yes/.test(document.querySelector('[data-clinic-permit-until]')?.textContent ?? '')", "equals": true },
+ { "eval": "/cancel or move — those are yours/.test(document.querySelector('[data-clinic-permit]')?.textContent ?? '')", "equals": true },
+ { "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '13'", "timeout": 6000 },
+ { "eval": "(() => { const b = [...document.querySelectorAll('button')].find(x => /take that back/i.test(x.textContent ?? '')); if (!b) return false; b.click(); return true; })()", "equals": true },
+ { "waitFor": "document.querySelector('[data-clinic-permit]')?.getAttribute('data-clinic-permit') === 'standard'", "timeout": 6000 },
+ { "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '12'", "timeout": 6000 }
+]

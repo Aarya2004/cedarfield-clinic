@@ -71,7 +71,7 @@ await new Promise((resolve, reject) => {
 let id = 0; const pending = new Map();
 /** Set by a `viewport` step; makes `shot` photograph the size the case actually asserted at. */
 let viewport = null;
-const tools = new Map(); const responded = []; const pageErrors = [];
+const tools = new Map(); const responded = []; const pageErrors = []; const asyncCalls = new Map(); const claimed = new Set();
 ws.onmessage = (ev) => {
   const m = JSON.parse(ev.data);
   if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); return; }
@@ -171,6 +171,36 @@ for (const step of steps) {
       if (ok && step.outputMatches && !new RegExp(step.outputMatches).test(JSON.stringify(output))) ok = false;
       if (!ok) await fail();
       out({ step: 'invoke', tool: step.invoke, input, status, output, ...(step.outputMatches ? { outputMatches: step.outputMatches, ok } : {}), ms: Math.round(performance.now() - t0) });
+    } else if (step.invokeAsync) {
+      // Start a tool call and keep going — for tools that wait on the person (clinic_ask). The page
+      // must be driven while the call is open; `awaitInvoke` collects it later.
+      const input = { ...(step.input ?? {}) };
+      for (const [k, expr] of Object.entries(step.inputFrom ?? {})) input[k] = await evalJs(expr);
+      const before = responded.length;
+      const p = send('WebMCP.invokeTool', { frameId, toolName: step.invokeAsync, input }).catch((error) => ({ error }));
+      asyncCalls.set(step.as ?? step.invokeAsync, { p, before, t0: performance.now(), tool: step.invokeAsync, input });
+      out({ step: 'invokeAsync', tool: step.invokeAsync, as: step.as ?? step.invokeAsync, input, ok: true });
+    } else if (step.awaitInvoke) {
+      const c = asyncCalls.get(step.awaitInvoke);
+      if (!c) { out({ step: 'awaitInvoke', as: step.awaitInvoke, ok: false, error: 'no such call' }); await fail(); }
+      else {
+        const inv = await c.p;
+        const budget = step.timeout ?? 5000;
+        // Open calls answer in any order: take the first response after this call began that no
+        // earlier awaitInvoke has claimed.
+        let idx = c.before;
+        while (claimed.has(idx)) idx++;
+        while (responded.length <= idx && !inv.error && performance.now() - t0 < budget) await sleep(20);
+        const r = responded[idx];
+        if (r) claimed.add(idx);
+        const status = inv.error ? 'CDP_ERROR' : (r?.status ?? 'NO_RESPONSE');
+        const output = r?.output ?? r?.exception?.description ?? inv.error?.message ?? null;
+        let ok = status === (step.expectStatus ?? 'Completed');
+        if (ok && step.outputMatches && !new RegExp(step.outputMatches).test(JSON.stringify(output))) ok = false;
+        if (!ok) await fail();
+        asyncCalls.delete(step.awaitInvoke);
+        out({ step: 'awaitInvoke', tool: c.tool, as: step.awaitInvoke, input: c.input, status, output, ...(step.outputMatches ? { outputMatches: step.outputMatches, ok } : {}), ms: Math.round(performance.now() - c.t0) });
+      }
     } else if (step.focus) {
       // Explicit only. Harness rule: never arrange a precondition a human would not have.
       out({ step: 'focus', selector: step.focus, ok: await evalJs(`(() => { const el = document.querySelector(${JSON.stringify(step.focus)}); if (!el) return false; el.focus(); return document.activeElement === el; })()`) });

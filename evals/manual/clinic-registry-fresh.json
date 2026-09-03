@@ -12,5 +12,5 @@
   {"expect": {"tool": "clinic_join_waitlist"}},
   {"expect": {"tool": "clinic_leave_waitlist"}},
   {"expect": {"noTool": "clinic_book_slot"}},
-  {"eval": "(() => { const live = (document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').split(' ').filter(Boolean); const browser = Number(document.querySelector('[data-clinic-browser-count]')?.getAttribute('data-clinic-browser-count')); return live.length + ':' + browser; })()", "equals": "13:13"}
+  {"eval": "(() => { const live = (document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools-live') ?? '').split(' ').filter(Boolean); const browser = Number(document.querySelector('[data-clinic-browser-count]')?.getAttribute('data-clinic-browser-count')); return live.length + ':' + browser; })()", "equals": "14:14"}
 ]
