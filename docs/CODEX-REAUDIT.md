@@ -91,6 +91,9 @@ New on this build:
     "no tool can book until…"; after a trusted press on "Let my assistant book for me" (or PASS-GUARD
     if your press is scripted) it reads "Until <time> — one booking, for <patient>, when you say yes"
     and the tool count is one higher; "Take that back" returns it.
+22. The assistant's pointer: after any successful tool call (say clinic_hold_slot), PASS = a small dark
+    pill reading "your assistant · held …" appears ON the held row itself and fades after ~5 s; after
+    clinic_ask it sits on the "Say it to the page" panel.
 
 Then: list anything you saw that is not covered above, ranked P1/P2/P3, with the exact text. Say
 "no P1, no P2" explicitly if that is the case.

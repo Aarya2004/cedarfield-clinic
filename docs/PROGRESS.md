@@ -36,7 +36,11 @@ Codex pass 1 on 1e3ac6f: 18 PASS/PASS-GUARD, 3 FAIL (voice cap spent by our prob
 keyboard's Select button; sign-camera palm copy), no P1/P2 — all fixed at the root.
 ~05:40 **Deployed `057b8de`, verified twice** (36/36 ×2 · live 25/25 ×2 · registry 14:14 ×3 · voice 14/14).
 Evidence `docs/evidence/clinic/2026-09-03-production-057b8de.txt`. Codex prompt at that hash.
-Owed by humans: Codex pass 2 (and a clean pass 3), Arav's hands/voice pass, the video, the Devpost text.
+Codex pass 2 on 057b8de: 2 P1 (first-snapshot tools; typed answers to clinic_ask), 1 P2 (not a regression).
+~07:30 Fixed at the root: inline bootstrap registers the twelve load-time tools before any bundle
+(`clinic-bootstrap.ts`, CSP-nonced, 4 tests, `clinic-first-call.json` lists+calls with no wait); ask takes a
+typed answer and one given up to 20 s early; the assistant's pointer rendered into the touched element.
+Unit **508/508**. Full r11 + deploy + double round next. Owed by humans: Codex pass 3, Arav's hands/voice pass, the video, the Devpost text.
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera

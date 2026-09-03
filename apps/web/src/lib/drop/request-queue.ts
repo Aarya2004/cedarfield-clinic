@@ -69,6 +69,8 @@ export interface RequestQueue {
 const MAX_TEXT = 400;
 const MAX_PENDING = 20;
 const MAX_HISTORY = 12;
+/** How far back a pending request may be read as the answer to a question that opens after it. */
+const EARLY_ANSWER_MS = 20_000;
 
 export function createRequestQueue(): RequestQueue {
   const pending: PersonRequest[] = [];
@@ -148,6 +150,20 @@ export function createRequestQueue(): RequestQueue {
       settle({ answer: null, stopped: false }); // a newer question supersedes an older one
       if (signal?.aborted) return Promise.resolve({ answer: null, stopped: false });
       const q: Question = { at: Date.now(), question, choices: choices.slice(0, 3) };
+      // A person often answers before the agent's call lands — the agent said the question in its
+      // chat, they typed "the first one", then the tool opened (Codex re-audit 2026-09-03). A pending
+      // request from the last EARLY_ANSWER_MS that reads as a choice is that answer, not a request.
+      const cutoff = q.at - EARLY_ANSWER_MS;
+      for (let i = 0; i < pending.length; i++) {
+        const r = pending[i]!;
+        if (r.at < cutoff) continue;
+        const m = matchChoice(r.text, q.choices);
+        if (m === null) continue;
+        pending.splice(i, 1);
+        taken();
+        if (m.kind === 'stop') return Promise.resolve({ answer: null, stopped: true });
+        return Promise.resolve({ answer: { at: r.at, index: m.index, choice: q.choices[m.index]!, via: r.via }, stopped: false });
+      }
       return new Promise<AskResult>((resolve) => {
         const timer = setTimeout(() => settle({ answer: null, stopped: false }), Math.max(0, timeoutMs));
         const onAbort = () => settle({ answer: null, stopped: false });

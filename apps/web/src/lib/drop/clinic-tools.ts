@@ -40,6 +40,7 @@ import type { DropSession } from '../../components/drop/useDropSession.ts';
 import { getModelContext, type ModelContext, type ModelContextTool } from '../webmcp/types.ts';
 // Chrome's secure-tools guidance, already agreed for the terminal tools: one tool result ≤ 1.5K chars.
 import { OUTPUT_BUDGET_CHARS } from '../webmcp/schemas.ts';
+import { bootstrapHandle } from './clinic-bootstrap.ts';
 
 // ── names ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -1577,8 +1578,22 @@ export async function registerClinicTools(
     if (!disposed) onState({ kind: 'registered', names: liveNames(), ...(browserCount !== undefined ? { browserCount } : {}) });
   };
 
+  // Tools already in the first snapshot (clinic-bootstrap.ts): the inline script registered the
+  // load-time set before any bundle ran; the app only takes over their execution. Nothing is
+  // registered twice, and a client that fetched at navigation holds handles that stay valid.
+  const pre = bootstrapHandle();
+  const preNames = new Set(pre?.names ?? []);
+  if (pre) {
+    const byName = new Map(defs.map((def) => [def.name, toTool(def)] as const));
+    pre.execute = (name, input, ctx) => {
+      const tool = byName.get(name as ClinicToolName);
+      if (!tool) return Promise.resolve(asToolResult({ ok: false, error: 'unknown_tool', detail: `No tool named ${name}.` } satisfies ErrorResult));
+      return tool.execute(input, ctx as Parameters<typeof tool.execute>[1]);
+    };
+    pre.resolve();
+  }
   try {
-    await registerSet(loadSet, base.signal);
+    await registerSet(loadSet.filter((n) => !preNames.has(n)), base.signal);
     await report();
   } catch (e) {
     // Half a surface is worse than none: a throw mid-loop must not leave the earlier tools live
@@ -1645,6 +1660,7 @@ export async function registerClinicTools(
 
   return () => {
     disposed = true;
+    if (pre) pre.execute = null; // the page is going: bootstrap tools answer page_not_ready
     clearInterval(watch);
     for (const ac of born.values()) ac.abort();
     born.clear();

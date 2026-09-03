@@ -73,6 +73,7 @@ import {
   waveIndexAt,
   waveSeed,
 } from './wave-clock.ts';
+import { createPortal } from 'react-dom';
 import './clinic-tokens.css';
 import './clinic.css';
 
@@ -117,6 +118,38 @@ function delegationMs(): number {
 }
 
 /** "2:24 PM" — when a standing permission ends, in the visitor's own clock. */
+/** Where a call lands on the page, so the assistant's pointer can stand there. Null = nowhere visible. */
+function pointerTargetFor(name: string, ok: boolean): string | null {
+  if (!ok) return '[data-clinic-agent-log]';
+  switch (name) {
+    case 'clinic_book_slot':
+      return '[data-clinic-appointment]';
+    case 'clinic_hold_slot':
+      return '[data-slot-state="held_by_you"]';
+    case 'clinic_release_hold':
+    case 'clinic_list_drops':
+    case 'clinic_find_slots':
+    case 'clinic_clinicians':
+    case 'clinic_hold_status':
+    case 'clinic_my_appointment':
+    case 'clinic_explain_confirm':
+      return '[data-clinic-agent-log]';
+    case 'clinic_prepare_cancel':
+    case 'clinic_prepare_move':
+      return '[data-clinic-dock]';
+    case 'clinic_ask':
+    case 'clinic_wait_for_request':
+      return '[data-clinic-listen]';
+    case 'clinic_set_sign':
+      return '[data-clinic-signs]';
+    case 'clinic_join_waitlist':
+    case 'clinic_leave_waitlist':
+      return '[data-clinic-agent-log]';
+    default:
+      return null;
+  }
+}
+
 function formatWallClock(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
@@ -510,24 +543,39 @@ export function ClinicBooking() {
     }
     // Bring the thing that changed into view: a booking → the appointment card; anything else that
     // succeeded → the record under the times, so the person sees the row appear.
-    const target =
-      record.name === 'clinic_book_slot' && record.ok
-        ? '[data-clinic-appointment]'
-        : record.name === 'clinic_hold_slot' && record.ok
-          ? '[data-slot-state="held_by_you"]'
-          : null;
+    const target = pointerTargetFor(record.name, record.ok);
     if (target === null) return;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const moves = record.name === 'clinic_book_slot' || record.name === 'clinic_hold_slot';
     setTimeout(() => {
       const el = document.querySelector<HTMLElement>(target);
       if (el === null) return;
-      el.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+      if (moves) el.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
       // A visible pulse on the thing the assistant changed — "it happened HERE" — honouring
       // reduced motion (the CSS rule is behind the media query).
       el.setAttribute('data-clinic-flash', 'true');
       setTimeout(() => el.removeAttribute('data-clinic-flash'), 1800);
+      // The assistant's pointer (2026-09-03, Arav: "have the cursor so users can see what's being
+      // clicked"): the agent has no hand, so the page draws one — a marker at the thing the last
+      // call touched, labelled in the record's words. Measured after the scroll settles.
+      // Rendered INTO the element it points at (a portal), so it sits on the thing itself through
+      // any scroll, in any pane, with no geometry to get wrong.
+      setPointer({ label: `your assistant · ${record.summary}`, el, at: Date.now() });
     }, 250);
   }, []);
+  /** The assistant's pointer: where the last call landed, in document coordinates. */
+  const [pointer, setPointer] = useState<{ label: string; el: HTMLElement; at: number } | null>(null);
+  const [pointerGone, setPointerGone] = useState(false);
+  useEffect(() => {
+    if (pointer === null) return;
+    setPointerGone(false);
+    const fade = setTimeout(() => setPointerGone(true), 5000);
+    const drop = setTimeout(() => setPointer((p) => (p === pointer ? null : p)), 5600);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(drop);
+    };
+  }, [pointer]);
   useEffect(() => {
     if (lastCall === null) return;
     const t = setTimeout(() => setLastCall((c) => (c === lastCall ? null : c)), 9000);
@@ -712,6 +760,14 @@ export function ClinicBooking() {
 
   return (
     <div className="clinic" data-clinic-route="book" data-clinic-wave={wave} data-clinic-board={live ? 'live' : liveFailed ? 'fallback' : 'seeded'}>
+      {pointer !== null && pointer.el.isConnected
+        ? createPortal(
+            <span className="cl-pointer" aria-hidden="true" data-clinic-pointer={pointer.label} data-clinic-pointer-state={pointerGone ? 'gone' : 'shown'}>
+              {pointer.label}
+            </span>,
+            pointer.el,
+          )
+        : null}
       <main className="cl-shell">
         <Masthead
           bar

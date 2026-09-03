@@ -1,0 +1,21 @@
+[
+ {
+  "_doc": [
+   "clinic-first-call — the tools exist in the FIRST snapshot (2026-09-03, Codex re-audit pass 2, P1:",
+   "'clinic_list_drops is not available in this snapshot' on three fresh loads). No waitFor before the",
+   "first two steps on purpose: the very first thing a client does after navigation is list and call.",
+   "The inline bootstrap (clinic-bootstrap.ts) registered the twelve load-time tools before any bundle;",
+   "a call made before the app hydrates is held and answered when it is ready — never refused."
+  ]
+ },
+ { "list": true },
+ { "eval": "1", "equals": 1 },
+ { "invoke": "clinic_list_drops", "input": {}, "timeout": 15000, "outputMatches": "open_count" },
+ { "invoke": "clinic_explain_confirm", "input": {}, "timeout": 15000, "outputMatches": "tool_that_books" },
+ { "_doc": "After hydration the page's own count and the browser's agree, and nothing was registered twice." },
+ { "waitFor": "document.querySelector('[data-clinic-tools]')?.getAttribute('data-clinic-tools') === 'registered'", "timeout": 15000 },
+ { "waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '12'", "timeout": 8000 },
+ { "eval": "(() => { const h = window.__cedarfieldTools; return !!h && h.names.length === 12 && typeof h.execute === 'function'; })()", "equals": true },
+ { "invoke": "clinic_list_drops", "input": {}, "outputMatches": "open_count" },
+ { "invoke": "clinic_hold_status", "input": {}, "outputMatches": "held" }
+]

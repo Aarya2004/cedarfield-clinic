@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { ClinicBooking } from '@/components/clinic/ClinicBooking';
+import { bootstrapScript, loadToolDescriptors } from '@/lib/drop/clinic-bootstrap';
+
+/** Static: the same twelve descriptors on every request, computed once per server. */
+const BOOTSTRAP = bootstrapScript(loadToolDescriptors());
 
 /**
  * Load-bearing, not cosmetic — the same reason as `/clinic`. `middleware.ts` mints the CSP nonce per
@@ -15,6 +20,14 @@ export const metadata: Metadata = {
     'Cancelled appointments at Cedarfield Clinic, released as they come in. Choose a time, give the patient’s details, and confirm.',
 };
 
-export default function ClinicBookPage() {
-  return <ClinicBooking />;
+export default async function ClinicBookPage() {
+  // The tools exist from the first byte (clinic-bootstrap.ts): registered by this inline script under
+  // the request's CSP nonce, before any bundle; the app takes over their execution when it hydrates.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  return (
+    <>
+      <script nonce={nonce} dangerouslySetInnerHTML={{ __html: BOOTSTRAP }} />
+      <ClinicBooking />
+    </>
+  );
 }

@@ -96,3 +96,25 @@ test('ask: the card button answers; stop stops; timeout and supersede resolve wi
   await p6;
   assert.ok(notified >= 2, 'the panel is told when a question opens and when it closes');
 });
+
+test('ask: an answer given a few seconds BEFORE the question opened is taken as the answer, not left as a request', async () => {
+  const q = createRequestQueue();
+  const choices = [
+    { id: 'c1', label: 'Hold it' },
+    { id: 'c2', label: 'Show another time' },
+  ];
+  q.push('is Dr Rao in on Tuesday?', 'typed', Date.now() - 5000);
+  q.push('the first one', 'typed', Date.now() - 3000);
+  assert.equal(q.pending(), 2);
+  const r = await q.ask('Hold 10:30 with Dr Lin?', choices, 5000);
+  assert.equal(r.answer?.index, 0);
+  assert.equal(r.answer?.via, 'typed');
+  assert.equal(q.pending(), 1, 'the unrelated request is still waiting; the answer was consumed');
+  assert.equal(q.question(), null);
+  // too old is a request, not an answer
+  const q2 = createRequestQueue();
+  q2.push('yes', 'voice', Date.now() - 60_000);
+  const p = q2.ask('Keep looking?', choices, 30);
+  assert.deepEqual(await p, { answer: null, stopped: false });
+  assert.equal(q2.pending(), 1);
+});
