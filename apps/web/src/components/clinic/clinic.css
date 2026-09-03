@@ -2711,3 +2711,8 @@ html:has(.cl-dock) {
     animation: none;
   }
 }
+
+.cl-listen__fate {
+  color: var(--clinic-muted);
+  font-size: var(--clinic-small);
+}

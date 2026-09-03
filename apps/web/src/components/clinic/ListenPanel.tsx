@@ -444,11 +444,20 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
         {history.slice(0, 4).map((r) => (
           <li key={`${r.at}-${r.text}`} data-clinic-heard={r.via} data-clinic-heard-pending={queue.isPending(r.at) ? 'true' : 'false'}>
             <span className="cl-listen__via">{r.via === 'voice' ? 'Heard' : r.via === 'sign' ? 'Signed' : 'Typed'}</span> “{r.text}”
+            {/* Its fate, in words — a button that vanishes the moment the agent takes the request read as a
+                glitch (Arav, 2026-09-03). Now the line says which it is. */}
             {queue.isPending(r.at) ? (
-              <button type="button" className="cl-link cl-listen__takeback" data-clinic-heard-takeback onClick={() => queue.withdraw(r.at)}>
-                Take it back
-              </button>
-            ) : null}
+              <span className="cl-listen__fate" data-clinic-heard-fate="waiting">
+                · waiting for your assistant{' '}
+                <button type="button" className="cl-link cl-listen__takeback" data-clinic-heard-takeback onClick={() => queue.withdraw(r.at)}>
+                  Take it back
+                </button>
+              </span>
+            ) : (
+              <span className="cl-listen__fate" data-clinic-heard-fate="taken">
+                · taken by your assistant
+              </span>
+            )}
           </li>
         ))}
         {last === null ? <li className="cl-listen__empty">Nothing yet.</li> : null}

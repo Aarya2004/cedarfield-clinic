@@ -166,7 +166,7 @@ export type ClinicToolName = (typeof CLINIC_TOOL_NAMES)[number];
  * decided it had finished reading descriptions.
  */
 export const HOLD_CHOREOGRAPHY =
-  'The slot is held. Tell your human: one keypress on the page books it — you cannot.';
+  'The slot is held. Tell your human: one keypress on the page books it — you cannot. If clinic_ask exists, ask them now with two choices: keep this time, or show another.';
 
 export const CANCEL_CHOREOGRAPHY =
   'The dock is armed to CANCEL. Tell your human: one keypress on the page cancels it — you cannot.';
@@ -1353,7 +1353,7 @@ export function clinicToolDefs(source: ClinicToolsSource, options: ClinicToolsOp
           next_step:
             req.text.toLowerCase() === 'stop'
               ? 'The person said stop. Say goodbye and do not call clinic_wait_for_request again.'
-              : 'Act on this with the other tools, tell the person what happened in one sentence, then call clinic_wait_for_request again.',
+              : 'If the request needs a decision (which time; keep it or change it), put 2–3 short choices to the person with clinic_ask and act on their answer. Otherwise act on it with the other tools. Tell the person what happened in one sentence, then call clinic_wait_for_request again.',
         });
       },
     },
