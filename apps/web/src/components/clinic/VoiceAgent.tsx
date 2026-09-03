@@ -40,6 +40,7 @@ interface RealtimeEvent {
   type: string;
   response?: { output?: Array<{ type: string; name?: string; call_id?: string; arguments?: string }> };
   transcript?: string;
+  delta?: string;
   error?: { message?: string };
 }
 
@@ -82,6 +83,9 @@ export function VoiceAgent({ executor, disabled = false, disabledReason, onLiveC
   const callsRef = useRef<AbortController | null>(null);
   const [reason, setReason] = useState<string>('');
   const [said, setSaid] = useState<string>('');
+  /** Captions: what the agent is saying right now (streamed), and the last thing it heard from the person. */
+  const [saying, setSaying] = useState<string>('');
+  const [heard, setHeard] = useState<string>('');
   const [calls, setCalls] = useState(0);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
@@ -123,6 +127,9 @@ export function VoiceAgent({ executor, disabled = false, disabledReason, onLiveC
           // "Missing required parameter: 'session.type'" and closes the call (found by the
           // fake-microphone proof against production, 2026-09-02).
           type: 'realtime',
+          // Captions (2026-09-03): the person's words come back as text too, so a Deaf or hard-of-hearing
+          // person, or anyone in a quiet room, reads both halves of the call on the page.
+          audio: { input: { transcription: { model: 'gpt-4o-mini-transcribe' } } },
           tools: ex.tools.map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: t.inputSchema })),
           tool_choice: 'auto',
         },
@@ -141,7 +148,14 @@ export function VoiceAgent({ executor, disabled = false, disabledReason, onLiveC
       } catch {
         return;
       }
+      if (ev.type === 'response.output_audio_transcript.delta' && typeof ev.delta === 'string') {
+        setSaying((s) => (s + ev.delta).slice(-400));
+      }
+      if (ev.type === 'conversation.item.input_audio_transcription.completed' && typeof ev.transcript === 'string') {
+        setHeard(ev.transcript);
+      }
       if (ev.type === 'response.output_audio_transcript.done' && typeof ev.transcript === 'string') {
+        setSaying('');
         setSaid(ev.transcript);
         return;
       }
@@ -185,6 +199,8 @@ export function VoiceAgent({ executor, disabled = false, disabledReason, onLiveC
     setState('connecting');
     setReason('');
     setSaid('');
+    setSaying('');
+    setHeard('');
     setCalls(0);
     callsRef.current = new AbortController();
     // 1. The microphone FIRST — a refusal must not spend a ticket (2026-09-02 review, P2-3).
@@ -280,6 +296,20 @@ export function VoiceAgent({ executor, disabled = false, disabledReason, onLiveC
           </button>
         )}
       </div>
+      {state === 'live' || heard !== '' || saying !== '' ? (
+        <div className="cl-voice__captions" aria-live="polite" data-clinic-voice-captions>
+          {heard !== '' ? (
+            <p className="cl-voice__cap cl-voice__cap--you" data-clinic-voice-heard>
+              <span className="cl-voice__who">You</span> {heard}
+            </p>
+          ) : null}
+          {saying !== '' || said !== '' ? (
+            <p className="cl-voice__cap" data-clinic-voice-saying>
+              <span className="cl-voice__who">Cedarfield</span> {saying !== '' ? saying : said}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <p className="cl-voice__status" role="status" data-clinic-voice-status>
         {disabled && state !== 'live' && state !== 'connecting'
           ? (disabledReason ?? 'Paused while the page is capturing above — one capture at a time.')

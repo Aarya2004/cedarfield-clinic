@@ -343,6 +343,10 @@ export function GestureConfirm({
       setPhase(null);
       setRunning(true);
       cameraBus.dispatchEvent(new CustomEvent('claim', { detail: instanceId.current }));
+      // Remembered for this visit: once a person has used a camera here, every later camera surface
+      // (the confirm bar's, the grant card's) opens by itself — a palm shown to the bar must never
+      // meet a closed lens (Arav's hand test, 2026-09-03: "it does not register to start the booking").
+      (window as unknown as { __cedarfieldCameraUsed?: boolean }).__cedarfieldCameraUsed = true;
       setLive(
         verb === 'sign'
           ? 'Camera on. Show thumbs up, thumbs down, a fist, one finger or two fingers to your assistant and hold it steady. An open palm is not a request here.'
@@ -410,7 +414,8 @@ export function GestureConfirm({
         permission = 'unknown'; // Firefox and Safari have no camera permission descriptor
       }
       if (cancelled || startedOnce.current) return;
-      if (autoStart && shouldAutoStart(pref, permission)) {
+      const usedThisVisit = (window as unknown as { __cedarfieldCameraUsed?: boolean }).__cedarfieldCameraUsed === true;
+      if (autoStart && (shouldAutoStart(pref, permission) || (usedThisVisit && permission !== 'denied'))) {
         startedOnce.current = true;
         void start();
       }

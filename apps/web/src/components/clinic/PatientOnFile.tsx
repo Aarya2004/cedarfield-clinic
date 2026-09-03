@@ -316,14 +316,16 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
               registerSignSink={setSignSink}
             />
           ) : (
-            <p className="cl-patient__scan-offer">
-              Cannot type?{' '}
-              {(['fullName', 'dateOfBirth', 'phone'] as PatientField[]).map((f) => (
-                <button key={f} type="button" className="cl-link" data-clinic-scan-open={f} onClick={() => setScanning(f)}>
-                  Type {FIELD_LABEL[f]} with two switches
-                </button>
-              ))}
-            </p>
+            <div className="cl-patient__scan-offer">
+              <p className="cl-patient__scan-lead">Cannot type? Two hand shapes, a switch or two keys can — a keyboard opens at the foot of the screen:</p>
+              <div className="cl-patient__scan-buttons">
+                {(['fullName', 'dateOfBirth', 'phone'] as PatientField[]).map((f) => (
+                  <button key={f} type="button" className="cl-quiet cl-quiet--sm" data-clinic-scan-open={f} onClick={() => setScanning(f)}>
+                    Type {FIELD_LABEL[f]}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
           <div className="cl-patient__actions">
             <button type="submit" className="cl-cta cl-cta--sm" data-clinic-patient-save>

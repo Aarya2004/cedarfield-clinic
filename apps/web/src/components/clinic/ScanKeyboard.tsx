@@ -75,7 +75,7 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900
   }, [registerSignSink, act]);
 
   return (
-    <div className="cl-scan" role="group" aria-label={`Scanning keyboard for ${fieldLabel}`} data-clinic-scan={state.key === null ? 'rows' : 'keys'} data-clinic-scan-row={state.row} data-clinic-scan-key={state.key ?? ''}>
+    <div className="cl-scan" role="dialog" aria-modal="false" aria-label={`Scanning keyboard for ${fieldLabel}`} data-clinic-scan={state.key === null ? 'rows' : 'keys'} data-clinic-scan-row={state.row} data-clinic-scan-key={state.key ?? ''}>
       <p className="cl-scan__head">
         Typing <b>{fieldLabel}</b> with two switches: <b>thumbs up</b> (or Space) selects, <b>a fist</b> (or Escape) goes back.
         For hand shapes, the camera under “Listen for me” must be on.
