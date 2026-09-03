@@ -61,7 +61,16 @@ if (board.error) process.exit(1);
     board = await rpcB('clinic_board');
   }
 }
-const open = (board.data?.slots ?? []).filter((s) => s.state === 'open');
+let open = (board.data?.slots ?? []).filter((s) => s.state === 'open');
+if (open.length < 2 && board.data?.next_wave_at) {
+  // Late in a wave the simulated demand has taken most of the board: wait for the next release
+  // rather than refuse to start (2026-09-03; three refused starts in one late wave).
+  const untilNext = Date.parse(board.data.next_wave_at) - Date.parse(board.data.server_now);
+  console.log(`· ${open.length} open — waiting ${Math.round(untilNext / 1000)} s for the next release`);
+  await new Promise((r) => setTimeout(r, Math.max(0, untilNext) + 1500));
+  board = await rpcB('clinic_board');
+  open = (board.data?.slots ?? []).filter((s) => s.state === 'open');
+}
 ok(open.length >= 2, 'at least two open slots to race over', `${open.length} open`);
 if (failures) process.exit(1);
 // The page picks the two slots ITSELF once its live board has landed (so they exist in A's DOM and
@@ -91,7 +100,9 @@ const steps = [
   // ── THE CASCADE (SPEC-V5). A gives its hold back; B (script) holds a THIRD slot; A's agent joins
   // the line for it; B lets go — and A's dock arms by itself: "It came back to you". Nobody raced.
   { invoke: 'clinic_release_hold', outputMatches: 'ok.{0,2}:true' },
-  { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state') === 'open'", timeout: 10000 },
+  // Back on the board — or, late in a wave, taken by the simulated demand the moment it was free.
+  // Either way A's page moved off held_by_you without a reload, which is the point.
+  { waitFor: "['open','taken_by_rival'].includes(document.querySelector('[data-clinic-slot=\"' + window.__a + '\"]')?.getAttribute('data-slot-state') ?? '')", timeout: 10000 },
   { eval: "(() => { const o = [...document.querySelectorAll('[data-slot-state=\"open\"]')].map(e => e.getAttribute('data-clinic-slot')).filter(id => id !== window.__t); window.__q = o[0]; return 'queue-target:' + o[0]; })()", matches: '^queue-target:' },
   { waitFor: "document.querySelector('[data-clinic-slot=\"' + window.__q + '\"]')?.getAttribute('data-slot-state') === 'held_by_other'", timeout: 15000 },
   { invoke: 'clinic_join_waitlist', inputFrom: { slot_id: 'window.__q' }, outputMatches: 'waiting.{0,2}:true[\\s\\S]*position.{0,2}:1[,}]' },

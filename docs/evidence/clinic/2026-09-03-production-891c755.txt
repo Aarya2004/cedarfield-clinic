@@ -1,0 +1,15 @@
+Production verification — main @ 891c755, 2026-09-03 ~02:30 PT (Engineer #4). Two consecutive rounds.
+
+Since f6d63ec (Codex pass 3: all PASS): build stamp in the colophon, seconds_to_answer clamped ≥ 0, the
+  visitor promise first in the guide.
+Local: unit 508/508 · typecheck 0 · lint 0 · touched cases clinic-ask, clinic-guide, clinic-first-call green.
+Round 1: verify-deployed 37 ✔ / 0 ✘ — DEPLOYED AND VERIFIED.
+Round 2: verify-deployed 37 ✔ / 0 ✘ — DEPLOYED AND VERIFIED.
+Live board, two visitors: run 1 missed one step late in a wave (A's released slot was taken by simulated
+  demand the instant it was free, so it never read "open" again); run 2 25/25; run 3 refused to start on a
+  board with one open slot. The eval now accepts "taken by demand" after a release and waits for the next
+  release instead of refusing; runs 4 and 5 below.
+Registry probe on the live board: 14:14. First-call probe on the live board, no wait: two loads, all answered.
+Colophon prints "Build 891c755 · deployed …" on the deployed page.
+Live run 4: 25 steps, 0 failed — LIVE BOARD PROVEN WITH TWO VISITORS
+Live run 5: 25 steps, 0 failed — LIVE BOARD PROVEN WITH TWO VISITORS
