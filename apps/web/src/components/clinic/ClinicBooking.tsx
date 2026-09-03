@@ -530,6 +530,9 @@ export function ClinicBooking() {
   const [listenActive, setListenActive] = useState(false);
   // One microphone consumer at a time: the page's own voice agent and the recognizer exclude each
   // other, so the agent's speech is never transcribed back as the person's words (review P1-3).
+  // `listenMic` is the recognizer or the sign camera actually running — a typed request waiting in
+  // the queue does not count (Codex audit: a typed handoff must not disable Talk to Cedarfield).
+  const [listenMic, setListenMic] = useState(false);
   const [voiceLive, setVoiceLive] = useState(false);
 
   const [delegation, setDelegationState] = useState<Delegation | null>(null);
@@ -546,17 +549,21 @@ export function ClinicBooking() {
         setSyntheticGrants((n) => n + 1);
         return;
       }
+      // No patient, no permission — and say so where the eye is, instead of a dead click
+      // (Codex audit, 2026-09-02: "gives no feedback when the patient profile is incomplete").
+      if (!requirePatient()) return;
       const now = Date.now();
       setDelegation({ grantedAt: now, until: now + DELEGATION_MS });
     },
-    [setDelegation],
+    [setDelegation, requirePatient],
   );
   /** The open palm, held: the camera dwell is a physical-presence root, not a DOM event, so no isTrusted to read. */
   const grantByGesture = useCallback(() => {
     if (delegationRef.current !== null) return;
+    if (!requirePatient()) return;
     const now = Date.now();
     setDelegation({ grantedAt: now, until: now + DELEGATION_MS });
-  }, [setDelegation]);
+  }, [setDelegation, requirePatient]);
   const revokeDelegation = useCallback(() => setDelegation(null), [setDelegation]);
   useEffect(() => {
     if (delegation === null) return;
@@ -732,8 +739,8 @@ export function ClinicBooking() {
           <Band flush wide>
             <PatientOnFile sample={clockOrigin !== 0} onChange={onPatientChange} />
             <AssistantGuide />
-            <ListenPanel queue={requestQueue} gesture={GESTURE_ENABLED} onActive={setListenActive} disabled={voiceLive} />
-            {VOICE_ENABLED ? <VoiceAgent executor={voiceExecutor} disabled={listenActive} onLiveChange={setVoiceLive} /> : null}
+            <ListenPanel queue={requestQueue} gesture={GESTURE_ENABLED} onActive={setListenActive} onMicChange={setListenMic} disabled={voiceLive} />
+            {VOICE_ENABLED ? <VoiceAgent executor={voiceExecutor} disabled={listenMic} onLiveChange={setVoiceLive} /> : null}
           </Band>
 
           {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (

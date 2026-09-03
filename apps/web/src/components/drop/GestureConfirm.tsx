@@ -109,6 +109,9 @@ interface Recognizer {
 /** Minimum gap between two inferences. ~12 readings/s is plenty for a one-second dwell. */
 const INFER_EVERY_MS = 80;
 
+/** The page-wide "who has the camera" channel: an instance that starts announces itself. */
+const cameraBus: EventTarget = typeof window === 'undefined' ? new EventTarget() : ((window as unknown as { __cedarfieldCameraBus?: EventTarget }).__cedarfieldCameraBus ??= new EventTarget());
+
 export function GestureConfirm({
   onConfirm,
   onSign,
@@ -131,6 +134,11 @@ export function GestureConfirm({
   useEffect(() => {
     onRunningChangeRef.current?.(running);
   }, [running]);
+  // One camera owner on the page at a time (Codex audit, 2026-09-02: duplicate recognizer/video
+  // activity). When another instance starts, this one lets go and says where the camera went.
+  const instanceId = useRef(`g${Math.random().toString(36).slice(2)}`);
+  const runningRef = useRef(false);
+  runningRef.current = running;
   const [dwellMs, setDwellMs] = useState(1000);
   const [progress, setProgress] = useState(0);
   const [holding, setHolding] = useState(false);
@@ -329,6 +337,7 @@ export function GestureConfirm({
       lastVideoTime.current = -1;
       setPhase(null);
       setRunning(true);
+      cameraBus.dispatchEvent(new CustomEvent('claim', { detail: instanceId.current }));
       setLive(`Camera on. Hold an open palm for ${(dwellMs / 1000).toFixed(1)} seconds to ${forms.infinitive}.`);
       rafRef.current = requestAnimationFrame(loop);
     } catch (err) {
@@ -356,6 +365,22 @@ export function GestureConfirm({
     teardown();
     setLive(`Camera off. The keyboard still ${forms.does} — ${forms.keyboard}.`);
   }, [teardown, forms.does, forms.keyboard]);
+
+  // ---- one camera owner: yield to whichever instance the person started last ----
+  useEffect(() => {
+    const onClaim = (e: Event) => {
+      const who = (e as CustomEvent<string>).detail;
+      if (who === instanceId.current || !runningRef.current) return;
+      teardown();
+      setRunning(false);
+      setEnabled(false);
+      setPhase(null);
+      setFailure(null);
+      setLive('Camera moved to the control you just enabled. Enable it here again if you need it.');
+    };
+    cameraBus.addEventListener('claim', onClaim);
+    return () => cameraBus.removeEventListener('claim', onClaim);
+  }, [teardown]);
 
   // ---- mount: read the prefs; reopen the lens only where a grant already stands ----
   const startedOnce = useRef(false);

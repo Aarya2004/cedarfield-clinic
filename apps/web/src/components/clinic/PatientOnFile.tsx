@@ -12,11 +12,12 @@
  * appointment reference on the card is what a clinic would file it under.
  */
 import { useEffect, useState } from 'react';
-import { SAMPLE_PATIENT, validate, type PatientOnFileRecord } from '../../lib/drop/patient-record.ts';
+import { SAMPLE_PATIENT, normalisePatient, validate, validateFields, type PatientField, type PatientOnFileRecord } from '../../lib/drop/patient-record.ts';
 
 export { SAMPLE_PATIENT, validate, type PatientOnFileRecord };
 
 const KEY = 'cedarfield.patient';
+const FIELD_IDS: Record<PatientField, string> = { fullName: 'cl-patient-name', dateOfBirth: 'cl-patient-dob', phone: 'cl-patient-phone' };
 
 export function readPatient(): PatientOnFileRecord | null {
   try {
@@ -58,7 +59,8 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
   const [patient, setPatient] = useState<PatientOnFileRecord | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<PatientOnFileRecord>({ fullName: '', dateOfBirth: '', phone: '' });
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<PatientField, string>>>({});
+  const [saved, setSaved] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -86,19 +88,26 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
     setPatient(null);
     setDraft({ fullName: '', dateOfBirth: '', phone: '' });
     setEditing(true);
-    setError(null);
+    setErrors({});
+    setSaved(false);
     writePatient(null);
     onChange(null);
   };
 
   const save = () => {
-    const next = { fullName: draft.fullName.trim(), dateOfBirth: draft.dateOfBirth.trim(), phone: draft.phone.trim() };
-    const problem = validate(next);
-    setError(problem);
-    if (problem !== null) return;
+    const problems = validateFields(draft);
+    setErrors(problems);
+    const next = normalisePatient(draft);
+    if (next === null) {
+      // Focus the first field with a problem so a keyboard or switch user lands on it.
+      const first = (['fullName', 'dateOfBirth', 'phone'] as PatientField[]).find((f) => problems[f]);
+      if (first) document.getElementById(FIELD_IDS[first])?.focus();
+      return;
+    }
     writePatient(next);
     setPatient(next);
     setEditing(false);
+    setSaved(true);
     onChange(next);
   };
 
@@ -114,6 +123,11 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
             <span id="cl-patient-head" className="cl-patient__label">Booking as</span>{' '}
             <b data-clinic-patient-name>{patient.fullName}</b> · {formatDob(patient.dateOfBirth)} · {patient.phone}
             {isSample ? <span className="cl-patient__sample"> · sample patient</span> : null}
+            {saved ? (
+              <span className="cl-patient__saved" role="status" data-clinic-patient-saved>
+                {' '}· Saved. Every booking on this page is now for this person.
+              </span>
+            ) : null}
           </p>
           <span className="cl-patient__actions-inline">
             <button
@@ -148,43 +162,82 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
             Entered once, kept in this browser only. Every booking on this page — by hand or by your assistant —
             is made for this person.
           </p>
-          {error !== null ? (
-            <p className="cl-lost" role="alert" data-clinic-patient-error>
-              {error}
-            </p>
+          {Object.keys(errors).length > 0 ? (
+            <div className="cl-lost" role="alert" data-clinic-patient-error>
+              <b>Not saved yet.</b> {Object.keys(errors).length === 1 ? 'One field needs attention:' : `${Object.keys(errors).length} fields need attention:`}
+              <ul>
+                {(['fullName', 'dateOfBirth', 'phone'] as PatientField[]).filter((f) => errors[f]).map((f) => (
+                  <li key={f}>
+                    <a href={`#${FIELD_IDS[f]}`}>{errors[f]}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           <div className="cl-fields">
-            <div className="cl-field">
-              <label htmlFor="cl-patient-name">Patient’s full name</label>
+            <div className="cl-field" data-invalid={errors.fullName ? 'true' : 'false'}>
+              <label htmlFor={FIELD_IDS.fullName}>Patient’s full name</label>
               <input
-                id="cl-patient-name"
+                id={FIELD_IDS.fullName}
                 name="patientFullName"
                 autoComplete="name"
+                required
+                aria-required="true"
+                aria-invalid={errors.fullName ? 'true' : 'false'}
+                aria-describedby={errors.fullName ? `${FIELD_IDS.fullName}-error` : undefined}
                 value={draft.fullName}
                 onChange={(e) => setDraft({ ...draft, fullName: e.target.value })}
               />
+              {errors.fullName ? (
+                <p className="cl-field__error" id={`${FIELD_IDS.fullName}-error`}>
+                  {errors.fullName}
+                </p>
+              ) : null}
             </div>
-            <div className="cl-field">
-              <label htmlFor="cl-patient-dob">Date of birth</label>
+            <div className="cl-field" data-invalid={errors.dateOfBirth ? 'true' : 'false'}>
+              <label htmlFor={FIELD_IDS.dateOfBirth}>Date of birth</label>
+              <p className="cl-field__hint" id={`${FIELD_IDS.dateOfBirth}-hint`}>
+                Day, month, year — for example 12/04/1988.
+              </p>
               <input
-                id="cl-patient-dob"
+                id={FIELD_IDS.dateOfBirth}
                 name="patientDateOfBirth"
-                type="date"
+                type="text"
+                inputMode="numeric"
                 autoComplete="bday"
+                placeholder="DD/MM/YYYY"
+                required
+                aria-required="true"
+                aria-invalid={errors.dateOfBirth ? 'true' : 'false'}
+                aria-describedby={`${FIELD_IDS.dateOfBirth}-hint${errors.dateOfBirth ? ` ${FIELD_IDS.dateOfBirth}-error` : ''}`}
                 value={draft.dateOfBirth}
                 onChange={(e) => setDraft({ ...draft, dateOfBirth: e.target.value })}
               />
+              {errors.dateOfBirth ? (
+                <p className="cl-field__error" id={`${FIELD_IDS.dateOfBirth}-error`}>
+                  {errors.dateOfBirth}
+                </p>
+              ) : null}
             </div>
-            <div className="cl-field">
-              <label htmlFor="cl-patient-phone">Phone number</label>
+            <div className="cl-field" data-invalid={errors.phone ? 'true' : 'false'}>
+              <label htmlFor={FIELD_IDS.phone}>Phone number</label>
               <input
-                id="cl-patient-phone"
+                id={FIELD_IDS.phone}
                 name="patientPhone"
                 type="tel"
                 autoComplete="tel"
+                required
+                aria-required="true"
+                aria-invalid={errors.phone ? 'true' : 'false'}
+                aria-describedby={errors.phone ? `${FIELD_IDS.phone}-error` : undefined}
                 value={draft.phone}
                 onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
               />
+              {errors.phone ? (
+                <p className="cl-field__error" id={`${FIELD_IDS.phone}-error`}>
+                  {errors.phone}
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="cl-patient__actions">

@@ -22,6 +22,8 @@
   {"waitFor": "document.querySelector('[data-clinic-tool-count]')?.getAttribute('data-clinic-tool-count') === '10'", "timeout": 8000},
   {"list": true},
   {"expect": {"tool": "clinic_wait_for_request"}},
+  {"_doc": "A typed request waiting does NOT disable the page's voice agent (Codex audit): only a live microphone does."},
+  {"eval": "document.querySelector('[data-clinic-voice-start]')?.hasAttribute('disabled')", "equals": false},
 
   {"_doc": "The agent asks: it gets the person's words, and is told to loop."},
   {"invoke": "clinic_wait_for_request", "input": {"timeout_seconds": 5}, "outputMatches": "hold me the earliest appointment[\\s\\S]*via.{0,4}:.{0,3}typed[\\s\\S]*call clinic_wait_for_request again"},

@@ -37,6 +37,8 @@ export interface ListenPanelProps {
   gesture: boolean;
   /** True while the page listens or a request is waiting — the page births the wait tool on it. */
   onActive?: (active: boolean) => void;
+  /** True only while the recognizer or the sign camera is actually running (the microphone exclusion). */
+  onMicChange?: (on: boolean) => void;
   /**
    * The page's own voice agent is live: this recognizer must be off, or the agent's speech would be
    * transcribed back into the queue as the person's words (2026-09-02 review, P1-3).
@@ -44,7 +46,7 @@ export interface ListenPanelProps {
   disabled?: boolean;
 }
 
-export function ListenPanel({ queue, gesture, onActive, disabled = false }: ListenPanelProps) {
+export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = false }: ListenPanelProps) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState('');
@@ -56,13 +58,19 @@ export function ListenPanel({ queue, gesture, onActive, disabled = false }: List
   const recRef = useRef<RecognitionLike | null>(null);
   const wantRef = useRef(false);
   const activeRef = useRef(false);
+  const micRef = useRef(false);
   useEffect(() => {
     const active = listening || signsOn || pending > 0;
     if (active !== activeRef.current) {
       activeRef.current = active;
       onActive?.(active);
     }
-  }, [listening, signsOn, pending, onActive]);
+    const mic = listening || signsOn;
+    if (mic !== micRef.current) {
+      micRef.current = mic;
+      onMicChange?.(mic);
+    }
+  }, [listening, signsOn, pending, onActive, onMicChange]);
 
   useEffect(() => setSupported(recognizerFactory() !== null), []);
   useEffect(() => {
