@@ -1,7 +1,8 @@
 # Devpost text — Cedarfield Clinic (final, 2026-09-03)
 
 > Paste each section into its Devpost field. Live: https://cedarfield-clinic.vercel.app/clinic/book
-> (the build number is at the foot of the page). Repo: this one. Video: the link Aarya uploads.
+> (the build number is at the foot of the page; verified on this domain 38/38). Repo: this one. Video: the link Aarya uploads.
+> The final copy handed to Arav in chat on 2026-09-03 ~05:10 PT has no dashes or parentheses; prefer that version if the two differ.
 
 ## Tagline
 
