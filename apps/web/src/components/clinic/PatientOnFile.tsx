@@ -11,8 +11,8 @@
  * Nothing leaves the browser: the record lives in localStorage and is never sent anywhere. The
  * appointment reference on the card is what a clinic would file it under.
  */
-import { useEffect, useState } from 'react';
-import { SAMPLE_PATIENT, normalisePatient, validate, validateFields, type PatientField, type PatientOnFileRecord } from '../../lib/drop/patient-record.ts';
+import { useEffect, useRef, useState } from 'react';
+import { SAMPLE_PATIENT, nextEmptyField, normalisePatient, validate, validateFields, type PatientField, type PatientOnFileRecord } from '../../lib/drop/patient-record.ts';
 import { setSignSink } from '../../lib/drop/sign-sink.ts';
 import { ScanKeyboard } from './ScanKeyboard.tsx';
 
@@ -132,6 +132,8 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
     onChange(null);
   };
 
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const save = () => {
     const problems = validateFields(draft);
     setErrors(problems);
@@ -147,6 +149,30 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
     setEditing(false);
     setSaved(true);
     onChange(next);
+  };
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  // Hands-free (2026-09-03, Arav: "the keyboard must be fully navigable through hand signs"): while the
+  // card is being filled and no keyboard is open, the camera's shapes belong to the card — one finger
+  // opens the scanning keyboard on the next empty field, two fingers saves. The keyboard takes the
+  // shapes over while it is open; "done" there moves to the next empty field, and past the last one
+  // the card saves itself.
+  useEffect(() => {
+    if (!editing || scanning !== null) return;
+    setSignSink((category) => {
+      if (category === 'Pointing_Up') setScanning(nextEmptyField(draftRef.current) ?? 'fullName');
+      else if (category === 'Victory') saveRef.current();
+    });
+    return () => setSignSink(null);
+  }, [editing, scanning]);
+  const keyboardDone = (field: PatientField) => {
+    const next = nextEmptyField(draftRef.current, field);
+    if (next !== null) {
+      setScanning(next);
+      return;
+    }
+    setScanning(null);
+    if (nextEmptyField(draftRef.current) === null) saveRef.current();
   };
 
   const isSample = patient !== null && patient.fullName === SAMPLE_PATIENT.fullName && patient.dateOfBirth === SAMPLE_PATIENT.dateOfBirth;
@@ -312,12 +338,17 @@ export function PatientOnFile({ sample = false, onChange }: PatientOnFileProps) 
               value={draft[scanning]}
               stepMs={scanStepMs()}
               onChange={(text) => setDraft((d) => ({ ...d, [scanning]: text }))}
-              onDone={() => setScanning(null)}
+              onDone={() => keyboardDone(scanning)}
+              onClose={() => setScanning(null)}
               registerSignSink={setSignSink}
+              fieldId={scanning}
             />
           ) : (
             <div className="cl-patient__scan-offer">
-              <p className="cl-patient__scan-lead">Cannot type? Two hand shapes, a switch or two keys can — a keyboard opens at the foot of the screen:</p>
+              <p className="cl-patient__scan-lead">
+                Cannot type? Two hand shapes, a switch or two keys can — a keyboard opens at the foot of the screen. With the camera
+                on: <b>one finger</b> opens it on the next empty field, <b>two fingers</b> saves.
+              </p>
               <div className="cl-patient__scan-buttons">
                 {(['fullName', 'dateOfBirth', 'phone'] as PatientField[]).map((f) => (
                   <button key={f} type="button" className="cl-quiet cl-quiet--sm" data-clinic-scan-open={f} onClick={() => setScanning(f)}>

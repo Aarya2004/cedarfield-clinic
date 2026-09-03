@@ -245,6 +245,15 @@ export function ListenPanel({ queue, gesture, onActive, onMicChange, disabled = 
     },
     [queue],
   );
+  // Test seam (?test=1 only): a hand shape as the camera would report it, through the same routing.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('test')) return;
+    const w = window as unknown as { __cedarfieldSign?: (category: string) => void };
+    w.__cedarfieldSign = (category: string) => onSign(category);
+    return () => {
+      delete w.__cedarfieldSign;
+    };
+  }, [onSign]);
 
   const last = history[0] ?? null;
   return (

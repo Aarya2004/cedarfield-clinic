@@ -112,6 +112,28 @@ export function ClinicTools({
   listening = false,
 }: ClinicToolsProps) {
   const [state, setState] = useState<ClinicRegistrationState>({ kind: 'pending' });
+  // Born and gone: diff the live names against the last render's, keep a chip that left for a
+  // moment (so a judge sees it go) and mark a chip that arrived (so they see it come).
+  const prevNames = useRef<string[]>([]);
+  const [born, setBorn] = useState<Set<string>>(() => new Set());
+  const [leaving, setLeaving] = useState<string[]>([]);
+  useEffect(() => {
+    const now: string[] = state.kind === 'registered' ? [...state.names] : [];
+    const before = prevNames.current;
+    const arrived = before.length > 0 ? now.filter((n) => !before.includes(n)) : [];
+    const left = before.filter((n) => !now.includes(n));
+    prevNames.current = [...now];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    if (arrived.length > 0) {
+      setBorn((b) => new Set([...b, ...arrived]));
+      timers.push(setTimeout(() => setBorn((b) => new Set([...b].filter((n) => !arrived.includes(n)))), 4000));
+    }
+    if (left.length > 0) {
+      setLeaving((l) => [...l.filter((n) => !left.includes(n)), ...left]);
+      timers.push(setTimeout(() => setLeaving((l) => l.filter((n) => !left.includes(n))), 1500));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [state]);
   // SPEC-V8: the page's own record of the agent's calls, newest first. Eight is a screenful; the
   // count keeps climbing so the drive (and a curious judge) can see nothing was dropped.
   const [calls, setCalls] = useState<ToolCallRecord[]>([]);
@@ -227,6 +249,31 @@ export function ClinicTools({
       data-clinic-tools-error={state.kind === 'error' ? state.message : undefined}
       data-clinic-browser-count={state.kind === 'registered' && state.browserCount !== undefined ? state.browserCount : undefined}
     />
+    {/* The tool surface, live (2026-09-03): every tool the page offers the agent RIGHT NOW, as chips.
+        A tool that is born (the booking tool, from the person's press) arrives gold and says so; a
+        tool that dies (revoke, use, expiry) fades out. Consent as a tool, visible. */}
+    {state.kind === 'registered' ? (
+      <div className="cl-surface" aria-label="Tools your assistant can use right now" data-clinic-surface={state.names.length}>
+        <p className="cl-surface__head">
+          Tools your assistant can use right now <b data-clinic-surface-count>{state.names.length}</b>
+        </p>
+        <ul className="cl-surface__list">
+          {[...state.names, ...leaving].map((n) => (
+            <li
+              key={n}
+              className="cl-surface__chip"
+              data-clinic-surface-tool={n}
+              data-born={born.has(n) ? 'true' : undefined}
+              data-gone={leaving.includes(n) ? 'true' : undefined}
+            >
+              {n.replace(/^clinic_/, '')}
+              {born.has(n) ? <span className="cl-surface__tag">born from your press</span> : null}
+              {leaving.includes(n) ? <span className="cl-surface__tag">gone</span> : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null}
     {/* SPEC-V8: the page's own record of what the assistant did here — a person watching rows
         change while a chat client works has no other way to know a call happened. Absent until
         the first call: a patient booking by hand is not shown an empty ledger. */}

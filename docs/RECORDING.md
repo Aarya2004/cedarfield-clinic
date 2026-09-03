@@ -51,7 +51,7 @@ fallbacks below in the Codex pane.
 6. A real press on "Let my assistant book for me" flips the permission card and adds the booking tool.
 7. "yes" with Listen on books; or the palm on the bar's camera books.
 8. "Take that back" removes the tool and the card returns to standard.
-9. Scanning keyboard (button under the patient card): thumbs-up picks a row, thumbs-up a letter, a fist steps back; after the palm books, the sign camera is back on by itself.
+9. Hands only, card empty: one finger opens the keyboard, thumbs-up picks a row, thumbs-up a letter, a fist steps back, done moves to the next field, two fingers saves; after the palm books, the sign camera is back on by itself.
 10. Recorder at 1080p, system audio and microphone on; captions generated after.
 
 ## The Codex loop prompt (paste into Codex before shot 3, page open in its pane)
@@ -81,7 +81,8 @@ SHOW: the page loading; the permission card under "Your assistant": Can / Cannot
 **SHOT 2 — 0:15–0:35 — arrival.**
 SAY: "Fourteen tools when the page loads. Search, hold, release, wait for the person, ask them one
 question. Not one of them can book."
-SHOW: cursor on the permission card, then on the Tools pane count. Do not read the tool names.
+SHOW: cursor on the permission card, then on the row of tool chips under "Your assistant" ("Tools
+your assistant can use right now · 14"). Do not read the tool names.
 
 **SHOT 3 — 0:35–1:00 — the person only speaks.**
 DO: press "Listen for me". Say: "hold me the earliest appointment." The agent picks it up from the page.
@@ -106,7 +107,8 @@ SAY: "The agent cannot press. A scripted press is counted and refused. Only the 
 a press, a palm, or a word only they can see — and then, for ten minutes, a booking tool exists
 that did not exist before."
 SHOW: the refusal line; the permission card flipping to "Until … one booking, for [name]"; the
-Tools pane gaining clinic_book_slot.
+gold chip "book_slot · born from your press" appearing in the tool row. THIS IS THE SHOT: consent as
+a tool that is born. Hold on it for two full seconds.
 
 **SHOT 6 — 1:50–2:15 — the human commits.**
 DO: with the hold on the bar and Listen on, say "yes".
@@ -121,7 +123,8 @@ DO: press "Let my assistant book for me" again, then "Take that back". Then "Not
 row, thumbs-up a letter, fist to step back.
 SAY: "Revoke it, and the tool is gone. And when the clinic needs her name, two hand shapes type it —
 the way switch users type today. Not sign language, and the page says so."
-SHOW: the tool leaving the Tools pane; the card back to standard; the sweep and one typed letter.
+SHOW: the chip fading with "gone"; the card back to standard; then, hands only: one finger opens the
+keyboard, thumbs-up picks a row, thumbs-up a letter, two fingers saves the card.
 
 **SHOT 8 — 2:40–3:00 — why WebMCP.**
 SAY: "Without WebMCP the agent scrapes, guesses and clicks. With it, the page declares what an agent

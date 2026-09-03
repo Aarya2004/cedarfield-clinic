@@ -61,3 +61,15 @@ export function normalisePatient(p: PatientOnFileRecord): PatientOnFileRecord | 
   if (validate(p) !== null) return null;
   return { fullName: p.fullName.trim(), dateOfBirth: normaliseDate(p.dateOfBirth)!, phone: p.phone.trim() };
 }
+
+/** The field order a hands-free visitor fills, and the next one still empty after `after` (or from the top). */
+export const PATIENT_FIELD_ORDER: readonly PatientField[] = ['fullName', 'dateOfBirth', 'phone'];
+
+export function nextEmptyField(draft: PatientOnFileRecord, after?: PatientField): PatientField | null {
+  const start = after ? PATIENT_FIELD_ORDER.indexOf(after) + 1 : 0;
+  for (let i = start; i < PATIENT_FIELD_ORDER.length; i++) {
+    const f = PATIENT_FIELD_ORDER[i]!;
+    if (draft[f].trim() === '') return f;
+  }
+  return null;
+}

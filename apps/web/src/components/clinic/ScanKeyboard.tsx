@@ -16,15 +16,19 @@ export interface ScanKeyboardProps {
   value: string;
   /** Every change; the host writes it into the field. */
   onChange: (text: string) => void;
-  /** "Done" selected, or the person closed it. */
+  /** The "done" key: this field is finished (the host may move to the next). */
   onDone: () => void;
+  /** Close keyboard / thumbs down: stop typing, keep the text, open nothing else. */
+  onClose?: () => void;
   /** Sweep speed. Slower is easier; 900 ms is the common starting point in AAC products. */
   stepMs?: number;
   /** The camera's sign channel feeds shapes here while the keyboard is open. */
   registerSignSink?: (sink: ((category: string) => void) | null) => void;
+  /** Which field this keyboard types into (an attribute for tests and styling). */
+  fieldId?: string;
 }
 
-export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900, registerSignSink }: ScanKeyboardProps) {
+export function ScanKeyboard({ fieldLabel, value, onChange, onDone, onClose, stepMs = 900, registerSignSink, fieldId }: ScanKeyboardProps) {
   const [state, setState] = useState<ScanState>(() => initialScan(value));
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -32,6 +36,8 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900
   onChangeRef.current = onChange;
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
+  const onCloseRef = useRef(onClose ?? onDone);
+  onCloseRef.current = onClose ?? onDone;
 
   // The sweep.
   useEffect(() => {
@@ -71,6 +77,11 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900
     const bus = (window as unknown as { __cedarfieldCameraBus?: EventTarget }).__cedarfieldCameraBus;
     bus?.dispatchEvent(new CustomEvent('want-signs'));
     registerSignSink((category) => {
+      // Thumbs down closes the keyboard (the field keeps what was typed).
+      if (category === 'Thumb_Down') {
+        onCloseRef.current();
+        return;
+      }
       const action = switchAction(category);
       if (action) act(action);
     });
@@ -78,9 +89,9 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900
   }, [registerSignSink, act]);
 
   return (
-    <div className="cl-scan" role="dialog" aria-modal="false" aria-label={`Scanning keyboard for ${fieldLabel}`} data-clinic-scan={state.key === null ? 'rows' : 'keys'} data-clinic-scan-row={state.row} data-clinic-scan-key={state.key ?? ''}>
+    <div className="cl-scan" role="dialog" aria-modal="false" aria-label={`Scanning keyboard for ${fieldLabel}`} data-clinic-scan-field={fieldId} data-clinic-scan={state.key === null ? 'rows' : 'keys'} data-clinic-scan-row={state.row} data-clinic-scan-key={state.key ?? ''}>
       <p className="cl-scan__head">
-        Typing <b>{fieldLabel}</b> with two switches: <b>thumbs up</b> (or Space) selects, <b>a fist</b> (or Escape) goes back.
+        Typing <b>{fieldLabel}</b> with two switches: <b>thumbs up</b> (or Space) selects, <b>a fist</b> (or Escape) goes back, <b>thumbs down</b> closes; <b>done</b> moves to the next field.
         For hand shapes, the camera under “Listen for me” must be on.
       </p>
       <p className="cl-scan__text" aria-label="Typed so far">
@@ -111,7 +122,7 @@ export function ScanKeyboard({ fieldLabel, value, onChange, onDone, stepMs = 900
         <button type="button" className="cl-quiet" data-clinic-scan-back onClick={() => act('back')}>
           Back
         </button>
-        <button type="button" className="cl-link" data-clinic-scan-close onClick={() => onDoneRef.current()}>
+        <button type="button" className="cl-link" data-clinic-scan-close onClick={() => onCloseRef.current()}>
           Close keyboard
         </button>
       </p>

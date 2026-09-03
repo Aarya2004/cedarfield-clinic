@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normaliseDate, normalisePatient, validate, validateFields, SAMPLE_PATIENT } from './patient-record.ts';
+import { normaliseDate, normalisePatient, validate, validateFields, SAMPLE_PATIENT, nextEmptyField } from './patient-record.ts';
 
 test('the sample patient is valid; the by-hand bar applies to every field, per field', () => {
   assert.equal(validate(SAMPLE_PATIENT), null);
@@ -28,4 +28,12 @@ test('dates the way people type them normalise to ISO; impossible and future dat
 test('normalisePatient stores ISO and trimmed fields, or null', () => {
   assert.deepEqual(normalisePatient({ fullName: '  Ada Okonkwo ', dateOfBirth: '12/04/1988', phone: ' 416 555 0100 ' }), SAMPLE_PATIENT);
   assert.equal(normalisePatient({ ...SAMPLE_PATIENT, phone: '' }), null);
+});
+
+test('nextEmptyField walks name → date → phone, skipping what is filled', () => {
+  assert.equal(nextEmptyField({ fullName: '', dateOfBirth: '', phone: '' }), 'fullName');
+  assert.equal(nextEmptyField({ fullName: 'Ada', dateOfBirth: '', phone: '' }), 'dateOfBirth');
+  assert.equal(nextEmptyField({ fullName: 'Ada', dateOfBirth: '', phone: '' }, 'dateOfBirth'), 'phone');
+  assert.equal(nextEmptyField({ fullName: 'Ada', dateOfBirth: '1988-04-12', phone: '416' }), null);
+  assert.equal(nextEmptyField({ fullName: '', dateOfBirth: '', phone: '' }, 'phone'), null, 'after the last field there is nothing');
 });
