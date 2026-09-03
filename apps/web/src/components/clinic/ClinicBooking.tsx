@@ -551,7 +551,7 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
     const target = pointerTargetFor(record.name, record.ok);
     if (target === null) return;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    const moves = record.name === 'clinic_book_slot' || record.name === 'clinic_hold_slot';
+    const moves = record.name === 'clinic_book_slot' || record.name === 'clinic_hold_slot' || record.name === 'clinic_ask';
     setTimeout(() => {
       const el = document.querySelector<HTMLElement>(target);
       if (el === null) return;
@@ -864,23 +864,9 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
             />
           </Band>
 
-          {/* What to say, for a first visitor with an assistant (Arav, 2026-09-02). Dismissible. */}
+          {/* Who the appointment is for — short, and before the times (a clinic asks this before it books). */}
           <Band flush wide>
             <PatientOnFile sample={clockOrigin !== 0} onChange={onPatientChange} />
-            <AssistantGuide />
-            <ListenPanel queue={requestQueue} gesture={GESTURE_ENABLED} onActive={setListenActive} onMicChange={setListenMic} disabled={voiceLive} />
-            {VOICE_ENABLED ? (
-              <VoiceAgent
-                executor={voiceExecutor}
-                disabled={listenMic !== 'off'}
-                disabledReason={
-                  listenMic === 'camera'
-                    ? 'Turn off the sign camera above before starting a voice call — one capture at a time.'
-                    : 'Press Stop listening above before starting a voice call — one microphone at a time.'
-                }
-                onLiveChange={setVoiceLive}
-              />
-            ) : null}
           </Band>
 
           {(liveMeta && liveMeta.errorSeq > 0 && liveMeta.lastError) || (arrival !== null && heldSlot) ? (
@@ -1057,6 +1043,25 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
             />
           </Band>
 
+          {/* The ways to talk to the page, and a first-visit guide — after the times and the permission,
+              where a visitor reaches for them (Arav, 2026-09-03: "why does it feel so congested"). */}
+          <Band flush wide>
+            <AssistantGuide />
+            <ListenPanel queue={requestQueue} gesture={GESTURE_ENABLED} onActive={setListenActive} onMicChange={setListenMic} disabled={voiceLive} />
+            {VOICE_ENABLED ? (
+              <VoiceAgent
+                executor={voiceExecutor}
+                disabled={listenMic !== 'off'}
+                disabledReason={
+                  listenMic === 'camera'
+                    ? 'Turn off the sign camera above before starting a voice call — one capture at a time.'
+                    : 'Press Stop listening above before starting a voice call — one microphone at a time.'
+                }
+                onLiveChange={setVoiceLive}
+              />
+            ) : null}
+          </Band>
+
           {/* Your appointment (SPEC-V3 §3). Rendered off the BOARD's state, not the manual flow's,
               so a booking the assistant set up gets the same reference, the same calendar file and
               the same cancel/move controls as one walked through by hand. The card arms; the dock
@@ -1135,7 +1140,7 @@ export function ClinicBooking({ build }: ClinicBookingProps = {}) {
             every row (Arav, 2026-09-03: "it should give off them visiting a real clinic webpage"). */}
         <footer className="cl-colophon" data-clinic-colophon>
           <p className="cl-colophon__id">
-            <b>Cedarfield Clinic</b> · 14 Meadow Lane · Mon–Fri 8:00–18:00 · Reception (555) 010-0140
+            <b>Cedarfield Clinic</b> · 14 Meadow Lane · Mon–Fri 8:00–18:00 · Reception 01632 960 118
           </p>
           <p className="cl-colophon__fine">
             Cedarfield is a fictional practice, built to show how a visitor’s own assistant books here. The other

@@ -7,7 +7,7 @@ import { bootstrapScript, loadToolDescriptors } from '@/lib/drop/clinic-bootstra
 const BOOTSTRAP = bootstrapScript(loadToolDescriptors());
 /** Stamped once per server start: Vercel's commit for this deployment, and when this server came up. */
 const BUILD = {
-  sha: (process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_SHA ?? 'local').slice(0, 7),
+  sha: (process.env.NEXT_PUBLIC_BUILD_SHA ?? process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_SHA ?? 'local').slice(0, 7),
   at: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
 };
 

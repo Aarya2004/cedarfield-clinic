@@ -2716,3 +2716,19 @@ html:has(.cl-dock) {
   color: var(--clinic-muted);
   font-size: var(--clinic-small);
 }
+
+/* --- the colophon sits in the column; the sign panel has no dwell control (2026-09-03) ------- */
+
+.cl-colophon {
+  max-width: 42.5rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.cl-listen__signs .rk-g-slider-label,
+.cl-listen__signs .rk-g-range,
+.cl-listen__signs [for='rk-g-dwell'] {
+  display: none;
+}
