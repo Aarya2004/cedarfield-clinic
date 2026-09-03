@@ -21,7 +21,10 @@ one red was the new scan case's selector, fixed) · scan + spoken cases green al
 deploy, double production round, then the physical pass with Arav.
 01:16 Arav's hand test on the OLD production build found two real bugs, fixed at the root: the
 seeing line ignored which camera it was on (`seeingCopy(seen, verb, armed)`, tests), and the
-`?test=1` sample patient persisted in localStorage (memory-only now). Unit **497/497**.
+`?test=1` sample patient persisted in localStorage (memory-only now; a stale one is cleaned once). Unit **497/497**.
+~02:10 **Deployed `a5fca53`, verified twice** (verify-deployed ×2 green incl. routes + axe · live-two-visitors ×2 ·
+registry 13:13 ×3 on the live board · voice handshake 14/14). Evidence:
+`docs/evidence/clinic/2026-09-03-production-a5fca53.txt`. Codex re-audit prompt in `docs/CODEX-REAUDIT.md` (hash updated).
 
 ## Build log — Engineer #4 (2026-09-02, ~13:30–15:00) — custom sign phrases; edge cases as cases; the repeat runs
 - **The shapes mean what the person says**: `sign-map.ts` (per-browser phrases for the five camera
